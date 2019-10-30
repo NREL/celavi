@@ -20,7 +20,8 @@ setuptools.setup(
     install_requires=[
         'pandas',
         'numpy',
-        'openmdao'
+        'openmdao',
+        'xlrd'
     ],
     command_options={
             'build_sphinx': {
