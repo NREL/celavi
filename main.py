@@ -21,10 +21,12 @@ class FunctionalUnit:
 
 
 class App:
-    def __init__(self, model_fn, min_eol=1, max_eol=10, number_of_inventories=10):
+    def __init__(self, model_fn, min_eol=1, max_eol=10, min_inventory=1, max_inventory=10, number_of_inventories=10):
         self.model = pysd.load(model_fn)
         self.min_eol = min_eol
         self.max_eol = max_eol
+        self.min_inventory = min_inventory
+        self.max_inventory = max_inventory
         self.number_of_inventories = number_of_inventories
         self.graph = nx.DiGraph()
         self.max_iterations = None
@@ -64,9 +66,12 @@ class App:
             self.graph.add_edge(inventory_id, "landfill", destination="landfill")
 
         for node_id, inventory in self.graph.nodes(data="inventory"):
-            lifespan = randint(self.min_eol, self.max_eol)
-            unit = FunctionalUnit(name="Turbine", lifespan=lifespan)
-            inventory.append(unit)
+            if node_id not in ["landfill", "recycler"]:
+                unit_count = randint(self.min_inventory, self.max_inventory)
+                for _ in range(unit_count):
+                    lifespan = randint(self.min_eol, self.max_eol)
+                    unit = FunctionalUnit(name="Turbine", lifespan=lifespan)
+                    inventory.append(unit)
 
     def inventory_functional_units(self):
         rows = []
