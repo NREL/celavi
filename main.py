@@ -2,6 +2,7 @@ import pysd
 import networkx as nx
 import pandas as pd
 import numpy as np
+from random import random
 
 
 class App:
@@ -9,13 +10,13 @@ class App:
         self.model = pysd.load(model_fn)
 
         # Most of these are set in run_model_and_create_functions() below
-        self.recycling_probability = None
+        self.recycle_yes_or_no = None
         self.max_iterations = None
         self.timesteps = None
 
     def run(self):
         self.run_model_and_create_functions()
-        print("Hello world")
+        print(self.recycle_yes_or_no(1.25))
 
     def run_model_and_create_functions(self):
         result = self.result = self.model.run(return_columns=[
@@ -31,9 +32,13 @@ class App:
 
         normalized_recycle_favorability_over_linear = \
             (recycle_favorability_over_linear - recycle_favorability_over_linear.min()) / (recycle_favorability_over_linear.max() - recycle_favorability_over_linear.min())
+        normalized_recycle_favorability_over_linear = pd.Series(normalized_recycle_favorability_over_linear, index=self.timesteps, )
 
-        print(normalized_recycle_favorability_over_linear.max())
-        print(normalized_recycle_favorability_over_linear.min())
+        def recycle_yes_or_no(ts):
+            threshold = normalized_recycle_favorability_over_linear[ts]
+            return random < threshold  # Higher favorability less likely to recycle
+
+        self.recycle_yes_or_no = recycle_yes_or_no
 
 
 if __name__ == '__main__':
