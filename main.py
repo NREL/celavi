@@ -1,6 +1,7 @@
 import pysd
 import networkx as nx
 import pandas as pd
+import numpy as np
 
 
 class App:
@@ -22,11 +23,17 @@ class App:
         ])
         self.timesteps = result.index
 
-        pd.set_option('display.max_rows', 500)
-        pd.set_option('display.max_columns', 500)
-        pd.set_option('display.width', 1000)
+        recycle_favorability_over_linear = result['recycle_favorability_over_linear']
 
-        print(result.describe())
+        # I am 100% sure I am abusing this column by nomralizing it, but I needed a
+        # value between 0.0 and 1.0 to determine the probablity that something would
+        # be recycled.
+
+        normalized_recycle_favorability_over_linear = \
+            (recycle_favorability_over_linear - recycle_favorability_over_linear.min()) / (recycle_favorability_over_linear.max() - recycle_favorability_over_linear.min())
+
+        print(normalized_recycle_favorability_over_linear.max())
+        print(normalized_recycle_favorability_over_linear.min())
 
 
 if __name__ == '__main__':
