@@ -1,0 +1,1646 @@
+{UTF-8}
+check fraction sum[component]=
+	Fraction Reuse[component] + Fraction Remanufacture[component] + Fraction Recycle[component\
+		]
+	~	Dmnl [0,1]
+	~		|
+
+reuse favorability over linear[component]=
+	reused material cost[component] / linear material cost[component]
+	~	Dmnl [0,?]
+	~		|
+
+Fraction Reuse[component]= INTEG (
+	changing fraction reuse[component],
+		fraction used product reused initial value[component])
+	~	Dmnl [0,1]
+	~		|
+
+remanufacture favorability[component]=
+	IF THEN ELSE(lowest cost pathway[component] = remanufacture favorability over linear\
+		[component],
+	             remanufacture favorability over linear[component],
+	             10)
+	~	Dmnl [0,?]
+	~		|
+
+rate of increasing recycle fraction[component]= WITH LOOKUP (
+	recycle favorability[component],
+		([(0,0)-(10,0.01)],(0,0.01),(0.275229,0.00964912),(0.422018,0.00995614),(1,0.0090825\
+		),(1.40673,0.00929825),(2,0),(10,0
+		) ))
+	~	
+	~	\!recycle favorability
+	|
+
+recycle favorability[component]=
+	IF THEN ELSE(lowest cost pathway[component] = recycle favorability over linear[component\
+		],
+	             recycle favorability over linear[component],
+	             10)
+	~	Dmnl [0,?]
+	~		|
+
+rate of increasing reuse fraction[component]= WITH LOOKUP (
+	reuse favorability[component],
+		([(0,0)-(10,0.01)],(0,0.01),(0.275229,0.00903509),(0.519878,0.00833333),(0.99,0.00758772\
+		),(1,0),(2,0),(10,0) ))
+	~	
+	~	\!reuse favorability\!rate of increasing fraction reuse
+	|
+
+increasing fraction recycle[component]=
+	IF THEN ELSE(check fraction sum[component] < 1 - rate of increasing recycle fraction\
+		[component] :AND:
+	             Fraction Recycle[component] < 1 - rate of increasing recycle fraction[component\
+		],
+	             increase recycle[component] * rate of increasing recycle fraction[component\
+		],
+	             0)
+	~	Dmnl/year
+	~		|
+
+rate of increasing remanufacture fraction[component]= WITH LOOKUP (
+	remanufacture favorability[component],
+		([(0,0)-(10,0.008)],(0,0.00736842),(0.165138,0.00526316),(0.360856,0.00342105),(0.550459\
+		,0.00184211),(1,0),(2,0),(10,0
+		) ))
+	~	
+	~	\!remanufacture favorability
+	|
+
+reuse favorability[component]=
+	IF THEN ELSE(lowest cost pathway[component] = reuse favorability over linear[component\
+		],
+	             reuse favorability over linear[component],
+	             10)
+	~	Dmnl [0,?]
+	~		|
+
+Cumulative Recycle[component]= INTEG (
+	tallying recycle[component],
+		0)
+	~	each [0,?]
+	~		|
+
+Cumulative Remanufacture[component]= INTEG (
+	tallying remanufacture[component],
+		0)
+	~	each [0,?]
+	~		|
+
+recycle process learning[component]=
+	-0.05 * TREND(Cumulative Recycle[component], 0.5 , 0 ) * MAX(0, Recycle Process Cost\
+		[component])
+	~	USD/each
+	~		|
+
+allowable turbine component remanufacture[component]=
+	0.9
+	~	Dmnl [0,1,0.05]
+	~	Upper limit on the fraction of turbines in the plant before EOL turbine \
+		components must be dealt with another way (not reusing). Represents the \
+		technical limitations of remanufacturing and prevents infinite \
+		remanufacturing.
+	|
+
+allowable turbine component reuse[component]=
+	0.2
+	~	Dmnl [0,1,0.05]
+	~	Upper limit on the fraction of turbine components in the plant that can be \
+		reused before the components must be dealt with another way at EOL. \
+		Represents technical limitations of reuse and the max lifetime that \
+		turbine components offer.
+	|
+
+remanufacture process learning[component]=
+	-0.05 * TREND(Cumulative Remanufacture[component], 0.5 , 0 ) * MAX(0, Remanufacture Process Cost\
+		[component])
+	~	USD/each
+	~		|
+
+tallying remanufacture[component]=
+	aggregating remanufactured products[component]
+	~	each/year [0,?]
+	~		|
+
+tallying reuse[component]=
+	aggregating reused products[component]
+	~	each/year [0,?]
+	~		|
+
+remaining remanufacture[component]=
+	allowable turbine component remanufacture[component] * number of turbines - Cumulative Remanufacture\
+		[component]
+	~	each [0,?]
+	~	calculates the number of turbine components that can still be \
+		remanufactured
+	|
+
+remaining reuse[component]=
+	allowable turbine component reuse[component] * number of turbines - Cumulative Reuse\
+		[component] - Fraction Reuse[component] * number of turbines
+	~	each [0,?]
+	~	calculates the number of turbine components that can still be reused
+	|
+
+Cumulative Reuse[component]= INTEG (
+	tallying reuse[component],
+		0)
+	~	each [0,?]
+	~		|
+
+reuse process learning[component]=
+	-0.05 * TREND(Cumulative Reuse[component], 0.5 , 0 ) * MAX(0, Reuse Process Cost[component\
+		])
+	~	USD/each
+	~		|
+
+tallying recycle[component]=
+	aggregating recycled materials[component]
+	~	each/year [0,?]
+	~		|
+
+Recycle Process Cost[component]= INTEG (
+	recycle process learning[component],
+		initial cost of recycling process[component])
+	~	USD/each [0,?]
+	~		|
+
+recycled material cost[component]=
+	( ( miles from end use location to recycling facility[component] * cost of transportation\
+		[component] * component mass[component]
+	              + Recycle Process Cost[component] )
+	  + fraction remanufactured product to recycle[component]
+	    * ( miles from remanufacturing facility to recycling facility[component] * cost of transportation\
+		[component] * component mass[component] 
+	        + Recycle Process Cost[component] )
+	  + ( miles from recycling to distribution facility[component] * cost of transportation\
+		[component] * component mass[component] ) ) 
+	- recycled material strategic value[component]
+	~	USD/each [0,?]
+	~		|
+
+remanufactured material cost[component]=
+	( ( miles from end use location to remanufacturing facility[component] * cost of transportation\
+		[component] * component mass
+	[component] + Remanufacture Process Cost[component] )
+	  +  fraction reused product remanufactured[component] * ( miles from reuse facility to remanufacturing facility\
+		[component
+	] * cost of transportation[component]  * component mass[component]
+	        + Remanufacture Process Cost[component] )
+	  +  ( miles from remanufacturing facility to product distribution facility[component\
+		] * cost of transportation[component
+	] * component mass[component] ) ) 
+	- remanufactured material strategic value[component]
+	~	USD/each
+	~		|
+
+initial cost of recycling process[blade]=
+	75 ~~|
+initial cost of recycling process[nacelle]=
+	50 ~~|
+initial cost of recycling process[tower]=
+	75 ~~|
+initial cost of recycling process[foundation]=
+	80 ~~|
+initial cost of recycling process[road]=
+	150 ~~|
+initial cost of recycling process[electrical]=
+	95
+	~	USD/each [0,?]
+	~		|
+
+initial cost of remanufacturing process[blade]=
+	100 ~~|
+initial cost of remanufacturing process[nacelle]=
+	100 ~~|
+initial cost of remanufacturing process[tower]=
+	100 ~~|
+initial cost of remanufacturing process[foundation]=
+	75 ~~|
+initial cost of remanufacturing process[road]=
+	130 ~~|
+initial cost of remanufacturing process[electrical]=
+	90
+	~	USD/each [0,?,0.01]
+	~		|
+
+Remanufacture Process Cost[component]= INTEG (
+	remanufacture process learning[component],
+		initial cost of remanufacturing process[component])
+	~	USD/each
+	~		|
+
+Reuse Process Cost[component]= INTEG (
+	reuse process learning[component],
+		initial cost of reuse process[component])
+	~	USD/each [0,?]
+	~		|
+
+increasing fraction remanufacture[component]=
+	IF THEN ELSE(check fraction sum[component] < 1 - rate of increasing remanufacture fraction\
+		[component] :AND:
+	             Fraction Remanufacture[component] < 1 - rate of increasing remanufacture fraction\
+		[component],
+	             increase remanufacture[component] * rate of increasing remanufacture fraction\
+		[component],
+	             0)
+	~	Dmnl/year
+	~		|
+
+initial cost of reuse process[blade]=
+	1000 ~~|
+initial cost of reuse process[nacelle]=
+	35 ~~|
+initial cost of reuse process[tower]=
+	55 ~~|
+initial cost of reuse process[foundation]=
+	40 ~~|
+initial cost of reuse process[road]=
+	40 ~~|
+initial cost of reuse process[electrical]=
+	75
+	~	USD/each [0,?]
+	~		|
+
+reused material cost[component]=
+	miles from end use location to reuse facility[component] * cost of transportation[component\
+		] * component mass[component
+	]
+	+ Reuse Process Cost[component]
+	+ miles from reuse facility to product distribution facility[component] * cost of transportation\
+		[component] * component mass
+	[component]
+	- reused material strategic value[component]
+	~	USD/each [0,?]
+	~		|
+
+cost of transportation[component]= WITH LOOKUP (
+	Time,
+		([(0,0.4)-(100,0.5)],(0,0.5),(100,0.5) ))
+	~	USD/metric ton/mile
+	~	NREL technical report, "Analysis of Transportation and Logistics \
+		Challenges Affecting the Deployment of Larger Wind Turbines: Summary of \
+		Results"
+	|
+
+increase recycle[component]=
+	IF THEN ELSE(recycle favorability over linear[component] < 1,
+	             1,
+	             0)
+	~	Dmnl [0,1]
+	~		|
+
+increase remanufacture[component]=
+	IF THEN ELSE(remanufacture favorability over linear[component] < 1,
+	             1,
+	             0)
+	~	Dmnl [0,1]
+	~		|
+
+increase reuse[component]=
+	IF THEN ELSE(reuse favorability over linear[component] < 1,
+	             1,
+	             0)
+	~	Dmnl [0,1]
+	~		|
+
+cost of landfilling[component]= WITH LOOKUP (
+	Time,
+		([(0,0)-(100,100)],(0,70),(100,70) ))
+	~	USD/metric ton [0,?]
+	~	$70 - $120 USD/metric ton is the range from source, "Construction and Demolition \
+		Waste Characterization and Market Analysis Report", prepared for CT Dept \
+		of Energy and Env Protection by Green Seal Environmental, Inc.
+		Value used is midpoint of the above range.
+	|
+
+cost of extraction and production[blade]= WITH LOOKUP (
+	Time,
+		([(0,0)-(100,40)],(0,20),(100,25) )) ~~|
+cost of extraction and production[nacelle]= WITH LOOKUP (
+	Time,
+		([(0,0)-(100,40)],(0,40),(100,50) )) ~~|
+cost of extraction and production[tower]= WITH LOOKUP (
+	Time,
+		([(0,0)-(100,75)],(0,40),(100,65) )) ~~|
+cost of extraction and production[foundation]= WITH LOOKUP (
+	Time,
+		([(0,0)-(100,890)],(0,70),(100,87.5) )) ~~|
+cost of extraction and production[road]= WITH LOOKUP (
+	Time,
+		([(0,0)-(100,160)],(0,125),(100,156.25) )) ~~|
+cost of extraction and production[electrical]= WITH LOOKUP (
+	Time,
+		([(0,0)-(100,100)],(0,80),(100,100) ))
+	~	USD/each [0,?]
+	~		|
+
+fraction used product reused initial value[component]=
+	0
+	~	Dmnl [0,1,0.01]
+	~		|
+
+Fraction Recycle[component]= INTEG (
+	increasing fraction recycle[component],
+		fraction used product recycled initial value[component])
+	~	Dmnl [0,1]
+	~		|
+
+Fraction Remanufacture[component]= INTEG (
+	increasing fraction remanufacture[component],
+		fraction used product remanufactured initial value[component])
+	~	Dmnl [0,1]
+	~		|
+
+reusing[component]=
+	INTEGER( reaching end of life[component] * Fraction Reuse[component] )
+	~	each/year [0,?]
+	~		|
+
+fraction used product disposed[component]=
+	1 - Fraction Reuse[component] - fraction used product reused in other sectors[component\
+		] - Fraction Remanufacture[component] - Fraction Recycle[component]
+	~	Dmnl [0,1]
+	~	default value 0.67
+	|
+
+fraction used product recycled initial value[component]=
+	0
+	~	Dmnl [0,1,0.01]
+	~		|
+
+fraction used product remanufactured initial value[component]=
+	0
+	~	Dmnl [0,1,0.01]
+	~		|
+
+remanufacturing[component]=
+	reaching end of life[component] * Fraction Remanufacture[component]
+	~	each/year [0,?]
+	~		|
+
+recycling[component]=
+	INTEGER(reaching end of life[component] * Fraction Recycle[component])
+	~	each/year [0,?]
+	~		|
+
+linear material cost[component]=
+	cost of extraction and production[component] + miles from extraction to production facility\
+		[component] * cost of transportation[component] * component mass[component]
+	+ 
+	( ( miles from end use location to landfill[component] 
+	                              * cost of transportation[component]
+	                              * component mass[component]  + 
+	cost of landfilling[component] * component mass[component] )
+	  + 
+	     ( miles from remanufacturing facility to landfill[component] * cost of transportation\
+		[component] * component mass[component] + cost of landfilling[component] * component mass\
+		[component] )
+	  + ( miles from recycling facility to landfill[component] * cost of transportation[\
+		component] * component mass[component]  + cost of landfilling[component] * component mass\
+		[component]) )
+	~	USD/each [0,?]
+	~		|
+
+annual demand[blade]=
+	(3 * number of turbines * TIME STEP / turbine assembly time) / one Year
+	* PULSE TRAIN(initial construction time, turbine assembly time , component lifetime[\
+		blade] + supply chain delay[blade], 1000 ) ~~|
+annual demand[nacelle]=
+	( number of turbines * TIME STEP / turbine assembly time ) / one Year
+	* PULSE TRAIN(initial construction time, turbine assembly time ,
+	              component lifetime[nacelle] + supply chain delay[nacelle] , 1000 ) ~~|
+annual demand[tower]=
+	( number of turbines * TIME STEP / turbine assembly time ) / one Year
+	* PULSE TRAIN(initial construction time, turbine assembly time ,
+	              component lifetime[tower] + supply chain delay[tower], 1000 ) ~~|
+annual demand[foundation]=
+	( number of turbines * TIME STEP / initial construction time ) / one Year
+	* PULSE TRAIN(0, initial construction time ,
+	              component lifetime[foundation] + supply chain delay[foundation] , 1000\
+		 ) ~~|
+annual demand[road]=
+	TIME STEP/one Year * PULSE TRAIN(0, initial construction time,
+	                                 component lifetime[road] + supply chain delay[road]\
+		 , 1000 ) * one Unit[road] / one Year ~~|
+annual demand[electrical]=
+	TIME STEP/one Year * PULSE TRAIN(0, initial construction time, component lifetime[electrical\
+		] + supply chain delay[electrical] , 1000 ) * one Unit[electrical
+	] / one Year
+	~	each/year [0,?,10000]
+	~	The values are made up. The shape of the curve covers some initial BOS \
+		construction of the wind farm, followed by full turbine installation, \
+		followed by regular O&M over the lifetime of the farm, followed by 2 more \
+		rounds of turbine replacement and continued O&M.
+	|
+
+component mass[blade]=
+	0.5 ~~|
+component mass[nacelle]=
+	0.75 ~~|
+component mass[tower]=
+	5 ~~|
+component mass[foundation]=
+	1 ~~|
+component mass[road]=
+	3 ~~|
+component mass[electrical]=
+	5
+	~	metric ton/each [0,?]
+	~		|
+
+remanufacture favorability over linear[component]=
+	remanufactured material cost[component] / linear material cost[component]
+	~	Dmnl [0,?]
+	~		|
+
+recycle favorability over linear[component]=
+	recycled material cost[component] / linear material cost[component]
+	~	Dmnl [0,?]
+	~		|
+
+one Year=
+	1
+	~	year [1,1]
+	~		|
+
+one Unit[component]=
+	1
+	~	each [1,1]
+	~		|
+
+aggregating recycled materials[component]=
+	recycling[component] + recycling failed remanufactured[component] - landfilling nonrecyclables\
+		[component]
+	~	each/year [0,?]
+	~		|
+
+aggregating remanufactured products[component]=
+	remanufacturing[component] + remanufacturing nonreusables[component] - landfilling failed remanufactured\
+		[component] - recycling failed remanufactured[component]
+	~	each/year [0,?]
+	~		|
+
+aggregating reused products[component]=
+	reusing[component] - remanufacturing nonreusables[component]
+	~	each/year [0,?]
+	~		|
+
+annual virgin material demand[component]=
+	annual demand[component]
+	- aggregating recycled materials[component]
+	- aggregating reused products[component]
+	- aggregating remanufactured products[component]
+	~	each/year [0,?]
+	~		|
+
+recycling failed remanufactured[component]=
+	(remanufacturing[component] + remanufacturing nonreusables[component]) * fraction remanufactured product to recycle\
+		[component]
+	~	each/year [0,?]
+	~	components that could not be put back into a using product
+	|
+
+relative landfill[component]=
+	( reaching end of life[component] - (landfilling[component] + landfilling failed remanufactured\
+		[component] + landfilling nonrecyclables[component]) ) / ( reaching end of life[component\
+		] + 0.001)
+	~	Dmnl
+	~		|
+
+Products in Use[component]= INTEG (
+	shipping[component]-reaching end of life[component],
+		initial components in use[component])
+	~	each [0,?]
+	~		|
+
+fraction used product reused in other sectors[component]=
+	0
+	~	Dmnl [0,1,0.01]
+	~		|
+
+cumulative landfill fraction[component]=
+	Landfill and Incineration[component] / (Total Extraction[component] + 0.001)
+	~	Dmnl [0,?]
+	~		|
+
+disposing[component]=
+	reaching end of life[component] * fraction used product disposed[component]
+	~	each/year [0,?]
+	~		|
+
+distributing[component]=
+	extracting[component] + aggregating recycled materials[component]
+	~	each/year [0,?]
+	~		|
+
+environmental impact from landfill transportation[component]=
+	environmental impact of transportation[component] * landfilling[component] * miles from end use location to landfill\
+		[component]
+	~	impact/year
+	~		|
+
+environmental impact from recycling transportation[component]=
+	environmental impact of transportation[component] *
+	( recycling[component] * miles from end use location to recycling facility[component\
+		]
+	  + recycling failed remanufactured[component] * miles from remanufacturing facility to recycling facility\
+		[component]
+	  + landfilling nonrecyclables[component] * miles from recycling facility to landfill\
+		[component]
+	  + aggregating recycled materials[component] * miles from recycling to distribution facility\
+		[component] )
+	~	impact/year
+	~		|
+
+environmental impact from remanufacturing transportation[component]=
+	environmental impact of transportation[component] *
+	( remanufacturing[component] * miles from end use location to remanufacturing facility\
+		[component] 
+	  + remanufacturing nonreusables[component] * miles from reuse facility to remanufacturing facility\
+		[component]
+	  + aggregating remanufactured products[component] * miles from remanufacturing facility to product distribution facility\
+		[component] 
+	  + landfilling failed remanufactured[component] * miles from remanufacturing facility to landfill\
+		[component] )
+	~	impact/year
+	~		|
+
+environmental impact from reuse transportation[component]=
+	environmental impact of transportation[component] * 
+	( reusing[component] * miles from end use location to reuse facility[component]
+	  + aggregating reused products[component] * miles from reuse facility to product distribution facility\
+		[component] )
+	~	impact/year
+	~	total mileage * environmental impact per kgmile
+	|
+
+Products at End of Life[component]= INTEG (
+	reaching end of life[component]-disposing[component]-recycling[component]-remanufacturing\
+		[component]-reusing[component]-reusing in other sectors[component],
+		0)
+	~	each [-1,?]
+	~		|
+
+landfilling nonrecyclables[component]=
+	(recycling[component] + recycling failed remanufactured[component]) * fraction of recycling to landfill\
+		[component]
+	~	each/year [0,?]
+	~		|
+
+Products Sent to Other Sectors[component]= INTEG (
+	reusing in other sectors[component],
+		0)
+	~	each [0,?]
+	~		|
+
+Raw Material Extraction[component]= INTEG (
+	-extracting[component],
+		1e+10)
+	~	each [0,?]
+	~		|
+
+reaching end of life[component]= DELAY MATERIAL (
+	shipping[component], component lifetime[component] , 0 , 0)
+	~	each/year [0,?]
+	~	* used to be a DELAY CONVEYOR( shipping ,
+		                product lifetime , 
+		                0 ,
+		                initprofile , 
+		                initial products at end of life , 
+		                product lifetime )
+		* first argument to DELAY CONVEYOR was originally transporting * IF THEN \
+		ELSE(Products in Use <= 0, 0, 1)
+	|
+
+environmental impact per kgyear[component]=
+	( aggregating reused products[component] * environmental impact of reusing process[component\
+		]
+	  + aggregating remanufactured products[component] * environmental impact of remanufacturing process\
+		[component]
+	  + aggregating recycled materials[component] * environmental impact of recycling process\
+		[component]
+	  + extracting[component] * environmental impact of extracting process[component] 
+	  + environmental impact from landfill transportation[component]
+	  + environmental impact from recycling transportation[component]
+	  + environmental impact from remanufacturing transportation[component]
+	  + environmental impact from reuse transportation[component] ) / (Products in Use[component\
+		] + 0.001)
+	~	impact/(each*year) [0,?]
+	~		|
+
+extracting[component]=
+	annual virgin material demand[component]
+	~	each/year [0,?]
+	~		|
+
+landfilling[component]=
+	disposing[component]
+	~	each/year [0,?]
+	~		|
+
+Production[component]= INTEG (
+	aggregating remanufactured products[component] + distributing[component] - producing\
+		[component],
+		100)
+	~	each [0,?]
+	~		|
+
+Material Distribution[component]= INTEG (
+	aggregating recycled materials[component]+extracting[component]-distributing[component\
+		],
+		100)
+	~	each [0,?]
+	~		|
+
+remanufacturing nonreusables[component]=
+	reusing[component] * fraction reused product remanufactured[component]
+	~	each/year [0,?]
+	~		|
+
+initial construction time=
+	2
+	~	year [0,10,0.25]
+	~		|
+
+Landfill and Incineration[component]= INTEG (
+	landfilling[component]+landfilling failed remanufactured[component]+landfilling nonrecyclables\
+		[component],
+		0)
+	~	each [0,?]
+	~		|
+
+Landfill Transport[component]= INTEG (
+	disposing[component]-landfilling[component],
+		0)
+	~	each [0,?]
+	~		|
+
+Product Distribution[component]= INTEG (
+	aggregating reused products[component]
+	+ producing[component]
+	- shipping[component],
+		100)
+	~	each [0,?]
+	~		|
+
+Product Remanufacture[component]= INTEG (
+	remanufacturing[component]+remanufacturing nonreusables[component]-aggregating remanufactured products\
+		[component]-landfilling failed remanufactured[component]-recycling failed remanufactured\
+		[component],
+		0)
+	~	each [0,?]
+	~		|
+
+landfilling failed remanufactured[component]=
+	(remanufacturing[component] + remanufacturing nonreusables[component]) * fraction of remanufacture to landfill\
+		[component]
+	~	each/year [0,?]
+	~		|
+
+shipping[component]= DELAY MATERIAL (
+	producing[component] + aggregating reused products[component], 
+	supply chain delay[component],
+	0,
+	0)
+	~	each/year [0,?]
+	~		|
+
+tallying extraction[component]=
+	extracting[component]
+	~	each/year [0,?]
+	~		|
+
+Total Extraction[component]= INTEG (
+	tallying extraction[component],
+		0)
+	~	each [0,?]
+	~		|
+
+Material Recycle[component]= INTEG (
+	recycling[component]+recycling failed remanufactured[component]-aggregating recycled materials\
+		[component]-landfilling nonrecyclables[component],
+		0)
+	~	each [-0.1,?]
+	~	aka recycling
+	|
+
+number of turbines=
+	200
+	~	each [0,?,1]
+	~		|
+
+producing[component]=
+	distributing[component] + aggregating remanufactured products[component]
+	~	each/year [0,?]
+	~		|
+
+Product Reuse[component]= INTEG (
+	reusing[component]-aggregating reused products[component]-remanufacturing nonreusables\
+		[component],
+		0)
+	~	each [0,?]
+	~		|
+
+reusing in other sectors[component]=
+	reaching end of life[component] * fraction used product reused in other sectors[component\
+		]
+	~	each/year [0,?]
+	~		|
+
+turbine assembly time=
+	1
+	~	year [0,5,0.25]
+	~		|
+
+environmental impact of extracting process[component]=
+	15
+	~	impact/each [0,?]
+	~		|
+
+environmental impact of recycling process[component]=
+	11
+	~	impact/each [0,?]
+	~		|
+
+environmental impact of remanufacturing process[component]=
+	8
+	~	impact/each [0,?]
+	~		|
+
+environmental impact of transportation[component]=
+	0.01
+	~	impact/(each*mile) [0,?]
+	~		|
+
+environmental impact of reusing process[component]=
+	5
+	~	impact/each [0,?]
+	~		|
+
+recycled material strategic value[component]=
+	0
+	~	USD/each [0,100]
+	~	value of using recycled material  - reduces overall cost of recycled \
+		material
+	|
+
+remanufactured material strategic value[component]=
+	0
+	~	USD/each [0,100]
+	~	value of using remanufactured material - reduces overall remanufactured \
+		material cost
+	|
+
+reused material strategic value[component]=
+	0
+	~	USD/each [0,100]
+	~	negative cost representing the value of using reused material instead of \
+		virgin
+	|
+
+miles from end use location to recycling facility[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+miles from end use location to remanufacturing facility[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+miles from end use location to reuse facility[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+miles from reuse facility to product distribution facility[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+miles from reuse facility to remanufacturing facility[component]=
+	0
+	~	mile [0,500,1]
+	~		|
+
+miles from extraction to production facility[component]=
+	20
+	~	mile [0,500,1]
+	~		|
+
+miles from recycling facility to landfill[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+miles from remanufacturing facility to landfill[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+miles from end use location to landfill[component]=
+	20
+	~	mile [0,500,1]
+	~		|
+
+miles from recycling to distribution facility[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+miles from remanufacturing facility to recycling facility[component]=
+	0
+	~	mile [0,500,1]
+	~		|
+
+miles from remanufacturing facility to product distribution facility[component]=
+	10
+	~	mile [0,500,1]
+	~		|
+
+supply chain delay[component]=
+	0.5
+	~	year [0,?]
+	~	default value 0.5
+	|
+
+initial components in use[component]=
+	0
+	~	each [0,?]
+	~	At the start of the model run, the wind farm has not yet been established \
+		and so no material is in use.
+	|
+
+fraction of recycling to landfill[component]=
+	0.01
+	~	Dmnl [0,1,0.01]
+	~	default value 0.01
+	|
+
+fraction of remanufacture to landfill[component]=
+	0.01
+	~	Dmnl [0,1,0.01]
+	~	default value 0.01
+	|
+
+fraction remanufactured product to recycle[component]=
+	0.01
+	~	Dmnl [0,1,0.01]
+	~		|
+
+fraction reused product remanufactured[component]=
+	0.01
+	~	Dmnl
+	~		|
+
+component lifetime[blade]=
+	25 - TIME STEP ~~|
+component lifetime[nacelle]=
+	25 - TIME STEP ~~|
+component lifetime[tower]=
+	25 - TIME STEP ~~|
+component lifetime[foundation]=
+	100 - TIME STEP ~~|
+component lifetime[road]=
+	100 - TIME STEP ~~|
+component lifetime[electrical]=
+	100 - TIME STEP
+	~	year [0,?]
+	~	default value 25
+	|
+
+********************************************************
+	.Control
+********************************************************~
+		Simulation Control Parameters
+	|
+
+FINAL TIME  = 100
+	~	year
+	~	The final time for the simulation.
+	|
+
+INITIAL TIME  = 0
+	~	year
+	~	The initial time for the simulation.
+	|
+
+SAVEPER  = 
+        TIME STEP
+	~	year [0,?]
+	~	The frequency with which output is stored.
+	|
+
+TIME STEP  = 0.25
+	~	year [0,?]
+	~	The time step for the simulation.
+	|
+
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Material Flows
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|72,72,90,0
+10,1,Raw Material Extraction,87,203,32,19,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,2,Production,340,209,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,3,Products at End of Life,883,202,65,38,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,4,Landfill and Incineration,1214,193,73,20,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,5,Material Distribution,216,206,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,6,Product Distribution,460,209,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,7,Landfill Transport,1049,192,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,8,Product Reuse,685,275,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,9,Product Remanufacture,653,388,49,26,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,10,Material Recycle,669,539,66,22,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,11,13,5,4,0,0,22,0,0,0,-1--1--1,,1|(170,203)|
+1,12,13,1,100,0,0,22,0,0,0,-1--1--1,,1|(131,203)|
+11,13,3368,149,203,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,14,extracting,149,218,24,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,15,17,2,4,0,0,22,0,0,0,-1--1--1,,1|(295,208)|
+1,16,17,5,100,0,0,22,0,0,0,-1--1--1,,1|(258,208)|
+11,17,2796,275,208,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,18,distributing,275,222,26,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,19,21,6,4,0,0,22,0,0,0,-1--1--1,,1|(416,211)|
+1,20,21,2,100,0,0,22,0,0,0,-1--1--1,,1|(381,211)|
+11,21,2774,398,211,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,22,producing,398,225,24,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,23,25,7,4,0,0,22,0,0,0,-1--1--1,,1|(1002,193)|
+1,24,25,3,100,0,0,22,0,0,0,-1--1--1,,1|(961,193)|
+11,25,3214,980,193,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,26,disposing,980,210,24,11,40,131,0,0,-1,0,0,0,0,0,0,0,0,0
+1,27,29,4,4,0,0,22,0,0,0,-1--1--1,,1|(1127,190)|
+1,28,29,7,100,0,0,22,0,0,0,-1--1--1,,1|(1091,190)|
+11,29,2752,1109,190,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,30,landfilling,1109,204,23,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,31,33,8,4,0,0,22,0,0,0,-1--1--1,,1|(772,268)|
+1,32,33,3,100,0,0,22,0,0,0,-1--1--1,,1|(835,251)|
+11,33,2598,835,268,6,5,33,131,0,0,1,0,0,0,0,0,0,0,0,0
+10,34,reusing,835,281,17,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,35,37,6,4,0,0,22,0,0,0,-1--1--1,,1|(460,269)|
+1,36,37,8,100,0,0,22,0,0,0,-1--1--1,,1|(598,269)|
+11,37,2048,536,269,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,38,aggregating reused products,536,293,38,17,40,131,0,0,-1,0,0,0,0,0,0,0,0,0
+1,39,41,9,4,0,0,22,0,0,0,-1--1--1,,1|(792,372)|
+1,40,41,3,100,0,0,22,0,0,0,-1--1--1,,1|(887,303)|
+11,41,1102,887,372,5,6,34,131,0,0,1,0,0,0,0,0,0,0,0,0
+10,42,remanufacturing,887,386,38,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,43,45,2,4,0,0,22,0,0,0,-1--1--1,,1|(350,304)|
+1,44,45,9,100,0,0,22,0,0,0,-1--1--1,,1|(479,391)|
+11,45,2158,350,391,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,46,aggregating remanufactured products,350,418,37,21,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,47,49,10,4,0,0,22,0,0,0,-1--1--1,,1|(669,434)|
+1,48,49,3,100,0,0,22,0,0,0,-1--1--1,,1|(942,334)|
+11,49,1058,942,434,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,50,recycling,942,449,22,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,51,53,5,4,0,0,22,0,0,0,-1--1--1,,1|(218,376)|
+1,52,53,10,100,0,0,22,0,0,0,-1--1--1,,1|(413,538)|
+11,53,2180,218,538,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,54,aggregating recycled materials,218,558,49,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,55,57,10,4,0,0,22,0,0,0,-1--1--1,,1|(615,495)|
+1,56,57,9,100,0,0,22,0,0,0,-1--1--1,,1|(615,437)|
+11,57,1256,615,467,5,6,34,3,0,0,2,0,0,0,0,0,0,0,0,0
+10,58,recycling failed remanufactured,575,467,37,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,59,61,4,4,0,0,22,0,0,0,-1--1--1,,1|(1191,301)|
+1,60,61,9,100,0,0,22,0,0,0,-1--1--1,,1|(944,395)|
+11,61,2466,1191,395,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,62,landfilling failed remanufactured,1191,415,37,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,63,65,4,4,0,0,22,0,0,0,-1--1--1,,1|(1269,365)|
+1,64,65,10,100,0,0,22,0,0,0,-1--1--1,,1|(999,523)|
+11,65,2532,1269,523,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,66,landfilling nonrecyclables,1269,545,42,16,40,131,0,0,-1,0,0,0,0,0,0,0,0,0
+1,67,69,9,4,0,0,22,0,0,0,-1--1--1,,1|(688,345)|
+1,68,69,8,100,0,0,22,0,0,0,-1--1--1,,1|(688,303)|
+11,69,2488,688,323,5,6,34,3,0,0,2,0,0,0,0,0,0,0,0,0
+10,70,remanufacturing nonreusables,646,323,38,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,71,fraction used product disposed,1115,155,42,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,72,71,25,1,0,0,0,0,128,0,-1--1--1,,1|(1022,160)|
+10,73,component lifetime,647,112,52,12,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,74,fraction reused product remanufactured,785,341,56,14,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,75,fraction remanufactured product to recycle,479,507,56,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,76,75,58,1,0,0,0,0,128,0,-1--1--1,,1|(530,497)|
+10,77,fraction of remanufacture to landfill,1058,431,35,24,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,78,fraction of recycling to landfill,1315,480,41,26,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,79,77,62,1,0,0,0,0,128,0,-1--1--1,,1|(1114,410)|
+1,80,78,66,1,0,0,0,0,128,0,-1--1--1,,1|(1330,521)|
+1,81,74,69,1,0,0,0,0,128,0,-1--1--1,,1|(710,336)|
+10,82,Products in Use,625,205,32,26,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,83,85,82,4,0,0,22,0,0,0,-1--1--1,,1|(569,209)|
+1,84,85,6,100,0,0,22,0,0,0,-1--1--1,,1|(513,209)|
+11,85,2620,541,209,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,86,shipping,541,224,20,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,87,89,3,4,0,0,22,0,0,0,-1--1--1,,1|(780,205)|
+1,88,89,82,100,0,0,22,0,0,0,-1--1--1,,1|(694,205)|
+11,89,2642,737,205,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,90,reaching end of life,737,219,44,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,91,73,89,1,0,0,0,0,128,0,-1--1--1,,1|(699,150)|
+10,92,initial components in use,561,152,43,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,93,92,82,1,0,0,0,0,128,1,-1--1--1,,1|(620,158)|
+10,94,supply chain delay,441,166,43,8,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,95,reaching end of life,997,299,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,96,90,33,1,0,0,0,0,128,0,-1--1--1,,1|(781,243)|
+1,97,95,41,1,0,0,0,0,128,0,-1--1--1,,1|(956,347)|
+1,98,95,26,1,0,0,0,0,128,0,-1--1--1,,1|(1006,251)|
+10,99,reaching end of life,860,471,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,100,99,50,1,0,0,0,0,128,0,-1--1--1,,1|(918,475)|
+1,101,34,69,1,0,0,0,0,128,0,-1--1--1,,1|(743,290)|
+10,102,remanufacturing,1067,467,44,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,103,remanufacturing nonreusables,1160,458,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,104,102,62,1,0,0,0,0,128,0,-1--1--1,,1|(1119,435)|
+1,105,103,62,1,0,0,0,0,128,0,-1--1--1,,1|(1212,447)|
+10,106,recycling,1172,551,29,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,107,recycling failed remanufactured,1205,588,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,108,106,66,1,0,0,0,0,128,0,-1--1--1,,1|(1208,536)|
+1,109,107,66,1,0,0,0,0,128,0,-1--1--1,,1|(1262,581)|
+10,110,remanufacturing,470,442,44,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,111,remanufacturing nonreusables,436,470,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,112,110,58,0,0,0,0,0,128,0,-1--1--1,,1|(513,452)|
+1,113,111,58,0,0,0,0,0,128,0,-1--1--1,,1|(500,468)|
+10,114,reusing,425,302,24,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,115,remanufacturing nonreusables,448,347,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,116,114,38,1,0,0,0,0,128,0,-1--1--1,,1|(453,290)|
+1,117,115,38,1,0,0,0,0,128,0,-1--1--1,,1|(504,328)|
+1,118,111,46,1,0,0,0,0,128,0,-1--1--1,,1|(362,453)|
+1,119,110,46,1,0,0,0,0,128,0,-1--1--1,,1|(415,430)|
+1,120,58,46,1,0,0,0,0,128,0,-1--1--1,,1|(491,407)|
+10,121,landfilling failed remanufactured,284,460,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,122,121,46,1,0,0,0,0,128,0,-1--1--1,,1|(301,437)|
+10,123,recycling failed remanufactured,341,568,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,124,recycling,195,604,29,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,125,landfilling nonrecyclables,296,616,39,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,126,124,54,1,0,0,0,0,128,0,-1--1--1,,1|(188,587)|
+1,127,125,54,1,0,0,0,0,128,0,-1--1--1,,1|(248,599)|
+1,128,123,54,0,0,0,0,0,128,0,-1--1--1,,1|(290,563)|
+1,129,54,18,0,0,0,0,0,64,0,-1--1--1,,1|(245,393)|
+1,130,14,18,1,0,0,0,0,64,0,-1--1--1,,1|(207,234)|
+1,131,46,22,0,0,0,0,0,64,0,-1--1--1,,1|(373,321)|
+1,132,18,22,1,0,0,0,0,64,0,-1--1--1,,1|(335,235)|
+1,133,38,86,0,0,0,0,0,64,0,-1--1--1,,1|(538,260)|
+1,134,22,86,1,0,0,0,0,64,0,-1--1--1,,1|(464,249)|
+1,135,26,30,1,0,0,0,0,64,0,-1--1--1,,1|(1043,218)|
+10,136,annual demand,224,153,35,8,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,137,aggregating recycled materials,82,61,47,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,138,aggregating remanufactured products,167,29,68,15,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,139,aggregating reused products,219,57,48,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,140,annual virgin material demand,112,116,40,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,141,136,140,1,0,0,0,0,128,0,-1--1--1,,1|(188,123)|
+1,142,139,140,1,0,0,0,0,128,0,-1--1--1,,1|(173,92)|
+1,143,138,140,1,0,0,0,0,128,0,-1--1--1,,1|(149,66)|
+1,144,137,140,1,0,0,0,0,128,0,-1--1--1,,1|(82,84)|
+1,145,140,13,1,0,0,0,0,128,0,-1--1--1,,1|(138,173)|
+1,146,86,90,1,0,0,0,0,64,0,-1--1--1,,1|(624,239)|
+1,147,94,85,1,0,0,0,0,128,0,-1--1--1,,1|(518,179)|
+10,148,Total Extraction,71,283,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+12,149,48,174,284,10,8,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,150,152,148,4,0,0,22,0,0,0,-1--1--1,,1|(122,284)|
+1,151,152,149,100,0,0,22,0,0,0,-1--1--1,,1|(158,284)|
+11,152,48,148,284,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,153,tallying extraction,148,298,41,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,154,14,152,1,0,0,0,0,128,0,-1--1--1,,1|(154,241)|
+12,155,0,420,18,121,12,3,135,0,10,-1,0,0,0,-1--1--1,0-0-0,|14||255-0-0,0,0,0,0,0,0
+Variables shown in red are data inputs.
+10,156,Products Sent to Other Sectors,878,60,50,26,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,157,159,156,4,0,0,22,0,0,0,-1--1--1,,1|(878,103)|
+1,158,159,3,100,0,0,22,0,0,0,-1--1--1,,1|(878,147)|
+11,159,3016,878,125,6,5,33,3,0,0,4,0,0,0,0,0,0,0,0,0
+10,160,reusing in other sectors,920,125,36,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,161,fraction used product reused in other sectors,753,54,46,26,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,162,161,159,1,0,0,0,0,128,0,-1--1--1,,1|(833,104)|
+10,163,fraction used product reused in other sectors,1158,32,58,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,164,163,71,1,0,0,0,0,128,0,-1--1--1,,1|(1106,92)|
+1,165,89,159,1,0,0,0,0,128,0,-1--1--1,,1|(801,153)|
+10,166,initial construction time,362,75,61,10,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,167,turbine assembly time,338,97,56,11,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,168,166,136,1,0,0,0,0,128,0,-1--1--1,,1|(248,93)|
+1,169,167,136,1,0,0,0,0,128,0,-1--1--1,,1|(263,110)|
+10,170,number of turbines,334,120,44,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,171,170,136,0,0,0,0,0,64,0,-1--1--1,,1|(285,134)|
+1,172,73,136,0,0,0,0,0,64,0,-1--1--1,,1|(433,132)|
+10,173,TIME STEP,338,168,38,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,174,173,136,1,0,0,0,0,64,0,-1--1--1,,1|(275,170)|
+10,175,one Year,244,5,23,8,8,3,1,0,0,0,0,0,0,0,0,0,0,0
+1,176,175,136,1,1,0,0,0,128,0,-1--1--1,,1|(237,76)|
+10,177,one Unit,452,59,21,8,8,3,1,0,0,0,0,0,0,0,0,0,0,0
+1,178,177,136,1,1,0,0,0,128,0,-1--1--1,,1|(302,56)|
+10,179,TIME STEP,625,58,38,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,180,179,73,0,0,0,0,0,64,0,-1--1--1,,1|(632,76)|
+1,181,94,136,1,0,0,0,0,128,0,-1--1--1,,1|(372,151)|
+10,182,Fraction Reuse,797,314,43,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,183,182,34,1,0,0,0,0,64,0,-1--1--1,,1|(799,301)|
+10,184,Fraction Reuse,1266,118,43,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,185,184,71,0,0,0,0,0,64,0,-1--1--1,,1|(1202,133)|
+10,186,Fraction Remanufacture,1035,367,40,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,187,Fraction Recycle,1006,491,24,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,188,186,42,0,0,0,0,0,128,0,-1--1--1,,1|(966,375)|
+1,189,187,50,1,0,0,0,0,128,0,-1--1--1,,1|(956,477)|
+10,190,Fraction Recycle,1015,75,24,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,191,190,71,0,0,0,0,0,64,0,-1--1--1,,1|(1059,110)|
+10,192,Fraction Remanufacture,1202,87,40,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,193,192,71,0,0,0,0,0,64,0,-1--1--1,,1|(1164,116)|
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Technical Limitations
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|72,72,90,0
+10,1,aggregating reused products,162,87,48,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,2,aggregating remanufactured products,142,182,65,16,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,3,aggregating recycled materials,146,296,47,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,4,Cumulative Reuse,392,130,39,17,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,5,Cumulative Remanufacture,385,221,43,20,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,6,Cumulative Recycle,389,329,44,17,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+12,7,48,239,131,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,8,10,4,4,0,0,22,0,0,0,-1--1--1,,1|(329,131)|
+1,9,10,7,100,0,0,22,0,0,0,-1--1--1,,1|(271,131)|
+11,10,48,300,131,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,11,tallying reuse,300,145,31,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+12,12,48,212,221,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,13,15,5,4,0,0,22,0,0,0,-1--1--1,,1|(311,221)|
+1,14,15,12,100,0,0,22,0,0,0,-1--1--1,,1|(245,221)|
+11,15,48,276,221,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,16,tallying remanufacture,276,242,34,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+12,17,48,209,331,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,18,20,6,4,0,0,22,0,0,0,-1--1--1,,1|(314,331)|
+1,19,20,17,100,0,0,22,0,0,0,-1--1--1,,1|(245,331)|
+11,20,48,278,331,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,21,tallying recycle,278,345,35,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,22,1,10,1,0,0,0,0,128,0,-1--1--1,,1|(248,98)|
+1,23,2,15,1,0,0,0,0,128,0,-1--1--1,,1|(248,197)|
+1,24,3,20,1,0,0,0,0,128,0,-1--1--1,,1|(253,306)|
+10,25,allowable turbine component reuse,561,131,50,16,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,26,allowable turbine component remanufacture,593,221,67,17,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,27,number of turbines,701,175,28,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,28,remaining reuse,479,77,37,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,29,25,28,0,0,0,0,0,128,0,-1--1--1,,1|(518,103)|
+1,30,27,28,1,0,0,0,0,128,0,-1--1--1,,1|(625,92)|
+1,31,4,28,0,0,0,0,0,128,0,-1--1--1,,1|(437,102)|
+10,32,remaining remanufacture,484,185,34,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,33,5,32,0,0,0,0,0,128,0,-1--1--1,,1|(434,203)|
+1,34,26,32,0,0,0,0,0,128,0,-1--1--1,,1|(536,202)|
+1,35,27,32,1,0,0,0,0,128,0,-1--1--1,,1|(596,173)|
+10,36,Fraction Reuse,564,40,43,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,37,36,28,1,0,0,0,0,64,0,-1--1--1,,1|(508,50)|
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Cost Models
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|72,72,100,0
+12,1,0,307,-267,120,21,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|16||0-0-0,0,0,0,0,0,0
+Processing Costs
+10,2,cost of landfilling,307,-173,39,8,8,3,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,3,cost of transportation,304,-193,51,8,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,4,initial cost of recycling process,272,547,41,14,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,5,initial cost of reuse process,201,20,44,14,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,6,initial cost of remanufacturing process,271,270,59,17,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,7,miles from end use location to recycling facility,301,682,104,10,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,8,miles from end use location to reuse facility,300,115,100,11,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,9,miles from end use location to remanufacturing facility,301,441,125,10,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,10,miles from extraction to production facility,307,-69,98,8,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,11,miles from recycling to distribution facility,301,662,105,8,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,12,miles from remanufacturing facility to product distribution facility,301,422,146,8,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,13,cost of extraction and production,307,-90,79,9,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+12,14,0,740,62,68,27,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|16||0-0-0,0,0,0,0,0,0
+Reused Material Cost Model
+12,15,0,828,389,75,27,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|16||0-0-0,0,0,0,0,0,0
+Recycled Material Cost Model
+12,16,0,855,242,74,29,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|16||0-0-0,0,0,0,0,0,0
+Remanufactured Product Cost Model
+10,17,reused material cost,598,59,36,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,18,recycled material cost,596,423,31,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,19,remanufactured material cost,598,230,37,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,20,3,17,0,0,0,0,0,64,0,-1--1--1,,1|(442,-74)|
+1,21,8,17,0,0,0,0,0,64,0,-1--1--1,,1|(455,85)|
+10,22,miles from reuse facility to product distribution facility,300,137,124,10,8,131,0,2,-1,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+1,23,22,17,0,0,0,0,0,64,0,-1--1--1,,1|(444,99)|
+1,24,3,18,0,0,0,0,0,64,0,-1--1--1,,1|(445,107)|
+1,25,7,18,0,0,0,0,0,64,0,-1--1--1,,1|(441,558)|
+1,26,11,18,0,0,0,0,0,64,0,-1--1--1,,1|(440,548)|
+1,27,3,19,0,0,0,0,0,64,0,-1--1--1,,1|(445,11)|
+1,28,9,19,0,0,0,0,0,64,0,-1--1--1,,1|(441,341)|
+12,29,0,596,-174,65,24,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|16||0-0-0,0,0,0,0,0,0
+Linear Material Cost Model
+10,30,miles from end use location to landfill,307,-46,86,11,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,31,linear material cost,598,-106,44,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,32,2,31,0,0,0,0,0,64,0,-1--1--1,,1|(446,-140)|
+1,33,3,31,0,0,0,0,0,64,0,-1--1--1,,1|(443,-151)|
+1,34,30,31,0,0,0,0,0,64,0,-1--1--1,,1|(454,-77)|
+10,35,miles from remanufacturing facility to landfill,301,383,103,11,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,36,miles from recycling facility to landfill,301,643,84,8,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,37,miles from reuse facility to remanufacturing facility,300,158,116,9,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,38,miles from remanufacturing facility to recycling facility,301,404,124,8,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+1,39,36,31,0,0,0,0,0,64,0,-1--1--1,,1|(446,273)|
+1,40,35,31,0,0,0,0,0,64,0,-1--1--1,,1|(447,141)|
+1,41,12,19,0,0,0,0,0,64,0,-1--1--1,,1|(440,332)|
+1,42,38,18,0,0,0,0,0,64,0,-1--1--1,,1|(489,416)|
+1,43,37,19,0,0,0,0,0,64,0,-1--1--1,,1|(443,192)|
+12,44,0,1064,-158,186,128,3,188,0,0,1,0,0,0,0,0,0,0,0,0
+Material_Costs
+10,45,reused material strategic value,300,179,72,10,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,46,recycled material strategic value,301,702,80,8,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,47,remanufactured material strategic value,301,463,92,10,8,131,0,2,0,0,0,0,0-0-0,0-0-0,|12||255-0-0,0,0,0,0,0,0
+1,48,45,17,0,0,0,0,0,64,0,-1--1--1,,1|(438,123)|
+1,49,46,18,0,0,0,0,0,64,0,-1--1--1,,1|(440,569)|
+1,50,47,19,0,0,0,0,0,64,0,-1--1--1,,1|(441,352)|
+12,51,0,307,-119,83,17,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|14||0-0-0,0,0,0,0,0,0
+Linear Pathway Cost Parameters
+12,52,0,302,506,67,20,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|14||0-0-0,0,0,0,0,0,0
+Recycling Pathway Parameters
+12,53,0,300,218,66,22,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|14||0-0-0,0,0,0,0,0,0
+Remanufacturing Pathway Parameters
+12,54,0,307,4,58,21,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|14||0-0-0,0,0,0,0,0,0
+Reuse Pathway Parameters
+12,55,0,308,-222,47,18,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|14||0-0-0,0,0,0,0,0,0
+General Parameters
+1,56,13,31,0,0,0,0,0,64,0,-1--1--1,,1|(464,-99)|
+1,57,10,31,0,0,0,0,0,64,0,-1--1--1,,1|(458,-89)|
+10,58,component mass,310,-150,40,8,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+1,59,58,31,0,0,0,0,0,128,0,-1--1--1,,1|(446,-129)|
+1,60,58,17,0,0,0,0,0,64,0,-1--1--1,,1|(445,-52)|
+1,61,58,19,0,0,0,0,0,64,0,-1--1--1,,1|(448,32)|
+1,62,58,18,0,0,0,0,0,64,0,-1--1--1,,1|(448,128)|
+10,63,fraction reused product remanufactured,717,204,61,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,64,63,19,0,0,0,0,0,128,0,-1--1--1,,1|(650,218)|
+10,65,fraction remanufactured product to recycle,700,359,60,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,66,65,18,0,0,0,0,0,128,0,-1--1--1,,1|(652,388)|
+10,67,Time,82,-188,20,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,68,67,3,0,0,0,0,0,128,0,-1--1--1,,1|(172,-189)|
+1,69,67,2,0,0,0,0,0,128,0,-1--1--1,,1|(179,-181)|
+1,70,67,13,1,0,0,0,0,128,0,-1--1--1,,1|(149,-115)|
+10,71,Reuse Process Cost,311,54,37,22,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+12,72,48,155,57,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,73,75,71,4,0,0,22,0,0,0,-1--1--1,,1|(248,57)|
+1,74,75,72,100,0,0,22,0,0,0,-1--1--1,,1|(188,57)|
+11,75,48,218,57,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,76,reuse process learning,218,77,33,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,77,5,71,0,0,0,0,0,128,1,-1--1--1,,1|(254,35)|
+1,78,71,75,1,0,0,0,0,128,0,-1--1--1,,1|(232,41)|
+1,79,71,17,0,0,0,0,0,64,0,-1--1--1,,1|(449,56)|
+10,80,Remanufacture Process Cost,374,330,41,24,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+12,81,48,213,328,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,82,84,80,4,0,0,22,0,0,0,-1--1--1,,1|(306,328)|
+1,83,84,81,100,0,0,22,0,0,0,-1--1--1,,1|(246,328)|
+11,84,48,276,328,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,85,remanufacture process learning,276,348,39,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,86,80,84,1,0,0,0,0,128,0,-1--1--1,,1|(306,304)|
+1,87,6,80,1,0,0,0,0,128,1,-1--1--1,,1|(332,284)|
+1,88,80,19,0,0,0,0,0,64,0,-1--1--1,,1|(485,280)|
+10,89,Recycle Process Cost,355,594,38,22,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+12,90,48,178,596,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,91,93,89,4,0,0,22,0,0,0,-1--1--1,,1|(286,596)|
+1,92,93,90,100,0,0,22,0,0,0,-1--1--1,,1|(215,596)|
+11,93,48,251,596,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,94,recycle process learning,251,617,38,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,95,89,93,1,0,0,0,0,128,0,-1--1--1,,1|(279,579)|
+1,96,4,89,1,0,0,0,0,128,1,-1--1--1,,1|(338,560)|
+1,97,89,18,0,0,0,0,0,128,0,-1--1--1,,1|(476,508)|
+10,98,Cumulative Reuse,72,58,31,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,99,Cumulative Remanufacture,86,340,40,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,100,Cumulative Recycle,97,608,31,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,101,98,76,1,0,0,0,0,128,0,-1--1--1,,1|(117,78)|
+1,102,99,85,1,0,0,0,0,128,0,-1--1--1,,1|(187,354)|
+1,103,100,94,1,0,0,0,0,128,0,-1--1--1,,1|(171,626)|
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Product Choice
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|72,72,100,0
+10,1,reused material cost,206,50,40,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,2,remanufactured material cost,452,72,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,3,recycled material cost,830,17,34,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,4,reuse favorability over linear,310,78,41,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,5,remanufacture favorability over linear,565,74,53,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,6,recycle favorability over linear,855,81,45,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,7,1,4,0,0,0,0,0,128,0,-1--1--1,,1|(252,62)|
+1,8,2,5,0,0,0,0,0,128,0,-1--1--1,,1|(497,73)|
+1,9,3,6,0,0,0,0,0,128,0,-1--1--1,,1|(839,44)|
+10,10,linear material cost,550,20,50,19,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,11,10,4,1,0,0,0,0,64,0,-1--1--1,,1|(424,42)|
+1,12,10,5,1,0,0,0,0,128,0,-1--1--1,,1|(560,66)|
+1,13,10,6,1,0,0,0,0,128,0,-1--1--1,,1|(764,53)|
+10,14,increase reuse,107,179,34,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,15,4,14,0,0,0,0,0,64,0,-1--1--1,,1|(207,129)|
+10,16,fraction used product reused initial value,299,239,51,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,17,Fraction Reuse,249,282,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+12,18,48,104,287,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,19,21,17,4,0,0,22,0,0,0,-1--1--1,,1|(194,287)|
+1,20,21,18,100,0,0,22,0,0,0,-1--1--1,,1|(136,287)|
+11,21,48,165,287,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,22,changing fraction reuse,165,308,41,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,23,16,17,1,0,0,0,0,128,1,-1--1--1,,1|(252,284)|
+1,24,17,22,1,0,0,0,0,64,0,-1--1--1,,1|(207,265)|
+10,25,Fraction Remanufacture,506,290,39,18,3,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,26,Fraction Recycle,905,286,30,15,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,27,fraction used product remanufactured initial value,650,287,64,14,8,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,28,27,25,0,0,0,0,0,64,1,-1--1--1,,1|(570,288)|
+12,29,48,340,290,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,30,32,25,4,0,0,22,0,0,0,-1--1--1,,1|(436,290)|
+1,31,32,29,100,0,0,22,0,0,0,-1--1--1,,1|(371,290)|
+11,32,48,400,290,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,33,increasing fraction remanufacture,400,310,43,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+12,34,48,766,291,8,6,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,35,37,26,4,0,0,22,0,0,0,-1--1--1,,1|(852,291)|
+1,36,37,34,100,0,0,22,0,0,0,-1--1--1,,1|(797,291)|
+11,37,48,824,291,5,6,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,38,increasing fraction recycle,824,311,43,14,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,39,fraction used product recycled initial value,1030,275,51,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,40,39,26,0,0,0,0,0,128,1,-1--1--1,,1|(962,280)|
+10,41,increase remanufacture,436,212,60,9,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,42,increase recycle,749,221,38,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,43,5,41,1,0,0,0,0,128,0,-1--1--1,,1|(515,176)|
+1,44,6,42,1,0,0,0,0,128,0,-1--1--1,,1|(802,108)|
+1,45,41,33,0,0,0,0,0,128,0,-1--1--1,,1|(420,253)|
+1,46,42,38,0,0,0,0,0,128,0,-1--1--1,,1|(780,259)|
+1,47,25,33,1,0,0,0,0,64,0,-1--1--1,,1|(464,323)|
+1,48,26,38,1,0,0,0,0,128,0,-1--1--1,,1|(860,275)|
+12,49,6622802,1382,589,191,142,3,188,0,0,1,0,0,0,0,0,0,0,0,0
+Circularity_Fractions
+10,50,rate of increasing reuse fraction,195,220,41,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,51,14,21,1,0,0,0,0,128,0,-1--1--1,,1|(120,218)|
+10,52,check fraction sum,428,434,44,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,53,25,52,1,0,0,0,0,128,0,-1--1--1,,1|(482,362)|
+1,54,26,52,1,0,0,0,0,128,0,-1--1--1,,1|(590,439)|
+1,55,52,22,1,0,0,0,0,64,0,-1--1--1,,1|(208,415)|
+1,56,52,33,1,0,0,0,0,64,0,-1--1--1,,1|(395,377)|
+1,57,52,38,1,0,0,0,0,64,0,-1--1--1,,1|(619,398)|
+12,58,4064830,1260,92,113,113,3,44,0,0,1,0,0,0,0,0,0,0,0,0
+Tower_Reuse_Over_Time
+12,59,2429046,1495,89,113,113,3,44,0,0,1,0,0,0,0,0,0,0,0,0
+Tower_Remanufacturing_Over_Time
+12,60,5180440,1259,328,113,113,3,44,0,0,1,0,0,0,0,0,0,0,0,0
+Tower_Recycling_Over_Time
+12,61,4459832,1496,327,113,113,3,44,0,0,1,0,0,0,0,0,0,0,0,0
+Tower_Landfilling_Over_Time
+10,62,rate of increasing remanufacture fraction,584,227,45,20,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,63,rate of increasing recycle fraction,895,204,41,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,64,62,33,1,0,0,0,0,128,0,-1--1--1,,1|(487,247)|
+10,65,lowest cost pathway,683,128,27,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,66,6,65,1,0,0,0,0,64,0,-1--1--1,,1|(759,91)|
+1,67,5,65,0,0,0,0,0,64,0,-1--1--1,,1|(621,99)|
+1,68,4,65,1,0,0,0,0,64,0,-1--1--1,,1|(496,113)|
+10,69,reuse favorability,282,181,40,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,70,65,69,1,0,0,0,0,64,0,-1--1--1,,1|(497,166)|
+1,71,4,69,0,0,0,0,0,64,0,-1--1--1,,1|(296,127)|
+1,72,69,50,1,0,0,0,0,128,0,-1--1--1,,1|(209,192)|
+1,73,50,21,1,0,0,0,0,128,0,-1--1--1,,1|(175,258)|
+10,74,remanufacture favorability,631,174,34,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,75,65,74,1,0,0,0,0,128,0,-1--1--1,,1|(674,166)|
+1,76,5,74,0,0,0,0,0,128,0,-1--1--1,,1|(594,119)|
+1,77,74,62,1,0,0,0,0,128,0,-1--1--1,,1|(644,205)|
+10,78,recycle favorability,942,140,44,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,79,6,78,0,0,0,0,0,128,0,-1--1--1,,1|(898,110)|
+1,80,78,63,0,0,0,0,0,128,0,-1--1--1,,1|(923,164)|
+1,81,63,37,0,0,0,0,0,128,0,-1--1--1,,1|(858,248)|
+1,82,65,78,1,0,0,0,0,128,0,-1--1--1,,1|(797,147)|
+1,83,17,52,0,0,0,0,0,64,0,-1--1--1,,1|(338,357)|
+10,84,remaining reuse,245,346,44,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,85,84,22,0,0,0,0,0,64,0,-1--1--1,,1|(215,332)|
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Metrics
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|72,72,90,0
+12,1,0,371,62,356,17,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|16||0-0-0,0,0,0,0,0,0
+Circularity Metrics
+10,2,landfilling,268,199,29,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,3,landfilling failed remanufactured,268,234,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,4,landfilling nonrecyclables,263,276,39,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,5,relative landfill,398,205,41,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,6,2,5,0,0,0,0,0,128,0,-1--1--1,,1|(322,200)|
+1,7,3,5,1,0,0,0,0,128,0,-1--1--1,,1|(329,226)|
+1,8,4,5,1,0,0,0,0,128,0,-1--1--1,,1|(339,247)|
+12,9,985928,591,205,137,107,3,188,0,0,2,0,0,0,0,0,0,0,0,0
+relative landfill,Graph
+10,10,reaching end of life,272,166,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,11,10,5,1,0,0,0,0,128,0,-1--1--1,,1|(365,182)|
+12,12,0,114,209,86,36,8,135,0,2,-1,0,0,0,-1--1--1,0-0-0,|12||0-0-255,0,0,0,0,0,0
+This metric indicates a linear system at zero, and increasing circularity as the metric increases to 1 (fully circular, no landfilling).
+10,13,Total Extraction,269,421,44,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,14,Landfill and Incineration,275,485,32,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,15,cumulative landfill fraction,404,450,42,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,16,13,15,0,0,0,0,0,128,0,-1--1--1,,1|(329,434)|
+1,17,14,15,0,0,0,0,0,128,0,-1--1--1,,1|(329,470)|
+12,18,1248456,590,445,137,107,3,188,0,0,2,0,0,0,0,0,0,0,0,0
+cumulative landfill fraction,Graph
+12,19,0,1112,64,271,17,3,135,0,8,-1,0,0,0,-1--1--1,0-0-0,|16||0-0-0,0,0,0,0,0,0
+Environmental Metrics
+10,20,aggregating reused products,875,383,48,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,21,aggregating remanufactured products,879,431,37,21,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,22,aggregating recycled materials,881,506,50,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,23,environmental impact of reusing process,892,345,61,14,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,24,environmental impact of remanufacturing process,996,398,58,14,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,25,environmental impact of recycling process,995,477,56,14,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,26,extracting,861,569,30,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,27,environmental impact of extracting process,995,556,56,14,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,28,environmental impact per kgyear,1196,437,50,14,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,29,20,28,1,0,0,0,0,128,0,-1--1--1,,1|(1079,373)|
+1,30,23,28,1,0,0,0,0,128,0,-1--1--1,,1|(1121,374)|
+1,31,24,28,0,0,0,0,0,128,0,-1--1--1,,1|(1094,416)|
+1,32,21,28,0,0,0,0,0,128,0,-1--1--1,,1|(1025,433)|
+1,33,25,28,1,0,0,0,0,128,0,-1--1--1,,1|(1145,452)|
+1,34,22,28,1,0,0,0,0,128,0,-1--1--1,,1|(1025,514)|
+1,35,27,28,1,0,0,0,0,128,0,-1--1--1,,1|(1106,526)|
+1,36,26,28,1,0,0,0,0,128,0,-1--1--1,,1|(1096,581)|
+10,37,Products in Use,1334,437,39,21,3,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,38,37,28,0,0,0,0,0,128,0,-1--1--1,,1|(1277,437)|
+10,39,environmental impact of transportation,1337,776,50,14,8,3,0,2,0,0,0,0,-1--1--1,0-0-0,|12||255-0-0,0,0,0,0,0,0
+10,40,environmental impact from reuse transportation,1102,662,75,19,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+10,41,aggregating reused products,866,676,48,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,42,41,40,0,0,0,0,0,64,0,-1--1--1,,1|(965,670)|
+1,43,39,40,1,0,0,0,0,64,0,-1--1--1,,1|(1261,713)|
+10,44,miles from end use location to reuse facility,877,644,59,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,45,44,40,0,0,0,0,0,64,0,-1--1--1,,1|(976,652)|
+10,46,miles from reuse facility to product distribution facility,884,709,67,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,47,46,40,0,0,0,0,0,64,0,-1--1--1,,1|(983,687)|
+10,48,reusing,842,619,24,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,49,48,40,0,0,0,0,0,64,0,-1--1--1,,1|(941,635)|
+10,50,environmental impact from remanufacturing transportation,1116,788,84,22,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,51,39,50,0,0,0,0,0,128,0,-1--1--1,,1|(1248,780)|
+10,52,aggregating remanufactured products,762,908,66,20,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,53,52,50,1,0,0,0,0,64,0,-1--1--1,,1|(967,888)|
+10,54,landfilling failed remanufactured,859,851,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,55,54,50,0,0,0,0,0,64,0,-1--1--1,,1|(960,825)|
+10,56,miles from end use location to remanufacturing facility,896,764,77,18,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,57,56,50,1,0,0,0,0,64,0,-1--1--1,,1|(1004,761)|
+10,58,miles from remanufacturing facility to landfill,890,879,72,16,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,59,58,50,0,0,0,0,0,64,0,-1--1--1,,1|(990,838)|
+10,60,miles from remanufacturing facility to product distribution facility,785,939,89,19,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,61,60,50,1,0,0,0,0,64,0,-1--1--1,,1|(1014,891)|
+10,62,miles from reuse facility to remanufacturing facility,760,819,64,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,63,62,50,0,0,0,0,0,64,0,-1--1--1,,1|(923,804)|
+10,64,remanufacturing,863,738,44,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,65,64,50,1,0,0,0,0,64,0,-1--1--1,,1|(980,733)|
+10,66,remanufacturing nonreusables,737,791,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,67,66,50,0,0,0,0,0,64,0,-1--1--1,,1|(900,789)|
+10,68,environmental impact from recycling transportation,1134,974,71,24,8,131,0,0,0,0,0,0,0,0,0,0,0,0
+1,69,39,68,1,0,0,0,0,128,0,-1--1--1,,1|(1298,881)|
+10,70,aggregating recycled materials,847,1131,50,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,71,70,68,1,0,0,0,0,64,0,-1--1--1,,1|(1016,1115)|
+10,72,landfilling nonrecyclables,914,1082,39,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,73,72,68,1,0,0,0,0,64,0,-1--1--1,,1|(1014,1052)|
+10,74,miles from end use location to recycling facility,936,994,68,17,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,75,74,68,0,0,0,0,0,64,0,-1--1--1,,1|(1028,984)|
+10,76,miles from recycling to distribution facility,878,1157,80,14,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,77,76,68,1,0,0,0,0,64,0,-1--1--1,,1|(1072,1118)|
+10,78,miles from recycling facility to landfill,929,1110,51,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,79,78,68,1,0,0,0,0,64,0,-1--1--1,,1|(1030,1074)|
+10,80,miles from remanufacturing facility to recycling facility,860,1049,72,17,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,81,80,68,1,0,0,0,0,64,0,-1--1--1,,1|(994,1025)|
+10,82,recycling,899,971,29,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,83,82,68,0,0,0,0,0,64,0,-1--1--1,,1|(989,971)|
+10,84,recycling failed remanufactured,827,1019,41,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,85,84,68,1,0,0,0,0,64,0,-1--1--1,,1|(965,1011)|
+10,86,environmental impact from landfill transportation,1318,1032,62,14,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,87,39,86,1,0,0,0,0,128,0,-1--1--1,,1|(1388,865)|
+10,88,landfilling,1310,1089,29,8,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,89,88,86,0,0,0,0,0,64,0,-1--1--1,,1|(1313,1068)|
+10,90,miles from end use location to landfill,1205,1067,48,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,91,90,86,0,0,0,0,0,64,0,-1--1--1,,1|(1256,1050)|
+10,92,environmental impact from landfill transportation,1355,503,65,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,93,environmental impact from recycling transportation,1357,539,69,14,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,94,environmental impact from remanufacturing transportation,1362,575,81,16,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+10,95,environmental impact from reuse transportation,1361,617,63,14,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128,0,0,0,0,0,0
+1,96,92,28,1,0,0,0,0,128,0,-1--1--1,,1|(1252,455)|
+1,97,93,28,1,0,0,0,0,128,0,-1--1--1,,1|(1255,501)|
+1,98,94,28,1,0,0,0,0,128,0,-1--1--1,,1|(1258,532)|
+1,99,95,28,1,0,0,0,0,128,0,-1--1--1,,1|(1235,560)|
+12,100,1182758,1242,230,113,113,3,44,0,0,1,0,0,0,0,0,0,0,0,0
+Environmental_Impact_of_
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*Output
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|72,72,90,0
+12,1,10946862,237,212,175,161,3,188,0,0,1,0,0,0,0,0,0,0,0,0
+extracting_by_component
+12,2,2165832,239,552,175,161,3,188,0,0,1,0,0,0,0,0,0,0,0,0
+demand_by_component
+12,3,10160280,746,334,290,256,3,188,0,0,1,0,0,0,0,0,0,0,0,0
+blade_tracing
+///---\\\
+:GRAPH Material_Costs
+:TITLE Material Costs
+:X-AXIS Time
+:X-LABEL Time
+:SCALE
+:VAR recycled material cost[tower]
+:Y-MIN 0
+:Y-MAX 150
+:LINE-WIDTH 2
+:VAR remanufactured material cost[tower]
+:Y-MIN 0
+:Y-MAX 150
+:LINE-WIDTH 2
+:VAR reused material cost[tower]
+:Y-MIN 0
+:Y-MAX 150
+:LINE-WIDTH 2
+
+:GRAPH Tower_Reuse_Over_Time
+:TITLE Tower Reuse Over Time
+:X-AXIS time
+:X-LABEL Year
+:NO-LEGEND 1
+:SCALE
+:VAR reusing[tower]
+:Y-MIN 0
+:Y-MAX 30
+:LINE-WIDTH 2
+
+:GRAPH Pathway_Favorability
+:TITLE Pathway Favorability
+:X-AXIS time
+:SCALE
+:VAR reuse favorability[tower]
+:LINE-WIDTH 2
+:VAR remanufacture favorability[tower]
+:LINE-WIDTH 2
+:VAR recycle favorability[tower]
+:LINE-WIDTH 2
+
+:GRAPH Circularity_Fractions
+:TITLE Circularity Fractions
+:X-AXIS Time
+:X-MIN 0
+:X-MAX 100
+:SCALE
+:VAR Fraction Reuse[tower]
+:LINE-WIDTH 2
+:VAR Fraction Remanufacture[tower]
+:LINE-WIDTH 2
+:VAR Fraction Recycle[tower]
+:LINE-WIDTH 2
+
+:GRAPH End-of-Life_Flows
+:TITLE End-of-Life Flows
+:X-AXIS Time
+:X-LABEL Years
+:SCALE
+:VAR reusing[tower]
+:LINE-WIDTH 2
+:VAR remanufacturing[tower]
+:LINE-WIDTH 2
+:VAR recycling[tower]
+:LINE-WIDTH 2
+:VAR disposing[tower]
+:LINE-WIDTH 2
+
+:GRAPH Tower_Remanufacturing_Over_Time
+:TITLE Tower Remanufacturing Over Time
+:X-AXIS time
+:NO-LEGEND 1
+:SCALE
+:VAR remanufacturing[tower]
+:Y-MIN 0
+:Y-MAX 30
+:LINE-WIDTH 2
+
+:GRAPH Tower_Recycling_Over_Time
+:TITLE Tower Recycling Over Time
+:X-AXIS Time
+:NO-LEGEND 1
+:SCALE
+:VAR recycling[tower]
+:Y-MIN 0
+:Y-MAX 30
+:LINE-WIDTH 2
+
+:GRAPH Tower_Landfilling_Over_Time
+:TITLE Tower Landfilling Over Time
+:X-AXIS Time
+:SCALE
+:VAR landfilling[tower]
+:Y-MIN 0
+:Y-MAX 30
+:LINE-WIDTH 2
+
+:GRAPH Environmental_Impact_of_
+:TITLE Environmental Impact of Tower Circularity
+:X-AXIS Time
+:SCALE
+:VAR environmental impact per kgyear[tower]
+:LINE-WIDTH 2
+:L<%^E!@
+1:results-3-30.vdfx
+9:results-3-30
+23:0
+15:0,0,0,0,0,0
+19:90,0
+27:0,
+34:0,
+42:1
+72:0
+73:0
+4:Time
+5:remaining reuse
+35:Date
+36:YYYY-MM-DD
+37:2020
+38:1
+39:1
+40:0
+41:0
+76:0
+77:0
+78:0
+79:0
+80:0
+81:0
+24:0
+25:100
+26:100
+75:
+43:
