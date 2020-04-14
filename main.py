@@ -3,7 +3,7 @@ from uuid import uuid4
 from dataclasses import dataclass, field
 import pysd
 import pandas as pd
-from random import random
+from random import random, randint
 
 
 pd.set_option('display.max_rows', 1000)
@@ -23,15 +23,10 @@ class FunctionalUnit:
 class App:
     def __init__(self, model_fn, min_eol=1, max_eol=10, number_of_inventories=10):
         self.model = pysd.load(model_fn)
-
         self.min_eol = min_eol
         self.max_eol = max_eol
         self.number_of_inventories = number_of_inventories
-
-        # Make a graph to hold the model
         self.graph = nx.DiGraph()
-
-        # Most of these are set in run_model_and_create_functions() below
         self.max_iterations = None
         self.timesteps = None
         self.normalized_recycle_favorability_over_linear = None
@@ -69,7 +64,9 @@ class App:
             self.graph.add_edge(inventory_id, "landfill", destination="landfill")
 
         for node_id, inventory in self.graph.nodes(data="inventory"):
-            pass
+            lifespan = randint(self.min_eol, self.max_eol)
+            unit = FunctionalUnit(name="Turbine", lifespan=lifespan)
+            inventory.append(unit)
 
     def inventory_functional_units(self):
         rows = []
@@ -87,7 +84,7 @@ class App:
     def run(self):
         self.run_sd_model()
         self.create_and_populate_inventories()
-        self.inventory_functional_units()
+        print(self.inventory_functional_units())
 
 
 if __name__ == '__main__':
