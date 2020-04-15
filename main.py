@@ -32,7 +32,7 @@ class FunctionalUnit:
 
     def recycle_yes_or_no(self, env_ts):
         threshold = self.normalized_recycle_favorability_over_linear.iloc[env_ts]
-        return random() < threshold  # Higher favorability less likely to recycle
+        return random() < threshold  # Higher favorability means less likely to recycle
 
 
 class App:
@@ -54,6 +54,23 @@ class App:
             'recycle_favorability_over_linear'
         ])
         self.timesteps = result.index
+
+
+        # This makes it possible for a pathway to be implemented, but what determines
+        # which pathway will be implemented is
+        #
+        # Look at 3 circularity pathways. Pick the lowest value pathway. And, in the unit
+        # track which one it has been on before. You can't reuse twice in a row. You
+        # can't remanufacture twice in a row. Never two non rcucling payhways next to
+        # each other.
+        #
+        # If non linearity is possible, one of the following parameters is non-zero
+        #
+        # 1. Rate of increasing resuse fraction
+        # 2. Rate of increasing recycling fraction
+        # 3. Rate of increasing remanufacture fraction
+        #
+        # If non are non-zero choose the landfill.
 
         recycle_favorability_over_linear = result['recycle_favorability_over_linear']
 
