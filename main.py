@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 import pysd
 import pandas as pd
 from random import random, randint
+import simpy
 
 
 pd.set_option('display.max_rows', 1000)
@@ -17,11 +18,16 @@ def unique_identifer_str():
 class FunctionalUnit:
     name: str
     lifespan: int
+    node_id: str
     functional_unit_id: str = field(default_factory=unique_identifer_str)
+
+    def eol_me(self, env):
+        yield env.timeout(self.lifespan)
+        print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now}")
 
 
 class App:
-    def __init__(self, model_fn, min_eol=1, max_eol=10, min_inventory=1, max_inventory=10, number_of_inventories=10):
+    def __init__(self, model_fn, min_eol=1, max_eol=100, min_inventory=1, max_inventory=10, number_of_inventories=10):
         self.model = pysd.load(model_fn)
         self.min_eol = min_eol
         self.max_eol = max_eol
@@ -32,6 +38,7 @@ class App:
         self.max_iterations = None
         self.timesteps = None
         self.normalized_recycle_favorability_over_linear = None
+        self.env = simpy.Environment()
 
     def run_sd_model(self):
         result = self.model.run(return_columns=[
@@ -70,7 +77,8 @@ class App:
                 unit_count = randint(self.min_inventory, self.max_inventory)
                 for _ in range(unit_count):
                     lifespan = randint(self.min_eol, self.max_eol)
-                    unit = FunctionalUnit(name="Turbine", lifespan=lifespan)
+                    unit = FunctionalUnit(name="Turbine", lifespan=lifespan, node_id=node_id)
+                    self.env.process(unit.eol_me(self.env))
                     inventory.append(unit)
 
     def inventory_functional_units(self):
@@ -89,7 +97,9 @@ class App:
     def run(self):
         self.run_sd_model()
         self.create_and_populate_inventories()
+        self.env.run(until=100)
         print(self.inventory_functional_units())
+        # Now run the environment
 
 
 if __name__ == '__main__':
