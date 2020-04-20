@@ -35,7 +35,7 @@ class FunctionalUnit:
         return random() < threshold  # Higher favorability means less likely to recycle
 
 
-class App:
+class Model:
     def __init__(self, model_fn, min_eol=1, max_eol=400, min_inventory=1, max_inventory=10, number_of_inventories=10):
         self.model = pysd.load(model_fn)
         self.min_eol = min_eol
@@ -82,8 +82,20 @@ class App:
             pd.Series(normalized_recycle_favorability_over_linear, index=self.timesteps, )
 
     def create_and_populate_inventories(self):
+        """
+        This creates functional units and populates inventories to their
+        initial states.
+
+        For this initial setup, there is a wind plant, recycler, remanufacturer,
+        landfill, and wind plant. The "reuse" pathway is an edge that points
+        back to the wind plant.
+
+        The functional units are turbines.
+        """
         self.graph.add_node("recycler", inventory=[])
         self.graph.add_node("landfill", inventory=[])
+        self.graph.add_node("remanufacturer", inventory=[])
+        # The wind plant is added below
 
         for i in range(self.number_of_inventories):
             inventory_id = f"inventory {i}"
@@ -126,5 +138,5 @@ class App:
 
 
 if __name__ == '__main__':
-    app = App("tinysd/tiny-sd_pysd_v30mar2020.py")
+    app = Model("tinysd/tiny-sd_pysd_v30mar2020.py")
     app.run()
