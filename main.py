@@ -27,9 +27,6 @@ class FunctionalUnit:
     """
     The instance attributes are:
 
-    normalized_recycle_favorability_over_linear: The time series of the
-        favorability of recycling versus landfilling.
-
     name: The name of this functional unit. This isn't a unique ID. It is
         the type of functional unit, such a s "turbine"
 
@@ -40,9 +37,21 @@ class FunctionalUnit:
 
     functional_unit_id: The unique ID for this functional unit. This unique
         ID does not rely on the name.
-    """
 
+    The following three instance attributes are used together to determine if
+    a unit should be landfilled, recycled, reused or remanufactured at each
+    time step.
+
+    rate_of_increasing_reuse_fraction
+    rate_of_increasing_recycle_fraction
+    rate_of_increasing_remanufacture_fraction
+    """
     normalized_recycle_favorability_over_linear: pd.Series
+
+    rate_of_increasing_reuse_fraction: pd.Series
+    rate_of_increasing_recycle_fraction: pd.Series
+    rate_of_increasing_remanufacture_fraction: pd.Series
+
     name: str
     lifespan: int
     node_id: str
@@ -104,8 +113,12 @@ class Model:
 
         # The following instance attributes hold data from the SD model when it
         # is created.
+
         self.model = pysd.load(model_fn)
         self.normalized_recycle_favorability_over_linear = None
+        self.rate_of_increasing_reuse_fraction = None
+        self.rate_of_increasing_recycle_fraction = None
+        self.rate_of_increasing_remamnufacture_fraction = None
         self.timesteps = None
 
         # The simpy environment
@@ -137,6 +150,10 @@ class Model:
         # 3. Rate of increasing remanufacture fraction
         #
         # If non are non-zero choose the landfill.
+
+        self.rate_of_increasing_recycle_fraction = result['rate_of_increasing_recycle_fraction']
+        self.rate_of_increasing_remamnufacture_fraction = result['rate_of_increasing_recycle_fraction']
+        self.rate_of_increasing_reuse_fraction = result['rate_of_increasing_reuse_fraction']
 
         recycle_favorability_over_linear = result['recycle_favorability_over_linear']
 
@@ -184,8 +201,14 @@ class Model:
                     unit = FunctionalUnit(name="Turbine",
                                           lifespan=lifespan,
                                           node_id=node_id,
-                                          normalized_recycle_favorability_over_linear= \
-                                            self.normalized_recycle_favorability_over_linear)
+                                          normalized_recycle_favorability_over_linear=\
+                                            self.normalized_recycle_favorability_over_linear,
+                                          rate_of_increasing_recycle_fraction=\
+                                            self.rate_of_increasing_recycle_fraction,
+                                          rate_of_increasing_remanufacture_fraction=\
+                                            self.rate_of_increasing_remamnufacture_fraction,
+                                          rate_of_increasing_reuse_fraction=\
+                                            self.rate_of_increasing_reuse_fraction)
                     self.env.process(unit.eol_me(self.env))
                     inventory.append(unit)
 
