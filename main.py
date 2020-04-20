@@ -56,12 +56,9 @@ class App:
         self.timesteps = result.index
 
 
-        # This makes it possible for a pathway to be implemented, but what determines
-        # which pathway will be implemented is
-        #
         # Look at 3 circularity pathways. Pick the lowest value pathway. And, in the unit
         # track which one it has been on before. You can't reuse twice in a row. You
-        # can't remanufacture twice in a row. Never two non rcucling payhways next to
+        # can't remanufacture twice in a row. Never two non recycling pathways next to
         # each other.
         #
         # If non linearity is possible, one of the following parameters is non-zero
