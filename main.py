@@ -81,6 +81,22 @@ class Model:
         self.normalized_recycle_favorability_over_linear = \
             pd.Series(normalized_recycle_favorability_over_linear, index=self.timesteps, )
 
+    def create_graph(self):
+        """
+        This creates a graph of inventories waiting to be populated by the
+        create_and_populate_inventories method.
+        """
+        self.graph.add_node("recycler", inventory=[])
+        self.graph.add_node("landfill", inventory=[])
+        self.graph.add_node("remanufacturer", inventory=[])
+        # The wind plants are added below as separate inventories
+
+        for i in range(self.number_of_inventories):
+            inventory_id = f"inventory {i}"
+            self.graph.add_node(inventory_id, inventory=[])
+            self.graph.add_edge(inventory_id, "recycler", destination="recycler")
+            self.graph.add_edge(inventory_id, "landfill", destination="landfill")
+
     def create_and_populate_inventories(self):
         """
         This creates functional units and populates inventories to their
@@ -92,17 +108,6 @@ class Model:
 
         The functional units are turbines.
         """
-        self.graph.add_node("recycler", inventory=[])
-        self.graph.add_node("landfill", inventory=[])
-        self.graph.add_node("remanufacturer", inventory=[])
-        # The wind plant is added below
-
-        for i in range(self.number_of_inventories):
-            inventory_id = f"inventory {i}"
-            self.graph.add_node(inventory_id, inventory=[])
-            self.graph.add_edge(inventory_id, "recycler", destination="recycler")
-            self.graph.add_edge(inventory_id, "landfill", destination="landfill")
-
         for node_id, inventory in self.graph.nodes(data="inventory"):
             if node_id not in ["landfill", "recycler"]:
                 unit_count = randint(self.min_inventory, self.max_inventory)
@@ -117,6 +122,10 @@ class Model:
                     inventory.append(unit)
 
     def inventory_functional_units(self):
+        """
+        This creates a dataframe that is an inventory of the functional units
+        and the inventories they are currently in.
+        """
         rows = []
         for node_id, node in self.graph.nodes.data():
             for unit in node["inventory"]:
@@ -131,6 +140,7 @@ class Model:
 
     def run(self):
         self.run_sd_model()
+        self.create_graph()
         self.create_and_populate_inventories()
         self.env.run(until=400)
         print(self.inventory_functional_units())
