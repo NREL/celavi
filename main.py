@@ -117,7 +117,10 @@ class Model:
         the simulation.
         """
         result = self.model.run(return_columns=[
-            'recycle_favorability_over_linear'
+            'recycle_favorability_over_linear',
+            'rate_of_increasing_reuse_fraction',
+            'rate_of_increasing_recycle_fraction',
+            'rate_of_increasing_reuse_fraction'
         ])
         self.timesteps = result.index
 
