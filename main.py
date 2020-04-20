@@ -1,9 +1,9 @@
-import networkx as nx
 from uuid import uuid4
+from random import random, randint
+import networkx as nx
 from dataclasses import dataclass, field
 import pysd
 import pandas as pd
-from random import random, randint
 import simpy
 
 
@@ -75,7 +75,7 @@ class FunctionalUnit:
 
 
 class Model:
-    def __init__(self, model_fn, min_eol=1, max_eol=400, min_inventory=1, max_inventory=10, number_of_inventories=10):
+    def __init__(self, model_fn, min_eol=1, max_eol=400, min_inventory=1, max_inventory=10):
         """
         The parameters set instance attributes of the same name.
 
@@ -95,17 +95,11 @@ class Model:
 
         max_inventory:
             The maximum number of turbines in an inventory.
-
-        number_of_inventories:
-            The number of inventories to have in the graph.
-            The number of recyclers, remanufacturers, etc. remain
-            constant.
         """
         self.min_eol = min_eol
         self.max_eol = max_eol
         self.min_inventory = min_inventory
         self.max_inventory = max_inventory
-        self.number_of_inventories = number_of_inventories
         self.graph = nx.DiGraph()
 
         # The following instance attributes hold data from the SD model when it
@@ -161,14 +155,12 @@ class Model:
         self.graph.add_node("recycler", inventory=[])
         self.graph.add_node("landfill", inventory=[])
         self.graph.add_node("remanufacturer", inventory=[])
-        # The wind plants are added below as separate inventories
-
-        for i in range(self.number_of_inventories):
-            inventory_id = f"inventory {i}"
-            self.graph.add_node(inventory_id, inventory=[])
-            self.graph.add_edge(inventory_id, "recycler", destination="recycler")
-            self.graph.add_edge(inventory_id, "landfill", destination="landfill")
-            self.graph.add_edge(inventory_id, "remanufacturer", destination="remanufacturer")
+        self.graph.add_node("wind plant", inventory=[])
+        self.graph.add_edge("wind plant", "recycler", event="recycle")
+        self.graph.add_edge("wind plant", "landfill", event="landfill")
+        self.graph.add_edge("wind plant", "remanufacturer", event="remanufacture")
+        self.graph.add_edge("recycler", "remanufacturer", event="remanufacture")
+        self.graph.add_edge("remanufacturer", "wind plant", event="deploy")
 
     def create_and_populate_inventories(self):
         """
@@ -182,7 +174,7 @@ class Model:
         The functional units are turbines.
         """
         for node_id, inventory in self.graph.nodes(data="inventory"):
-            if node_id not in ["landfill", "recycler"]:
+            if node_id not in ["landfill", "recycler", "remanufacturer"]:
                 unit_count = randint(self.min_inventory, self.max_inventory)
                 for _ in range(unit_count):
                     lifespan = randint(self.min_eol, self.max_eol)
