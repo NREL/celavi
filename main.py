@@ -11,11 +11,37 @@ pd.set_option('display.max_rows', 1000)
 
 
 def unique_identifer_str():
+    """
+    This returns a UUID that can serve as a unique identifier for anything
+
+    Returns
+    -------
+    str
+        A UUID to be used as a unique identifer.
+    """
     return str(uuid4())
 
 
 @dataclass
 class FunctionalUnit:
+    """
+    The instance attributes are:
+
+    normalized_recycle_favorability_over_linear: The time series of the
+        favorability of recycling versus landfilling.
+
+    name: The name of this functional unit. This isn't a unique ID. It is
+        the type of functional unit, such a s "turbine"
+
+    lifespan: The current lifespan of this functional unit.
+
+    node_id: The node_id of the current inventory that holds this functional
+        unit.
+
+    functional_unit_id: The unique ID for this functional unit. This unique
+        ID does not rely on the name.
+    """
+
     normalized_recycle_favorability_over_linear: pd.Series
     name: str
     lifespan: int
@@ -23,6 +49,15 @@ class FunctionalUnit:
     functional_unit_id: str = field(default_factory=unique_identifer_str)
 
     def eol_me(self, env):
+        """
+        This method is called by the SimPy environment when the lifespan
+        times out.
+
+        Parameters
+        ----------
+        env
+            The SimPy environment.
+        """
         yield env.timeout(self.lifespan)
         will_recycle = self.recycle_yes_or_no(env.now)
         if will_recycle:
@@ -31,25 +66,62 @@ class FunctionalUnit:
             print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} and is going to landfill")
 
     def recycle_yes_or_no(self, env_ts):
+        """
+        This method makes the decision about whether to recycle or landfill the
+        unit at its end of life.
+        """
         threshold = self.normalized_recycle_favorability_over_linear.iloc[env_ts]
         return random() < threshold  # Higher favorability means less likely to recycle
 
 
 class Model:
     def __init__(self, model_fn, min_eol=1, max_eol=400, min_inventory=1, max_inventory=10, number_of_inventories=10):
-        self.model = pysd.load(model_fn)
+        """
+        The parameters set instance attributes of the same name.
+
+        Parameters
+        ----------
+        model_fn:
+            The function that is the SD model.
+
+        min_eol:
+            The minimum lifespan of a turbine in timesteps.
+
+        max_eol:
+            The maximum lifespan of a turbine in timesteps.
+
+        min_inventory:
+            The minimum number of turbines in an inventory.
+
+        max_inventory:
+            The maximum number of turbines in an inventory.
+
+        number_of_inventories:
+            The number of inventories to have in the graph.
+            The number of recyclers, remanufacturers, etc. remain
+            constant.
+        """
         self.min_eol = min_eol
         self.max_eol = max_eol
         self.min_inventory = min_inventory
         self.max_inventory = max_inventory
         self.number_of_inventories = number_of_inventories
         self.graph = nx.DiGraph()
-        self.max_iterations = None
-        self.timesteps = None
+
+        # The following instance attributes hold data from the SD model when it
+        # is created.
+        self.model = pysd.load(model_fn)
         self.normalized_recycle_favorability_over_linear = None
+        self.timesteps = None
+
+        # The simpy environment
         self.env = simpy.Environment()
 
     def run_sd_model(self):
+        """
+        This method runs the SD model to get the outputs we need to run
+        the simulation.
+        """
         result = self.model.run(return_columns=[
             'recycle_favorability_over_linear'
         ])
@@ -96,6 +168,7 @@ class Model:
             self.graph.add_node(inventory_id, inventory=[])
             self.graph.add_edge(inventory_id, "recycler", destination="recycler")
             self.graph.add_edge(inventory_id, "landfill", destination="landfill")
+            self.graph.add_edge(inventory_id, "remanufacturer", destination="remanufacturer")
 
     def create_and_populate_inventories(self):
         """
@@ -144,7 +217,6 @@ class Model:
         self.create_and_populate_inventories()
         self.env.run(until=400)
         print(self.inventory_functional_units())
-        # Now run the environment
 
 
 if __name__ == '__main__':
