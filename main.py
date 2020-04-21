@@ -47,8 +47,6 @@ class FunctionalUnit:
     rate_of_increasing_recycle_fraction
     rate_of_increasing_remanufacture_fraction
     """
-    normalized_recycle_favorability_over_linear: pd.Series
-
     rate_of_increasing_reuse_fraction: pd.Series
     rate_of_increasing_recycle_fraction: pd.Series
     rate_of_increasing_remanufacture_fraction: pd.Series
@@ -126,7 +124,7 @@ class FunctionalUnit:
 
 
 class Model:
-    def __init__(self, model_fn, min_eol=1, max_eol=400, min_inventory=1, max_inventory=10):
+    def __init__(self, model_fn):
         """
         The parameters set instance attributes of the same name.
 
@@ -134,23 +132,7 @@ class Model:
         ----------
         model_fn:
             The function that is the SD model.
-
-        min_eol:
-            The minimum lifespan of a turbine in timesteps.
-
-        max_eol:
-            The maximum lifespan of a turbine in timesteps.
-
-        min_inventory:
-            The minimum number of turbines in an inventory.
-
-        max_inventory:
-            The maximum number of turbines in an inventory.
         """
-        self.min_eol = min_eol
-        self.max_eol = max_eol
-        self.min_inventory = min_inventory
-        self.max_inventory = max_inventory
         self.graph = nx.DiGraph()
 
         # The following instance attributes hold data from the SD model when it
@@ -177,37 +159,12 @@ class Model:
             'rate_of_increasing_recycle_fraction',
             'rate_of_increasing_reuse_fraction'
         ])
+
         self.timesteps = result.index
-
-
-        # Look at 3 circularity pathways. Pick the lowest value pathway. And, in the unit
-        # track which one it has been on before. You can't reuse twice in a row. You
-        # can't remanufacture twice in a row. Never two non recycling pathways next to
-        # each other.
-        #
-        # If non linearity is possible, one of the following parameters is non-zero
-        #
-        # 1. Rate of increasing resuse fraction
-        # 2. Rate of increasing recycling fraction
-        # 3. Rate of increasing remanufacture fraction
-        #
-        # If non are non-zero choose the landfill.
 
         self.rate_of_increasing_recycle_fraction = result['rate_of_increasing_recycle_fraction']
         self.rate_of_increasing_remamnufacture_fraction = result['rate_of_increasing_recycle_fraction']
         self.rate_of_increasing_reuse_fraction = result['rate_of_increasing_reuse_fraction']
-
-        recycle_favorability_over_linear = result['recycle_favorability_over_linear']
-
-        # I am 100% sure I am abusing this column by normalizing it, but I needed a
-        # value between 0.0 and 1.0 to determine the probability that something would
-        # be recycled.
-
-        normalized_recycle_favorability_over_linear = \
-            (recycle_favorability_over_linear - recycle_favorability_over_linear.min()) / (recycle_favorability_over_linear.max() - recycle_favorability_over_linear.min())
-
-        self.normalized_recycle_favorability_over_linear = \
-            pd.Series(normalized_recycle_favorability_over_linear, index=self.timesteps, )
 
     def create_graph(self):
         """
@@ -224,7 +181,7 @@ class Model:
         self.graph.add_edge("recycler", "remanufacturer", event="remanufacture")
         self.graph.add_edge("remanufacturer", "wind plant", event="deploy")
 
-    def create_and_populate_inventories(self):
+    def create_and_populate_inventories(self, min_eol=1, max_eol=400, min_inventory=20, max_inventory=20):
         """
         This creates functional units and populates inventories to their
         initial states.
@@ -234,17 +191,29 @@ class Model:
         back to the wind plant.
 
         The functional units are turbines.
+
+        Parameters
+        ----------
+        min_eol:
+            The minimum lifespan of a turbine in timesteps.
+
+        max_eol:
+            The maximum lifespan of a turbine in timesteps.
+
+        min_inventory:
+            The minimum number of turbines in an inventory.
+
+        max_inventory:
+            The maximum number of turbines in an inventory.
         """
         for node_id, inventory in self.graph.nodes(data="inventory"):
             if node_id not in ["landfill", "recycler", "remanufacturer"]:
-                unit_count = randint(self.min_inventory, self.max_inventory)
+                unit_count = randint(min_inventory, max_inventory)
                 for _ in range(unit_count):
-                    lifespan = randint(self.min_eol, self.max_eol)
+                    lifespan = randint(min_eol, max_eol)
                     unit = FunctionalUnit(name="Turbine",
                                           lifespan=lifespan,
                                           node_id=node_id,
-                                          normalized_recycle_favorability_over_linear=\
-                                            self.normalized_recycle_favorability_over_linear,
                                           rate_of_increasing_recycle_fraction=\
                                             self.rate_of_increasing_recycle_fraction,
                                           rate_of_increasing_remanufacture_fraction=\
@@ -280,9 +249,5 @@ class Model:
 
 
 if __name__ == '__main__':
-    app = Model("tinysd/tiny-sd_pysd_v30mar2020.py",
-                min_eol=100,
-                max_eol=400,
-                min_inventory=20,
-                max_inventory=20)
+    app = Model("tinysd/tiny-sd_pysd_v30mar2020.py")
     app.run()
