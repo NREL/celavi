@@ -46,10 +46,16 @@ class FunctionalUnit:
     rate_of_increasing_reuse_fraction
     rate_of_increasing_recycle_fraction
     rate_of_increasing_remanufacture_fraction
+
+    sd_timesteps: pd.Series
+        Each element is a value in SD timestep. The index on that element is the
+        SimPy timestep that corresponds to it.
     """
     rate_of_increasing_reuse_fraction: pd.Series
     rate_of_increasing_recycle_fraction: pd.Series
     rate_of_increasing_remanufacture_fraction: pd.Series
+
+    sd_timesteps: pd.Series
 
     name: str
     lifespan: int
@@ -77,7 +83,7 @@ class FunctionalUnit:
         else:
             print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} and is going to landfill")
 
-    def disposal_action(self, env_ts, sd_steps_per_ts=4):
+    def disposal_action(self, env_ts):
         """
         This method makes a decision about whether to recycle, resuse,
         or remanufacture at end of life.
@@ -107,7 +113,7 @@ class FunctionalUnit:
         #
         # If non are non-zero choose the landfill.
 
-        sd_step = env_ts / sd_steps_per_ts
+        sd_step = self.sd_timesteps[env_ts]
 
         reuse = self.rate_of_increasing_reuse_fraction[sd_step]
         recycle = self.rate_of_increasing_recycle_fraction[sd_step]
@@ -219,7 +225,8 @@ class Model:
                                           rate_of_increasing_remanufacture_fraction=\
                                             self.rate_of_increasing_remamnufacture_fraction,
                                           rate_of_increasing_reuse_fraction=\
-                                            self.rate_of_increasing_reuse_fraction)
+                                            self.rate_of_increasing_reuse_fraction,
+                                          sd_timesteps=self.timesteps)
                     self.env.process(unit.eol_me(self.env))
                     inventory.append(unit)
 
@@ -245,7 +252,8 @@ class Model:
         self.create_graph()
         self.create_and_populate_inventories()
         self.env.run(until=400)
-        print(self.inventory_functional_units())
+        # Commenting out because things aren't moving across the graph.
+        # print(self.inventory_functional_units())
 
 
 if __name__ == '__main__':
