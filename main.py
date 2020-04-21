@@ -4,6 +4,7 @@ import networkx as nx
 from dataclasses import dataclass, field
 import pysd
 import pandas as pd
+import numpy as np
 import simpy
 
 
@@ -68,19 +69,60 @@ class FunctionalUnit:
             The SimPy environment.
         """
         yield env.timeout(self.lifespan)
-        will_recycle = self.recycle_yes_or_no(env.now)
-        if will_recycle:
+        action = self.disposal_action(env.now)
+        if action == "reuse":
+            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being reuse")
+        elif action == "recycle":
             print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being recycled")
+        elif action == "remanufacture":
+            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being remanufactured")
         else:
             print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} and is going to landfill")
 
-    def recycle_yes_or_no(self, env_ts):
+    def disposal_action(self, env_ts, sd_steps_per_ts=4):
         """
-        This method makes the decision about whether to recycle or landfill the
-        unit at its end of life.
+        This method makes a decision about whether to recycle, resuse,
+        or remanufacture at end of life.
+
+        Parameters
+        ----------
+        env_ts: int
+            The current timestep in the simulation.
+
+        Returns
+        -------
+        str
+            "reuse", "remanufacture", "recycle", "landfill" depending on the
+            choice that is made.
         """
-        threshold = self.normalized_recycle_favorability_over_linear.iloc[env_ts]
-        return random() < threshold  # Higher favorability means less likely to recycle
+
+        # Look at 3 circularity pathways. Pick the lowest value pathway. And, in the unit
+        # track which one it has been on before. You can't reuse twice in a row. You
+        # can't remanufacture twice in a row. Never two non recycling pathways next to
+        # each other.
+        #
+        # If non linearity is possible, one of the following parameters is non-zero
+        #
+        # 1. Rate of increasing resuse fraction
+        # 2. Rate of increasing recycling fraction
+        # 3. Rate of increasing remanufacture fraction
+        #
+        # If non are non-zero choose the landfill.
+
+        sd_step = env_ts / sd_steps_per_ts
+
+        reuse = self.rate_of_increasing_reuse_fraction[sd_step]
+        recycle = self.rate_of_increasing_recycle_fraction[sd_step]
+        remanufacture = self.rate_of_increasing_remanufacture_fraction[sd_step]
+
+        if reuse == 0.0:
+            return "reuse"
+        elif recycle == 0.0:
+            return "recycle"
+        elif remanufacture == 0.0:
+            return "remanufacture"
+        else:
+            return "landfill"
 
 
 class Model:
@@ -238,5 +280,9 @@ class Model:
 
 
 if __name__ == '__main__':
-    app = Model("tinysd/tiny-sd_pysd_v30mar2020.py")
+    app = Model("tinysd/tiny-sd_pysd_v30mar2020.py",
+                min_eol=100,
+                max_eol=400,
+                min_inventory=20,
+                max_inventory=20)
     app.run()
