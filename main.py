@@ -1,10 +1,9 @@
 from uuid import uuid4
-from random import random, randint
+import random
 import networkx as nx
 from dataclasses import dataclass, field
 import pysd
 import pandas as pd
-import numpy as np
 import simpy
 
 
@@ -119,12 +118,21 @@ class FunctionalUnit:
         recycle = self.rate_of_increasing_recycle_fraction[sd_step]
         remanufacture = self.rate_of_increasing_remanufacture_fraction[sd_step]
 
+        print(f"reuse={reuse}, remanufacture={remanufacture}, recycle={recycle}")
+
+        possible_actions = []
+
         if reuse == 0.0:
-            return "reuse"
-        elif recycle == 0.0:
-            return "recycle"
-        elif remanufacture == 0.0:
-            return "remanufacture"
+            possible_actions.append("reuse")
+
+        if recycle == 0.0:
+            possible_actions.append("recycle")
+
+        if remanufacture == 0.0:
+            possible_actions.append("remanufacture")
+
+        if len(possible_actions) > 0:
+            return random.choice(possible_actions)
         else:
             return "landfill"
 
@@ -148,7 +156,7 @@ class Model:
         self.normalized_recycle_favorability_over_linear = None
         self.rate_of_increasing_reuse_fraction = None
         self.rate_of_increasing_recycle_fraction = None
-        self.rate_of_increasing_remamnufacture_fraction = None
+        self.rate_of_increasing_remanufacture_fraction = None
         self.sd_timesteps = None
 
         # The simpy environment
@@ -169,7 +177,7 @@ class Model:
         self.sd_timesteps = result.index
 
         self.rate_of_increasing_recycle_fraction = result['rate_of_increasing_recycle_fraction']
-        self.rate_of_increasing_remamnufacture_fraction = result['rate_of_increasing_recycle_fraction']
+        self.rate_of_increasing_remanufacture_fraction = result['rate_of_increasing_recycle_fraction']
         self.rate_of_increasing_reuse_fraction = result['rate_of_increasing_reuse_fraction']
 
     def create_graph(self):
@@ -214,16 +222,16 @@ class Model:
         """
         for node_id, inventory in self.graph.nodes(data="inventory"):
             if node_id not in ["landfill", "recycler", "remanufacturer"]:
-                unit_count = randint(min_inventory, max_inventory)
+                unit_count = random.randint(min_inventory, max_inventory)
                 for _ in range(unit_count):
-                    lifespan = randint(min_eol, max_eol)
+                    lifespan = random.randint(min_eol, max_eol)
                     unit = FunctionalUnit(name="Turbine",
                                           lifespan=lifespan,
                                           node_id=node_id,
                                           rate_of_increasing_recycle_fraction=\
                                             self.rate_of_increasing_recycle_fraction,
                                           rate_of_increasing_remanufacture_fraction=\
-                                            self.rate_of_increasing_remamnufacture_fraction,
+                                            self.rate_of_increasing_remanufacture_fraction,
                                           rate_of_increasing_reuse_fraction=\
                                             self.rate_of_increasing_reuse_fraction,
                                           sd_timesteps=self.sd_timesteps)
@@ -257,5 +265,6 @@ class Model:
 
 
 if __name__ == '__main__':
+    random.seed(0)
     app = Model("tinysd/tiny-sd_pysd_v30mar2020.py")
     app.run()
