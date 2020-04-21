@@ -149,7 +149,7 @@ class Model:
         self.rate_of_increasing_reuse_fraction = None
         self.rate_of_increasing_recycle_fraction = None
         self.rate_of_increasing_remamnufacture_fraction = None
-        self.timesteps = None
+        self.sd_timesteps = None
 
         # The simpy environment
         self.env = simpy.Environment()
@@ -166,7 +166,7 @@ class Model:
             'rate_of_increasing_reuse_fraction'
         ])
 
-        self.timesteps = result.index
+        self.sd_timesteps = result.index
 
         self.rate_of_increasing_recycle_fraction = result['rate_of_increasing_recycle_fraction']
         self.rate_of_increasing_remamnufacture_fraction = result['rate_of_increasing_recycle_fraction']
@@ -226,7 +226,7 @@ class Model:
                                             self.rate_of_increasing_remamnufacture_fraction,
                                           rate_of_increasing_reuse_fraction=\
                                             self.rate_of_increasing_reuse_fraction,
-                                          sd_timesteps=self.timesteps)
+                                          sd_timesteps=self.sd_timesteps)
                     self.env.process(unit.eol_me(self.env))
                     inventory.append(unit)
 
@@ -250,8 +250,8 @@ class Model:
     def run(self):
         self.run_sd_model()
         self.create_graph()
-        self.create_and_populate_inventories()
-        self.env.run(until=400)
+        self.create_and_populate_inventories(min_inventory=50, max_inventory=50)
+        self.env.run(until=len(self.sd_timesteps))
         # Commenting out because things aren't moving across the graph.
         # print(self.inventory_functional_units())
 
