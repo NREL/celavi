@@ -74,7 +74,7 @@ class FunctionalUnit:
         yield env.timeout(self.lifespan)
         action = self.disposal_action(env.now)
         if action == "reuse":
-            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being reuse")
+            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being reused")
         elif action == "recycle":
             print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being recycled")
         elif action == "remanufacture":
@@ -111,6 +111,8 @@ class FunctionalUnit:
         # 3. Rate of increasing remanufacture fraction
         #
         # If non are non-zero choose the landfill.
+        #
+        # Flip the logic: The non-zero option is selected.
 
         sd_step = self.sd_timesteps[env_ts]
 
@@ -122,13 +124,13 @@ class FunctionalUnit:
 
         possible_actions = []
 
-        if reuse == 0.0:
+        if reuse > 0.0:
             possible_actions.append("reuse")
 
-        if recycle == 0.0:
+        if recycle > 0.0:
             possible_actions.append("recycle")
 
-        if remanufacture == 0.0:
+        if remanufacture > 0.0:
             possible_actions.append("remanufacture")
 
         if len(possible_actions) > 0:
