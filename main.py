@@ -88,62 +88,74 @@ class FunctionalUnit:
         env
             The SimPy environment.
         """
-        yield env.timeout(self.lifespan)
-        disposal_event = self.disposal_action(env.now)
+        unit_has_not_been_landfilled = True
 
-        print(f'{disposal_event} "{self.name}" {self.functional_unit_id} in "{self.node_id}" at timestamp {env.now}')
+        # Keep setting timeouts to come back to this eol event until the
+        # unit has been landfilled.
 
-        # Error checking! Make sure that the requested action is feasible
+        while unit_has_not_been_landfilled:
+            yield env.timeout(self.lifespan)
+            disposal_event = self.disposal_action(env.now)
 
-        if disposal_event == "reuse" and self.has_been_reused:
-            raise Exception("Reuse event attempted twice in a row.")
+            print(f'{disposal_event} "{self.name}" {self.functional_unit_id} in "{self.node_id}" at timestamp {env.now}')
 
-        if disposal_event == "remanufacture" and self.has_been_remanufactured:
-            raise Exception("Remanufacture event attempted twice in a row.")
+            # Error checking! Make sure that the requested action is feasible
 
-        if disposal_event == "reuse" and self.has_been_remanufactured:
-            raise Exception("Reuse attempted after remanufacturing")
+            if disposal_event == "reuse" and self.has_been_reused:
+                raise Exception("Reuse event attempted twice in a row.")
 
-        # allowed_edges is the list of edges that can be traversed for the
-        # disposal_event calculated from the disposal disposal_event. It is a filtered list
-        # of edges that point to possible destinations for this functional
-        # unit at this stage in life for this given disposal_event.
-        #
-        # This is O(n) scaling...is there a way to make this O(1) with some
-        # dictionaries?
+            if disposal_event == "remanufacture" and self.has_been_remanufactured:
+                raise Exception("Remanufacture event attempted twice in a row.")
 
-        allowed_edges = []
-        for _, target_node, edge_event in self.graph.edges(self.node_id, data="event"):
-            if edge_event == disposal_event:
-                allowed_edges.append(target_node)
+            if disposal_event == "reuse" and self.has_been_remanufactured:
+                raise Exception("Reuse attempted after remanufacturing")
 
-        if len(allowed_edges) == 0:
-            raise Exception(f"Requested disposal event was '{disposal_event} but no edges support that.")
+            # allowed_edges is the list of edges that can be traversed for the
+            # disposal_event calculated from the disposal disposal_event. It is a filtered list
+            # of edges that point to possible destinations for this functional
+            # unit at this stage in life for this given disposal_event.
+            #
+            # This is O(n) scaling...is there a way to make this O(1) with some
+            # dictionaries?
 
-        # If the event is feasible, then go ahead and do it. Just pull the first
-        # destination node off the list, and send the functional unit there
+            allowed_edges = []
+            for _, target_node, edge_event in self.graph.edges(self.node_id, data="event"):
+                if edge_event == disposal_event:
+                    allowed_edges.append(target_node)
 
-        target_node_id = allowed_edges[0]
-        target_inventory = self.graph.nodes[target_node_id]["inventory"]
-        source_inventory = self.graph.nodes[self.node_id]["inventory"]
-        del source_inventory[self.functional_unit_id]
-        target_inventory[self.functional_unit_id] = self
+            if len(allowed_edges) == 0:
+                raise Exception(f"Requested disposal event was '{disposal_event} but no edges support that.")
 
-        # Set the flags on the functional unit according to the disposal event
-        if disposal_event == "reuse":
-            self.has_been_reused = True
+            # If the event is feasible, then go ahead and do it. Just pull the first
+            # destination node off the list, and send the functional unit there
 
-        if disposal_event == "remanufacture":
-            self.has_been_remanufactured = True
+            target_node_id = allowed_edges[0]
+            target_inventory = self.graph.nodes[target_node_id]["inventory"]
+            source_inventory = self.graph.nodes[self.node_id]["inventory"]
+            del source_inventory[self.functional_unit_id]
+            target_inventory[self.functional_unit_id] = self
 
-        if disposal_event == "recycle":
-            self.has_been_remanufactured = False
-            self.has_been_reused = False
+            # Set the flags on the functional unit according to the disposal event
+            if disposal_event == "reuse":
+                self.has_been_reused = True
 
-        # Finally, set the new EOL timeout depending on the destination.
-        # For now this will be hardcoded just to have one, but this
-        # should be more sophisticated parameter.
+            if disposal_event == "remanufacture":
+                self.has_been_remanufactured = True
 
+            if disposal_event == "recycle":
+                self.has_been_remanufactured = False
+                self.has_been_reused = False
+
+            # Finally, set the new EOL timeout depending on the destination.
+            # For now this will be hardcoded just to have one, but this
+            # should be more sophisticated parameter.
+            #
+            # If the functional unit was landfilled do not timeout again.
+
+            if disposal_event == "landfill":
+                unit_has_not_been_landfilled = False
+            else:
+                self.lifespan = 500  # Replace this hardcoded value with something better.
 
     def disposal_action(self, env_ts):
         """
