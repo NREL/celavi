@@ -27,15 +27,29 @@ class FunctionalUnit:
     """
     The instance attributes are:
 
-    name: The name of this functional unit. This isn't a unique ID. It is
+    name: str
+        The name of this functional unit. This isn't a unique ID. It is
         the type of functional unit, such a s "turbine"
 
-    lifespan: The current lifespan of this functional unit.
+    lifespan: int
+        The current lifespan of this functional unit.
 
-    node_id: The node_id of the current inventory that holds this functional
+    node_id: str
+        The node_id of the current inventory that holds this functional
         unit.
 
-    functional_unit_id: The unique ID for this functional unit. This unique
+    has_been_reused:
+        True if the last step was being reused, False otherwise.
+
+    has_been_remanufactured:
+        True if the last step was being remanufactured, False
+        otherwise.
+
+    The previous two attributes are to ensure that there can be
+    no two non-recycling steps in a row.
+
+    functional_unit_id: str
+        The unique ID for this functional unit. This unique
         ID does not rely on the name.
 
     The following three instance attributes are used together to determine if
@@ -60,6 +74,8 @@ class FunctionalUnit:
     lifespan: int
     node_id: str
     graph: nx.DiGraph
+    has_been_reused: bool = False
+    has_been_remanufactured: bool = False
     functional_unit_id: str = field(default_factory=unique_identifer_str)
 
     def eol(self, env):
@@ -77,6 +93,17 @@ class FunctionalUnit:
 
         print(f'{disposal_event} "{self.name}" {self.functional_unit_id} in "{self.node_id}" at timestamp {env.now}')
 
+        # Error checking! Make sure that the requested action is feasible
+
+        if disposal_event == "reuse" and self.has_been_reused:
+            raise Exception("Reuse event attempted twice in a row.")
+
+        if disposal_event == "remanufacture" and self.has_been_remanufactured:
+            raise Exception("Remanufacture event attempted twice in a row.")
+
+        if disposal_event == "reuse" and self.has_been_remanufactured:
+            raise Exception("Reuse attempted after remanufacturing")
+
         # allowed_edges is the list of edges that can be traversed for the
         # disposal_event calculated from the disposal disposal_event. It is a filtered list
         # of edges that point to possible destinations for this functional
@@ -90,7 +117,13 @@ class FunctionalUnit:
             if edge_event == disposal_event:
                 allowed_edges.append((source_node, target_node, edge_event))
 
-        print(allowed_edges)
+        if len(allowed_edges) == 0:
+            raise Exception(f"Requested disposal event was '{disposal_event} but no edges support that.")
+
+        # If the event is feasible, then go ahead and do it
+        #
+        # Note, this is where I should change the inventories to dictionaries
+        # so that I can get O(1) scaling based on IDs
 
     def disposal_action(self, env_ts):
         """
