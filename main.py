@@ -59,9 +59,10 @@ class FunctionalUnit:
     name: str
     lifespan: int
     node_id: str
+    graph: nx.DiGraph
     functional_unit_id: str = field(default_factory=unique_identifer_str)
 
-    def eol_me(self, env):
+    def eol(self, env):
         """
         This method is called by the SimPy environment when the lifespan
         times out.
@@ -72,15 +73,26 @@ class FunctionalUnit:
             The SimPy environment.
         """
         yield env.timeout(self.lifespan)
-        action = self.disposal_action(env.now)
-        if action == "reuse":
-            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being reused")
-        elif action == "recycle":
-            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being recycled")
-        elif action == "remanufacture":
-            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} is being remanufactured")
-        else:
-            print(f"{self.name} {self.functional_unit_id} is being EOLd at {env.now} and is going to landfill")
+        disposal_event = self.disposal_action(env.now)
+
+        # TODO: Make disposal_event and event naming consistent
+
+        print(f'{disposal_event} "{self.name}" {self.functional_unit_id} in "{self.node_id}" at timestamp {env.now}')
+
+        # allowed_edges is the list of edges that can be traversed for the
+        # disposal_event calculated from the disposal disposal_event. It is a filtered list
+        # of edges that point to possible destinations for this functional
+        # unit at this stage in life for this given disposal_event.
+        #
+        # This is O(n) scaling...is there a way to make this O(1) with some
+        # dictionaries?
+
+        allowed_edges = []
+        for source_node, target_node, edge_event in self.graph.edges(self.node_id, data="event"):
+            if edge_event == disposal_event:
+                allowed_edges.append((source_node, target_node, edge_event))
+
+        print(allowed_edges)
 
     def disposal_action(self, env_ts):
         """
@@ -192,6 +204,7 @@ class Model:
         self.graph.add_node("remanufacturer", inventory=[])
         self.graph.add_node("wind plant", inventory=[])
         self.graph.add_edge("wind plant", "recycler", event="recycle")
+        self.graph.add_edge("wind plant", "wind plant", event="reuse")
         self.graph.add_edge("wind plant", "landfill", event="landfill")
         self.graph.add_edge("wind plant", "remanufacturer", event="remanufacture")
         self.graph.add_edge("recycler", "remanufacturer", event="remanufacture")
@@ -230,6 +243,7 @@ class Model:
                     unit = FunctionalUnit(name="Turbine",
                                           lifespan=lifespan,
                                           node_id=node_id,
+                                          graph=self.graph,
                                           rate_of_increasing_recycle_fraction=\
                                             self.rate_of_increasing_recycle_fraction,
                                           rate_of_increasing_remanufacture_fraction=\
@@ -237,7 +251,7 @@ class Model:
                                           rate_of_increasing_reuse_fraction=\
                                             self.rate_of_increasing_reuse_fraction,
                                           sd_timesteps=self.sd_timesteps)
-                    self.env.process(unit.eol_me(self.env))
+                    self.env.process(unit.eol(self.env))
                     inventory.append(unit)
 
     def inventory_functional_units(self):
