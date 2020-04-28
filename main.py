@@ -121,9 +121,6 @@ class FunctionalUnit:
             raise Exception(f"Requested disposal event was '{disposal_event} but no edges support that.")
 
         # If the event is feasible, then go ahead and do it
-        #
-        # Note, this is where I should change the inventories to dictionaries
-        # so that I can get O(1) scaling based on IDs
 
     def disposal_action(self, env_ts):
         """
@@ -154,8 +151,6 @@ class FunctionalUnit:
         # 3. Rate of increasing remanufacture fraction
         #
         # If non are non-zero choose the landfill.
-        #
-        # Flip the logic: The non-zero option is selected.
 
         sd_step = self.sd_timesteps[env_ts]
 
@@ -230,10 +225,10 @@ class Model:
         This creates a graph of inventories waiting to be populated by the
         create_and_populate_inventories method.
         """
-        self.graph.add_node("recycler", inventory=[])
-        self.graph.add_node("landfill", inventory=[])
-        self.graph.add_node("remanufacturer", inventory=[])
-        self.graph.add_node("wind plant", inventory=[])
+        self.graph.add_node("recycler", inventory={})
+        self.graph.add_node("landfill", inventory={})
+        self.graph.add_node("remanufacturer", inventory={})
+        self.graph.add_node("wind plant", inventory={})
         self.graph.add_edge("wind plant", "recycler", event="recycle")
         self.graph.add_edge("wind plant", "wind plant", event="reuse")
         self.graph.add_edge("wind plant", "landfill", event="landfill")
@@ -283,7 +278,7 @@ class Model:
                                             self.rate_of_increasing_reuse_fraction,
                                           sd_timesteps=self.sd_timesteps)
                     self.env.process(unit.eol(self.env))
-                    inventory.append(unit)
+                    inventory[unit.functional_unit_id] = unit
 
     def inventory_functional_units(self):
         """
