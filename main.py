@@ -124,8 +124,8 @@ class FunctionalUnit:
         # destination node off the list, and send the functional unit there
 
         target_node_id = allowed_edges[0]
-        target_inventory = self.graph[target_node_id]["inventory"]
-        source_inventory = self.graph[self.node_id]["inventory"]
+        target_inventory = self.graph.nodes[target_node_id]["inventory"]
+        source_inventory = self.graph.nodes[self.node_id]["inventory"]
         del source_inventory[self.functional_unit_id]
         target_inventory[self.functional_unit_id] = self
 
