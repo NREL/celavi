@@ -75,8 +75,6 @@ class FunctionalUnit:
         yield env.timeout(self.lifespan)
         disposal_event = self.disposal_action(env.now)
 
-        # TODO: Make disposal_event and event naming consistent
-
         print(f'{disposal_event} "{self.name}" {self.functional_unit_id} in "{self.node_id}" at timestamp {env.now}')
 
         # allowed_edges is the list of edges that can be traversed for the
