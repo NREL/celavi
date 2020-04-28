@@ -113,14 +113,37 @@ class FunctionalUnit:
         # dictionaries?
 
         allowed_edges = []
-        for source_node, target_node, edge_event in self.graph.edges(self.node_id, data="event"):
+        for _, target_node, edge_event in self.graph.edges(self.node_id, data="event"):
             if edge_event == disposal_event:
-                allowed_edges.append((source_node, target_node, edge_event))
+                allowed_edges.append(target_node)
 
         if len(allowed_edges) == 0:
             raise Exception(f"Requested disposal event was '{disposal_event} but no edges support that.")
 
-        # If the event is feasible, then go ahead and do it
+        # If the event is feasible, then go ahead and do it. Just pull the first
+        # destination node off the list, and send the functional unit there
+
+        target_node_id = allowed_edges[0]
+        target_inventory = self.graph[target_node_id]["inventory"]
+        source_inventory = self.graph[self.node_id]["inventory"]
+        del source_inventory[self.functional_unit_id]
+        target_inventory[self.functional_unit_id] = self
+
+        # Set the flags on the functional unit according to the disposal event
+        if disposal_event == "reuse":
+            self.has_been_reused = True
+
+        if disposal_event == "remanufacture":
+            self.has_been_remanufactured = True
+
+        if disposal_event == "recycle":
+            self.has_been_remanufactured = False
+            self.has_been_reused = False
+
+        # Finally, set the new EOL timeout depending on the destination.
+        # For now this will be hardcoded just to have one, but this
+        # should be more sophisticated parameter.
+
 
     def disposal_action(self, env_ts):
         """
