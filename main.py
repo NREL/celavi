@@ -243,17 +243,22 @@ class Model:
         the simulation.
         """
         result = self.model.run(return_columns=[
-            'recycle_favorability_over_linear',
             'rate_of_increasing_reuse_fraction',
             'rate_of_increasing_recycle_fraction',
-            'rate_of_increasing_reuse_fraction'
+            'rate_of_increasing_remanufacture_fraction'
         ])
 
+        # These are the timesteps of the SD model. This series enables those
+        # timesteps to be converted to SimPy timesteps.
         self.sd_timesteps = result.index
 
+        # These are the columns to decide disposal actions
         self.rate_of_increasing_recycle_fraction = result['rate_of_increasing_recycle_fraction']
-        self.rate_of_increasing_remanufacture_fraction = result['rate_of_increasing_recycle_fraction']
+        self.rate_of_increasing_remanufacture_fraction = result['rate_of_increasing_remanufacture_fraction']
         self.rate_of_increasing_reuse_fraction = result['rate_of_increasing_reuse_fraction']
+
+        # Write the SD model as a .csv.
+        result.to_csv('sd_values.csv', index=True, index_label='SD Timestep')
 
     def create_graph(self):
         """
