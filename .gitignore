@@ -112,5 +112,6 @@ ENV/
 # Excel temp files
 ~$*
 
-# Vensim results files
+# Vensim files
 *.vdf
+*.2mdl
