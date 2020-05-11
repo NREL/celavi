@@ -1397,7 +1397,7 @@ General Parameters
 1,113,112,88,1,0,0,0,0,128,0,-1--1--1,,1|(282,771)|
 \\\---/// Sketch information - do not modify anything except names
 V300  Do not put anything below this section - it will be ignored
-*Product Choice
+*Pathway Choice
 $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,100,0
 10,1,reused material cost,223,185,53,19,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
 10,2,remanufactured material cost,552,215,54,19,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
@@ -1646,11 +1646,11 @@ Material_Flows_into_Wind
 9:results-4-30
 10:C:\Users\rhanes\Box Sync\Circular Economy LDRD\tiny-sd\input-files\steel.cin
 15:0,0,0,0,0,0
-19:90,0
+19:100,5
 27:0,
 34:0,
 4:Time
-5:reuse process learning
+5:recycle process learning
 35:Date
 36:YYYY-MM-DD
 37:1980
