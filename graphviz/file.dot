@@ -1,0 +1,8 @@
+digraph  {
+	"wind plant" -> "wind plant";
+	"wind plant" -> landfill;
+	"wind plant" -> recycler;
+	"wind plant" -> remanufacturer;
+	recycler -> remanufacturer;
+	remanufacturer -> "wind plant";
+}

@@ -1,0 +1,96 @@
+{UTF-8}
+Characteristic Time=
+	10
+	~	Minute
+	~		|
+
+Heat Loss to Room=
+	(Tea Cup Temperature - Room Temperature) / Characteristic Time
+	~	degrees/Minute
+	~		|
+
+Room Temperature=
+	70
+	~	degrees
+	~		|
+
+Tea Cup Temperature= INTEG (
+	-Heat Loss to Room,
+		180)
+	~	degrees
+	~		|
+
+********************************************************
+	.Control
+********************************************************~
+		Simulation Control Parameters
+	|
+
+FINAL TIME  = 100
+	~	Minute
+	~	The final time for the simulation.
+	|
+
+INITIAL TIME  = 0
+	~	Minute
+	~	The initial time for the simulation.
+	|
+
+SAVEPER  = 
+        TIME STEP 
+	~	Minute [0,?]
+	~	The frequency with which output is stored.
+	|
+
+TIME STEP  = 1
+	~	Minute [0,?]
+	~	The time step for the simulation.
+	|
+
+\\\---/// Sketch information - do not modify anything except names
+V300  Do not put anything below this section - it will be ignored
+*View 1
+$192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|72,72,100,0
+10,1,Tea Cup Temperature,208,125,40,20,3,3,0,0,0,0,0,0,0,0,0,0,0,0
+12,2,48,417,125,10,8,0,3,0,0,-1,0,0,0,0,0,0,0,0,0
+1,4,6,2,4,0,0,22,0,0,0,-1--1--1,,1|(383,125)|
+1,5,6,1,100,0,0,22,0,0,0,-1--1--1,,1|(297,125)|
+11,6,0,353,125,6,8,34,3,0,0,1,0,0,0,0,0,0,0,0,0
+10,7,Heat Loss to Room,353,141,49,8,40,3,0,0,-1,0,0,0,0,0,0,0,0,0
+10,9,Characteristic Time,294,46,49,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+10,10,Room Temperature,366,241,49,8,8,3,0,0,0,0,0,0,0,0,0,0,0,0
+1,12,10,6,0,0,0,0,0,64,0,-1--1--1,,1|(360,188)|
+1,13,1,6,1,0,0,0,0,64,0,-1--1--1,,1|(282,78)|
+1,14,9,6,1,0,0,0,0,64,0,-1--1--1,,1|(297,44)|
+///---\\\
+:L<%^E!@
+1:Current.vdfx
+9:Current
+23:0
+15:0,0,0,0,0,0
+19:100,0
+27:0,
+34:0,
+42:1
+72:0
+73:0
+4:Time
+5:Tea Cup Temperature
+35:Date
+36:YYYY-MM-DD
+37:2000
+38:1
+39:1
+40:6
+41:0
+76:0
+77:0
+78:0
+79:0
+80:0
+81:0
+24:0
+25:100
+26:100
+75:
+43:

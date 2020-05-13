@@ -1,2 +1,352 @@
+from uuid import uuid4
+import random
+import networkx as nx
+from dataclasses import dataclass, field
+import pysd
+import pandas as pd
+import simpy
+
+
+pd.set_option('display.max_rows', 1000)
+
+
+def unique_identifer_str():
+    """
+    This returns a UUID that can serve as a unique identifier for anything
+
+    Returns
+    -------
+    str
+        A UUID to be used as a unique identifer.
+    """
+    return str(uuid4())
+
+
+@dataclass
+class FunctionalUnit:
+    """
+    The instance attributes are:
+
+    name: str
+        The name of this functional unit. This isn't a unique ID. It is
+        the type of functional unit, such a s "turbine"
+
+    lifespan: int
+        The current lifespan of this functional unit.
+
+    node_id: str
+        The node_id of the current inventory that holds this functional
+        unit.
+
+    has_been_reused:
+        True if the last step was being reused, False otherwise.
+
+    has_been_remanufactured:
+        True if the last step was being remanufactured, False
+        otherwise.
+
+    The previous two attributes are to ensure that there can be
+    no two non-recycling steps in a row.
+
+    functional_unit_id: str
+        The unique ID for this functional unit. This unique
+        ID does not rely on the name.
+
+    The following three instance attributes are used together to determine if
+    a unit should be landfilled, recycled, reused or remanufactured at each
+    time step.
+
+    rate_of_increasing_reuse_fraction
+    rate_of_increasing_recycle_fraction
+    rate_of_increasing_remanufacture_fraction
+
+    sd_timesteps: pd.Series
+        Each element is a value in SD timestep. The index on that element is the
+        SimPy timestep that corresponds to it.
+    """
+    rate_of_increasing_reuse_fraction: pd.Series
+    rate_of_increasing_recycle_fraction: pd.Series
+    rate_of_increasing_remanufacture_fraction: pd.Series
+
+    sd_timesteps: pd.Series
+
+    name: str
+    lifespan: int
+    node_id: str
+    graph: nx.DiGraph
+    has_been_reused: bool = False
+    has_been_remanufactured: bool = False
+    functional_unit_id: str = field(default_factory=unique_identifer_str)
+
+    def eol(self, env):
+        """
+        This method is called by the SimPy environment when the lifespan
+        times out.
+
+        Parameters
+        ----------
+        env
+            The SimPy environment.
+        """
+        unit_has_not_been_landfilled = True
+
+        # Keep setting timeouts to come back to this eol event until the
+        # unit has been landfilled.
+
+        while unit_has_not_been_landfilled:
+            yield env.timeout(self.lifespan)
+            disposal_event = self.disposal_action(env.now)
+
+            print(f'{disposal_event} "{self.name}" {self.functional_unit_id} in "{self.node_id}" at timestamp {env.now}')
+
+            # Error checking! Make sure that the requested action is feasible
+
+            if disposal_event == "reuse" and self.has_been_reused:
+                raise Exception("Reuse event attempted twice in a row.")
+
+            if disposal_event == "remanufacture" and self.has_been_remanufactured:
+                raise Exception("Remanufacture event attempted twice in a row.")
+
+            if disposal_event == "reuse" and self.has_been_remanufactured:
+                raise Exception("Reuse attempted after remanufacturing")
+
+            # allowed_edges is the list of edges that can be traversed for the
+            # disposal_event calculated from the disposal disposal_event. It is a filtered list
+            # of edges that point to possible destinations for this functional
+            # unit at this stage in life for this given disposal_event.
+            #
+            # This is O(n) scaling...is there a way to make this O(1) with some
+            # dictionaries?
+
+            allowed_edges = []
+            for _, target_node, edge_event in self.graph.edges(self.node_id, data="event"):
+                if edge_event == disposal_event:
+                    allowed_edges.append(target_node)
+
+            if len(allowed_edges) == 0:
+                raise Exception(f"Requested disposal event was '{disposal_event} but no edges support that.")
+
+            # If the event is feasible, then go ahead and do it. Just pull the first
+            # destination node off the list, and send the functional unit there
+
+            target_node_id = allowed_edges[0]
+            target_inventory = self.graph.nodes[target_node_id]["inventory"]
+            source_inventory = self.graph.nodes[self.node_id]["inventory"]
+            del source_inventory[self.functional_unit_id]
+            target_inventory[self.functional_unit_id] = self
+
+            # Set the flags on the functional unit according to the disposal event
+            if disposal_event == "reuse":
+                self.has_been_reused = True
+
+            if disposal_event == "remanufacture":
+                self.has_been_remanufactured = True
+
+            if disposal_event == "recycle":
+                self.has_been_remanufactured = False
+                self.has_been_reused = False
+
+            # Finally, set the new EOL timeout depending on the destination.
+            # For now this will be hardcoded just to have one, but this
+            # should be more sophisticated parameter.
+            #
+            # If the functional unit was landfilled do not timeout again.
+
+            if disposal_event == "landfill":
+                unit_has_not_been_landfilled = False
+            else:
+                self.lifespan = 500  # Replace this hardcoded value with something better.
+
+    def disposal_action(self, env_ts):
+        """
+        This method makes a decision about whether to recycle, resuse,
+        or remanufacture at end of life.
+
+        Parameters
+        ----------
+        env_ts: int
+            The current timestep in the simulation.
+
+        Returns
+        -------
+        str
+            "reuse", "remanufacture", "recycle", "landfill" depending on the
+            choice that is made.
+        """
+
+        # Look at 3 circularity pathways. Pick the lowest value pathway. And, in the unit
+        # track which one it has been on before. You can't reuse twice in a row. You
+        # can't remanufacture twice in a row. Never two non recycling pathways next to
+        # each other.
+        #
+        # If non linearity is possible, one of the following parameters is non-zero
+        #
+        # 1. Rate of increasing resuse fraction
+        # 2. Rate of increasing recycling fraction
+        # 3. Rate of increasing remanufacture fraction
+        #
+        # If non are non-zero choose the landfill.
+
+        sd_step = self.sd_timesteps[env_ts]
+
+        reuse = self.rate_of_increasing_reuse_fraction[sd_step]
+        recycle = self.rate_of_increasing_recycle_fraction[sd_step]
+        remanufacture = self.rate_of_increasing_remanufacture_fraction[sd_step]
+
+        print(f"reuse={reuse}, remanufacture={remanufacture}, recycle={recycle}")
+
+        possible_actions = []
+
+        if reuse > 0.0:
+            possible_actions.append("reuse")
+
+        if recycle > 0.0:
+            possible_actions.append("recycle")
+
+        if remanufacture > 0.0:
+            possible_actions.append("remanufacture")
+
+        if len(possible_actions) > 0:
+            return random.choice(possible_actions)
+        else:
+            return "landfill"
+
+
+class Model:
+    def __init__(self, model_fn):
+        """
+        The parameters set instance attributes of the same name.
+
+        Parameters
+        ----------
+        model_fn:
+            The function that is the SD model.
+        """
+        self.graph = nx.DiGraph()
+
+        # The following instance attributes hold data from the SD model when it
+        # is created.
+
+        self.model = pysd.load(model_fn)
+        self.normalized_recycle_favorability_over_linear = None
+        self.rate_of_increasing_reuse_fraction = None
+        self.rate_of_increasing_recycle_fraction = None
+        self.rate_of_increasing_remanufacture_fraction = None
+        self.sd_timesteps = None
+
+        # The simpy environment
+        self.env = simpy.Environment()
+
+    def run_sd_model(self):
+        """
+        This method runs the SD model to get the outputs we need to run
+        the simulation.
+        """
+        result = self.model.run(return_columns=[
+            'rate_of_increasing_reuse_fraction',
+            'rate_of_increasing_recycle_fraction',
+            'rate_of_increasing_remanufacture_fraction'
+        ])
+
+        # These are the timesteps of the SD model. This series enables those
+        # timesteps to be converted to SimPy timesteps.
+        self.sd_timesteps = result.index
+
+        # These are the columns to decide disposal actions
+        self.rate_of_increasing_recycle_fraction = result['rate_of_increasing_recycle_fraction']
+        self.rate_of_increasing_remanufacture_fraction = result['rate_of_increasing_remanufacture_fraction']
+        self.rate_of_increasing_reuse_fraction = result['rate_of_increasing_reuse_fraction']
+
+        # Write the SD model as a .csv.
+        result.to_csv('sd_values.csv', index=True, index_label='SD Timestep')
+
+    def create_graph(self):
+        """
+        This creates a graph of inventories waiting to be populated by the
+        create_and_populate_inventories method.
+        """
+        self.graph.add_node("recycler", inventory={})
+        self.graph.add_node("landfill", inventory={})
+        self.graph.add_node("remanufacturer", inventory={})
+        self.graph.add_node("wind plant", inventory={})
+        self.graph.add_edge("wind plant", "recycler", event="recycle")
+        self.graph.add_edge("wind plant", "wind plant", event="reuse")
+        self.graph.add_edge("wind plant", "landfill", event="landfill")
+        self.graph.add_edge("wind plant", "remanufacturer", event="remanufacture")
+        self.graph.add_edge("recycler", "remanufacturer", event="remanufacture")
+        self.graph.add_edge("remanufacturer", "wind plant", event="deploy")
+
+    def create_and_populate_inventories(self, min_eol=1, max_eol=400, min_inventory=20, max_inventory=20):
+        """
+        This creates functional units and populates inventories to their
+        initial states.
+
+        For this initial setup, there is a wind plant, recycler, remanufacturer,
+        landfill, and wind plant. The "reuse" pathway is an edge that points
+        back to the wind plant.
+
+        The functional units are turbines.
+
+        Parameters
+        ----------
+        min_eol:
+            The minimum lifespan of a turbine in timesteps.
+
+        max_eol:
+            The maximum lifespan of a turbine in timesteps.
+
+        min_inventory:
+            The minimum number of turbines in an inventory.
+
+        max_inventory:
+            The maximum number of turbines in an inventory.
+        """
+        for node_id, inventory in self.graph.nodes(data="inventory"):
+            if node_id not in ["landfill", "recycler", "remanufacturer"]:
+                unit_count = random.randint(min_inventory, max_inventory)
+                for _ in range(unit_count):
+                    lifespan = random.randint(min_eol, max_eol)
+                    unit = FunctionalUnit(name="Turbine",
+                                          lifespan=lifespan,
+                                          node_id=node_id,
+                                          graph=self.graph,
+                                          rate_of_increasing_recycle_fraction=\
+                                            self.rate_of_increasing_recycle_fraction,
+                                          rate_of_increasing_remanufacture_fraction=\
+                                            self.rate_of_increasing_remanufacture_fraction,
+                                          rate_of_increasing_reuse_fraction=\
+                                            self.rate_of_increasing_reuse_fraction,
+                                          sd_timesteps=self.sd_timesteps)
+                    self.env.process(unit.eol(self.env))
+                    inventory[unit.functional_unit_id] = unit
+
+    def inventory_functional_units(self):
+        """
+        This creates a dataframe that is an inventory of the functional units
+        and the inventories they are currently in.
+        """
+        rows = []
+        for node_id, node in self.graph.nodes.data():
+            for unit in node["inventory"]:
+                rows.append({
+                    "Inventory": node_id,
+                    "Unit name": unit.name,
+                    "Unit lifespan": unit.lifespan,
+                    "Unit ID": unit.functional_unit_id
+                })
+        result = pd.DataFrame(rows)
+        return result
+
+    def run(self):
+        self.run_sd_model()
+        self.create_graph()
+        self.create_and_populate_inventories(min_inventory=50, max_inventory=50)
+        self.env.run(until=len(self.sd_timesteps))
+        # Commenting out because things aren't moving across the graph.
+        # print(self.inventory_functional_units())
+
+
 if __name__ == '__main__':
-    print("Hello world")
+    random.seed(0)
+    app = Model("tinysd/tiny-sd_pysd_v30mar2020.py")
+    app.run()
