@@ -112,6 +112,12 @@ ENV/
 # Excel temp files
 ~$*
 
+# Intermediate .csv files written as outputs
+*.csv
+
+# Ignore any Tableau stuff
+*.twb
+
 # Vensim files
 *.vdf
 *.2mdl
