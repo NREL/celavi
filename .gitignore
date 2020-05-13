@@ -117,3 +117,7 @@ ENV/
 
 # Ignore any Tableau stuff
 *.twb
+
+# Vensim files
+*.vdf
+*.2mdl
