@@ -64,6 +64,8 @@ class FunctionalUnit:
         Each element is a value in SD timestep. The index on that element is the
         SimPy timestep that corresponds to it.
     """
+
+    # These will become arrays, one for each material.
     rate_of_increasing_reuse_fraction: pd.Series
     rate_of_increasing_recycle_fraction: pd.Series
     rate_of_increasing_remanufacture_fraction: pd.Series

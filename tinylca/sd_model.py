@@ -205,6 +205,13 @@ def lowest_cost_pathway():
 
     b''
     """
+    # Alicia changed this from
+    #
+    # return np.minimum(reuse_favorability_over_linear(), remanufacture_favorability_over_linear(),
+    #                       recycle_favorability_over_linear(), 1000)
+    #
+    # to
+    #
     return min(reuse_favorability_over_linear(), remanufacture_favorability_over_linear(),
                       recycle_favorability_over_linear(), 1000)
 
