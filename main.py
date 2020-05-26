@@ -392,5 +392,5 @@ class Model:
 
 if __name__ == '__main__':
     random.seed(0)
-    app = Model("tinysd/tiny-sd_pysd_v30mar2020.py")
+    app = Model("tinysd/tiny-sd_pysd_v13may2020.py")
     app.run()
