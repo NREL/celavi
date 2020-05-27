@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import time
 
 # Read in Vensim model: national scale, adjusted for import
-model = pysd.read_vensim("C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale//tiny-sd-all-US.mdl")  # use for first load of model from Vensim
+model = pysd.read_vensim("C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale//tiny-sd-all-US-pysd-importable.mdl")  # use for first load of model from Vensim
 
 start = time.time()
 model = pysd.load('tiny-sd_pysd_v13may2020.py')
