@@ -1788,11 +1788,11 @@ Material_Flows_into_Wind
 9:results-importable-5-27
 10:C:\Users\rhanes\Box Sync\Circular Economy LDRD\tiny-sd\input-files\steel.cin
 15:0,0,0,0,0,0
-19:90,2
+19:100,5
 27:0,
 34:0,
 4:Time
-5:reaching end of life
+5:Fraction Recycle
 35:Date
 36:YYYY-MM-DD
 37:1980

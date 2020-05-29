@@ -10,6 +10,8 @@ import xarray as xr
 from pysd.py_backend.functions import cache
 from pysd.py_backend import functions
 
+from pandas import read_csv
+
 _subscript_dict = {}
 
 _namespace = {
@@ -829,10 +831,16 @@ def average_turbine_capacity_data():
     Units: b'MW'
     Limits: (None, None)
     Type: component
-
+    @todo add in data input
     b'Historical data on the average turbine capacity installed in each year \\n    \\t\\t1980 - 2019'
     """
-    return functions.lookup(time(), [1980, 2019], [0.1, 2.1])
+
+    capacity_data = read_csv("C:\\Users\\rhanes\\Box Sync\\Circular Economy LDRD\\data\\wind\\wind.csv",
+                             usecols=['year','avg turbine capacity mw'])
+
+    return functions.lookup(time(),
+                            np.array(capacity_data['year']),
+                            np.array(capacity_data['avg turbine capacity mw']))
 
 
 @cache('step')
@@ -964,7 +972,7 @@ def installed_capacity_per_year_data():
     Units: b'MW/year'
     Limits: (0.0, None)
     Type: component
-
+    @todo replace with data input from file
     b'Contains historical data on installed turbine capacity for years 1980 - \\n    \\t\\t2019 and projected installation for years 2020 - 2050.'
     """
     return functions.lookup(time(), [1980, 1990, 2000, 2010, 2020, 2030, 2040, 2050],
@@ -2178,7 +2186,7 @@ def final_time():
     Units: b'year'
     Limits: (None, None)
     Type: constant
-
+    @note this matches the Vensim model
     b'The final time for the simulation.'
     """
     return 2050
@@ -2192,7 +2200,7 @@ def initial_time():
     Units: b'year'
     Limits: (None, None)
     Type: constant
-
+    @note this matches the Vensim model
     b'The initial time for the simulation.'
     """
     return 1982
@@ -2220,7 +2228,7 @@ def time_step():
     Units: b'year'
     Limits: (0.0, None)
     Type: constant
-
+    @note this matches the Vensim model - both the value and the units
     b'The time step for the simulation.'
     """
     return 0.25
