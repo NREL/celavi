@@ -31,21 +31,16 @@ result = model.run()
 # plt.xlabel('Months')
 # plt.show()
 
-print(result.columns)
+for col in result.columns:
+    print(col)
 
-time_series = result[['rate of increasing recycle fraction',
-                      'rate of increasing reuse fraction',
-                      'rate of increasing remanufacture fraction']]
+time_series = result[['Fraction Recycle', 'Fraction Remanufacture', 'Fraction Reuse']]
 xs = range(len(time_series))
 
-fig, axs = plt.subplots(nrows=3, ncols=1, figsize=(5, 15))
-axs[0].plot(xs, time_series['rate of increasing recycle fraction'])
-axs[0].set_title('rate of increasing recycle fraction')
-
-axs[1].plot(xs, time_series['rate of increasing reuse fraction'])
-axs[1].set_title('rate of increasing reuse fraction')
-
-axs[2].plot(xs, time_series['rate of increasing remanufacture fraction'])
-axs[2].set_title('rate of increasing remanufacture fraction')
+fig, axs = plt.subplots(nrows=len(time_series.columns), ncols=1, figsize=(10, 7))
+plt.tight_layout()
+for i, col in enumerate(time_series):
+    axs[i].plot(xs, time_series[col])
+    axs[i].set_title(col)
 
 plt.show()
