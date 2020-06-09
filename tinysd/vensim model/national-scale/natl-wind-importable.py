@@ -922,6 +922,7 @@ def average_turbine_capacity_data():
     1980 - 2019'
     """
 
+    # capacity_data = read_csv("C:\\Users\\rhanes\\Box Sync\\Circular Economy LDRD\\data\\wind\\wind.csv",
     capacity_data = read_csv("tinysd/vensim model/national-scale/wind.csv",
                              usecols=['year','avg turbine capacity mw'])
 
@@ -2575,6 +2576,7 @@ _integ_fraction_reuse = functions.Integ(lambda: changing_fraction_reuse(),
                                         fraction_used_product_reused_initial_value())
 
 _macro_minlist_reuse_favorability_over_linear_remanufacture_favorability_over_linear_recycle_favorability_over_linear_ = functions.Macro(
+    # 'C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale/minlist.py',
     'tinysd/vensim model/national-scale/minlist.py',
     {
         'input1': lambda: reuse_favorability_over_linear(),
