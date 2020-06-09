@@ -56,16 +56,18 @@ class NextState:
     state: str
         The target state after the state transition.
 
-    eol_min: int
+    lifespan_min: int
         The minimum duration of the state in discrete timesteps.
 
-    eol_max: int
+    lifespan_max: int
         The maximum duration of the state in discrete timesteps.
+
+    Obviously, the
     """
 
     state: str
-    eol_min: int = 40
-    eol_max: int = 80
+    lifespan_min: int = 40
+    lifespan_max: int = 80
 
     @property
     def eol(self) -> int:
@@ -80,9 +82,9 @@ class NextState:
             of the state.
         """
         return (
-            self.eol_min
-            if self.eol_min == self.eol_max
-            else randint(self.eol_min, self.eol_max + 1)
+            self.lifespan_min
+            if self.lifespan_min == self.lifespan_max
+            else randint(self.lifespan_min, self.lifespan_max + 1)
         )
 
 
@@ -116,7 +118,7 @@ class Context:
             ),
             StateTransition(state="use", transition="reusing"): NextState(state="use"),
             StateTransition(state="use", transition="landfilling"): NextState(
-                state="landfill", eol_min=1000, eol_max=1000
+                state="landfill", lifespan_min=1000, lifespan_max=1000
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture"
