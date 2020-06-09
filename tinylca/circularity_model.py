@@ -23,18 +23,62 @@ def unique_identifer_str():
 
 @dataclass(frozen=True)
 class StateTransition:
+    """
+    This class specifies the starting point for a transition in a state machine.
+
+    StateTransition and NextState are used together in a state transition
+    dictionary, where the key is a StateTransition instance and the
+    value is a NextState instance.
+
+    Instance attributes
+    -------------------
+    state: str
+        The starting state in the state machine.
+
+    transition: str
+        The transition away from the current state.
+    """
     state: str
     transition: str
 
 
 @dataclass(frozen=True)
 class NextState:
+    """
+    This class specifies the target for a state machine transition.
+
+    StateTransition and NextState are used together in a state transition
+    dictionary, where the key is a StateTransition instance and the
+    value is a NextState instance.
+
+    Instance attributes
+    -------------------
+    state: str
+        The target state after the state transition.
+
+    eol_min: int
+        The minimum duration of the state in discrete timesteps.
+
+    eol_max: int
+        The maximum duration of the state in discrete timesteps.
+    """
+
     state: str
     eol_min: int = 40
     eol_max: int = 80
 
     @property
-    def eol(self):
+    def eol(self) -> int:
+        """
+        This calculates a random integer for the duration of a state
+        transition.
+
+        Returns
+        -------
+        int
+            The discrete timesteps until end-of-life or the lifespan
+            of the state.
+        """
         return (
             self.eol_min
             if self.eol_min == self.eol_max
@@ -43,6 +87,15 @@ class NextState:
 
 
 class Context:
+    """
+    Context is a class that provides:
+
+    1. A SimPy environment for discrete time steps.
+    2. Functional units that are state machines
+    3. An SD model to probabilistically control the state machines
+    4. A list of functional units.
+    5. The table of allowed state transitions.
+    """
     def __init__(self, sd_model_filename: str):
         sd_model = pysd.load(sd_model_filename)
         sd = sd_model.run()
@@ -81,16 +134,59 @@ class Context:
 
     @property
     def log_df(self) -> pd.DataFrame:
+        """
+        This returns the log of each unit's state at each timestep.
+
+        The dataframe has the following columns:
+
+        ts: The discrete timestep of the log entry
+        unit.unit_type: The type of the functional unit
+        unit.unit_id: The uuid of the functional unit
+        unit.state: The current state of the functional unit
+
+        Returns
+        -------
+        pd.DataFrame
+            The dataframe of the log.
+        """
         result = pd.DataFrame(self.log_list)
         return result
 
     @property
     def max_timestep(self) -> int:
+        """
+        This returns the maximum timestep available. It is a count of the number
+        of timesteps in the SD run.
+
+        Returns
+        -------
+        int
+            The maximum timestep.
+        """
         return len(self.fraction_reuse)
 
     # Could not make a type for unit (it needs to be of type Unit) because unit is
     # defined below context.
     def probabilistic_transition(self, unit, ts: int) -> str:
+        """
+        This method is the link between the SD model and the discrete time
+        model. It returns a string with the name of a state transition
+        generated with probabilities from the SD model.
+
+        Parameters
+        ----------
+        unit: Unit
+            The functional unit instance that is being transitioned
+
+        ts: int
+            The timestep in the discrete time model used to look up values from
+            the SD model.
+
+        Returns
+        -------
+        str
+            The name of the transition to send to the unit's state machine.
+        """
         if unit.state == "recycle":
             return "remanufacturing"
         elif unit.state == "remanufacture":
@@ -123,6 +219,11 @@ class Context:
             return choice
 
     def populate_units(self, number_of_units: int = 100) -> None:
+        """
+        This makes an initial population of functional units in the
+        model.
+        """
+
         for _ in range(number_of_units):
             unit = Unit(
                 unit_type="blade",
@@ -134,7 +235,16 @@ class Context:
             self.units.append(unit)
             self.env.process(unit.eol(self.env))
 
-    def log_process(self, env) -> None:
+    def log_process(self, env):
+        """
+        This is a SimPy process that logs the state of every unit at every
+        timestep.
+
+        Parameters
+        ----------
+        env: simpy.Environment
+            The SimPy environment which can be used to generate timeouts.
+        """
         while True:
             yield env.timeout(1)
             for unit in self.units:
@@ -143,20 +253,52 @@ class Context:
                         "ts": env.now,
                         "unit.unit_type": unit.unit_type,
                         "unit.unit_id,": unit.unit_id,
-                        "unit.lifespan": unit.lifespan,
                         "unit.state": unit.state,
                     }
                 )
 
     def run(self) -> pd.DataFrame:
+        """
+        This runs the model. Note that it does not initially populate the model
+        first.
+
+        Returns
+        -------
+        pd.DataFrame
+            The log of every unit at every timestep in the simulation.
+        """
         self.env.process(self.log_process(self.env))
         self.env.run(self.max_timestep)
-
         return self.log_df
 
 
 @dataclass
 class Unit:
+    """
+    This models a functional unit within the discrete time model.
+
+    Instance attributes
+    -------------------
+    unit_type: str
+        The type of unit this is (e.g., "turbine blade")
+
+    state: str
+        The current state of the functional unit.
+
+    lifespan: int
+        The lifespan of the functional unit in discrete timesteps
+
+    context: Context
+        The context (class from above) in which the unit operates.
+
+    transitions_table: Dict[StateTransition, NextState]
+        The dictionary that controls the state transitions.
+
+    unit_id: str
+        The unique identifier for the unit. This doesn't rely on the
+        type of unit. If it is not overridden, it defaults to a UUID.
+    """
+
     unit_type: str
     state: str
     lifespan: int
@@ -165,6 +307,9 @@ class Unit:
     unit_id: str = field(default_factory=unique_identifer_str)
 
     def __str__(self):
+        """
+        A reasonable string representaiton of the unit for use with print().
+        """
         return f"type: {self.unit_type}, id:{self.unit_id}, state: {self.state}, lifespan:{self.lifespan}"
 
     def transition(self, transition: str) -> None:
@@ -196,7 +341,17 @@ class Unit:
         self.state = next_state.state
         self.lifespan = next_state.eol
 
-    def eol(self, env) -> None:
+    def eol(self, env):
+        """
+        This is a generator for the SimPy process that controls what happens
+        when this unit reaches the end of its lifespan. The duration of the
+        timeout is controlled by this lifespan.
+
+        Parameters
+        ----------
+        env: simpy.Environment
+            The SimPy environment controlling the lifespan of this unit.
+        """
         unit_has_not_been_landfilled = True
         while unit_has_not_been_landfilled:
             yield env.timeout(self.lifespan)
