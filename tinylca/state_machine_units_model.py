@@ -115,17 +115,17 @@ class Context:
 
         self.transitions_table = {
             StateTransition(state="use", transition="recycling"): NextState(
-                state="recycle"
+                state="recycle", lifespan_min=4, lifespan_max=8
             ),
             StateTransition(state="use", transition="reusing"): NextState(state="use"),
             StateTransition(state="use", transition="landfilling"): NextState(
                 state="landfill", lifespan_min=1000, lifespan_max=1000
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
-                state="remanufacture"
+                state="remanufacture", lifespan_min=4, lifespan_max=8
             ),
             StateTransition(state="recycle", transition="remanufacturing"): NextState(
-                "remanufacture"
+                "remanufacture", lifespan_min=4, lifespan_max=8
             ),
             StateTransition(state="remanufacture", transition="using"): NextState(
                 "use"
