@@ -6,6 +6,7 @@ import pandas as pd
 import pysd
 import simpy
 from uuid import uuid4
+from collections import deque
 
 
 def unique_identifer_str():
@@ -70,7 +71,7 @@ class NextState:
     lifespan_max: int = 80
 
     @property
-    def eol(self) -> int:
+    def lifespan(self) -> int:
         """
         This calculates a random integer for the duration of a state
         transition.
@@ -195,30 +196,43 @@ class Context:
             return "using"
         elif unit.state == "landfill":
             return "landfilling"
-        else:
-            circular_probabilities = np.array(
-                [
-                    self.fraction_recycle[ts],
-                    self.fraction_remanufacture[ts],
-                    self.fraction_reuse[ts],
-                ]
-            )
-            landfill_probability = 1.0 - circular_probabilities.sum()
 
-            probabilities = np.array(
-                [
-                    self.fraction_recycle[ts],
-                    self.fraction_remanufacture[ts],
-                    self.fraction_reuse[ts],
-                    landfill_probability,
-                ]
-            )
+        else:  # The "use" state
 
-            # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
+            # Do not choose "remanufacture" and "reuse" (or a combination of the two)
+            # twice in a row. If this happens, give an even chance of recycling or
+            # landfilling
+            if unit.transition_list[-1] == "reuse" \
+                    or unit.transition_list[-2:] == ['remanufacturing', 'remanufacturing']\
+                    or unit.transition_list[-2:] == ['reusing', 'remanufacturing']:
+                choices = ["recycling", "landfilling"]
+                choice = np.random.choice(choices)
+                return choice
 
-            choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
-            choice = np.random.choice(choices, p=np.array(probabilities))
-            return choice
+            else:
+                circular_probabilities = np.array(
+                    [
+                        self.fraction_recycle[ts],
+                        self.fraction_remanufacture[ts],
+                        self.fraction_reuse[ts],
+                    ]
+                )
+                landfill_probability = 1.0 - circular_probabilities.sum()
+
+                probabilities = np.array(
+                    [
+                        self.fraction_recycle[ts],
+                        self.fraction_remanufacture[ts],
+                        self.fraction_reuse[ts],
+                        landfill_probability,
+                    ]
+                )
+
+                # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
+
+                choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
+                choice = np.random.choice(choices, p=np.array(probabilities))
+                return choice
 
     def populate_units(self, number_of_units: int = 100) -> None:
         """
@@ -235,7 +249,7 @@ class Context:
                 context=self,
             )
             self.units.append(unit)
-            self.env.process(unit.eol(self.env))
+            self.env.process(unit.eol_process(self.env))
 
     def log_process(self, env):
         """
@@ -274,39 +288,61 @@ class Context:
         return self.log_df
 
 
-@dataclass
 class Unit:
     """
     This models a functional unit within the discrete time model.
-
-    Instance attributes
-    -------------------
-    unit_type: str
-        The type of unit this is (e.g., "turbine blade")
-
-    state: str
-        The current state of the functional unit.
-
-    lifespan: int
-        The lifespan of the functional unit in discrete timesteps
-
-    context: Context
-        The context (class from above) in which the unit operates.
-
-    transitions_table: Dict[StateTransition, NextState]
-        The dictionary that controls the state transitions.
-
-    unit_id: str
-        The unique identifier for the unit. This doesn't rely on the
-        type of unit. If it is not overridden, it defaults to a UUID.
     """
 
-    unit_type: str
-    state: str
-    lifespan: int
-    context: Context
-    transitions_table: Dict[StateTransition, NextState]
-    unit_id: str = field(default_factory=unique_identifer_str)
+    def __init__(self,
+                 unit_type: str,
+                 state: str,
+                 lifespan: int,
+                 context: Context,
+                 transitions_table: Dict[StateTransition, NextState],
+                 unit_id: str = None):
+        """
+        Parameters
+        ----------
+        unit_type: str
+            The type of unit this is (e.g., "turbine blade")
+
+        state: str
+            The current state of the functional unit.
+
+        lifespan: int
+            The lifespan of the functional unit in discrete timesteps
+
+        context: Context
+            The context (class from above) in which the unit operates.
+
+        transitions_table: Dict[StateTransition, NextState]
+            The dictionary that controls the state transitions.
+
+        unit_id: str
+            The unique identifier for the unit. This doesn't rely on the
+            type of unit. If it is not overridden, it defaults to a UUID.
+
+        Instance attributes that are not parameters
+        -------------------------------------------
+        state_stack: deque[str]
+            Holds a stack of states this unit has been through. This is to
+            enforce technical limitations around remanufacturing and reusing
+            functional units.
+        """
+
+        self.unit_type = unit_type
+        self.state = state
+        self.lifespan = lifespan
+        self.context = context
+        self.transitions_table = transitions_table
+        self.unit_id = str(uuid4()) if unit_id is None else unit_id
+        self.transition_list = []
+        if state == "use":
+            self.transition_list.append("using")
+        elif state == "remanufacture":
+            self.transition_list.append("remanufacturing")
+        elif state == "recycle":
+            self.transition_list.append("recycling")
 
     def __str__(self):
         """
@@ -341,9 +377,10 @@ class Unit:
             )
         next_state = self.transitions_table[lookup]
         self.state = next_state.state
-        self.lifespan = next_state.eol
+        self.lifespan = next_state.lifespan
+        self.transition_list.append(transition)
 
-    def eol(self, env):
+    def eol_process(self, env):
         """
         This is a generator for the SimPy process that controls what happens
         when this unit reaches the end of its lifespan. The duration of the

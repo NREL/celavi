@@ -1,8 +1,8 @@
 digraph  {
-	"wind plant" -> "wind plant";
-	"wind plant" -> landfill;
-	"wind plant" -> recycler;
-	"wind plant" -> remanufacturer;
-	recycler -> remanufacturer;
-	remanufacturer -> "wind plant";
+	use -> use	 [label=reusing];
+	use -> landfill	 [label=landfilling];
+	use -> recycler	 [label=recycling];
+	use -> remanufacturer	 [label=remanufacturing];
+	recycler -> remanufacturer	 [label=remanufacturing];
+	remanufacturer -> use	 [label=using];
 }
