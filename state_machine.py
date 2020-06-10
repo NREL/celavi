@@ -39,6 +39,7 @@ def report(result):
 def make_plots(report_df, context):
     fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(7, 7))
     plt.tight_layout()
+    plt.subplots_adjust(top=0.95, hspace=0.5)
 
     xs = report_df["ts"].values
 
