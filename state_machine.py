@@ -3,6 +3,7 @@ from typing import List, Dict
 import pandas as pd
 import matplotlib.pyplot as plt
 import random
+import numpy as np
 
 
 def report(result):
@@ -56,6 +57,26 @@ def make_plots(report_df, context):
     axs[3, 0].set_title("Discrete Fraction Landfill")
     axs[3, 0].set_ylim(-0.1, 1.1)
     axs[3, 0].plot(xs, report_df["fraction_landfill"])
+
+    axs[0, 1].set_title("SD Fraction Reus(ing)")
+    axs[0, 1].set_ylim(-0.1, 1.1)
+    axs[0, 1].plot(np.arange(len(context.fraction_reuse)), \
+                   context.fraction_reuse, c="r")
+
+    axs[1, 1].set_title("SD Fraction Remanufactur(ing)")
+    axs[1, 1].set_ylim(-0.1, 1.1)
+    axs[1, 1].plot(np.arange(len(context.fraction_remanufacture)), \
+                   context.fraction_remanufacture, c="r")
+
+    axs[2, 1].set_title("SD Fraction Recycl(ing)")
+    axs[2, 1].set_ylim(-0.1, 1.1)
+    axs[2, 1].plot(np.arange(len(context.fraction_remanufacture)),
+                   context.fraction_recycle, c="r")
+
+    axs[3, 1].set_title("Discrete Fraction Landfill(ing)")
+    axs[3, 1].set_ylim(-0.1, 1.1)
+    axs[3, 1].plot(np.arange(len(context.fraction_remanufacture)),
+                   context.fraction_landfill, c="r")
 
     plt.show()
 
