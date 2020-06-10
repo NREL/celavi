@@ -35,27 +35,27 @@ def report(result):
     return report_df
 
 
-def plot_report(report_df):
-    fig, axs = plt.subplots(nrows=4, ncols=1, figsize=(7, 7))
+def make_plots(report_df, context):
+    fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(7, 7))
     plt.tight_layout()
 
     xs = report_df["ts"].values
 
-    axs[0].set_title("Discrete Fraction Use")
-    axs[0].set_ylim(-0.1, 1.1)
-    axs[0].plot(xs, report_df["fraction_use"])
+    axs[0, 0].set_title("Discrete Fraction Use")
+    axs[0, 0].set_ylim(-0.1, 1.1)
+    axs[0, 0].plot(xs, report_df["fraction_use"])
 
-    axs[1].set_title("Discrete Fraction Remanufacture")
-    axs[1].set_ylim(-0.1, 1.1)
-    axs[1].plot(xs, report_df["fraction_remanufacture"])
+    axs[1, 0].set_title("Discrete Fraction Remanufacture")
+    axs[1, 0].set_ylim(-0.1, 1.1)
+    axs[1, 0].plot(xs, report_df["fraction_remanufacture"])
 
-    axs[2].set_title("Discrete Fraction Recycle")
-    axs[2].set_ylim(-0.1, 1.1)
-    axs[2].plot(xs, report_df["fraction_recycle"])
+    axs[2, 0].set_title("Discrete Fraction Recycle")
+    axs[2, 0].set_ylim(-0.1, 1.1)
+    axs[2, 0].plot(xs, report_df["fraction_recycle"])
 
-    axs[3].set_title("Discrete Fraction Landfill")
-    axs[3].set_ylim(-0.1, 1.1)
-    axs[3].plot(xs, report_df["fraction_landfill"])
+    axs[3, 0].set_title("Discrete Fraction Landfill")
+    axs[3, 0].set_ylim(-0.1, 1.1)
+    axs[3, 0].plot(xs, report_df["fraction_landfill"])
 
     plt.show()
 
@@ -65,7 +65,7 @@ def run_and_report():
     context.populate_units()
     result = context.run()
     report_df = report(result)
-    plot_report(report_df)
+    make_plots(report_df, context)
     report_df.to_csv("circular-revolution.csv")
 
 
