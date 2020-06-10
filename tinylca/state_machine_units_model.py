@@ -109,6 +109,12 @@ class Context:
         self.fraction_recycle = time_series["Fraction Recycle"].values
         self.fraction_remanufacture = time_series["Fraction Remanufacture"].values
         self.fraction_reuse = time_series["Fraction Reuse"].values
+
+        self.fraction_landfill = 1.0 -\
+            self.fraction_recycle -\
+            self.fraction_reuse -\
+            self.fraction_remanufacture
+
         self.env = simpy.Environment()
         self.log_list: List[Dict] = []
         self.units: List[Unit] = []
@@ -210,24 +216,14 @@ class Context:
                 return choice
 
             else:
-                circular_probabilities = np.array(
-                    [
-                        self.fraction_recycle[ts],
-                        self.fraction_remanufacture[ts],
-                        self.fraction_reuse[ts],
-                    ]
-                )
-                landfill_probability = 1.0 - circular_probabilities.sum()
+                probabilities = np.array([
+                    self.fraction_recycle[ts],
+                    self.fraction_remanufacture[ts],
+                    self.fraction_reuse[ts],
+                    self.fraction_landfill[ts]
+                ])
 
-                probabilities = np.array(
-                    [
-                        self.fraction_recycle[ts],
-                        self.fraction_remanufacture[ts],
-                        self.fraction_reuse[ts],
-                        landfill_probability,
-                    ]
-                )
-
+                # Use this line to force probabilities for testing.
                 # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
 
                 choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
