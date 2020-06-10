@@ -196,30 +196,43 @@ class Context:
             return "using"
         elif unit.state == "landfill":
             return "landfilling"
-        else:
-            circular_probabilities = np.array(
-                [
-                    self.fraction_recycle[ts],
-                    self.fraction_remanufacture[ts],
-                    self.fraction_reuse[ts],
-                ]
-            )
-            landfill_probability = 1.0 - circular_probabilities.sum()
 
-            probabilities = np.array(
-                [
-                    self.fraction_recycle[ts],
-                    self.fraction_remanufacture[ts],
-                    self.fraction_reuse[ts],
-                    landfill_probability,
-                ]
-            )
+        else:  # The "use" state
 
-            # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
+            # Do not choose "remanufacture" and "reuse" (or a combination of the two)
+            # twice in a row. If this happens, give an even chance of recycling or
+            # landfilling
+            if unit.transition_list[-1] == "reuse" \
+                    or unit.transition_list[-2:] == ['remanufacturing', 'remanufacturing']\
+                    or unit.transition_list[-2:] == ['reusing', 'remanufacturing']:
+                choices = ["recycling", "landfilling"]
+                choice = np.random.choice(choices)
+                return choice
 
-            choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
-            choice = np.random.choice(choices, p=np.array(probabilities))
-            return choice
+            else:
+                circular_probabilities = np.array(
+                    [
+                        self.fraction_recycle[ts],
+                        self.fraction_remanufacture[ts],
+                        self.fraction_reuse[ts],
+                    ]
+                )
+                landfill_probability = 1.0 - circular_probabilities.sum()
+
+                probabilities = np.array(
+                    [
+                        self.fraction_recycle[ts],
+                        self.fraction_remanufacture[ts],
+                        self.fraction_reuse[ts],
+                        landfill_probability,
+                    ]
+                )
+
+                # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
+
+                choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
+                choice = np.random.choice(choices, p=np.array(probabilities))
+                return choice
 
     def populate_units(self, number_of_units: int = 100) -> None:
         """
@@ -323,7 +336,13 @@ class Unit:
         self.context = context
         self.transitions_table = transitions_table
         self.unit_id = str(uuid4()) if unit_id is None else unit_id
-        self.state_stack = deque()
+        self.transition_list = []
+        if state == "use":
+            self.transition_list.append("using")
+        elif state == "remanufacture":
+            self.transition_list.append("remanufacturing")
+        elif state == "recycle":
+            self.transition_list.append("recycling")
 
     def __str__(self):
         """
@@ -359,6 +378,7 @@ class Unit:
         next_state = self.transitions_table[lookup]
         self.state = next_state.state
         self.lifespan = next_state.lifespan
+        self.transition_list.append(transition)
 
     def eol_process(self, env):
         """
