@@ -39,7 +39,7 @@ def report(result):
 def make_plots(report_df, context):
     fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(10, 7))
     plt.tight_layout()
-    plt.subplots_adjust(top=0.95, hspace=0.5)
+    plt.subplots_adjust(top=0.93, bottom=0.07, hspace=0.7)
 
     xs = report_df["ts"].values
 
@@ -57,6 +57,7 @@ def make_plots(report_df, context):
 
     axs[3, 0].set_title("(g) Discrete Fraction Landfill")
     axs[3, 0].set_ylim(-0.1, 1.1)
+    axs[3, 0].set_xlabel("discrete timestep")
     axs[3, 0].plot(xs, report_df["fraction_landfill"])
 
     axs[0, 1].set_title("(b) SD Fraction Reus(ing)")
@@ -76,6 +77,7 @@ def make_plots(report_df, context):
 
     axs[3, 1].set_title("(h) Discrete Fraction Landfill(ing)")
     axs[3, 1].set_ylim(-0.1, 1.1)
+    axs[3, 1].set_xlabel("discrete timestep")
     axs[3, 1].plot(np.arange(len(context.fraction_remanufacture)),
                    context.fraction_landfill, c="r")
 
