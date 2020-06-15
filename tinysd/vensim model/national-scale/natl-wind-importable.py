@@ -917,7 +917,7 @@ def average_turbine_capacity_data():
     Units: b'MW'
     Limits: (None, None)
     Type: component
-    @todo add in data input
+    @todo test data input
     b'Historical data on the average turbine capacity installed in each year
     1980 - 2019'
     """
@@ -943,8 +943,14 @@ def average_turbine_capacity():
     b'Switch variable that returns the historical capacity data for 2019 and
     prior time steps, and the trendline projections for times after 2019.'
     """
-    return functions.if_then_else(time() <= 2019, average_turbine_capacity_data(),
-                                  average_turbine_capacity_trendline())
+    _out = np.nan
+
+    if time() <= 2019:
+        _out = average_turbine_capacity_data()
+    else:
+        _out = average_turbine_capacity_trendline()
+
+    return _out
 
 
 @cache('step')
@@ -1080,13 +1086,17 @@ def installed_capacity_per_year_data():
     Units: b'MW/year'
     Limits: (0.0, None)
     Type: component
-    @todo replace with data input from file
+    @todo test data input
     b'Contains historical data on installed turbine capacity for years 1980 -
     2019 and projected installation for years 2020 - 2050.'
     """
+
+    installation_data = read_csv("C:\\Users\\rhanes\\Box Sync\\Circular Economy LDRD\\data\\wind\\wind.csv",
+                             usecols=['year','mw installed'])
+
     return functions.lookup(time(),
-                            [1980, 1990, 2000, 2010, 2020, 2030, 2040, 2050],
-                            [1, 10, 20, 40, 30, 30, 30, 30])
+                            np.array(installation_data['year']),
+                            np.array(installation_data['mw installed']))
 
 
 @cache('step')
@@ -1104,10 +1114,15 @@ def changing_fraction_reuse():
     pathway, if that increase will not put the total fraction of material sent
     through circular pathways or the fraction sent to reuse over 1'
     """
-    return functions.if_then_else(
-        check_fraction_sum() < 1 - rate_of_increasing_reuse_fraction()
-        and fraction_reuse() < 1 - rate_of_increasing_reuse_fraction(),
-        increase_reuse() * rate_of_increasing_reuse_fraction() / time_step(), 0)
+    _out = np.nan
+
+    if check_fraction_sum() < 1 - rate_of_increasing_reuse_fraction() &\
+            fraction_reuse() < 1 - rate_of_increasing_reuse_fraction():
+        _out = increase_reuse() * rate_of_increasing_reuse_fraction() / time_step()
+    else:
+        _out = 0
+
+    return _out
 
 
 @cache('step')
@@ -1208,10 +1223,14 @@ def recycle_favorability():
     cost among the circular pathways; otherwise, returns 10 and recycling is
     not implemented/increased in that time step'
     """
-    return functions.if_then_else(lowest_cost_pathway() ==
-                                  recycle_favorability_over_linear(),
-                                  recycle_favorability_over_linear(),
-                                  10)
+    _out = np.nan
+
+    if lowest_cost_pathway() == recycle_favorability_over_linear():
+        _out = recycle_favorability_over_linear()
+    else:
+        _out = 10
+
+    return _out
 
 
 @cache('step')
@@ -1243,7 +1262,14 @@ def increase_recycle():
     lowest cost compared to the other circular pathways. Otherwise, recycling
     is not implemented/increased.'
     """
-    return functions.if_then_else(recycle_favorability_over_linear() < 1, 1, 0)
+    _out = np.nan
+
+    if recycle_favorability_over_linear() < 1:
+        _out = 1
+    else:
+        _out = 0
+
+    return _out
 
 
 @cache('step')
@@ -1261,8 +1287,14 @@ def increase_remanufacture():
     remanufacturing is also lowest cost compared to the other circular
     pathways. Otherwise, remanufacturing is not implemented/increased.'
     """
-    return functions.if_then_else(remanufacture_favorability_over_linear() < 1,
-                                  1, 0)
+    _out = np.nan
+
+    if remanufacture_favorability_over_linear() < 1:
+        _out = 1
+    else:
+        _out = 0
+
+    return _out
 
 
 @cache('step')
@@ -1279,7 +1311,14 @@ def increase_reuse():
     lowest cost compared to the other circular pathways. Otherwise, reusing is
     not implemented/increased.'
     """
-    return functions.if_then_else(reuse_favorability_over_linear() < 1, 1, 0)
+    _out = np.nan
+
+    if reuse_favorability_over_linear() < 1:
+        _out = 1
+    else:
+        _out = 0
+
+    return _out
 
 
 @cache('step')
@@ -1302,10 +1341,15 @@ def increasing_fraction_recycle():
     Under those conditions, the prospective increase in recycling is
     implemented.'
     """
-    return functions.if_then_else(
-        check_fraction_sum() < 1 - rate_of_increasing_recycle_fraction()
-        and fraction_recycle() < 1 - rate_of_increasing_recycle_fraction(),
-        increase_recycle() * rate_of_increasing_recycle_fraction() / time_step(), 0)
+    _out = np.nan
+
+    if check_fraction_sum() < 1 - rate_of_increasing_recycle_fraction() & \
+            fraction_recycle() < 1 - rate_of_increasing_recycle_fraction():
+        _out = increase_recycle() * rate_of_increasing_recycle_fraction() / time_step()
+    else:
+        _out = 0
+
+    return _out
 
 
 @cache('step')
@@ -1328,11 +1372,15 @@ def increasing_fraction_remanufacture():
     must also be less than 1. Under those conditions, the prospective increase
     in remanufacturing is implemented.'
     """
-    return functions.if_then_else(
-        check_fraction_sum() < 1 - rate_of_increasing_remanufacture_fraction()
-        and fraction_remanufacture() < 1 - rate_of_increasing_remanufacture_fraction(),
-        increase_remanufacture() * rate_of_increasing_remanufacture_fraction() /
-        time_step(), 0)
+    _out = np.nan
+
+    if check_fraction_sum() < 1 - rate_of_increasing_remanufacture_fraction() & \
+            fraction_remanufacture() < 1 - rate_of_increasing_remanufacture_fraction():
+        _out = increase_remanufacture() * rate_of_increasing_remanufacture_fraction() / time_step()
+    else:
+        _out = 0
+
+    return _out
 
 
 @cache('step')
@@ -1408,9 +1456,14 @@ def reuse_favorability():
     among the circular pathways; otherwise, returns 10 and reusing is not
     \\n    \\t\\timplemented/increased in that time step'
     """
-    return functions.if_then_else(lowest_cost_pathway() ==
-                                  reuse_favorability_over_linear(),
-                                  reuse_favorability_over_linear(), 10)
+    _out = np.nan
+
+    if lowest_cost_pathway() == reuse_favorability_over_linear():
+        _out = reuse_favorability_over_linear()
+    else:
+        _out = 10
+
+    return _out
 
 
 @cache('step')
@@ -1458,9 +1511,14 @@ def remanufacture_favorability():
     returns 10 and \\n    \\t\\tremanufacturing is not implemented/increased
     in that time step'
     """
-    return functions.if_then_else(
-        lowest_cost_pathway() == remanufacture_favorability_over_linear(),
-        remanufacture_favorability_over_linear(), 10)
+    _out = np.nan
+
+    if lowest_cost_pathway() == remanufacture_favorability_over_linear():
+        _out = remanufacture_favorability_over_linear()
+    else:
+        _out = 10
+
+    return _out
 
 
 @cache('run')
@@ -2223,11 +2281,16 @@ def externalities_total():
     \\n    \\t\\twhen annual demand is greater than zero; otherwise, returns
      zero.'
     """
-    return functions.if_then_else(
-        annual_demand() == 0, 0,
-        (externalities_from_reusing() + externalities_from_remanufacturing() +
+    _out = np.nan
+
+    if annual_demand() == 0:
+        _out = 0
+    else:
+        _out = (externalities_from_reusing() + externalities_from_remanufacturing() +
          externalities_from_recycling() + externalities_from_extracting() +
-         externalities_from_total_transportation()) / annual_demand())
+         externalities_from_total_transportation()) / annual_demand()
+
+    return _out
 
 
 @cache('step')
