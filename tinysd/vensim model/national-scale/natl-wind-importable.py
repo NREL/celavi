@@ -1114,16 +1114,11 @@ def changing_fraction_reuse():
     pathway, if that increase will not put the total fraction of material sent
     through circular pathways or the fraction sent to reuse over 1'
     """
-    _out = np.nan
 
-    if check_fraction_sum() < 1 - rate_of_increasing_reuse_fraction() &\
-            fraction_reuse() < 1 - rate_of_increasing_reuse_fraction():
-        _out = increase_reuse() * rate_of_increasing_reuse_fraction() / time_step()
-    else:
-        _out = 0
-
-    return _out
-
+    return functions.if_then_else(check_fraction_sum() < 1 - rate_of_increasing_reuse_fraction() and
+                                  fraction_reuse() < 1 - rate_of_increasing_reuse_fraction(),
+                                  increase_reuse() * rate_of_increasing_reuse_fraction() / time_step(),
+                                  0)
 
 @cache('step')
 def check_fraction_sum():
@@ -1341,15 +1336,11 @@ def increasing_fraction_recycle():
     Under those conditions, the prospective increase in recycling is
     implemented.'
     """
-    _out = np.nan
 
-    if check_fraction_sum() < 1 - rate_of_increasing_recycle_fraction() & \
-            fraction_recycle() < 1 - rate_of_increasing_recycle_fraction():
-        _out = increase_recycle() * rate_of_increasing_recycle_fraction() / time_step()
-    else:
-        _out = 0
-
-    return _out
+    return functions.if_then_else(check_fraction_sum() < 1 - rate_of_increasing_recycle_fraction() and
+                                  fraction_recycle() < 1 - rate_of_increasing_recycle_fraction(),
+                                  increase_recycle() * rate_of_increasing_recycle_fraction() / time_step(),
+                                  0)
 
 
 @cache('step')
@@ -1372,15 +1363,11 @@ def increasing_fraction_remanufacture():
     must also be less than 1. Under those conditions, the prospective increase
     in remanufacturing is implemented.'
     """
-    _out = np.nan
 
-    if check_fraction_sum() < 1 - rate_of_increasing_remanufacture_fraction() & \
-            fraction_remanufacture() < 1 - rate_of_increasing_remanufacture_fraction():
-        _out = increase_remanufacture() * rate_of_increasing_remanufacture_fraction() / time_step()
-    else:
-        _out = 0
-
-    return _out
+    return functions.if_then_else(check_fraction_sum() < 1 - rate_of_increasing_remanufacture_fraction() and
+                                  fraction_remanufacture() < 1 - rate_of_increasing_remanufacture_fraction(),
+                                  increase_remanufacture() * rate_of_increasing_remanufacture_fraction() / time_step(),
+                                  0)
 
 
 @cache('step')
