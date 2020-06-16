@@ -19,6 +19,34 @@ steel_result = model.run(params={'material selection':1,
                                  'remanufacture learning rate':-0.005,
                                  'recycle learning rate':-0.05})
 
+blade_lowcostrecycle_result = model.run(params={'material selection':0,
+                                                'fraction used product recycled initial value':0,
+                                                'initial cost of reuse process':100000,
+                                                'initial cost of remanufacturing process':75000,
+                                                'initial cost of recycling process':50000,
+                                                'initial cost of extraction and production':50000,
+                                                'annual change in cost of extraction and production':-559,
+                                                'reused material strategic value':0,
+                                                'remanufactured material strategic value':0,
+                                                'recycled material strategic value':2000,
+                                                'reuse learning rate':-0.001,
+                                                'remanufacture learning rate':-0.005,
+                                                'recycle learning rate':-0.05})
+
+blade_highcostrecycle_result = model.run(params={'material selection':0,
+                                                'fraction used product recycled initial value':0,
+                                                'initial cost of reuse process':100000,
+                                                'initial cost of remanufacturing process':75000,
+                                                'initial cost of recycling process':55000,
+                                                'initial cost of extraction and production':50000,
+                                                'annual change in cost of extraction and production':-559,
+                                                'reused material strategic value':0,
+                                                'remanufactured material strategic value':0,
+                                                'recycled material strategic value':0,
+                                                'reuse learning rate':-0.001,
+                                                'remanufacture learning rate':-0.005,
+                                                'recycle learning rate':-0.05})
+
 # Plot results
 # plt.figure(1, figsize=(5, 8))
 # plt.subplot(211)
