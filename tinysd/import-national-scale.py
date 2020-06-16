@@ -5,13 +5,22 @@ import matplotlib.pyplot as plt
 # model = pysd.read_vensim("C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale//natl-wind-importable.mdl")  # use for first load of model from Vensim
 
 # load model if not converting afresh
-model = pysd.load("tinysd/vensim model/national-scale/natl-wind-importable.py")
+model = pysd.load("C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale//natl-wind-importable.py")
 
 # Show model documents after import to confirm it loaded
 # print(model.doc())
 
-# does the model in python format run?
-result = model.run()
+# set parameters and initial conditions for steel; get results
+steel_result = model.run(params={'material selection':1,
+                                 'fraction used product recycled initial value':0.30,
+                                 'initial cost of reuse process':125,
+                                 'initial cost of remanufacturing process':250,
+                                 'initial cost of recycling process':200,
+                                 'initial cost of extraction and production':65,
+                                 'annual change in cost of extraction and production':-0.357,
+                                 'reuse learning rate':-0.001,
+                                 'remanufacture learning rate':-0.005,
+                                 'recycle learning rate':-0.05})
 
 # Plot results
 # plt.figure(1, figsize=(5, 8))
