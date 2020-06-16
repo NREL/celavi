@@ -2625,7 +2625,7 @@ _integ_fraction_reuse = functions.Integ(lambda: changing_fraction_reuse(),
                                         fraction_used_product_reused_initial_value())
 
 _macro_minlist_reuse_favorability_over_linear_remanufacture_favorability_over_linear_recycle_favorability_over_linear_ = functions.Macro(
-    'C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale/minlist.py',
+    'minlist.py',
     {
         'input1': lambda: reuse_favorability_over_linear(),
         'input2': lambda: remanufacture_favorability_over_linear(),

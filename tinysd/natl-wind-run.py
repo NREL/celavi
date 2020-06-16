@@ -1,11 +1,8 @@
 import pysd
 import matplotlib.pyplot as plt
 
-# Read in Vensim model: national scale, adjusted for import
-# model = pysd.read_vensim("C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale//natl-wind-importable.mdl")  # use for first load of model from Vensim
-
 # load model if not converting afresh
-model = pysd.load("C://Users//rhanes//Documents//GitHub//tiny-lca//tinysd//vensim model//national-scale//natl-wind-importable.py")
+model = pysd.load('natl-wind-importable.py')
 
 # Show model documents after import to confirm it loaded
 # print(model.doc())
