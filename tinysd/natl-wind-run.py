@@ -47,23 +47,35 @@ blade_highcostrecycle_result = model.run(params={'material selection':0,
                                                 'remanufacture learning rate':-0.005,
                                                 'recycle learning rate':-0.05})
 
-# Plot results
-# plt.figure(1, figsize=(5, 8))
-# plt.subplot(211)
-# stock_names = ['Products at End of Life', 'Product Remanufacture',
-#                'Material Recycle', 'Product Reuse', 'Landfill and Incineration',
-#                'Products in Use']
-# stocks = result[stock_names]
-# plt.plot(stocks)
-# plt.ylabel('Mass (kg)')
-# plt.xlabel('Months')
-#
-# plt.subplot(212)
-# relative_landfill = result['relative landfill']
-# plt.plot(relative_landfill)
-# plt.ylabel('Relative Landfill')
-# plt.xlabel('Months')
-# plt.show()
+# Plot blade, low cost recycle, scenario results
+plt.figure(1, figsize=(5, 5))
+plt.subplot(211)
+stock_names = ['Fraction Recycle', 'Fraction Remanufacture', 'Fraction Reuse']
+stocks = blade_lowcostrecycle_result[stock_names]
+plt.plot(stocks)
+plt.ylabel('Circularity Fractions')
+plt.xlabel('Year')
+
+blade_lowcostrecycle_result[1982:1990]['recycle process learning']
+
+#blade_lowcostrecycle_result[1982:1990]['Cumulative Recycle']
+
+def simple_plot(names):
+
+    plt.figure(1, figsize=(5, 5))
+    plt.subplot(211)
+    stock_names = names
+    stocks = blade_lowcostrecycle_result[stock_names]
+    plt.plot(stocks)
+    plt.ylabel(stock_names[0])
+    plt.xlabel('Time')
+
+plt.subplot(212)
+relative_landfill = blade_lowcostrecycle_result['relative landfill']
+plt.plot(relative_landfill)
+plt.ylabel('Relative Landfill')
+plt.xlabel('Months')
+plt.show()
 
 for col in result.columns:
     print(col)
