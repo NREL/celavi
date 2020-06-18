@@ -917,12 +917,11 @@ def average_turbine_capacity_data():
     Units: b'MW'
     Limits: (None, None)
     Type: component
-    @todo test data input
     b'Historical data on the average turbine capacity installed in each year
     1980 - 2019'
     """
 
-    capacity_data = read_csv("C:\\Users\\rhanes\\Box Sync\\Circular Economy LDRD\\data\\wind\\wind.csv",
+    capacity_data = read_csv('wind.csv',
                              usecols=['year','avg turbine capacity mw'])
 
     return functions.lookup(time(),
@@ -1086,12 +1085,11 @@ def installed_capacity_per_year_data():
     Units: b'MW/year'
     Limits: (0.0, None)
     Type: component
-    @todo test data input
     b'Contains historical data on installed turbine capacity for years 1980 -
     2019 and projected installation for years 2020 - 2050.'
     """
 
-    installation_data = read_csv("C:\\Users\\rhanes\\Box Sync\\Circular Economy LDRD\\data\\wind\\wind.csv",
+    installation_data = read_csv('wind.csv',
                              usecols=['year','mw installed'])
 
     return functions.lookup(time(),
