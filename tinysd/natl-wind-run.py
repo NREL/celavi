@@ -1,6 +1,9 @@
 import pysd
 import matplotlib.pyplot as plt
 
+# convert updated copy of model if needed
+#model = pysd.read_vensim("C:\\Users\\rhanes\\Documents\\GitHub\\tiny-lca\\tinysd\\vensim model\\national-scale\\natl-wind-importable.mdl")
+
 # load model if not converting afresh
 model = pysd.load('natl-wind-importable.py')
 
