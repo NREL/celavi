@@ -32,13 +32,18 @@ one Year=
 ********************************************************~
 	|
 
+tallying recycle=
+	aggregating recycled materials
+	~	metric ton/year [0,?]
+	~		|
+
 tallying remanufacture=
-	aggregating remanufactured products / TIME STEP
+	aggregating remanufactured products
 	~	metric ton/year [0,?]
 	~		|
 
 tallying reuse=
-	aggregating reused products / TIME STEP
+	aggregating reused products
 	~	metric ton/year [0,?]
 	~		|
 
@@ -63,11 +68,6 @@ Cumulative Reuse= INTEG (
 	~	tracks total reusing by material mass (not individual products) in wind \
 		energy sector
 	|
-
-tallying recycle=
-	aggregating recycled materials / TIME STEP
-	~	metric ton/year [0,?]
-	~		|
 
 ********************************************************
 	.cost models
@@ -362,7 +362,7 @@ adding capacity=
 	|
 
 Cumulative Capacity= INTEG (
-	adding capacity,
+	adding capacity/TIME STEP,
 		0)
 	~	MW [0,?]
 	~	Cumulative installed turbine capacity without accounting for turbines \
@@ -388,6 +388,14 @@ installed capacity per year data:INTERPOLATE::=
 ********************************************************
 	.product choice
 ********************************************************~
+	|
+
+Fraction Reuse= INTEG (
+	changing fraction reuse,
+		fraction used product reused initial value)
+	~	Dmnl [0,1]
+	~	fraction of end-of-life material sent to remanufacturing in each time \
+		step, before system losses and leakage
 	|
 
 changing fraction reuse=
@@ -419,14 +427,6 @@ Fraction Recycle= INTEG (
 Fraction Remanufacture= INTEG (
 	increasing fraction remanufacture,
 		fraction used product remanufactured initial value)
-	~	Dmnl [0,1]
-	~	fraction of end-of-life material sent to remanufacturing in each time \
-		step, before system losses and leakage
-	|
-
-Fraction Reuse= INTEG (
-	changing fraction reuse,
-		fraction used product reused initial value)
 	~	Dmnl [0,1]
 	~	fraction of end-of-life material sent to remanufacturing in each time \
 		step, before system losses and leakage
@@ -621,6 +621,23 @@ fraction used product remanufactured initial value=
 ********************************************************~
 	|
 
+Landfill and Incineration= INTEG (
+	landfilling+landfilling failed remanufactured+landfilling nonrecyclables,
+		0)
+	~	metric ton [0,?]
+	~	Accumulates total end-of-life materials landfilled or incinerated; \
+		Represents total system losses.
+	|
+
+Products Sent to Other Sectors= INTEG (
+	reusing in other sectors,
+		0)
+	~	metric ton [0,?]
+	~	Accumulates the mass of end-of-life materials that leave the energy \
+		technology system for another sector, instead of being kept within the \
+		original system
+	|
+
 Products at End of Life= INTEG (
 	reaching end of life-landfilling-recycling-remanufacturing-reusing-reusing in other sectors\
 		,
@@ -633,15 +650,6 @@ landfilling=
 	reaching end of life - reusing - remanufacturing - recycling - reusing in other sectors
 	~	metric ton/year [0,?]
 	~		|
-
-Landfill and Incineration= INTEG (
-	(landfilling+landfilling failed remanufactured+landfilling nonrecyclables)/TIME STEP\
-		,
-		0)
-	~	metric ton [0,?]
-	~	Accumulates total end-of-life materials landfilled or incinerated; \
-		Represents total system losses.
-	|
 
 total fraction=
 	fraction used product disposed+check fraction sum+fraction used product reused in other sectors
@@ -705,15 +713,6 @@ extracting=
 	annual virgin material demand
 	~	metric ton/year [0,?]
 	~		|
-
-Products Sent to Other Sectors= INTEG (
-	reusing in other sectors/TIME STEP,
-		0)
-	~	metric ton [0,?]
-	~	Accumulates the mass of end-of-life materials that leave the energy \
-		technology system for another sector, instead of being kept within the \
-		original system
-	|
 
 Raw Material Extraction= INTEG (
 	-extracting,
@@ -1180,6 +1179,8 @@ CLOSE THE DATA FILE before running the simulation.
 1,32,30,15,1,0,0,0,0,128,0,-1--1--1,,1|(804,392)|
 10,33,material selection,715,490,54,11,8,3,0,0,0,0,0,0
 1,34,33,15,1,0,0,0,0,128,0,-1--1--1,,1|(643,462)|
+10,35,TIME STEP,317,562,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|0||128-128-128
+1,36,35,4,1,0,0,0,0,64,0,-1--1--1,,1|(380,536)|
 \\\---/// Sketch information - do not modify anything except names
 V300  Do not put anything below this section - it will be ignored
 *Material Flows
@@ -1368,10 +1369,6 @@ $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,9
 1,182,147,177,0,0,0,0,0,64,0,-1--1--1,,1|(1364,239)|
 10,183,TIME STEP,229,456,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
 1,184,183,141,0,0,0,0,0,64,0,-1--1--1,,1|(236,441)|
-10,185,TIME STEP,1566,214,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|0||128-128-128
-1,186,185,4,0,0,0,0,0,64,0,-1--1--1,,1|(1599,233)|
-10,187,TIME STEP,1345,47,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|0||128-128-128
-1,188,187,143,0,0,0,0,0,64,0,-1--1--1,,1|(1312,60)|
 \\\---/// Sketch information - do not modify anything except names
 V300  Do not put anything below this section - it will be ignored
 *Technical Limitations
@@ -1400,11 +1397,6 @@ $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,9
 1,22,1,10,1,0,0,0,0,128,0,-1--1--1,,1|(331,150)|
 1,23,2,15,1,0,0,0,0,128,0,-1--1--1,,1|(331,282)|
 1,24,3,20,1,0,0,0,0,128,0,-1--1--1,,1|(337,427)|
-10,25,TIME STEP,403,260,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
-1,26,25,11,0,0,0,0,0,64,0,-1--1--1,,1|(402,242)|
-1,27,25,15,0,0,0,0,0,128,0,-1--1--1,,1|(387,283)|
-10,28,TIME STEP,331,530,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
-1,29,28,21,0,0,0,0,0,64,0,-1--1--1,,1|(346,509)|
 \\\---/// Sketch information - do not modify anything except names
 V300  Do not put anything below this section - it will be ignored
 *Cost Models
@@ -1523,9 +1515,9 @@ $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,1
 10,4,reuse favorability over linear,362,138,54,19,8,3,0,0,0,0,0,0
 10,5,remanufacture favorability over linear,702,133,70,19,8,3,0,0,0,0,0,0
 10,6,recycle favorability over linear,1089,142,60,19,8,3,0,0,0,0,0,0
-1,7,1,4,0,0,0,0,0,128,0,-1--1--1,,1|(285,117)|
+1,7,1,4,0,0,0,0,0,128,0,-1--1--1,,1|(285,116)|
 1,8,2,5,0,0,0,0,0,128,0,-1--1--1,,1|(612,131)|
-1,9,3,6,0,0,0,0,0,128,0,-1--1--1,,1|(1068,93)|
+1,9,3,6,0,0,0,0,0,128,0,-1--1--1,,1|(1068,92)|
 10,10,linear material cost,682,60,67,25,8,130,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
 1,11,10,4,1,0,0,0,0,64,0,-1--1--1,,1|(514,90)|
 1,12,10,5,1,0,0,0,0,128,0,-1--1--1,,1|(695,122)|
@@ -1539,7 +1531,7 @@ $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,1
 1,20,21,18,100,0,0,22,0,0,0,-1--1--1,,1|(130,417)|
 11,21,48,169,417,6,8,34,3,0,0,1,0,0,0
 10,22,changing fraction reuse,169,444,54,19,40,3,0,0,-1,0,0,0
-1,23,16,17,1,0,0,0,0,128,1,-1--1--1,,1|(285,412)|
+1,23,16,17,1,0,0,0,0,128,0,-1--1--1,,1|(285,412)|
 1,24,17,22,1,0,0,0,0,64,0,-1--1--1,,1|(225,387)|
 10,25,Fraction Remanufacture,624,421,52,24,3,131,0,0,0,0,0,0
 10,26,Fraction Recycle,1156,415,40,20,3,3,0,0,0,0,0,0
@@ -1595,8 +1587,8 @@ $192-192-192,0,Times New Roman|12||0-0-0|0-0-0|0-0-255|-1--1--1|-1--1--1|96,96,1
 1,76,58,37,0,0,0,0,0,128,0,-1--1--1,,1|(1093,365)|
 1,77,60,73,1,0,0,0,0,128,0,-1--1--1,,1|(1011,230)|
 1,78,17,51,0,0,0,0,0,64,0,-1--1--1,,1|(399,510)|
-10,79,TIME STEP,169,482,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
-1,80,79,22,0,0,0,0,0,64,0,-1--1--1,,1|(169,474)|
+10,79,TIME STEP,255,490,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
+1,80,79,22,0,0,0,0,0,64,0,-1--1--1,,1|(225,474)|
 10,81,TIME STEP,482,485,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
 1,82,81,33,0,0,0,0,0,64,0,-1--1--1,,1|(482,477)|
 10,83,TIME STEP,1048,487,50,11,8,2,0,3,-1,0,0,0,128-128-128,0-0-0,|12||128-128-128
@@ -1763,11 +1755,11 @@ Material_Flows_into_Wind
 1:results-6-29.vdf
 9:results-6-29
 15:0,0,0,0,0,0
-19:90,2
+19:100,5
 27:0,
 34:0,
 4:Time
-5:Products Sent to Other Sectors
+5:Fraction Reuse
 35:Date
 36:YYYY-MM-DD
 37:1980
