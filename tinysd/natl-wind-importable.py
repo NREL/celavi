@@ -2256,7 +2256,8 @@ _integ_products_sent_to_other_sectors = functions.Integ(lambda: reusing_in_other
 _integ_raw_material_extraction = functions.Integ(lambda: -extracting(), lambda: 1e+15)
 
 _delay_shipping_component_lifetime_0_1 = functions.Delay(lambda: shipping(),
-                                                         lambda: component_lifetime(), lambda: 0,
+                                                         lambda: component_lifetime(),
+                                                         lambda: 0,
                                                          lambda: 1)
 
 _integ_material_distribution = functions.Integ(
