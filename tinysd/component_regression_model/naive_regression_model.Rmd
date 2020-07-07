@@ -1,0 +1,29 @@
+---
+title: "Naive Regression Model"
+author: "Alicia Key"
+date: "7/7/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Naive Component Fitting
+
+This is a naive linear regression for all components in the wind turbine dataset
+
+Load the libraries:
+``` {r message = FALSE}
+library(dplyr)
+library(readr)
+library(purrr)
+```
+
+Load the `.csv` file. Read into a standard data frame first, to create proper column names, and then convert into a tibble for use with dplyr and purrr
+
+``` {r}
+all_materials <- read.csv("Dataset_wind_turbine_materials.csv")
+all_materials <- as_tibble(all_materials)
+knitr::kable(head(all_materials))
+```

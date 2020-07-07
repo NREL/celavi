@@ -124,3 +124,4 @@ ENV/
 
 # Intermediate plots
 *.png
+.Rproj.user
