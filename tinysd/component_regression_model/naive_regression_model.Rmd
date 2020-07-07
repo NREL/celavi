@@ -17,9 +17,10 @@ Load the libraries:
 ``` {r message = FALSE}
 library(dplyr)
 library(readr)
-library(purrr)
+library(stringr)
 library(ggplot2)
 library(broom)
+library(tidyr)
 ```
 
 ### Load source data
@@ -39,7 +40,8 @@ Now give each row a component_material so that further breakdown can be made by 
 ``` {r}
 component_materials <- all_materials %>%
   filter(Material %in% c("Glass Fiber", "High Strength Steel", "Aluminum", "Highly alloyed Steel")) %>%
-  mutate(component_material = paste(Component, Material))
+  # mutate(component_material = paste(Component, Material))
+  mutate(component_material = str_c(Component, Material, sep = "_"))
 
 knitr::kable(head(component_materials))
 ```
@@ -113,7 +115,14 @@ extract_lm_coefficients <- function(obs, ...) {
 
 linear_models <- component_materials %>%
   group_by(component_material) %>%
-  group_modify(extract_lm_coefficients)
+  group_modify(extract_lm_coefficients) %>%
+  separate(component_material, into = c("Component", "Material"), sep = "_")
 
 knitr::kable(linear_models)
+```
+
+Finally, write the model to a `.csv` file:
+
+``` {r}
+write_csv(linear_models, "component_material_linear_models.csv")
 ```
