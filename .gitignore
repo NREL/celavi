@@ -121,3 +121,6 @@ ENV/
 # Vensim files
 *.vdf
 *.2mdl
+
+# Intermediate plots
+*.png
