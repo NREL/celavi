@@ -124,4 +124,8 @@ ENV/
 
 # Intermediate plots
 *.png
+
+# Intermediate files from R markdown, and RStudio project
 .Rproj.user
+*.Rproj
+*.html
