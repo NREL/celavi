@@ -18,7 +18,10 @@ Load the libraries:
 library(dplyr)
 library(readr)
 library(purrr)
+library(ggplot2)
 ```
+
+### Load source data
 
 Load the `.csv` file. Read into a standard data frame first, to create proper column names, and then convert into a tibble for use with dplyr and purrr
 
@@ -27,3 +30,52 @@ all_materials <- read.csv("Dataset_wind_turbine_materials.csv")
 all_materials <- as_tibble(all_materials)
 knitr::kable(head(all_materials))
 ```
+
+### Breakdown into materials on components
+
+Now give each row a component_material so that further breakdown can be made by each material within each component:
+
+``` {r}
+component_materials <- all_materials %>%
+  mutate(component_material = paste(Component, Material))
+
+knitr::kable(head(component_materials))
+```
+
+
+### Data visualization: Hub height
+
+``` {r fig.width = 10, fig.height = 10, message = FALSE}
+ggplot(component_materials, aes(x = Hub.height.m., y = Value)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = 0) +
+  labs(x = "Hub height (m)",
+       y = "Mass (tonnes)") +
+  facet_wrap(~ component_material)
+```
+
+### Data visualization: Hub height
+
+``` {r fig.width = 10, fig.height = 10, message = FALSE}
+ggplot(component_materials, aes(x = Capacity.MW., y = Value)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = 0) +
+  labs(x = "Capacity (MW)",
+       y = "Mass (tonnes)") +
+  facet_wrap(~ component_material)
+```
+
+### Data visualization: Blade diameter
+
+``` {r fig.width = 10, fig.height = 10, message = FALSE}
+ggplot(component_materials, aes(x = Blade.Diameter.m., y = Value)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = 0) +
+  labs(x = "Blade Diameter (m)",
+       y = "Mass (tonnes)") +
+  facet_wrap(~ component_material)
+```
+
+### Now create groupings
+
+Use [group_map](https://dplyr.tidyverse.org/reference/group_map.html) to create a linear model on each 
