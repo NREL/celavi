@@ -19,6 +19,7 @@ library(dplyr)
 library(readr)
 library(purrr)
 library(ggplot2)
+library(broom)
 ```
 
 ### Load source data
@@ -33,19 +34,20 @@ knitr::kable(head(all_materials))
 
 ### Breakdown into materials on components
 
-Now give each row a component_material so that further breakdown can be made by each material within each component:
+Now give each row a component_material so that further breakdown can be made by each material within each component. Also, filter only on the steels:
 
 ``` {r}
 component_materials <- all_materials %>%
+  filter(Material %in% c("Glass Fiber", "High Strength Steel", "Aluminum", "Highly alloyed Steel")) %>%
   mutate(component_material = paste(Component, Material))
 
 knitr::kable(head(component_materials))
 ```
 
 
-### Data visualization: Hub height
+### Data visualization: Hub height (m)
 
-``` {r fig.width = 10, fig.height = 10, message = FALSE}
+``` {r fig.width = 7, fig.height = 5, message = FALSE}
 ggplot(component_materials, aes(x = Hub.height.m., y = Value)) +
   geom_point() +
   geom_smooth(method = "lm", se = 0) +
@@ -54,9 +56,9 @@ ggplot(component_materials, aes(x = Hub.height.m., y = Value)) +
   facet_wrap(~ component_material)
 ```
 
-### Data visualization: Hub height
+### Data visualization: Capcity (MW)
 
-``` {r fig.width = 10, fig.height = 10, message = FALSE}
+``` {r fig.width = 7, fig.height = 5, message = FALSE}
 ggplot(component_materials, aes(x = Capacity.MW., y = Value)) +
   geom_point() +
   geom_smooth(method = "lm", se = 0) +
@@ -65,9 +67,9 @@ ggplot(component_materials, aes(x = Capacity.MW., y = Value)) +
   facet_wrap(~ component_material)
 ```
 
-### Data visualization: Blade diameter
+### Data visualization: Blade diameter (m)
 
-``` {r fig.width = 10, fig.height = 10, message = FALSE}
+``` {r fig.width = 7, fig.height = 5, message = FALSE}
 ggplot(component_materials, aes(x = Blade.Diameter.m., y = Value)) +
   geom_point() +
   geom_smooth(method = "lm", se = 0) +
@@ -78,4 +80,21 @@ ggplot(component_materials, aes(x = Blade.Diameter.m., y = Value)) +
 
 ### Now create groupings
 
-Use [group_map](https://dplyr.tidyverse.org/reference/group_map.html) to create a linear model on each 
+Use [group_map](https://dplyr.tidyverse.org/reference/group_map.html) to create a linear model on each of the material_components.
+
+If you look at the EDA above, you will see lots of fitted flat lines on the plots where the amount of a particular moaterial does not depend (for example, nacelle aluminum does not depend on blade diameter) so I assume those coefficients are 0.
+
+``` {r}
+foo <- function(obs, ...) {
+  mod <- lm(formula = Value ~ Blade.Diameter.m., data = ungroup(obs))
+  adj.r.squared <- glance(mod) %>% pull(adj.r.squared)
+  data.frame("adj.r.squared" = adj.r.squared)
+}
+
+linear_models <- component_materials %>%
+  group_by(component_material) %>%
+  # group_modify(~ tidy(lm(Value ~ Blade.Diameter.m. , data = .x))) %>%
+  group_modify(foo)
+
+knitr::kable(linear_models)
+```
