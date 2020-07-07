@@ -80,27 +80,40 @@ ggplot(component_materials, aes(x = Blade.Diameter.m., y = Value)) +
 
 ### Now create groupings
 
-Use [group_map](https://dplyr.tidyverse.org/reference/group_map.html) to create a linear model on each of the material_components.
+Use [group_map](https://dplyr.tidyverse.org/reference/group_map.html) to create a linear model on each of group of unique material_components. The code below
 
-If you look at the EDA above, you will see lots of fitted flat lines on the plots where the amount of a particular moaterial does not depend (for example, nacelle aluminum does not depend on blade diameter) so I assume those coefficients are 0.
+If you look at the EDA above, you will see lots of fitted flat lines on the plots where the amount of a particular moaterial does not depend on blade diameter, hub height, or turbine cpacity (e.g., nacelle aluminum does not depend on blade diameter). I suspect this caused some of the models generated to not have coefficient estimates for blade diameter, hub height, or capacity. In those situations, I mark the coefficient in the resulting data frame as NA to show that those coefficients are not available.
 
 ``` {r}
-foo <- function(obs, ...) {
-  mod <- lm(formula = Value ~ Blade.Diameter.m. + Hub.height.m., data = ungroup(obs))
+extract_lm_coefficients <- function(obs, ...) {
+  mod <- lm(formula = Value ~ Blade.Diameter.m. + Hub.height.m. + Capacity.MW., data = ungroup(obs))
   tidied <- tidy(mod)
+  
+  # Uncomment for diagnostics to ensure R2, adjusted R2, intercepts, 
+  # and coefficients are being extracted correctly.
+  
+  #print(tidied)
+  #print(glance(mod))
+  
   adj.r.squared <- glance(mod) %>% pull(adj.r.squared)
+  r.squared <- glance(mod) %>% pull(r.squared)
   
-  hub_height_coeff <- tidied %>%
-    filter(term == "Hub.height.m.")
+  blade_diam_coeff <- filter(tidied, term == "Blade.Diameter.m.")
+  hub_height_coeff <- filter(tidied, term == "Hub.height.m.")
+  capacity_MW_coeff <- filter(tidied, term == "Capacity.MW.")
+  intercept <- filter(tidied, term == "(Intercept)")
   
-  data.frame("adj.r.squared" = adj.r.squared, 
-             "Hub.height.m.coeff" = ifelse(nrow(hub_height_coeff) == 0, 0, hub_height_coeff$estimate))
+  data.frame("adj.r.squared" = adj.r.squared,
+             "r.squared" = r.squared,
+             "Intercept" = intercept$estimate,
+             "Blade.diam.m.coeff" = ifelse(nrow(blade_diam_coeff) == 0, NA, blade_diam_coeff$estimate),
+             "Hub.height.m.coeff" = ifelse(nrow(hub_height_coeff) == 0, NA, hub_height_coeff$estimate),
+             "Capacity.MW.coeff" = ifelse(nrow(capacity_MW_coeff) == 0, NA, capacity_MW_coeff$estimate))
 }
 
 linear_models <- component_materials %>%
   group_by(component_material) %>%
-  # group_modify(~ tidy(lm(Value ~ Blade.Diameter.m. , data = .x))) %>%
-  group_modify(foo)
+  group_modify(extract_lm_coefficients)
 
 knitr::kable(linear_models)
 ```
