@@ -1,6 +1,7 @@
 from tinylca.state_machine_units_model import Context
 from typing import List, Dict
 import pandas as pd
+import os
 import matplotlib.pyplot as plt
 import random
 import numpy as np
@@ -85,7 +86,8 @@ def make_plots(report_df, context):
 
 
 def run_and_report():
-    context = Context("tinysd/vensim model/national-scale/natl-wind-importable.py")
+    print(os.getcwd())
+    context = Context("natl-wind-importable.py")
     context.populate_units()
     result = context.run()
     report_df = report(result)
