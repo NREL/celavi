@@ -86,9 +86,15 @@ If you look at the EDA above, you will see lots of fitted flat lines on the plot
 
 ``` {r}
 foo <- function(obs, ...) {
-  mod <- lm(formula = Value ~ Blade.Diameter.m., data = ungroup(obs))
+  mod <- lm(formula = Value ~ Blade.Diameter.m. + Hub.height.m., data = ungroup(obs))
+  tidied <- tidy(mod)
   adj.r.squared <- glance(mod) %>% pull(adj.r.squared)
-  data.frame("adj.r.squared" = adj.r.squared)
+  
+  hub_height_coeff <- tidied %>%
+    filter(term == "Hub.height.m.")
+  
+  data.frame("adj.r.squared" = adj.r.squared, 
+             "Hub.height.m.coeff" = ifelse(nrow(hub_height_coeff) == 0, 0, hub_height_coeff$estimate))
 }
 
 linear_models <- component_materials %>%
