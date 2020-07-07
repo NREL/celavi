@@ -62,8 +62,6 @@ class NextState:
 
     lifespan_max: int
         The maximum duration of the state in discrete timesteps.
-
-    Obviously, the
     """
 
     state: str
