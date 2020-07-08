@@ -1,8 +1,8 @@
 digraph  {
 	use -> use	 [label=reusing];
 	use -> landfill	 [label=landfilling];
-	use -> recycler	 [label=recycling];
-	use -> remanufacturer	 [label=remanufacturing];
-	recycler -> remanufacturer	 [label=remanufacturing];
-	remanufacturer -> use	 [label=using];
+	use -> recycle	 [label=recycling];
+	use -> remanufacture	 [label=remanufacturing];
+	recycle -> remanufacture	 [label=remanufacturing];
+	remanufacture -> use	 [label=using];
 }

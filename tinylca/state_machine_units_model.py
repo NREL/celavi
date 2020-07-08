@@ -62,8 +62,6 @@ class NextState:
 
     lifespan_max: int
         The maximum duration of the state in discrete timesteps.
-
-    Obviously, the
     """
 
     state: str
@@ -109,23 +107,29 @@ class Context:
         self.fraction_recycle = time_series["Fraction Recycle"].values
         self.fraction_remanufacture = time_series["Fraction Remanufacture"].values
         self.fraction_reuse = time_series["Fraction Reuse"].values
+
+        self.fraction_landfill = 1.0 -\
+            self.fraction_recycle -\
+            self.fraction_reuse -\
+            self.fraction_remanufacture
+
         self.env = simpy.Environment()
         self.log_list: List[Dict] = []
         self.units: List[Unit] = []
 
         self.transitions_table = {
             StateTransition(state="use", transition="recycling"): NextState(
-                state="recycle"
+                state="recycle", lifespan_min=4, lifespan_max=8
             ),
             StateTransition(state="use", transition="reusing"): NextState(state="use"),
             StateTransition(state="use", transition="landfilling"): NextState(
                 state="landfill", lifespan_min=1000, lifespan_max=1000
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
-                state="remanufacture"
+                state="remanufacture", lifespan_min=4, lifespan_max=8
             ),
             StateTransition(state="recycle", transition="remanufacturing"): NextState(
-                "remanufacture"
+                "remanufacture", lifespan_min=4, lifespan_max=8
             ),
             StateTransition(state="remanufacture", transition="using"): NextState(
                 "use"
@@ -210,24 +214,14 @@ class Context:
                 return choice
 
             else:
-                circular_probabilities = np.array(
-                    [
-                        self.fraction_recycle[ts],
-                        self.fraction_remanufacture[ts],
-                        self.fraction_reuse[ts],
-                    ]
-                )
-                landfill_probability = 1.0 - circular_probabilities.sum()
+                probabilities = np.array([
+                    self.fraction_recycle[ts],
+                    self.fraction_remanufacture[ts],
+                    self.fraction_reuse[ts],
+                    self.fraction_landfill[ts]
+                ])
 
-                probabilities = np.array(
-                    [
-                        self.fraction_recycle[ts],
-                        self.fraction_remanufacture[ts],
-                        self.fraction_reuse[ts],
-                        landfill_probability,
-                    ]
-                )
-
+                # Use this line to force probabilities for testing.
                 # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
 
                 choices = ["recycling", "remanufacturing", "reusing", "landfilling"]

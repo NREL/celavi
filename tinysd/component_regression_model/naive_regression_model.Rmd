@@ -1,0 +1,144 @@
+---
+title: "Naive Regression Model"
+author: "Alicia Key"
+date: "7/7/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Naive Component Fitting
+
+This is a naive linear regression for all components in the wind turbine dataset
+
+Load the libraries:
+``` {r message = FALSE}
+library(dplyr)
+library(readr)
+library(stringr)
+library(ggplot2)
+library(broom)
+library(tidyr)
+```
+
+### Load source data
+
+Load the `.csv` file. Read into a standard data frame first, to create proper column names, and then convert into a tibble for use with dplyr and purrr
+
+``` {r}
+all_materials <- read.csv("Dataset_wind_turbine_materials.csv")
+all_materials <- as_tibble(all_materials)
+knitr::kable(head(all_materials))
+```
+
+### Breakdown into materials on components
+
+Now give each row a component_material so that further breakdown can be made by each material within each component. Also, filter only on the steels:
+
+``` {r}
+component_materials <- all_materials %>%
+  filter(Material %in% c("Glass Fiber", "High Strength Steel", "Aluminum", "Highly alloyed Steel")) %>%
+  # mutate(component_material = paste(Component, Material))
+  mutate(component_material = str_c(Component, Material, sep = "_"))
+
+knitr::kable(head(component_materials))
+```
+
+
+### Data visualization: Hub height (m)
+
+``` {r fig.width = 7, fig.height = 5, message = FALSE}
+ggplot(component_materials, aes(x = Hub.height.m., y = Value)) +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = 0) +
+  labs(x = "Hub height (m)",
+       y = "Mass (tonnes)") +
+  facet_wrap(~ component_material)
+```
+
+### Data visualization: Capcity (MW)
+
+``` {r fig.width = 7, fig.height = 5, message = FALSE}
+ggplot(component_materials, aes(x = Capacity.MW., y = Value)) +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = 0) +
+  labs(x = "Capacity (MW)",
+       y = "Mass (tonnes)") +
+  facet_wrap(~ component_material)
+```
+
+### Data visualization: Blade diameter (m)
+
+``` {r fig.width = 7, fig.height = 5, message = FALSE}
+ggplot(component_materials, aes(x = Blade.Diameter.m., y = Value)) +
+  geom_jitter() +
+  geom_smooth(method = "lm", se = 0) +
+  labs(x = "Blade Diameter (m)",
+       y = "Mass (tonnes)") +
+  facet_wrap(~ component_material)
+```
+
+### Now create groupings
+
+Use [group_map](https://dplyr.tidyverse.org/reference/group_map.html) to create a linear model on each of group of unique material_components. The code below
+
+If you look at the EDA above, you will see lots of fitted flat lines on the plots where the amount of a particular moaterial does not depend on blade diameter, hub height, or turbine cpacity (e.g., nacelle aluminum does not depend on blade diameter). I suspect this caused some of the models generated to not have coefficient estimates for blade diameter, hub height, or capacity. In those situations, I mark the coefficient in the resulting data frame as NA to show that those coefficients are not available.
+
+``` {r}
+extract_lm_coefficients <- function(obs, ...) {
+  mod <- lm(formula = Value ~ Blade.Diameter.m. + Hub.height.m. + Capacity.MW., data = ungroup(obs))
+  tidied <- tidy(mod)
+  
+  # Uncomment for diagnostics to ensure R2, adjusted R2, intercepts, 
+  # and coefficients are being extracted correctly.
+  
+  #print(tidied)
+  #print(glance(mod))
+  
+  adj.r.squared <- glance(mod) %>% pull(adj.r.squared)
+  r.squared <- glance(mod) %>% pull(r.squared)
+  
+  blade_diam_coeff <- filter(tidied, term == "Blade.Diameter.m.")
+  hub_height_coeff <- filter(tidied, term == "Hub.height.m.")
+  capacity_MW_coeff <- filter(tidied, term == "Capacity.MW.")
+  intercept <- filter(tidied, term == "(Intercept)")
+  
+  data.frame("adj.r.squared" = adj.r.squared,
+             "r.squared" = r.squared,
+             "Intercept" = intercept$estimate,
+             "Blade.diam.m.coeff" = ifelse(nrow(blade_diam_coeff) == 0, NA, blade_diam_coeff$estimate),
+             "Hub.height.m.coeff" = ifelse(nrow(hub_height_coeff) == 0, NA, hub_height_coeff$estimate),
+             "Capacity.MW.coeff" = ifelse(nrow(capacity_MW_coeff) == 0, NA, capacity_MW_coeff$estimate))
+}
+
+linear_models <- component_materials %>%
+  group_by(component_material) %>%
+  group_modify(extract_lm_coefficients) %>%
+  separate(component_material, into = c("Component", "Material"), sep = "_")
+
+failed_regressions <- linear_models %>%
+  filter(is.na(Blade.diam.m.coeff) | is.na(Hub.height.m.coeff) | is.na(Capacity.MW.coeff))
+
+good_regressions <- linear_models %>%
+  filter(!is.na(Blade.diam.m.coeff) & !is.na(Hub.height.m.coeff) & !is.na(Capacity.MW.coeff))
+```
+
+#### Regressions that did not work
+
+``` {r}
+knitr::kable(failed_regressions)
+```
+
+#### Regressions that did not fail
+
+``` {r}
+knitr::kable(good_regressions)
+```
+
+Finally, write the good regressions to a `.csv` file:
+
+``` {r}
+write_csv(good_regressions, "component_material_linear_models.csv")
+```
