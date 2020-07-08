@@ -51,7 +51,7 @@ knitr::kable(head(component_materials))
 
 ``` {r fig.width = 7, fig.height = 5, message = FALSE}
 ggplot(component_materials, aes(x = Hub.height.m., y = Value)) +
-  geom_point() +
+  geom_jitter() +
   geom_smooth(method = "lm", se = 0) +
   labs(x = "Hub height (m)",
        y = "Mass (tonnes)") +
@@ -62,7 +62,7 @@ ggplot(component_materials, aes(x = Hub.height.m., y = Value)) +
 
 ``` {r fig.width = 7, fig.height = 5, message = FALSE}
 ggplot(component_materials, aes(x = Capacity.MW., y = Value)) +
-  geom_point() +
+  geom_jitter() +
   geom_smooth(method = "lm", se = 0) +
   labs(x = "Capacity (MW)",
        y = "Mass (tonnes)") +
@@ -73,7 +73,7 @@ ggplot(component_materials, aes(x = Capacity.MW., y = Value)) +
 
 ``` {r fig.width = 7, fig.height = 5, message = FALSE}
 ggplot(component_materials, aes(x = Blade.Diameter.m., y = Value)) +
-  geom_point() +
+  geom_jitter() +
   geom_smooth(method = "lm", se = 0) +
   labs(x = "Blade Diameter (m)",
        y = "Mass (tonnes)") +
@@ -118,11 +118,27 @@ linear_models <- component_materials %>%
   group_modify(extract_lm_coefficients) %>%
   separate(component_material, into = c("Component", "Material"), sep = "_")
 
-knitr::kable(linear_models)
+failed_regressions <- linear_models %>%
+  filter(is.na(Blade.diam.m.coeff) | is.na(Hub.height.m.coeff) | is.na(Capacity.MW.coeff))
+
+good_regressions <- linear_models %>%
+  filter(!is.na(Blade.diam.m.coeff) & !is.na(Hub.height.m.coeff) & !is.na(Capacity.MW.coeff))
 ```
 
-Finally, write the model to a `.csv` file:
+#### Regressions that did not work
 
 ``` {r}
-write_csv(linear_models, "component_material_linear_models.csv")
+knitr::kable(failed_regressions)
+```
+
+#### Regressions that did not fail
+
+``` {r}
+knitr::kable(good_regressions)
+```
+
+Finally, write the good regressions to a `.csv` file:
+
+``` {r}
+write_csv(good_regressions, "component_material_linear_models.csv")
 ```
