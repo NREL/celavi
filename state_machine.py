@@ -12,25 +12,25 @@ def report(result):
     report_list: List[Dict] = []
     for ts in range(1, max_timestep + 1):
         timestep_result = result[result["ts"] == ts]
-        number_use = len(timestep_result[timestep_result["unit.state"] == "use"])
+        number_use = len(timestep_result[timestep_result["component.state"] == "use"])
         number_recycle = len(
-            timestep_result[timestep_result["unit.state"] == "recycle"]
+            timestep_result[timestep_result["component.state"] == "recycle"]
         )
         number_remanufacture = len(
-            timestep_result[timestep_result["unit.state"] == "remanufacture"]
+            timestep_result[timestep_result["component.state"] == "remanufacture"]
         )
         number_landfill = len(
-            timestep_result[timestep_result["unit.state"] == "landfill"]
+            timestep_result[timestep_result["component.state"] == "landfill"]
         )
-        total_units = len(timestep_result)
+        total_components = len(timestep_result)
         report_list.append(
             {
                 "ts": ts,
-                "total_units": total_units,
-                "fraction_use": number_use / total_units,
-                "fraction_recycle": number_recycle / total_units,
-                "fraction_remanufacture": number_remanufacture / total_units,
-                "fraction_landfill": number_landfill / total_units,
+                "total_components": total_components,
+                "fraction_use": number_use / total_components,
+                "fraction_recycle": number_recycle / total_components,
+                "fraction_remanufacture": number_remanufacture / total_components,
+                "fraction_landfill": number_landfill / total_components,
             }
         )
     report_df = pd.DataFrame(report_list)
@@ -88,7 +88,7 @@ def make_plots(report_df, context):
 def run_and_report():
     print(os.getcwd())
     context = Context("natl-wind-importable.py")
-    context.populate_units()
+    context.populate_components()
     result = context.run()
     report_df = report(result)
     make_plots(report_df, context)
