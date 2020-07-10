@@ -228,22 +228,26 @@ class Context:
                 choice = np.random.choice(choices, p=np.array(probabilities))
                 return choice
 
-    def populate_components(self, number_of_components: int = 100) -> None:
+    def populate_components(self, turbine_data_filename: str) -> None:
         """
         This makes an initial population of components in the
         model.
         """
-
-        for _ in range(number_of_components):
-            component = Component(
-                component_type="blade",
-                state="use",
-                lifespan=randint(40, 80),
-                transitions_table=self.transitions_table,
-                context=self,
-            )
-            self.components.append(component)
-            self.env.process(component.eol_process(self.env))
+        all_turbines = pd.read_csv(turbine_data_filename)
+        turbine_ids = all_turbines["id"].unique()
+        for turbine_id in turbine_ids:
+            single_turbine = all_turbines.query("id == @turbine_id")
+            component_types = single_turbine["Component"]
+            for component_type in component_types:
+                component = Component(
+                    component_type=component_type,
+                    state="use",
+                    lifespan=randint(40, 80),
+                    transitions_table=self.transitions_table,
+                    context=self,
+                )
+                self.components.append(component)
+                self.env.process(component.eol_process(self.env))
 
     def log_process(self, env):
         """
