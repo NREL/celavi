@@ -218,10 +218,11 @@ class Context:
         all_turbines = pd.read_csv(turbine_data_filename)
         turbine_ids = all_turbines["id"].unique()
         for turbine_id in turbine_ids:
+            print(f"Importing turbine {turbine_id}")
             single_turbine = all_turbines.query("id == @turbine_id")
             # TODO: Make the followig two lines use .loc
-            latitude = single_turbine.iloc[0, 17]
-            longitude = single_turbine.iloc[0, 18]
+            latitude = single_turbine.iloc[0, 18]
+            longitude = single_turbine.iloc[0, 17]
             component_types = single_turbine["Component"].unique()
             for component_type in component_types:
                 component = Component(
@@ -260,6 +261,7 @@ class Context:
             The SimPy environment which can be used to generate timeouts.
         """
         while True:
+            print(f"Logging {env.now}")
             yield env.timeout(1)
             for component in self.components:
                 self.component_log_list.append(
