@@ -237,7 +237,7 @@ class Context:
         turbine_ids = all_turbines["id"].unique()
         for turbine_id in turbine_ids:
             single_turbine = all_turbines.query("id == @turbine_id")
-            component_types = single_turbine["Component"]
+            component_types = single_turbine["Component"].unique()
             for component_type in component_types:
                 component = Component(
                     component_type=component_type,
@@ -248,6 +248,15 @@ class Context:
                 )
                 self.components.append(component)
                 self.env.process(component.eol_process(self.env))
+                single_component = single_turbine.query("Component == @component_type")
+                for _, material_row in single_component.iterrows():
+                    material_type = material_row["Material"]
+                    component_material = ComponentMaterial(
+                        material_type=material_type,
+                        component_material=f"{material_type}"
+                    )
+                    component.materials.append(component_material)
+
 
     def log_process(self, env):
         """
@@ -286,6 +295,28 @@ class Context:
         return self.log_df
 
 
+@dataclass
+class ComponentMaterial:
+    """
+    This class stores a material in a component
+
+    Instance attributes
+    -------------------
+    material: str
+        The name of the type of material.
+
+    component_material: str
+        The name of the component followed by the name of the material.
+
+    component_material_id: str
+        Optional. A unique identifying string for the material
+        component. Will populate with a UUID if unspecified.
+    """
+    component_material: str
+    material_type: str
+    component_material_id: str = field(default_factory=unique_identifer_str)
+
+
 class Component:
     """
     This models a component within the discrete time model.
@@ -322,10 +353,13 @@ class Component:
 
         Instance attributes that are not parameters
         -------------------------------------------
-        state_stack: deque[str]
-            Holds a stack of states this component has been through. This is to
-            enforce technical limitations around remanufacturing and reusing
-            components.
+        self.transition_list: List[str]
+            The list of state transition history. This is used to block
+            disallowed sequences of transitions. This is a shortcut to
+            keep our state transition tables simpler.
+
+        self.materials: List[ComponentMaterial]
+            This is the list of the materials inside the component.
         """
 
         self.component_type = component_type
@@ -335,6 +369,8 @@ class Component:
         self.transitions_table = transitions_table
         self.component_id = str(uuid4()) if component_id is None else component_id
         self.transition_list = []
+        self.materials = []
+
         if state == "use":
             self.transition_list.append("using")
         elif state == "remanufacture":
