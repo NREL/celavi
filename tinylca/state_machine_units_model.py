@@ -244,7 +244,8 @@ class Context:
                         material_tonnes=material_tonnes,
                         component_material=f"{component_type} {material_type}",
                         latitude=latitude,
-                        longitude=longitude
+                        longitude=longitude,
+                        parent_component=component,
                     )
                     component.materials.append(component_material)
 
@@ -275,6 +276,7 @@ class Context:
                 for material in component.materials:
                     self.component_material_log_list.append({
                         "ts": env.now,
+                        "state": material.state,
                         "component_material_id": material.component_material_id,
                         "component_material": material.component_material,
                         "material_type": material.material_type,
@@ -300,37 +302,6 @@ class Context:
         component_log_df = pd.DataFrame(self.component_log_list)
         material_component_log_df = pd.DataFrame(self.component_material_log_list)
         return component_log_df, material_component_log_df
-
-
-@dataclass
-class ComponentMaterial:
-    """
-    This class stores a material in a component
-
-    Instance attributes
-    -------------------
-    latitude: float
-        The latitude location of this component
-
-    longitude: float
-        The longitude location of this component
-
-    material: str
-        The name of the type of material.
-
-    component_material: str
-        The name of the component followed by the name of the material.
-
-    component_material_id: str
-        Optional. A unique identifying string for the material
-        component. Will populate with a UUID if unspecified.
-    """
-    component_material: str
-    material_type: str
-    material_tonnes: float
-    latitude: float
-    longitude: float
-    component_material_id: str = field(default_factory=unique_identifer_str)
 
 
 class Component:
@@ -456,6 +427,49 @@ class Component:
             yield env.timeout(self.lifespan)
             next_transition = self.context.probabilistic_transition(self, env.now)
             self.transition(next_transition)
+
+
+@dataclass
+class ComponentMaterial:
+    """
+    This class stores a material in a component
+
+    Instance attributes
+    -------------------
+    parent_component: Component
+        The component that contains this material_component
+
+    latitude: float
+        The latitude location of this component
+
+    longitude: float
+        The longitude location of this component
+
+    material: str
+        The name of the type of material.
+
+    component_material: str
+        The name of the component followed by the name of the material.
+
+    component_material_id: str
+        Optional. A unique identifying string for the material
+        component. Will populate with a UUID if unspecified.
+    """
+    parent_component: Component
+    component_material: str
+    material_type: str
+    material_tonnes: float
+    latitude: float
+    longitude: float
+    component_material_id: str = field(default_factory=unique_identifer_str)
+
+    @property
+    def state(self) -> str:
+        """
+        Obtains the state from the parent component, and uses that as a
+        proxy for the state of this material component.
+        """
+        return self.parent_component.state
 
 
 @dataclass

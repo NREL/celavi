@@ -92,7 +92,8 @@ def run_and_report():
     component_log, material_component_log = context.run()
     report_df = report(component_log)
     make_plots(report_df, context)
-    report_df.to_csv("circular-revolution.csv")
+    report_df.to_csv("component_report.csv", index=False)
+    material_component_log.to_csv("material_component_log.csv", index=False)
 
 
 if __name__ == "__main__":
