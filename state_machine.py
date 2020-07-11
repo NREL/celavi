@@ -92,7 +92,9 @@ def run_and_report():
     component_log, material_component_log = context.run()
     report_df = report(component_log)
     make_plots(report_df, context)
+    print("Writing component report...")
     report_df.to_csv("component_report.csv", index=False)
+    print("writing material component log...")
     material_component_log.to_csv("material_component_log.csv", index=False)
 
 
