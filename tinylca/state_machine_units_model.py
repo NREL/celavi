@@ -251,9 +251,11 @@ class Context:
                 single_component = single_turbine.query("Component == @component_type")
                 for _, material_row in single_component.iterrows():
                     material_type = material_row["Material"]
+                    material_tonnes = material_row["Material Tonnes"]
                     component_material = ComponentMaterial(
                         material_type=material_type,
-                        component_material=f"{material_type}"
+                        material_tonnes=material_tonnes,
+                        component_material=f"{component_type} {material_type}"
                     )
                     component.materials.append(component_material)
 
@@ -314,6 +316,7 @@ class ComponentMaterial:
     """
     component_material: str
     material_type: str
+    material_tonnes: float
     component_material_id: str = field(default_factory=unique_identifer_str)
 
 
