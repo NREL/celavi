@@ -89,8 +89,8 @@ def run_and_report():
     print(os.getcwd())
     context = Context("natl-wind-importable.py")
     context.populate_components("long_ten_usgs_dataset_materials.csv")
-    result = context.run()
-    report_df = report(result)
+    component_log, material_component_log = context.run()
+    report_df = report(component_log)
     make_plots(report_df, context)
     report_df.to_csv("circular-revolution.csv")
 

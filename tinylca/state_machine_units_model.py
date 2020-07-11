@@ -142,26 +142,6 @@ class Context:
         }
 
     @property
-    def component_log_df(self) -> pd.DataFrame:
-        """
-        This returns the log of each component's state at each timestep.
-
-        The dataframe has the following columns:
-
-        ts: The discrete timestep of the log entry
-        component.component_type: The type of the component
-        component.component_id: The uuid of the component
-        component.state: The current state of the component
-
-        Returns
-        -------
-        pd.DataFrame
-            The dataframe of the log.
-        """
-        result = pd.DataFrame(self.component_log_list)
-        return result
-
-    @property
     def max_timestep(self) -> int:
         """
         This returns the maximum timestep available. It is a count of the number
@@ -310,12 +290,16 @@ class Context:
 
         Returns
         -------
-        pd.DataFrame
+        pd.DataFrame, pd.DataFrame
             The log of every component at every timestep in the simulation.
+            And the log of every material component at every timestep in
+            the simulation.
         """
         self.env.process(self.log_process(self.env))
         self.env.run(self.max_timestep)
-        return self.component_log_df
+        component_log_df = pd.DataFrame(self.component_log_list)
+        material_component_log_df = pd.DataFrame(self.component_material_log_list)
+        return component_log_df, material_component_log_df
 
 
 @dataclass
