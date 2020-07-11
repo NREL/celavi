@@ -116,6 +116,7 @@ class Context:
         self.env = simpy.Environment()
         self.log_list: List[Dict] = []
         self.components: List[Component] = []
+        self.turbines: List[Turbine] = []
 
         self.transitions_table = {
             StateTransition(state="use", transition="recycling"): NextState(
@@ -237,6 +238,18 @@ class Context:
         turbine_ids = all_turbines["id"].unique()
         for turbine_id in turbine_ids:
             single_turbine = all_turbines.query("id == @turbine_id")
+            if len(single_turbine) == 0:
+                print("Golly gosh darn")
+
+            # TODO: Make the followig two lines use .loc
+            latitude = single_turbine.iloc[0, 17]
+            longitude = single_turbine.iloc[0, 18]
+
+            turbine = Turbine(
+                latitude=latitude,
+                longitude=longitude,
+            )
+            self.turbines.append(turbine)
             component_types = single_turbine["Component"].unique()
             for component_type in component_types:
                 component = Component(
@@ -247,6 +260,7 @@ class Context:
                     context=self,
                 )
                 self.components.append(component)
+                turbine.components.append(component)
                 self.env.process(component.eol_process(self.env))
                 single_component = single_turbine.query("Component == @component_type")
                 for _, material_row in single_component.iterrows():
@@ -433,3 +447,10 @@ class Component:
             yield env.timeout(self.lifespan)
             next_transition = self.context.probabilistic_transition(self, env.now)
             self.transition(next_transition)
+
+
+@dataclass
+class Turbine:
+    latitude: float
+    longitude: float
+    components: List[Component] = field(default_factory=list)
