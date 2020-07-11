@@ -114,9 +114,10 @@ class Context:
             self.fraction_remanufacture
 
         self.env = simpy.Environment()
-        self.log_list: List[Dict] = []
         self.components: List[Component] = []
-        self.turbines: List[Turbine] = []
+
+        self.component_log_list: List[Dict] = []
+        self.component_material_log_list: List[Dict] = []
 
         self.transitions_table = {
             StateTransition(state="use", transition="recycling"): NextState(
@@ -141,7 +142,7 @@ class Context:
         }
 
     @property
-    def log_df(self) -> pd.DataFrame:
+    def component_log_df(self) -> pd.DataFrame:
         """
         This returns the log of each component's state at each timestep.
 
@@ -157,7 +158,7 @@ class Context:
         pd.DataFrame
             The dataframe of the log.
         """
-        result = pd.DataFrame(self.log_list)
+        result = pd.DataFrame(self.component_log_list)
         return result
 
     @property
@@ -238,29 +239,21 @@ class Context:
         turbine_ids = all_turbines["id"].unique()
         for turbine_id in turbine_ids:
             single_turbine = all_turbines.query("id == @turbine_id")
-            if len(single_turbine) == 0:
-                print("Golly gosh darn")
-
             # TODO: Make the followig two lines use .loc
             latitude = single_turbine.iloc[0, 17]
             longitude = single_turbine.iloc[0, 18]
-
-            turbine = Turbine(
-                latitude=latitude,
-                longitude=longitude,
-            )
-            self.turbines.append(turbine)
             component_types = single_turbine["Component"].unique()
             for component_type in component_types:
                 component = Component(
                     component_type=component_type,
                     state="use",
                     lifespan=randint(40, 80),
+                    latitude=latitude,
+                    longitude=longitude,
                     transitions_table=self.transitions_table,
                     context=self,
                 )
                 self.components.append(component)
-                turbine.components.append(component)
                 self.env.process(component.eol_process(self.env))
                 single_component = single_turbine.query("Component == @component_type")
                 for _, material_row in single_component.iterrows():
@@ -269,10 +262,11 @@ class Context:
                     component_material = ComponentMaterial(
                         material_type=material_type,
                         material_tonnes=material_tonnes,
-                        component_material=f"{component_type} {material_type}"
+                        component_material=f"{component_type} {material_type}",
+                        latitude=latitude,
+                        longitude=longitude
                     )
                     component.materials.append(component_material)
-
 
     def log_process(self, env):
         """
@@ -287,14 +281,27 @@ class Context:
         while True:
             yield env.timeout(1)
             for component in self.components:
-                self.log_list.append(
+                self.component_log_list.append(
                     {
                         "ts": env.now,
+                        "component.id": component.component_id,
                         "component.component_type": component.component_type,
                         "component.component_id,": component.component_id,
                         "component.state": component.state,
+                        "component.latitude": component.latitude,
+                        "component.longitude": component.longitude
                     }
                 )
+                for material in component.materials:
+                    self.component_material_log_list.append({
+                        "ts": env.now,
+                        "component_material_id": material.component_material_id,
+                        "component_material": material.component_material,
+                        "material_type": material.material_type,
+                        "material_tonnes": material.material_tonnes,
+                        "latitude": material.latitude,
+                        "longitude": material.longitude,
+                    })
 
     def run(self) -> pd.DataFrame:
         """
@@ -308,7 +315,7 @@ class Context:
         """
         self.env.process(self.log_process(self.env))
         self.env.run(self.max_timestep)
-        return self.log_df
+        return self.component_log_df
 
 
 @dataclass
@@ -318,6 +325,12 @@ class ComponentMaterial:
 
     Instance attributes
     -------------------
+    latitude: float
+        The latitude location of this component
+
+    longitude: float
+        The longitude location of this component
+
     material: str
         The name of the type of material.
 
@@ -331,6 +344,8 @@ class ComponentMaterial:
     component_material: str
     material_type: str
     material_tonnes: float
+    latitude: float
+    longitude: float
     component_material_id: str = field(default_factory=unique_identifer_str)
 
 
@@ -343,6 +358,8 @@ class Component:
                  component_type: str,
                  state: str,
                  lifespan: int,
+                 latitude: float,
+                 longitude: float,
                  context: Context,
                  transitions_table: Dict[StateTransition, NextState],
                  component_id: str = None):
@@ -354,6 +371,12 @@ class Component:
 
         state: str
             The current state of the component.
+
+        latitude: float
+            The latitude geolocation of this component.
+
+        longitude: float
+            The longitude geolocation of this component.
 
         lifespan: int
             The lifespan of the component in discrete timesteps
@@ -381,6 +404,8 @@ class Component:
 
         self.component_type = component_type
         self.state = state
+        self.latitude = latitude
+        self.longitude = longitude
         self.lifespan = lifespan
         self.context = context
         self.transitions_table = transitions_table
