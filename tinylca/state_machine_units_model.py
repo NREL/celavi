@@ -19,7 +19,7 @@ def unique_identifer_str():
     str
         A UUID to be used as a unique identifier.
     """
-    return str(uuid4())
+    return str(uuid4())[-10:]
 
 
 @dataclass(frozen=True)
