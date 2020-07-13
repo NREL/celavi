@@ -87,7 +87,7 @@ def make_plots(report_df, context):
 
 def run_and_report():
     print(os.getcwd())
-    context = Context("natl-wind-importable.py")
+    context = Context("natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25)
     context.populate_components("long_ten_usgs_dataset_materials.csv")
     component_log, material_component_log = context.run()
     report_df = report(component_log)

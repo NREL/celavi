@@ -96,8 +96,12 @@ class Context:
     3. An SD model to probabilistically control the state machines
     4. A list of components.
     5. The table of allowed state transitions.
+    6. A way to translate discrete timesteps to years.
     """
-    def __init__(self, sd_model_filename: str):
+    def __init__(self, 
+                 sd_model_filename: str, 
+                 year_intercept: float, 
+                 years_per_timestep):
         sd_model = pysd.load(sd_model_filename)
         sd = sd_model.run()
         self.sd_variables = sd.columns
@@ -107,6 +111,8 @@ class Context:
         self.fraction_recycle = time_series["Fraction Recycle"].values
         self.fraction_remanufacture = time_series["Fraction Remanufacture"].values
         self.fraction_reuse = time_series["Fraction Reuse"].values
+        self.year_intercept = year_intercept
+        self.years_per_timestep = years_per_timestep
 
         self.fraction_landfill = 1.0 -\
             self.fraction_recycle -\
@@ -263,10 +269,12 @@ class Context:
         while True:
             print(f"Logging {env.now}...")
             yield env.timeout(1)
+            year = self.year_intercept + env.now * self.years_per_timestep
             for component in self.components:
                 self.component_log_list.append(
                     {
                         "ts": env.now,
+                        "year": year,
                         "component.id": component.component_id,
                         "component.component_type": component.component_type,
                         "component.component_id,": component.component_id,
@@ -278,6 +286,7 @@ class Context:
                 for material in component.materials:
                     self.component_material_log_list.append({
                         "ts": env.now,
+                        "year": year,
                         "state": material.state,
                         "component_material_id": material.component_material_id,
                         "component_material": material.component_material,
