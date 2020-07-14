@@ -226,10 +226,9 @@ class Context:
         for turbine_id in turbine_ids:
             print(f"Importing turbine {turbine_id}...")
             turbine_df = all_turbines.query("id == @turbine_id")
-            # TODO: Make the following two lines use .loc
-            latitude = turbine_df.iloc[0, 18]
-            longitude = turbine_df.iloc[0, 17]
-            turbine_id = turbine_df.iloc[0, 4]
+            latitude = turbine_df["ylat"].values[0]
+            longitude = turbine_df["xlong"].values[0]
+            turbine_id = turbine_df["faa_asn"].values[0]
             turbine = Turbine(turbine_id=turbine_id,
                               latitude=latitude,
                               longitude=longitude)
