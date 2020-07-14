@@ -130,28 +130,6 @@ class Context:
         self.component_event_log_list: List[Dict] = []
         self.component_material_event_log_list: List[Dict] = []
 
-        self.default_transitions_table = {
-            StateTransition(state="use", transition="recycling"): NextState(
-                state="recycle", lifespan_min=4, lifespan_max=8
-            ),
-            StateTransition(state="use", transition="reusing"): NextState(state="use"),
-            StateTransition(state="use", transition="landfilling"): NextState(
-                state="landfill", lifespan_min=1000, lifespan_max=1000
-            ),
-            StateTransition(state="use", transition="remanufacturing"): NextState(
-                state="remanufacture", lifespan_min=4, lifespan_max=8
-            ),
-            StateTransition(state="recycle", transition="remanufacturing"): NextState(
-                "remanufacture", lifespan_min=4, lifespan_max=8
-            ),
-            StateTransition(state="remanufacture", transition="using"): NextState(
-                "use"
-            ),
-            StateTransition(state="landfill", transition="landfilling"): NextState(
-                "landfill", lifespan_min=1000, lifespan_max=1000
-            ),
-        }
-
     @property
     def max_timestep(self) -> int:
         """
@@ -165,8 +143,8 @@ class Context:
         """
         return len(self.fraction_reuse)
 
-    # Could not make a type for component (it needs to be of type Unit) because component is
-    # defined below context.
+    # Could not make a type for component (it needs to be of type Component) because component is
+    # defined below Context.
     def probabilistic_transition(self, component_material, ts: int) -> str:
         """
         This method is the link between the SD model and the discrete time
@@ -265,7 +243,6 @@ class Context:
                         longitude=longitude,
                         lifespan=component_material_lifespan,
                         parent_component=component,
-                        transitions_table=self.default_transitions_table,
                     )
                     component.materials.append(component_material)
                     self.env.process(component_material.eol_process(self.env))
@@ -400,7 +377,6 @@ class ComponentMaterial:
 
     parent_component: Component
     context: Context
-    transitions_table: Dict[StateTransition, NextState]
     component_material: str
     material_type: str
     material_tonnes: float
@@ -412,6 +388,28 @@ class ComponentMaterial:
     component_material_id: str = field(default_factory=unique_identifer_str)
 
     def __post_init__(self):
+        self.transitions_table = {
+            StateTransition(state="use", transition="recycling"): NextState(
+                state="recycle", lifespan_min=4, lifespan_max=8
+            ),
+            StateTransition(state="use", transition="reusing"): NextState(state="use"),
+            StateTransition(state="use", transition="landfilling"): NextState(
+                state="landfill", lifespan_min=1000, lifespan_max=1000
+            ),
+            StateTransition(state="use", transition="remanufacturing"): NextState(
+                state="remanufacture", lifespan_min=4, lifespan_max=8
+            ),
+            StateTransition(state="recycle", transition="remanufacturing"): NextState(
+                "remanufacture", lifespan_min=4, lifespan_max=8
+            ),
+            StateTransition(state="remanufacture", transition="using"): NextState(
+                "use"
+            ),
+            StateTransition(state="landfill", transition="landfilling"): NextState(
+                "landfill", lifespan_min=1000, lifespan_max=1000
+            ),
+        }
+
         if self.state == "use":
             self.transition_list.append("using")
         elif self.state == "remanufacture":
