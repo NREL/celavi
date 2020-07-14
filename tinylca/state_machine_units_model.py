@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
+from typing import Dict, List
 from random import randint
-import numpy as np
-import pandas as pd
-import pysd
-import simpy
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+import pysd  # type: ignore
+import simpy  # type: ignore
 from uuid import uuid4
 
 
@@ -352,14 +352,7 @@ class Component:
         self.longitude = longitude
         self.context = context
         self.component_id = str(uuid4()) if component_id is None else component_id
-        self.transition_list = []
-        self.materials = []
-
-    def __str__(self):
-        """
-        A reasonable string representation of the component for use with print().
-        """
-        return f"type: {self.component_type}, id:{self.component_id}, state: {self.state}, lifespan:{self.lifespan}"
+        self.materials: List[ComponentMaterial] = []
 
 
 @dataclass
