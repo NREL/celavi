@@ -94,7 +94,7 @@ class Context:
     1. A SimPy environment for discrete time steps.
     2. Storage components that are state machines
     3. An SD model to probabilistically control the state machines
-    4. A list of components.
+    4. Lists of turbines, components, and component_materials
     5. The table of allowed state transitions.
     6. A way to translate discrete timesteps to years.
     """
@@ -103,7 +103,19 @@ class Context:
         self, sd_model_filename: str, year_intercept: float, years_per_timestep
     ):
         """
-        TODO: Make docstirng
+        For converting from discrete timesteps to years, the formula is
+            year_intercept + timestep * years_per_timestep.
+
+        Parameters
+        ----------
+        sd_model_filename: str
+            The filename that has the PySD model.
+
+        year_intercept: float
+            The intercept for timestep to year conversion
+
+        years_per_timestep: float
+            The number of years per timestep for timestep conversion.
         """
         sd_model = pysd.load(sd_model_filename)
         sd = sd_model.run()
@@ -126,6 +138,7 @@ class Context:
 
         self.env = simpy.Environment()
         self.components: List[Component] = []
+        self.turbines: List[Turbine] = []
 
         self.component_event_log_list: List[Dict] = []
         self.component_material_event_log_list: List[Dict] = []
@@ -143,8 +156,6 @@ class Context:
         """
         return len(self.fraction_reuse)
 
-    # Could not make a type for component (it needs to be of type Component) because component is
-    # defined below Context.
     def probabilistic_transition(self, component_material, ts: int) -> str:
         """
         This method is the link between the SD model and the discrete time
@@ -153,7 +164,7 @@ class Context:
 
         Parameters
         ----------
-        component: ComponentMaterial
+        component_material: ComponentMaterial
             The component instance that is being transitioned
 
         ts: int
@@ -214,21 +225,24 @@ class Context:
         turbine_ids = all_turbines["id"].unique()
         for turbine_id in turbine_ids:
             print(f"Importing turbine {turbine_id}...")
-            single_turbine = all_turbines.query("id == @turbine_id")
+            turbine_df = all_turbines.query("id == @turbine_id")
             # TODO: Make the following two lines use .loc
-            latitude = single_turbine.iloc[0, 18]
-            longitude = single_turbine.iloc[0, 17]
-            component_types = single_turbine["Component"].unique()
+            latitude = turbine_df.iloc[0, 18]
+            longitude = turbine_df.iloc[0, 17]
+            turbine = Turbine()
+            self.turbines.append(turbine)
+            component_types = turbine_df["Component"].unique()
             for component_type in component_types:
                 component = Component(
                     component_type=component_type,
                     context=self,
                 )
                 self.components.append(component)
+                turbine.components.append(component)
 
                 component_material_lifespan = randint(40, 80)
 
-                single_component = single_turbine.query("Component == @component_type")
+                single_component = turbine_df.query("Component == @component_type")
                 for _, material_row in single_component.iterrows():
                     material_type = material_row["Material"]
                     material_tonnes = material_row["Material Tonnes"]
@@ -242,7 +256,7 @@ class Context:
                         lifespan=component_material_lifespan,
                         parent_component=component,
                     )
-                    component.materials.append(component_material)
+                    component.component_materials.append(component_material)
                     self.env.process(component_material.eol_process(self.env))
 
     def log_process(self, env):
@@ -261,7 +275,7 @@ class Context:
             year = self.year_intercept + env.now * self.years_per_timestep
 
             for component in self.components:
-                for material in component.materials:
+                for material in component.component_materials:
                     self.component_material_event_log_list.append(
                         {
                             "ts": env.now,
@@ -428,22 +442,35 @@ class ComponentMaterial:
 
 
 @dataclass
-class Component:
-    """
-    This models a component within the discrete time model.
-    """
-
-    context: Context
-    component_type: str
-    materials: List[ComponentMaterial] = field(default_factory=list)
-
-
-@dataclass
 class Turbine:
     """
     TODO: Make docstring
     """
 
-    latitude: float
-    longitude: float
-    components: List[Component] = field(default_factory=list)
+    components: List = field(default_factory=list)  # list holds components
+
+
+@dataclass
+class Component:
+    """
+    This specifies a component within the model
+
+    Instance attributes
+    -------------------
+    parent_turbine: Turbine
+        The turbine that contains this component
+
+    context: Context
+        The context that contains this turbine
+
+    component_type: str
+        The type of component (Nacelle, Tower, Blade)
+
+    materials: List[ComponentMaterial]
+        Optional. If left unspecified, it defaults to an empty list.
+        The list of
+    """
+
+    context: Context
+    component_type: str
+    component_materials: List[ComponentMaterial] = field(default_factory=list)
