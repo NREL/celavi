@@ -222,8 +222,6 @@ class Context:
             for component_type in component_types:
                 component = Component(
                     component_type=component_type,
-                    latitude=latitude,
-                    longitude=longitude,
                     context=self,
                 )
                 self.components.append(component)
@@ -294,100 +292,65 @@ class Context:
         return material_component_log_df
 
 
-class Component:
+class ComponentMaterial:
     """
-    This models a component within the discrete time model.
+    ComponentMaterial models a particular material in a specific component
     """
 
     def __init__(
         self,
-        component_type: str,
+        parent_component,  # Should be of type Component not defined yet.
+        context: Context,
+        component_material: str,
+        material_type: str,
+        material_tonnes: float,
         latitude: float,
         longitude: float,
-        context: Context,
-        component_id: str = None,
+        lifespan: int,
+        state: str = "use",
+        component_material_id: str = None,
     ):
         """
         Parameters
         ----------
-        component_type: str
-            The type of component this is (e.g., "turbine blade")
+        parent_component: Component
+            The component that contains this material_component
 
         latitude: float
-            The latitude geolocation of this component.
+            The latitude location of this component
 
         longitude: float
-            The longitude geolocation of this component.
+            The longitude location of this component
 
-        context: Context
-            The context (class from above) in which the component operates.
+        material: str
+            The name of the type of material.
 
-        component_id: str
-            The unique identifier for the component. This doesn't rely on the
-            type of component. If it is not overridden, it defaults to a UUID.
+        component_material: str
+            The name of the component followed by the name of the material.
 
-        Instance attributes that are not parameters
-        -------------------------------------------
-        self.transition_list: List[str]
-            The list of state transition history. This is used to block
-            disallowed sequences of transitions. This is a shortcut to
-            keep our state transition tables simpler.
+        component_material_id: str
+            Optional. A unique identifying string for the material
+            component. Will populate with a UUID if unspecified.
 
-        self.materials: List[ComponentMaterial]
-            This is the list of the materials inside the component.
+        transitions_table: Dict[StateTransition, NextState]
+                The dictionary that controls the state transitions.
         """
-
-        self.component_type = component_type
+        self.component_material_id = (
+            unique_identifer_str()
+            if component_material_id is None
+            else component_material_id
+        )
+        self.parent_component = parent_component
+        self.context = context
+        self.component_material = component_material
+        self.material_type = material_type
+        self.material_tonnes = material_tonnes
         self.latitude = latitude
         self.longitude = longitude
-        self.context = context
-        self.component_id = str(uuid4()) if component_id is None else component_id
-        self.materials: List[ComponentMaterial] = []
+        self.lifespan = lifespan
+        self.state = state
+        self.transition_list: List[str] = []
 
-
-@dataclass
-class ComponentMaterial:
-    """
-    This class stores a material in a component
-
-    Instance attributes
-    -------------------
-    parent_component: Component
-        The component that contains this material_component
-
-    latitude: float
-        The latitude location of this component
-
-    longitude: float
-        The longitude location of this component
-
-    material: str
-        The name of the type of material.
-
-    component_material: str
-        The name of the component followed by the name of the material.
-
-    component_material_id: str
-        Optional. A unique identifying string for the material
-        component. Will populate with a UUID if unspecified.
-
-    transitions_table: Dict[StateTransition, NextState]
-            The dictionary that controls the state transitions.
-    """
-
-    parent_component: Component
-    context: Context
-    component_material: str
-    material_type: str
-    material_tonnes: float
-    latitude: float
-    longitude: float
-    lifespan: int
-    state: str = "use"
-    transition_list: List[str] = field(default_factory=list)
-    component_material_id: str = field(default_factory=unique_identifer_str)
-
-    def __post_init__(self):
         self.transitions_table = {
             StateTransition(state="use", transition="recycling"): NextState(
                 state="recycle", lifespan_min=4, lifespan_max=8
@@ -462,6 +425,17 @@ class ComponentMaterial:
             yield env.timeout(self.lifespan)
             next_transition = self.context.probabilistic_transition(self, env.now)
             self.transition(next_transition)
+
+
+@dataclass
+class Component:
+    """
+    This models a component within the discrete time model.
+    """
+
+    context: Context
+    component_type: str
+    materials: List[ComponentMaterial] = field(default_factory=list)
 
 
 @dataclass
