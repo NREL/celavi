@@ -229,13 +229,17 @@ class Context:
             # TODO: Make the following two lines use .loc
             latitude = turbine_df.iloc[0, 18]
             longitude = turbine_df.iloc[0, 17]
-            turbine = Turbine()
+            turbine_id = turbine_df.iloc[0, 4]
+            turbine = Turbine(turbine_id=turbine_id,
+                              latitude=latitude,
+                              longitude=longitude)
             self.turbines.append(turbine)
             component_types = turbine_df["Component"].unique()
             for component_type in component_types:
                 component = Component(
                     component_type=component_type,
                     context=self,
+                    parent_turbine=turbine,
                 )
                 self.components.append(component)
                 turbine.components.append(component)
@@ -251,8 +255,6 @@ class Context:
                         context=self,
                         material_tonnes=material_tonnes,
                         component_material=f"{component_type} {material_type}",
-                        latitude=latitude,
-                        longitude=longitude,
                         lifespan=component_material_lifespan,
                         parent_component=component,
                     )
@@ -280,13 +282,14 @@ class Context:
                         {
                             "ts": env.now,
                             "year": year,
+                            "turbine_id": material.parent_component.parent_turbine.turbine_id,
                             "state": material.state,
                             "component_material_id": material.component_material_id,
                             "component_material": material.component_material,
                             "material_type": material.material_type,
                             "material_tonnes": material.material_tonnes,
-                            "latitude": material.latitude,
-                            "longitude": material.longitude,
+                            "latitude": material.parent_component.parent_turbine.latitude,
+                            "longitude": material.parent_component.parent_turbine.longitude,
                         }
                     )
 
@@ -318,8 +321,6 @@ class ComponentMaterial:
         component_material: str,
         material_type: str,
         material_tonnes: float,
-        latitude: float,
-        longitude: float,
         lifespan: int,
         state: str = "use",
         component_material_id: str = None,
@@ -329,12 +330,6 @@ class ComponentMaterial:
         ----------
         parent_component: Component
             The component that contains this material_component
-
-        latitude: float
-            The latitude location of this component
-
-        longitude: float
-            The longitude location of this component
 
         material: str
             The name of the type of material.
@@ -359,8 +354,6 @@ class ComponentMaterial:
         self.component_material = component_material
         self.material_type = material_type
         self.material_tonnes = material_tonnes
-        self.latitude = latitude
-        self.longitude = longitude
         self.lifespan = lifespan
         self.state = state
         self.transition_list: List[str] = []
@@ -444,9 +437,27 @@ class ComponentMaterial:
 @dataclass
 class Turbine:
     """
-    TODO: Make docstring
+    The Turbine class represents a turbine.
+
+    Instance attributes
+    -------------------
+    turbine_id: str
+        The identification string for the turbine, such as an FAA identifier.
+        This should be unique.
+
+    components: List[Component]
+        The list of components that make this turbine.
+
+    latitude: float
+        The latitude of the turbine.
+
+    longitude: float
+        The longitude of the turbine.
     """
 
+    turbine_id: str
+    latitude: float
+    longitude: float
     components: List = field(default_factory=list)  # list holds components
 
 
@@ -458,7 +469,7 @@ class Component:
     Instance attributes
     -------------------
     parent_turbine: Turbine
-        The turbine that contains this component
+        The turbine that contains this component.
 
     context: Context
         The context that contains this turbine
@@ -473,4 +484,5 @@ class Component:
 
     context: Context
     component_type: str
+    parent_turbine: Turbine
     component_materials: List[ComponentMaterial] = field(default_factory=list)
