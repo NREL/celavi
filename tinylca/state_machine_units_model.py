@@ -38,6 +38,7 @@ class StateTransition:
     transition: str
         The transition away from the current state.
     """
+
     state: str
     transition: str
 
@@ -97,10 +98,10 @@ class Context:
     5. The table of allowed state transitions.
     6. A way to translate discrete timesteps to years.
     """
-    def __init__(self, 
-                 sd_model_filename: str, 
-                 year_intercept: float, 
-                 years_per_timestep):
+
+    def __init__(
+        self, sd_model_filename: str, year_intercept: float, years_per_timestep
+    ):
         """
         TODO: Make docstirng
         """
@@ -116,10 +117,12 @@ class Context:
         self.year_intercept = year_intercept
         self.years_per_timestep = years_per_timestep
 
-        self.fraction_landfill = 1.0 -\
-            self.fraction_recycle -\
-            self.fraction_reuse -\
-            self.fraction_remanufacture
+        self.fraction_landfill = (
+            1.0
+            - self.fraction_recycle
+            - self.fraction_reuse
+            - self.fraction_remanufacture
+        )
 
         self.env = simpy.Environment()
         self.components: List[Component] = []
@@ -196,20 +199,26 @@ class Context:
             # Do not choose "remanufacture" and "reuse" (or a combination of the two)
             # twice in a row. If this happens, give an even chance of recycling or
             # landfilling
-            if component_material.transition_list[-1] == "reuse" \
-                    or component_material.transition_list[-2:] == ['remanufacturing', 'remanufacturing']\
-                    or component_material.transition_list[-2:] == ['reusing', 'remanufacturing']:
+            if (
+                component_material.transition_list[-1] == "reuse"
+                or component_material.transition_list[-2:]
+                == ["remanufacturing", "remanufacturing"]
+                or component_material.transition_list[-2:]
+                == ["reusing", "remanufacturing"]
+            ):
                 choices = ["recycling", "landfilling"]
                 choice = np.random.choice(choices)
                 return choice
 
             else:
-                probabilities = np.array([
-                    self.fraction_recycle[ts],
-                    self.fraction_remanufacture[ts],
-                    self.fraction_reuse[ts],
-                    self.fraction_landfill[ts]
-                ])
+                probabilities = np.array(
+                    [
+                        self.fraction_recycle[ts],
+                        self.fraction_remanufacture[ts],
+                        self.fraction_reuse[ts],
+                        self.fraction_landfill[ts],
+                    ]
+                )
 
                 # Use this line to force probabilities for testing.
                 # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
@@ -278,17 +287,19 @@ class Context:
 
             for component in self.components:
                 for material in component.materials:
-                    self.component_material_event_log_list.append({
-                        "ts": env.now,
-                        "year": year,
-                        "state": material.state,
-                        "component_material_id": material.component_material_id,
-                        "component_material": material.component_material,
-                        "material_type": material.material_type,
-                        "material_tonnes": material.material_tonnes,
-                        "latitude": material.latitude,
-                        "longitude": material.longitude,
-                    })
+                    self.component_material_event_log_list.append(
+                        {
+                            "ts": env.now,
+                            "year": year,
+                            "state": material.state,
+                            "component_material_id": material.component_material_id,
+                            "component_material": material.component_material,
+                            "material_type": material.material_type,
+                            "material_tonnes": material.material_tonnes,
+                            "latitude": material.latitude,
+                            "longitude": material.longitude,
+                        }
+                    )
 
     def run(self) -> pd.DataFrame:
         """
@@ -311,12 +322,14 @@ class Component:
     This models a component within the discrete time model.
     """
 
-    def __init__(self,
-                 component_type: str,
-                 latitude: float,
-                 longitude: float,
-                 context: Context,
-                 component_id: str = None):
+    def __init__(
+        self,
+        component_type: str,
+        latitude: float,
+        longitude: float,
+        context: Context,
+        component_id: str = None,
+    ):
         """
         Parameters
         ----------
@@ -384,6 +397,7 @@ class ComponentMaterial:
     transitions_table: Dict[StateTransition, NextState]
             The dictionary that controls the state transitions.
     """
+
     parent_component: Component
     context: Context
     transitions_table: Dict[StateTransition, NextState]
@@ -451,11 +465,13 @@ class ComponentMaterial:
             next_transition = self.context.probabilistic_transition(self, env.now)
             self.transition(next_transition)
 
+
 @dataclass
 class Turbine:
     """
     TODO: Make docstring
     """
+
     latitude: float
     longitude: float
     components: List[Component] = field(default_factory=list)
