@@ -13,12 +13,14 @@ def unique_identifer_str():
     This returns a UUID that can serve as a unique identifier for anything.
     These UUIDs can be used as keys in a set or hash if needed.
 
+    TODO: Replace this with an incrementing integer.
+
     Returns
     -------
     str
         A UUID to be used as a unique identifier.
     """
-    return str(uuid4())[-10:]
+    return str(uuid4())
 
 
 @dataclass(frozen=True)
@@ -140,7 +142,6 @@ class Context:
         self.components: List[Component] = []
         self.turbines: List[Turbine] = []
 
-        self.component_event_log_list: List[Dict] = []
         self.component_material_event_log_list: List[Dict] = []
 
     @property
@@ -220,6 +221,11 @@ class Context:
         """
         This makes an initial population of components in the
         model.
+
+        Parameters
+        ----------
+        turbine_data_filename: str
+            The .csv file that has the data to populate the model.
         """
         all_turbines = pd.read_csv(turbine_data_filename)
         turbine_ids = all_turbines["id"].unique()
@@ -228,7 +234,6 @@ class Context:
             turbine_df = all_turbines.query("id == @turbine_id")
             latitude = turbine_df["ylat"].values[0]
             longitude = turbine_df["xlong"].values[0]
-            turbine_id = turbine_df["faa_asn"].values[0]
             turbine = Turbine(turbine_id=turbine_id,
                               latitude=latitude,
                               longitude=longitude)
