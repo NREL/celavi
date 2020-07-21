@@ -1,12 +1,11 @@
 from dataclasses import dataclass, field
 from typing import Dict, List
 from random import randint
-import numpy as np
-import pandas as pd
-import pysd
-import simpy
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
+import pysd  # type: ignore
+import simpy  # type: ignore
 from uuid import uuid4
-from collections import deque
 
 
 def unique_identifer_str():
@@ -14,12 +13,14 @@ def unique_identifer_str():
     This returns a UUID that can serve as a unique identifier for anything.
     These UUIDs can be used as keys in a set or hash if needed.
 
+    TODO: Replace this with an incrementing integer.
+
     Returns
     -------
     str
         A UUID to be used as a unique identifier.
     """
-    return str(uuid4())[-10:]
+    return str(uuid4())
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class StateTransition:
     transition: str
         The transition away from the current state.
     """
+
     state: str
     transition: str
 
@@ -92,12 +94,31 @@ class Context:
     Context is a class that provides:
 
     1. A SimPy environment for discrete time steps.
-    2. Functional components that are state machines
+    2. Storage components that are state machines
     3. An SD model to probabilistically control the state machines
-    4. A list of components.
+    4. Lists of turbines, components, and component_materials
     5. The table of allowed state transitions.
+    6. A way to translate discrete timesteps to years.
     """
-    def __init__(self, sd_model_filename: str):
+
+    def __init__(
+        self, sd_model_filename: str, year_intercept: float, years_per_timestep
+    ):
+        """
+        For converting from discrete timesteps to years, the formula is
+            year_intercept + timestep * years_per_timestep.
+
+        Parameters
+        ----------
+        sd_model_filename: str
+            The filename that has the PySD model.
+
+        year_intercept: float
+            The intercept for timestep to year conversion
+
+        years_per_timestep: float
+            The number of years per timestep for timestep conversion.
+        """
         sd_model = pysd.load(sd_model_filename)
         sd = sd_model.run()
         self.sd_variables = sd.columns
@@ -107,17 +128,239 @@ class Context:
         self.fraction_recycle = time_series["Fraction Recycle"].values
         self.fraction_remanufacture = time_series["Fraction Remanufacture"].values
         self.fraction_reuse = time_series["Fraction Reuse"].values
+        self.year_intercept = year_intercept
+        self.years_per_timestep = years_per_timestep
 
-        self.fraction_landfill = 1.0 -\
-            self.fraction_recycle -\
-            self.fraction_reuse -\
-            self.fraction_remanufacture
+        self.fraction_landfill = (
+            1.0
+            - self.fraction_recycle
+            - self.fraction_reuse
+            - self.fraction_remanufacture
+        )
 
         self.env = simpy.Environment()
         self.components: List[Component] = []
+        self.turbines: List[Turbine] = []
 
-        self.component_log_list: List[Dict] = []
-        self.component_material_log_list: List[Dict] = []
+        self.component_material_event_log_list: List[Dict] = []
+
+    @property
+    def max_timestep(self) -> int:
+        """
+        This returns the maximum timestep available. It is a count of the number
+        of timesteps in the SD run.
+
+        Returns
+        -------
+        int
+            The maximum timestep.
+        """
+        return len(self.fraction_reuse)
+
+    def probabilistic_transition(self, component_material, ts: int) -> str:
+        """
+        This method is the link between the SD model and the discrete time
+        model. It returns a string with the name of a state transition
+        generated with probabilities from the SD model.
+
+        Parameters
+        ----------
+        component_material: ComponentMaterial
+            The component instance that is being transitioned
+
+        ts: int
+            The timestep in the discrete time model used to look up values from
+            the SD model.
+
+        Returns
+        -------
+        str
+            The name of the transition to send to the component's state machine.
+        """
+        if component_material.state == "recycle":
+            return "remanufacturing"
+        elif component_material.state == "remanufacture":
+            return "using"
+        elif component_material.state == "landfill":
+            return "landfilling"
+
+        else:  # The "use" state
+
+            # Do not choose "remanufacture" and "reuse" (or a combination of the two)
+            # twice in a row. If this happens, give an even chance of recycling or
+            # landfilling
+            if (
+                component_material.transition_list[-1] == "reuse"
+                or component_material.transition_list[-2:]
+                == ["remanufacturing", "remanufacturing"]
+                or component_material.transition_list[-2:]
+                == ["reusing", "remanufacturing"]
+            ):
+                choices = ["recycling", "landfilling"]
+                choice = np.random.choice(choices)
+                return choice
+
+            else:
+                probabilities = np.array(
+                    [
+                        self.fraction_recycle[ts],
+                        self.fraction_remanufacture[ts],
+                        self.fraction_reuse[ts],
+                        self.fraction_landfill[ts],
+                    ]
+                )
+
+                # Use this line to force probabilities for testing.
+                # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
+
+                choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
+                choice = np.random.choice(choices, p=np.array(probabilities))
+                return choice
+
+    def populate_components(self, turbine_data_filename: str) -> None:
+        """
+        This makes an initial population of components in the
+        model.
+
+        Parameters
+        ----------
+        turbine_data_filename: str
+            The .csv file that has the data to populate the model.
+        """
+        all_turbines = pd.read_csv(turbine_data_filename)
+        turbine_ids = all_turbines["id"].unique()
+        for turbine_id in turbine_ids:
+            print(f"Importing turbine {turbine_id}...")
+            turbine_df = all_turbines.query("id == @turbine_id")
+            latitude = turbine_df["ylat"].values[0]
+            longitude = turbine_df["xlong"].values[0]
+            turbine = Turbine(turbine_id=turbine_id,
+                              latitude=latitude,
+                              longitude=longitude)
+            self.turbines.append(turbine)
+            component_types = turbine_df["Component"].unique()
+            for component_type in component_types:
+                component = Component(
+                    component_type=component_type,
+                    context=self,
+                    parent_turbine=turbine,
+                )
+                self.components.append(component)
+                turbine.components.append(component)
+
+                component_material_lifespan = randint(40, 80)
+
+                single_component = turbine_df.query("Component == @component_type")
+                for _, material_row in single_component.iterrows():
+                    material_type = material_row["Material"]
+                    material_tonnes = material_row["Material Tonnes"]
+                    component_material = ComponentMaterial(
+                        material_type=material_type,
+                        context=self,
+                        material_tonnes=material_tonnes,
+                        component_material=f"{component_type} {material_type}",
+                        lifespan=component_material_lifespan,
+                        parent_component=component,
+                    )
+                    component.component_materials.append(component_material)
+                    self.env.process(component_material.eol_process(self.env))
+
+    def log_process(self, env):
+        """
+        This is a SimPy process that logs the state of every component at every
+        timestep.
+
+        Parameters
+        ----------
+        env: simpy.Environment
+            The SimPy environment which can be used to generate timeouts.
+        """
+        while True:
+            print(f"Logging {env.now}...")
+            yield env.timeout(1)
+            year = self.year_intercept + env.now * self.years_per_timestep
+
+            for component in self.components:
+                for material in component.component_materials:
+                    self.component_material_event_log_list.append(
+                        {
+                            "ts": env.now,
+                            "year": year,
+                            "turbine_id": material.parent_component.parent_turbine.turbine_id,
+                            "state": material.state,
+                            "component_material_id": material.component_material_id,
+                            "component_material": material.component_material,
+                            "material_type": material.material_type,
+                            "material_tonnes": material.material_tonnes,
+                            "latitude": material.parent_component.parent_turbine.latitude,
+                            "longitude": material.parent_component.parent_turbine.longitude,
+                        }
+                    )
+
+    def run(self) -> pd.DataFrame:
+        """
+        This runs the model. Note that it does not initially populate the model
+        first.
+
+        Returns
+        -------
+        pd.DataFrame
+            The log of the state every component_material at every step of the simulation.
+        """
+        self.env.process(self.log_process(self.env))
+        self.env.run(self.max_timestep)
+        material_component_log_df = pd.DataFrame(self.component_material_event_log_list)
+        return material_component_log_df
+
+
+class ComponentMaterial:
+    """
+    ComponentMaterial models a particular material in a specific component
+    """
+
+    def __init__(
+        self,
+        parent_component,  # Should be of type Component not defined yet.
+        context: Context,
+        component_material: str,
+        material_type: str,
+        material_tonnes: float,
+        lifespan: int,
+        state: str = "use",
+        component_material_id: str = None,
+    ):
+        """
+        Parameters
+        ----------
+        parent_component: Component
+            The component that contains this material_component
+
+        material: str
+            The name of the type of material.
+
+        component_material: str
+            The name of the component followed by the name of the material.
+
+        component_material_id: str
+            Optional. A unique identifying string for the material
+            component. Will populate with a UUID if unspecified.
+
+        transitions_table: Dict[StateTransition, NextState]
+                The dictionary that controls the state transitions.
+        """
+        self.component_material_id = (
+            unique_identifer_str()
+            if component_material_id is None
+            else component_material_id
+        )
+        self.parent_component = parent_component
+        self.context = context
+        self.component_material = component_material
+        self.material_type = material_type
+        self.material_tonnes = material_tonnes
+        self.lifespan = lifespan
+        self.state = state
+        self.transition_list: List[str] = []
 
         self.transitions_table = {
             StateTransition(state="use", transition="recycling"): NextState(
@@ -137,251 +380,16 @@ class Context:
                 "use"
             ),
             StateTransition(state="landfill", transition="landfilling"): NextState(
-                "landfill"
+                "landfill", lifespan_min=1000, lifespan_max=1000
             ),
         }
 
-    @property
-    def max_timestep(self) -> int:
-        """
-        This returns the maximum timestep available. It is a count of the number
-        of timesteps in the SD run.
-
-        Returns
-        -------
-        int
-            The maximum timestep.
-        """
-        return len(self.fraction_reuse)
-
-    # Could not make a type for component (it needs to be of type Unit) because component is
-    # defined below context.
-    def probabilistic_transition(self, component, ts: int) -> str:
-        """
-        This method is the link between the SD model and the discrete time
-        model. It returns a string with the name of a state transition
-        generated with probabilities from the SD model.
-
-        Parameters
-        ----------
-        component: Component
-            The component instance that is being transitioned
-
-        ts: int
-            The timestep in the discrete time model used to look up values from
-            the SD model.
-
-        Returns
-        -------
-        str
-            The name of the transition to send to the component's state machine.
-        """
-        if component.state == "recycle":
-            return "remanufacturing"
-        elif component.state == "remanufacture":
-            return "using"
-        elif component.state == "landfill":
-            return "landfilling"
-
-        else:  # The "use" state
-
-            # Do not choose "remanufacture" and "reuse" (or a combination of the two)
-            # twice in a row. If this happens, give an even chance of recycling or
-            # landfilling
-            if component.transition_list[-1] == "reuse" \
-                    or component.transition_list[-2:] == ['remanufacturing', 'remanufacturing']\
-                    or component.transition_list[-2:] == ['reusing', 'remanufacturing']:
-                choices = ["recycling", "landfilling"]
-                choice = np.random.choice(choices)
-                return choice
-
-            else:
-                probabilities = np.array([
-                    self.fraction_recycle[ts],
-                    self.fraction_remanufacture[ts],
-                    self.fraction_reuse[ts],
-                    self.fraction_landfill[ts]
-                ])
-
-                # Use this line to force probabilities for testing.
-                # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
-
-                choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
-                choice = np.random.choice(choices, p=np.array(probabilities))
-                return choice
-
-    def populate_components(self, turbine_data_filename: str) -> None:
-        """
-        This makes an initial population of components in the
-        model.
-        """
-        all_turbines = pd.read_csv(turbine_data_filename)
-        turbine_ids = all_turbines["id"].unique()
-        for turbine_id in turbine_ids:
-            print(f"Importing turbine {turbine_id}...")
-            single_turbine = all_turbines.query("id == @turbine_id")
-            # TODO: Make the followig two lines use .loc
-            latitude = single_turbine.iloc[0, 18]
-            longitude = single_turbine.iloc[0, 17]
-            component_types = single_turbine["Component"].unique()
-            for component_type in component_types:
-                component = Component(
-                    component_type=component_type,
-                    state="use",
-                    lifespan=randint(40, 80),
-                    latitude=latitude,
-                    longitude=longitude,
-                    transitions_table=self.transitions_table,
-                    context=self,
-                )
-                self.components.append(component)
-                self.env.process(component.eol_process(self.env))
-                single_component = single_turbine.query("Component == @component_type")
-                for _, material_row in single_component.iterrows():
-                    material_type = material_row["Material"]
-                    material_tonnes = material_row["Material Tonnes"]
-                    component_material = ComponentMaterial(
-                        material_type=material_type,
-                        material_tonnes=material_tonnes,
-                        component_material=f"{component_type} {material_type}",
-                        latitude=latitude,
-                        longitude=longitude,
-                        parent_component=component,
-                    )
-                    component.materials.append(component_material)
-
-    def log_process(self, env):
-        """
-        This is a SimPy process that logs the state of every component at every
-        timestep.
-
-        Parameters
-        ----------
-        env: simpy.Environment
-            The SimPy environment which can be used to generate timeouts.
-        """
-        while True:
-            print(f"Logging {env.now}...")
-            yield env.timeout(1)
-            for component in self.components:
-                self.component_log_list.append(
-                    {
-                        "ts": env.now,
-                        "component.id": component.component_id,
-                        "component.component_type": component.component_type,
-                        "component.component_id,": component.component_id,
-                        "component.state": component.state,
-                        "component.latitude": component.latitude,
-                        "component.longitude": component.longitude
-                    }
-                )
-                for material in component.materials:
-                    self.component_material_log_list.append({
-                        "ts": env.now,
-                        "state": material.state,
-                        "component_material_id": material.component_material_id,
-                        "component_material": material.component_material,
-                        "material_type": material.material_type,
-                        "material_tonnes": material.material_tonnes,
-                        "latitude": material.latitude,
-                        "longitude": material.longitude,
-                    })
-
-    def run(self) -> pd.DataFrame:
-        """
-        This runs the model. Note that it does not initially populate the model
-        first.
-
-        Returns
-        -------
-        pd.DataFrame, pd.DataFrame
-            The log of every component at every timestep in the simulation.
-            And the log of every material component at every timestep in
-            the simulation.
-        """
-        self.env.process(self.log_process(self.env))
-        self.env.run(self.max_timestep)
-        component_log_df = pd.DataFrame(self.component_log_list)
-        material_component_log_df = pd.DataFrame(self.component_material_log_list)
-        return component_log_df, material_component_log_df
-
-
-class Component:
-    """
-    This models a component within the discrete time model.
-    """
-
-    def __init__(self,
-                 component_type: str,
-                 state: str,
-                 lifespan: int,
-                 latitude: float,
-                 longitude: float,
-                 context: Context,
-                 transitions_table: Dict[StateTransition, NextState],
-                 component_id: str = None):
-        """
-        Parameters
-        ----------
-        component_type: str
-            The type of component this is (e.g., "turbine blade")
-
-        state: str
-            The current state of the component.
-
-        latitude: float
-            The latitude geolocation of this component.
-
-        longitude: float
-            The longitude geolocation of this component.
-
-        lifespan: int
-            The lifespan of the component in discrete timesteps
-
-        context: Context
-            The context (class from above) in which the component operates.
-
-        transitions_table: Dict[StateTransition, NextState]
-            The dictionary that controls the state transitions.
-
-        component_id: str
-            The unique identifier for the component. This doesn't rely on the
-            type of component. If it is not overridden, it defaults to a UUID.
-
-        Instance attributes that are not parameters
-        -------------------------------------------
-        self.transition_list: List[str]
-            The list of state transition history. This is used to block
-            disallowed sequences of transitions. This is a shortcut to
-            keep our state transition tables simpler.
-
-        self.materials: List[ComponentMaterial]
-            This is the list of the materials inside the component.
-        """
-
-        self.component_type = component_type
-        self.state = state
-        self.latitude = latitude
-        self.longitude = longitude
-        self.lifespan = lifespan
-        self.context = context
-        self.transitions_table = transitions_table
-        self.component_id = str(uuid4()) if component_id is None else component_id
-        self.transition_list = []
-        self.materials = []
-
-        if state == "use":
+        if self.state == "use":
             self.transition_list.append("using")
-        elif state == "remanufacture":
+        elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
-        elif state == "recycle":
+        elif self.state == "recycle":
             self.transition_list.append("recycling")
-
-    def __str__(self):
-        """
-        A reasonable string representaiton of the component for use with print().
-        """
-        return f"type: {self.component_type}, id:{self.component_id}, state: {self.state}, lifespan:{self.lifespan}"
 
     def transition(self, transition: str) -> None:
         """
@@ -424,58 +432,61 @@ class Component:
         env: simpy.Environment
             The SimPy environment controlling the lifespan of this component.
         """
-        component_has_not_been_landfilled = True
-        while component_has_not_been_landfilled:
+        while True:
             yield env.timeout(self.lifespan)
             next_transition = self.context.probabilistic_transition(self, env.now)
             self.transition(next_transition)
 
 
 @dataclass
-class ComponentMaterial:
+class Turbine:
     """
-    This class stores a material in a component
+    The Turbine class represents a turbine.
 
     Instance attributes
     -------------------
-    parent_component: Component
-        The component that contains this material_component
+    turbine_id: str
+        The identification string for the turbine, such as an FAA identifier.
+        This should be unique.
+
+    components: List[Component]
+        The list of components that make this turbine.
 
     latitude: float
-        The latitude location of this component
+        The latitude of the turbine.
 
     longitude: float
-        The longitude location of this component
-
-    material: str
-        The name of the type of material.
-
-    component_material: str
-        The name of the component followed by the name of the material.
-
-    component_material_id: str
-        Optional. A unique identifying string for the material
-        component. Will populate with a UUID if unspecified.
+        The longitude of the turbine.
     """
-    parent_component: Component
-    component_material: str
-    material_type: str
-    material_tonnes: float
+
+    turbine_id: str
     latitude: float
     longitude: float
-    component_material_id: str = field(default_factory=unique_identifer_str)
-
-    @property
-    def state(self) -> str:
-        """
-        Obtains the state from the parent component, and uses that as a
-        proxy for the state of this material component.
-        """
-        return self.parent_component.state
+    components: List = field(default_factory=list)  # list holds components
 
 
 @dataclass
-class Turbine:
-    latitude: float
-    longitude: float
-    components: List[Component] = field(default_factory=list)
+class Component:
+    """
+    This specifies a component within the model
+
+    Instance attributes
+    -------------------
+    parent_turbine: Turbine
+        The turbine that contains this component.
+
+    context: Context
+        The context that contains this turbine
+
+    component_type: str
+        The type of component (Nacelle, Tower, Blade)
+
+    materials: List[ComponentMaterial]
+        Optional. If left unspecified, it defaults to an empty list.
+        The list of
+    """
+
+    context: Context
+    component_type: str
+    parent_turbine: Turbine
+    component_materials: List[ComponentMaterial] = field(default_factory=list)
