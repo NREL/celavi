@@ -112,8 +112,8 @@ ENV/
 # Excel temp files
 ~$*
 
-# Intermediate .csv files written as outputs
-*.csv
+# Ignore intermediate .csv files from outputs
+*.csv 
 
 # Ignore any Tableau stuff
 *.twb
@@ -124,3 +124,9 @@ ENV/
 
 # Intermediate plots
 *.png
+
+# Intermediate files from R markdown, and RStudio projects
+.Rproj.user
+.Rhistory
+*.Rproj
+*.html
