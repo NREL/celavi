@@ -1,32 +1,31 @@
 import setuptools
 
-name = 'tinylca'
-version = '0.0.1'
+name = "celavi"
+version = "0.0.3"
 
-with open('README.md', 'r') as fh:
+with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name=name,
     version=version,
-    author='Alicia Key',
-    author_email='alicia.key@nrel.gov',
-    description='Experiments in LCA modeling',
+    author="Annika Eberle",
+    author_email="annika.eberle@nrel.gov",
+    description="Python model for the CELAVI project",
     long_description=long_description,
-    long_description_content_type='text/markdown',
-    packages=['tinylca'],
-    test_suite='nose.collector',
-    tests_require=['nose'],
+    long_description_content_type="text/markdown",
+    packages=["celavi"],
     install_requires=[
-        'pandas',
-        'numpy',
-        'openmdao',
-        'xlrd'
-    ],
-    command_options={
-            'build_sphinx': {
-                'project': ('setup.py', name),
-                'version': ('setup.py', version),
-                # 'release': ('setup.py', release),  # Not yet needed
-                'source_dir': ('setup.py', 'docs')}}
+        "pytest",
+        "mypy",
+        "black",
+        "sphinx",
+        "pandas",
+        "matplotlib",
+        "numpy",
+        "pysd",
+        "networkx",
+        "graphviz",
+        "simpy",
+    ]
 )

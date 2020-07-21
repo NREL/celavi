@@ -1,6 +1,6 @@
 import pandas as pd
 
-from tinylca.physical_flow_lci import PhysicalFlowLCI
+from celavi.physical_flow_lci import PhysicalFlowLCI
 
 if __name__ == '__main__':
     # Import from the spreadsheet

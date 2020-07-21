@@ -1,4 +1,4 @@
-from tinylca.state_machine_units_model import Context
+from celavi.state_machine_units_model import Context
 from typing import List, Dict
 import pandas as pd
 import os
