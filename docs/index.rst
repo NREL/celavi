@@ -7,8 +7,8 @@ Welcome to celavi's documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   doc_main
+   doc_state_machine_units_model
 
 
 
