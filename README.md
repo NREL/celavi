@@ -40,8 +40,10 @@ From the root of the repo, run the following commands
 
 ```
 mypy celavi
-black celavi
+black celavi --exclude sd_model.py
 ```
+
+(Note: The `--exclude` option will ignore the automatically generated SD model from PySD)
 
 If all passes, you will get status messages that look similar to the following:
 
