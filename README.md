@@ -64,14 +64,6 @@ Black has the useful feature that, if it finds a non-compliant file, it will fai
 
 The first time you run MyPy can be slow since it needs to parse the files and put them into a cache for faster type checking.
 
-### Testing
-
-This project uses `pytest` as the testing framework. To run all the tests, execute the following command from the root of the repo.
-
-``` 
-pytest
-```
-
 ### Docstrings
 
 To build the documentation from the docstrings in the code, type the following commands from the root of the repo:
@@ -91,3 +83,11 @@ make.bat html
 ```
 
 After these commands, these documentation can be found at `docs/_build/html/index.html`
+
+### Testing
+
+This project uses `pytest` as the testing framework. To run all the tests, execute the following command from the root of the repo.
+
+``` 
+pytest celavi/tests
+```
