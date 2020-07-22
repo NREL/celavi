@@ -21,7 +21,16 @@ pip install -e .
 
 ## Running the package
 
-TODO: Fill this in
+First, change directory to the `tinysd` folder. In that folder there is the `celavi_sample_10_turbines.csv` file which contains anonymized data for ten turbines with a location at the NREL NWTC (they really aren't at the NWTC).
+
+From the root of the repo:
+
+```
+cd tinysd
+python -m celavi
+```
+
+An output file called `material_component_log.csv` which is the output log.
 
 ## Guide for development
 
