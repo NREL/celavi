@@ -1,4 +1,4 @@
-from tinylca.state_machine_units_model import Context
+from celavi.state_machine_units_model import Context
 from typing import List, Dict
 import pandas as pd
 import os
@@ -13,15 +13,11 @@ def report(result):
     for ts in range(1, max_timestep + 1):
         timestep_result = result[result["ts"] == ts]
         number_use = len(timestep_result[timestep_result["state"] == "use"])
-        number_recycle = len(
-            timestep_result[timestep_result["state"] == "recycle"]
-        )
+        number_recycle = len(timestep_result[timestep_result["state"] == "recycle"])
         number_remanufacture = len(
             timestep_result[timestep_result["state"] == "remanufacture"]
         )
-        number_landfill = len(
-            timestep_result[timestep_result["state"] == "landfill"]
-        )
+        number_landfill = len(timestep_result[timestep_result["state"] == "landfill"])
         total_component_materials = len(timestep_result)
         report_list.append(
             {
@@ -29,7 +25,8 @@ def report(result):
                 "total_components": total_component_materials,
                 "fraction_use": number_use / total_component_materials,
                 "fraction_recycle": number_recycle / total_component_materials,
-                "fraction_remanufacture": number_remanufacture / total_component_materials,
+                "fraction_remanufacture": number_remanufacture
+                / total_component_materials,
                 "fraction_landfill": number_landfill / total_component_materials,
             }
         )
@@ -63,37 +60,47 @@ def make_plots(report_df, context):
 
     axs[0, 1].set_title("(b) SD Fraction Reus(ing)")
     axs[0, 1].set_ylim(-0.1, 1.1)
-    axs[0, 1].plot(np.arange(len(context.fraction_reuse)), \
-                   context.fraction_reuse, c="r")
+    axs[0, 1].plot(
+        np.arange(len(context.fraction_reuse)), context.fraction_reuse, c="r"
+    )
 
     axs[1, 1].set_title("(d) SD Fraction Remanufactur(ing)")
     axs[1, 1].set_ylim(-0.1, 1.1)
-    axs[1, 1].plot(np.arange(len(context.fraction_remanufacture)), \
-                   context.fraction_remanufacture, c="r")
+    axs[1, 1].plot(
+        np.arange(len(context.fraction_remanufacture)),
+        context.fraction_remanufacture,
+        c="r",
+    )
 
     axs[2, 1].set_title("(f) SD Fraction Recycl(ing)")
     axs[2, 1].set_ylim(-0.1, 1.1)
-    axs[2, 1].plot(np.arange(len(context.fraction_remanufacture)),
-                   context.fraction_recycle, c="r")
+    axs[2, 1].plot(
+        np.arange(len(context.fraction_remanufacture)), context.fraction_recycle, c="r"
+    )
 
     axs[3, 1].set_title("(h) Discrete Fraction Landfill(ing)")
     axs[3, 1].set_ylim(-0.1, 1.1)
     axs[3, 1].set_xlabel("discrete timestep")
-    axs[3, 1].plot(np.arange(len(context.fraction_remanufacture)),
-                   context.fraction_landfill, c="r")
+    axs[3, 1].plot(
+        np.arange(len(context.fraction_remanufacture)), context.fraction_landfill, c="r"
+    )
 
     plt.show()
 
 
 def run_and_report():
     print(os.getcwd())
-    context = Context("natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25)
+    context = Context(
+        "natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25
+    )
     context.populate_components("long_ten_usgs_dataset_materials.csv")
     material_component_log = context.run()
     report_df = report(material_component_log)
     make_plots(report_df, context)
     print("writing material component log...")
-    material_component_log.to_csv("material_component_log.csv", index=False, float_format='%.3f')
+    material_component_log.to_csv(
+        "material_component_log.csv", index=False, float_format="%.3f"
+    )
 
 
 if __name__ == "__main__":
