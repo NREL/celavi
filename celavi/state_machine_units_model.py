@@ -234,16 +234,14 @@ class Context:
             turbine_df = all_turbines.query("id == @turbine_id")
             latitude = turbine_df["ylat"].values[0]
             longitude = turbine_df["xlong"].values[0]
-            turbine = Turbine(turbine_id=turbine_id,
-                              latitude=latitude,
-                              longitude=longitude)
+            turbine = Turbine(
+                turbine_id=turbine_id, latitude=latitude, longitude=longitude
+            )
             self.turbines.append(turbine)
             component_types = turbine_df["Component"].unique()
             for component_type in component_types:
                 component = Component(
-                    component_type=component_type,
-                    context=self,
-                    parent_turbine=turbine,
+                    component_type=component_type, context=self, parent_turbine=turbine,
                 )
                 self.components.append(component)
                 turbine.components.append(component)

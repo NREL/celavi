@@ -130,3 +130,9 @@ ENV/
 .Rhistory
 *.Rproj
 *.html
+
+# mypy
+.mypy_cache/
+
+# Sphinx documentation build
+doc/_build
