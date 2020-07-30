@@ -9,4 +9,4 @@ def an_inventory():
 
 
 def test_material_present(an_inventory):
-    assert an_inventory.check_if_material_present("Al", 100)
+    assert an_inventory.check_material("Al", 100)

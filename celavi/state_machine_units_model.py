@@ -143,7 +143,7 @@ class Inventory:
             self.materials[material] = 0
         self.materials[material] += quantity
 
-    def check_if_material_present(self, material: str, threshold: int) -> bool:
+    def check_material(self, material: str, threshold: int) -> bool:
         """
         Check to see if a material is present in a particular quantity.
 
