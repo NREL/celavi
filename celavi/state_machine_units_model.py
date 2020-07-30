@@ -89,6 +89,83 @@ class NextState:
         )
 
 
+@dataclass
+class Inventory:
+    """
+    The inventory class holds an inventory of materials and quantities
+    for a landfill, virgin material extraction, or recycled material
+    availability
+
+    Instance attributes
+    -------------------
+    quantity_unit: str
+        The unit in which the quantity is recorded.
+
+    materials: Dict[str, int]
+       The key of the dictionary is a string that is the name of the
+       material. The value is an integer that is the quantity of the
+       material.
+    """
+
+    quantity_unit: str
+    materials: Dict[str, int] = field(default_factory=dict)
+
+    def increment_material_quantity(self, material: str, quantity: int) -> int:
+        """
+        Changes the material quantity in this inventory. If the material
+        is not already present, then it is added to the inventory at a
+        quantity of 0 before it is incremented.
+
+        For virgin material extractions, the quantity should be negative
+        to indicate a withdrawal.
+
+        For landfill additions, the quantity should be positive to
+        indicate a deposit of material.
+
+        For recycling, the quantity can either be positive or negative,
+        depending on if there is an increase in supply or a decrease in
+        supply through consumption.
+
+        Parameters
+        ----------
+        material: str
+            The material being deposited or withdrawn
+
+        quantity: int
+            The quantity of the material, either positive or negative.
+
+        Returns
+        -------
+        int
+            The new quantity of the material.
+        """
+        if material not in self.materials:
+            self.materials[material] = 0
+        self.materials[material] += quantity
+
+    def check_if_material_present(self, material: str, threshold: int) -> bool:
+        """
+        Check to see if a material is present in a particular quantity.
+
+        If the amount of material is greater than at_least, then it returns
+        True. Otherwise it returns False.
+
+        The use case for this is generally for using recycled material
+
+        Parameters
+        ----------
+        material: str
+            The name of the material in question.
+
+        threshold: int
+            The minimum amount of material being tested for.
+        """
+        if material not in self.materials:
+            return False
+        else:
+            return self.materials[material] <= threshold
+
+
 class Context:
     """
     Context is a class that provides:
