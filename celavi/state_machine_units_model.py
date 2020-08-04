@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from collections import OrderedDict
 from typing import Dict, List
 from random import randint
 import numpy as np  # type: ignore
@@ -89,28 +90,35 @@ class NextState:
         )
 
 
-@dataclass
 class Inventory:
-    """
-    The inventory class holds an inventory of materials and quantities
-    for a landfill, virgin material extraction, or recycled material
-    availability
+    def __init__(self, quantity_unit: str = "tonne"):
+        """
+        The inventory class holds an inventory of materials and quantities
+        for a landfill, virgin material extraction, or recycled material
+        availability
 
-    Instance attributes
-    -------------------
-    quantity_unit: str
-        The unit in which the quantity is recorded.
+        Parameters
+        ----------
+        quantity_unit: str
+            The unit in which the quantity is recorded.
 
-    materials: Dict[str, int]
-       The key of the dictionary is a string that is the name of the
-       material. The value is an integer that is the quantity of the
-       material.
-    """
 
-    quantity_unit: str
-    materials: Dict[str, int] = field(default_factory=dict)
+        Other instance variables
+        ------------------------
+        materials: Dict[str, int]
+           The key of the dictionary is a string that is the name of the
+           material. The value is an integer that is the quantity of the
+           material.
 
-    def increment_material_quantity(self, material: str, quantity: int) -> int:
+        self.materials_history: OrderedDict[int, Dict[str, int]]:
+            A history of the levels of the materials each time
+            a deposit or withdrawal is made.
+        """
+        self.quantity_unit = quantity_unit
+        self.materials: Dict[str, int] = {}
+        self.materials_history: OrderedDict[int, Dict[str, int]] = {}
+
+    def increment_material_quantity(self, material: str, quantity: int, timestep: int) -> int:
         """
         Changes the material quantity in this inventory. If the material
         is not already present, then it is added to the inventory at a
@@ -134,6 +142,10 @@ class Inventory:
         quantity: int
             The quantity of the material, either positive or negative.
 
+        timestep: int
+            The timestep of this deposit or withdrawal or deposit
+            (depending on the sign the quantity)
+
         Returns
         -------
         int
@@ -142,6 +154,11 @@ class Inventory:
         if material not in self.materials:
             self.materials[material] = 0
         self.materials[material] += quantity
+        copy_of_materials = {}
+        for k, v in self.materials.items():
+            copy_of_materials[k] = v
+        self.materials_history[timestep] = copy_of_materials
+        return self.materials[material]
 
     def check_material(self, material: str, threshold: int) -> bool:
         """
