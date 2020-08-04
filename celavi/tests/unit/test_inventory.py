@@ -1,6 +1,7 @@
 import pytest
 from celavi.state_machine_units_model import Inventory
 
+
 @pytest.fixture()
 def an_inventory():
     inventory = Inventory("tonne")

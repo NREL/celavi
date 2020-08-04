@@ -118,9 +118,11 @@ class Inventory:
         """
         self.quantity_unit = quantity_unit
         self.materials: Dict[str, int] = {}
-        self.materials_history: OrderedDict[int, Dict[str, int]] = {}
+        self.materials_history: OrderedDict[int, Dict[str, int]] = OrderedDict()
 
-    def increment_material_quantity(self, material: str, quantity: int, timestep: int) -> int:
+    def increment_material_quantity(
+        self, material: str, quantity: int, timestep: int
+    ) -> int:
         """
         Changes the material quantity in this inventory. If the material
         is not already present, then it is added to the inventory at a
