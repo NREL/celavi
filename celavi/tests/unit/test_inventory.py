@@ -18,3 +18,12 @@ def test_material_history_timestamps(an_inventory):
     actual_timestamps = an_inventory.materials_history.keys()
     for x, y in zip(expected_timestamps, actual_timestamps):
         assert x == y
+
+
+def test_material_quantities(an_inventory):
+    expected_aluminum_quantities = [25, 100]
+    actual_aluminum_quantities = []
+    for materials in an_inventory.materials_history.values():
+        actual_aluminum_quantities.append(materials["Al"])
+    for x, y in zip(expected_aluminum_quantities, actual_aluminum_quantities):
+        assert x == y

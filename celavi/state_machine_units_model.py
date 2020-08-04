@@ -112,7 +112,9 @@ class Inventory:
 
         self.materials_history: OrderedDict[int, Dict[str, int]]:
             A history of the levels of the materials each time
-            a deposit or withdrawal is made.
+            a deposit or withdrawal is made. It is an OrderedDict to
+            ensure that keys are iterated in the same order they are
+            inserted.
         """
         self.quantity_unit = quantity_unit
         self.materials: Dict[str, int] = {}
