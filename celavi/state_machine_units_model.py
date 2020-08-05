@@ -515,6 +515,11 @@ class ComponentMaterial:
             # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
                 state="use", lifespan_min=40, lifespan_max=80
+            ),
+
+            # Manufacture outbound
+            StateTransition(state="manufacture", transition="using"): NextState(
+                state="use", lifespan_min=40, lifespan_max=80
             )
         }
 

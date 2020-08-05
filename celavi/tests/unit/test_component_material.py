@@ -62,3 +62,9 @@ def test_remanufacture_use(a_component_material):
     a_component_material.state = "remanufacture"
     a_component_material.transition("using")
     assert a_component_material.state == "use"
+
+
+def test_manufacture_use(a_component_material):
+    a_component_material.state = "manufacture"
+    a_component_material.transition("using")
+    assert a_component_material.state == "use"
