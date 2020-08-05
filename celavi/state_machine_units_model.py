@@ -458,26 +458,64 @@ class ComponentMaterial:
         self.state = state
         self.transition_list: List[str] = []
 
+        # self.transitions_table = {
+        #     StateTransition(state="use", transition="recycling"): NextState(
+        #         state="recycle", lifespan_min=4, lifespan_max=8
+        #     ),
+        #     StateTransition(state="use", transition="reusing"): NextState(state="use"),
+        #     StateTransition(state="use", transition="landfilling"): NextState(
+        #         state="landfill", lifespan_min=1000, lifespan_max=1000
+        #     ),
+        #     StateTransition(state="use", transition="remanufacturing"): NextState(
+        #         state="remanufacture", lifespan_min=4, lifespan_max=8
+        #     ),
+        #     StateTransition(state="recycle", transition="remanufacturing"): NextState(
+        #         "remanufacture", lifespan_min=4, lifespan_max=8
+        #     ),
+        #     StateTransition(state="remanufacture", transition="using"): NextState(
+        #         "use"
+        #     ),
+        #     StateTransition(state="landfill", transition="landfilling"): NextState(
+        #         "landfill", lifespan_min=1000, lifespan_max=1000
+        #     ),
+        # }
+
         self.transitions_table = {
-            StateTransition(state="use", transition="recycling"): NextState(
-                state="recycle", lifespan_min=4, lifespan_max=8
-            ),
-            StateTransition(state="use", transition="reusing"): NextState(state="use"),
+
+            # Outbound use states
             StateTransition(state="use", transition="landfilling"): NextState(
                 state="landfill", lifespan_min=1000, lifespan_max=1000
             ),
+            StateTransition(state="use", transition="reusing"): NextState(
+                state="reuse", lifespan_min=40, lifespan_max=80
+            ),
+            StateTransition(state="use", transition="recycling"): NextState(
+                state="recycle", lifespan_min=4, lifespan_max=4
+            ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
-                state="remanufacture", lifespan_min=4, lifespan_max=8
+                state="remanufacture", lifespan_min=4, lifespan_max=4
             ),
-            StateTransition(state="recycle", transition="remanufacturing"): NextState(
-                "remanufacture", lifespan_min=4, lifespan_max=8
+
+            # Outbound reuse states
+            StateTransition(state="reuse", transition="ramnufacturing"): NextState(
+                state="remanufacture", lifespan_min=4, lifespan_max=4
             ),
+            StateTransition(state="reuse", transition="landfilling"): NextState(
+                state="landfill", lifespan_min=1000, lifespan_max=1000
+            ),
+            StateTransition(state="reuse", transition="recycling"): NextState(
+                state="recycle", lifespan_min=4, lifespan_max=4
+            ),
+
+            # Recycle outbound
+            StateTransition(state="recycle", transition="manufacturing"): NextState(
+                state="manufacture", lifespan_min=4, lifespan_max=4
+            ),
+
+            # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
-                "use"
-            ),
-            StateTransition(state="landfill", transition="landfilling"): NextState(
-                "landfill", lifespan_min=1000, lifespan_max=1000
-            ),
+                state="use", lifespan_min=40, lifespan_max=80
+            )
         }
 
         if self.state == "use":
