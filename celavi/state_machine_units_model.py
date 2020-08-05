@@ -255,65 +255,25 @@ class Context:
         """
         return len(self.fraction_reuse)
 
-    def probabilistic_transition(self, component_material, ts: int) -> str:
+    @staticmethod
+    def choose_transition(component_material, ts: int) -> str:
         """
-        This method is the link between the SD model and the discrete time
-        model. It returns a string with the name of a state transition
-        generated with probabilities from the SD model.
+        Does not support landfilling at the present time.
 
-        Parameters
-        ----------
-        component_material: ComponentMaterial
-            The component instance that is being transitioned
+        Does not use sophisticated decision making at this time.
 
-        ts: int
-            The timestep in the discrete time model used to look up values from
-            the SD model.
-
-        Returns
-        -------
-        str
-            The name of the transition to send to the component's state machine.
+        Does not keep track of the number of times it has been remanufactured
         """
         if component_material.state == "recycle":
-            return "remanufacturing"
+            return "manufacturing"
+        elif component_material.state == "manufacture":
+            return "using"
+        elif component_material.state == "reuse":
+            return "recycling"
         elif component_material.state == "remanufacture":
             return "using"
-        elif component_material.state == "landfill":
-            return "landfilling"
-
-        else:  # The "use" state
-
-            # Do not choose "remanufacture" and "reuse" (or a combination of the two)
-            # twice in a row. If this happens, give an even chance of recycling or
-            # landfilling
-            if (
-                component_material.transition_list[-1] == "reuse"
-                or component_material.transition_list[-2:]
-                == ["remanufacturing", "remanufacturing"]
-                or component_material.transition_list[-2:]
-                == ["reusing", "remanufacturing"]
-            ):
-                choices = ["recycling", "landfilling"]
-                choice = np.random.choice(choices)
-                return choice
-
-            else:
-                probabilities = np.array(
-                    [
-                        self.fraction_recycle[ts],
-                        self.fraction_remanufacture[ts],
-                        self.fraction_reuse[ts],
-                        self.fraction_landfill[ts],
-                    ]
-                )
-
-                # Use this line to force probabilities for testing.
-                # probabilities = np.array([0.0, 1.0, 0.0, 0.0])
-
-                choices = ["recycling", "remanufacturing", "reusing", "landfilling"]
-                choice = np.random.choice(choices, p=np.array(probabilities))
-                return choice
+        else:  # "use" state
+            return np.random.choice(["reusing", "recycling", "remanufacturing"])
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -458,30 +418,7 @@ class ComponentMaterial:
         self.state = state
         self.transition_list: List[str] = []
 
-        # self.transitions_table = {
-        #     StateTransition(state="use", transition="recycling"): NextState(
-        #         state="recycle", lifespan_min=4, lifespan_max=8
-        #     ),
-        #     StateTransition(state="use", transition="reusing"): NextState(state="use"),
-        #     StateTransition(state="use", transition="landfilling"): NextState(
-        #         state="landfill", lifespan_min=1000, lifespan_max=1000
-        #     ),
-        #     StateTransition(state="use", transition="remanufacturing"): NextState(
-        #         state="remanufacture", lifespan_min=4, lifespan_max=8
-        #     ),
-        #     StateTransition(state="recycle", transition="remanufacturing"): NextState(
-        #         "remanufacture", lifespan_min=4, lifespan_max=8
-        #     ),
-        #     StateTransition(state="remanufacture", transition="using"): NextState(
-        #         "use"
-        #     ),
-        #     StateTransition(state="landfill", transition="landfilling"): NextState(
-        #         "landfill", lifespan_min=1000, lifespan_max=1000
-        #     ),
-        # }
-
         self.transitions_table = {
-
             # Outbound use states
             StateTransition(state="use", transition="landfilling"): NextState(
                 state="landfill", lifespan_min=1000, lifespan_max=1000
@@ -495,7 +432,6 @@ class ComponentMaterial:
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture", lifespan_min=4, lifespan_max=4
             ),
-
             # Outbound reuse states
             StateTransition(state="reuse", transition="ramnufacturing"): NextState(
                 state="remanufacture", lifespan_min=4, lifespan_max=4
@@ -506,22 +442,23 @@ class ComponentMaterial:
             StateTransition(state="reuse", transition="recycling"): NextState(
                 state="recycle", lifespan_min=4, lifespan_max=4
             ),
-
             # Recycle outbound
             StateTransition(state="recycle", transition="manufacturing"): NextState(
                 state="manufacture", lifespan_min=4, lifespan_max=4
             ),
-
             # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
                 state="use", lifespan_min=40, lifespan_max=80
             ),
-
             # Manufacture outbound
             StateTransition(state="manufacture", transition="using"): NextState(
                 state="use", lifespan_min=40, lifespan_max=80
-            )
+            ),
         }
+
+        # When the component material is initialized, it will be initialized
+        # into a particular state. Record the transition into this initial
+        # state here.
 
         if self.state == "use":
             self.transition_list.append("using")
@@ -529,6 +466,10 @@ class ComponentMaterial:
             self.transition_list.append("remanufacturing")
         elif self.state == "recycle":
             self.transition_list.append("recycling")
+        elif self.state == "manufacture":
+            self.transition_list.append("manufacturing")
+        elif self.state == "reuse":
+            self.transition_list.append("reusing")
 
     def transition(self, transition: str) -> None:
         """
@@ -573,7 +514,7 @@ class ComponentMaterial:
         """
         while True:
             yield env.timeout(self.lifespan)
-            next_transition = self.context.probabilistic_transition(self, env.now)
+            next_transition = self.context.choose_transition(self, env.now)
             self.transition(next_transition)
 
 
