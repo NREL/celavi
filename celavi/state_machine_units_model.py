@@ -620,6 +620,12 @@ class ComponentMaterial:
 
         if self.state == "landfill":
             lookup = StateTransition(state=self.state, transition="manufacturing")
+            manufacture_state = self.transitions_table[lookup]
+            self.state = manufacture_state.state
+            self.lifespan = manufacture_state.lifespan
+            self.transition_list.append("manufacturing")
+            process_function = manufacture_state.process_function
+            process_function(self.context, self, timestep)
 
     def eol_process(self, env):
         """

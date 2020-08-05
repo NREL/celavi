@@ -26,7 +26,7 @@ def test_material_type(a_component_material):
 def test_use_landfill(a_component_material):
     a_component_material.state = "use"
     a_component_material.transition("landfilling", 1)
-    assert a_component_material.state == "landfill"
+    assert a_component_material.state == "manufacture"
 
 
 def test_use_reuse(a_component_material):
@@ -56,7 +56,7 @@ def test_use_recycle(a_component_material):
 def test_reuse_landfill(a_component_material):
     a_component_material.state = "reuse"
     a_component_material.transition("landfilling", 1)
-    assert a_component_material.state == "landfill"
+    assert a_component_material.state == "manufacture"
 
 
 def test_recycle_manufacture(a_component_material):
@@ -75,6 +75,7 @@ def test_manufacture_use(a_component_material):
     a_component_material.state = "manufacture"
     a_component_material.transition("using", 1)
     assert a_component_material.state == "use"
+
 
 def test_landfill_to_manufacture(a_component_material):
     a_component_material.state = "landfill"
