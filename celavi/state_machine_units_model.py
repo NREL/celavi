@@ -127,7 +127,7 @@ class Inventory:
         self.materials_history: OrderedDict[int, Dict[str, int]] = OrderedDict()
 
     def increment_material_quantity(
-        self, material: str, quantity: int, timestep: int
+        self, material: str, quantity: float, timestep: int
     ) -> int:
         """
         Changes the material quantity in this inventory. If the material
@@ -278,11 +278,11 @@ class Context:
         elif component_material.state == "manufacture":
             return "using"
         elif component_material.state == "reuse":
-            return "recycling"
+            return np.random.choice(["recycling", "landfilling"])
         elif component_material.state == "remanufacture":
             return "using"
         else:  # "use" state
-            return np.random.choice(["reusing", "recycling", "remanufacturing"])
+            return np.random.choice(["reusing", "recycling", "remanufacturing", "landfilling"])
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -603,6 +603,14 @@ class ComponentMaterial:
         self.transition_list.append(transition)
         if next_state.process_function is not None:
             next_state.process_function(self.context, self, timestep)
+
+        # Check to see if this component material was landfilled because this
+        # is a special case. In that case, the component material should
+        # immediately pass into the manufacture state to build a replace
+        # ment.
+
+        if self.state == "landfill":
+            lookup = StateTransition(state=self.state, transition="manufacturing")
 
     def eol_process(self, env):
         """
