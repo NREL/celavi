@@ -123,12 +123,12 @@ class Inventory:
             inserted.
         """
         self.quantity_unit = quantity_unit
-        self.materials: Dict[str, int] = {}
-        self.materials_history: OrderedDict[int, Dict[str, int]] = OrderedDict()
+        self.materials: Dict[str, float] = {}
+        self.materials_history: OrderedDict[int, Dict[str, float]] = OrderedDict()
 
     def increment_material_quantity(
         self, material: str, quantity: float, timestep: int
-    ) -> int:
+    ) -> float:
         """
         Changes the material quantity in this inventory. If the material
         is not already present, then it is added to the inventory at a
@@ -282,7 +282,9 @@ class Context:
         elif component_material.state == "remanufacture":
             return "using"
         else:  # "use" state
-            return np.random.choice(["reusing", "recycling", "remanufacturing", "landfilling"])
+            return np.random.choice(
+                ["reusing", "recycling", "remanufacturing", "landfilling"]
+            )
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -486,6 +488,13 @@ class ComponentMaterial:
             # Manufacture outbound
             StateTransition(state="manufacture", transition="using"): NextState(
                 state="use", lifespan_min=40, lifespan_max=80
+            ),
+            # Landfill outbound
+            StateTransition(state="landfill", transition="manufacturing"): NextState(
+                state="manufacture",
+                lifespan_min=4,
+                lifespan_max=8,
+                process_function=self.manufacture,
             ),
         }
 

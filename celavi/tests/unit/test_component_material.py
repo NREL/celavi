@@ -76,7 +76,7 @@ def test_manufacture_use(a_component_material):
     a_component_material.transition("using", 1)
     assert a_component_material.state == "use"
 
-# def test_landfill_to_manufacture(a_component_material):
-#     a_component_material.state = "landfill"
-#     a_component_material.transition("manufacturing", 1)
-#     assert a_component_material.state == "manufacture"
+def test_landfill_to_manufacture(a_component_material):
+    a_component_material.state = "landfill"
+    a_component_material.transition("manufacturing", 1)
+    assert a_component_material.state == "manufacture"
