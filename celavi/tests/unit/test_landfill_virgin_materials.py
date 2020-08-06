@@ -25,16 +25,10 @@ def a_dummy_context_with_component_material():
 def test_virgin_material(a_dummy_context_with_component_material):
     dummy_context, component_material = a_dummy_context_with_component_material
     component_material.transition("landfilling", 1)
-    assert dummy_context.virgin_material_inventory.materials["Aluminum"] == -1
-
-
-def test_virgin_material(a_dummy_context_with_component_material):
-    dummy_context, component_material = a_dummy_context_with_component_material
-    component_material.transition("landfilling", 1)
-    assert dummy_context.virgin_material_inventory.materials["Aluminum"] == -1
+    assert dummy_context.virgin_material_inventory.component_materials["Nacelle Aluminum"] == -1
 
 
 def test_landfill_material(a_dummy_context_with_component_material):
     dummy_context, component_material = a_dummy_context_with_component_material
     component_material.transition("landfilling", 1)
-    assert dummy_context.landfill_material_inventory.materials["Aluminum"] == 1
+    assert dummy_context.landfill_material_inventory.component_materials["Nacelle Aluminum"] == 1

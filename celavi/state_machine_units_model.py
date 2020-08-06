@@ -123,8 +123,8 @@ class Inventory:
             inserted.
         """
         self.quantity_unit = quantity_unit
-        self.materials: Dict[str, float] = {}
-        self.materials_history: OrderedDict[int, Dict[str, float]] = OrderedDict()
+        self.component_materials: Dict[str, float] = {}
+        self.component_materials_history: OrderedDict[int, Dict[str, float]] = OrderedDict()
 
     def increment_material_quantity(
         self, material: str, quantity: float, timestep: int
@@ -161,14 +161,14 @@ class Inventory:
         int
             The new quantity of the material.
         """
-        if material not in self.materials:
-            self.materials[material] = 0
-        self.materials[material] += quantity
+        if material not in self.component_materials:
+            self.component_materials[material] = 0
+        self.component_materials[material] += quantity
         copy_of_materials = {}
-        for k, v in self.materials.items():
+        for k, v in self.component_materials.items():
             copy_of_materials[k] = v
-        self.materials_history[timestep] = copy_of_materials
-        return self.materials[material]
+        self.component_materials_history[timestep] = copy_of_materials
+        return self.component_materials[material]
 
     def check_material(self, material: str, threshold: int) -> bool:
         """
@@ -187,10 +187,10 @@ class Inventory:
         threshold: int
             The minimum amount of material being tested for.
         """
-        if material not in self.materials:
+        if material not in self.component_materials:
             return False
         else:
-            return self.materials[material] <= threshold
+            return self.component_materials[material] <= threshold
 
 
 class Context:
@@ -537,7 +537,7 @@ class ComponentMaterial:
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
         context.virgin_material_inventory.increment_material_quantity(
-            material=component_material.material_type,
+            material=component_material.component_material,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -563,7 +563,7 @@ class ComponentMaterial:
             f"Landfill process component_material {component_material.component_material_id}"
         )
         context.landfill_material_inventory.increment_material_quantity(
-            material=component_material.material_type,
+            material=component_material.component_material,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
