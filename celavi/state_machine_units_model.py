@@ -124,7 +124,9 @@ class Inventory:
         """
         self.quantity_unit = quantity_unit
         self.component_materials: Dict[str, float] = {}
-        self.component_materials_history: OrderedDict[int, Dict[str, float]] = OrderedDict()
+        self.component_materials_history: OrderedDict[
+            int, Dict[str, float]
+        ] = OrderedDict()
 
     def increment_material_quantity(
         self, material: str, quantity: float, timestep: int

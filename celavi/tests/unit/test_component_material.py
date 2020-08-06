@@ -14,8 +14,17 @@ class DummyContext:
 @pytest.fixture
 def a_component_material():
     turbine = Turbine(turbine_id="test_turbine", latitude=39.9106, longitude=-105.2347)
-    component = Component(context=DummyContext(), component_type="Nacelle", parent_turbine=turbine)
-    component_material = ComponentMaterial(parent_component=component, context=DummyContext(), component_material="Nacelle Aluminum", material_type="Aluminum", material_tonnes=1, lifespan=50)
+    component = Component(
+        context=DummyContext(), component_type="Nacelle", parent_turbine=turbine
+    )
+    component_material = ComponentMaterial(
+        parent_component=component,
+        context=DummyContext(),
+        component_material="Nacelle Aluminum",
+        material_type="Aluminum",
+        material_tonnes=1,
+        lifespan=50,
+    )
     return component_material
 
 
