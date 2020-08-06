@@ -538,7 +538,7 @@ class ComponentMaterial:
         component_material.remanufacture_counter = 0
         context.virgin_material_inventory.increment_material_quantity(
             material=component_material.material_type,
-            quantity=component_material.material_tonnes,
+            quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
 

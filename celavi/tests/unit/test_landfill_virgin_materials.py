@@ -25,4 +25,4 @@ def a_dummy_context_with_component_material():
 def test_landfill_virgin_material(a_dummy_context_with_component_material):
     dummy_context, component_material = a_dummy_context_with_component_material
     component_material.transition("landfilling", 1)
-    assert component_material.state == "manufacture"
+    assert dummy_context.virgin_material_inventory.materials["Aluminum"] == -1
