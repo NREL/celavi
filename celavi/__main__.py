@@ -7,6 +7,10 @@ import random
 import numpy as np
 
 
+"""
+HELP WANTED: We need better default plots. Thoughts?
+"""
+
 def report(result):
     max_timestep = int(result["ts"].max())
     report_list: List[Dict] = []
