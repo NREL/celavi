@@ -4,20 +4,22 @@ import pysd
 import matplotlib.pyplot as plt
 
 
-## Converts updated model and moves to this file's directory
-# specify location of vensim file relative to this file's directory
 vensimdir = os.getcwd() + "\\vensim\\national-scale\\"
 pysdfile = 'natl-wind-importable.py'
 
+# if there's no pre-imported python file in this directory, convert an updated
+# model located in vensimdir and move it to this directory
+# otherwise, load the pysd model in pysdfile
 if pysdfile in os.listdir():
     model = pysd.load(pysdfile)
 else:
+    print('creating new .py file from .mdl')
     # create a .py file from .mdl file
     model = pysd.read_vensim(vensimdir + "natl-wind-importable.mdl")
     # move new .py file to this file's directory (unnecessary?)
     shutil.move(vensimdir + "natl-wind-importable.py", os.getcwd())
 
-
+# Instructions on editing a fresh pysd import to avoid various errors
 ## AFTER NEW IMPORT FROM MDL, edit pysd model
 # Manual at the moment
 # @todo automate this process
