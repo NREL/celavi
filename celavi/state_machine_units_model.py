@@ -274,6 +274,11 @@ class Context:
         Does not use sophisticated decision making at this time.
 
         Does not keep track of the number of times it has been remanufactured
+
+        HELP WANTED: How can I use the SD model to make more informed decisions
+           about what to do with the SD model to capture better state
+           transition decisions. I am still using probability distributions
+           and this has been flagged as an area for improvement.
         """
         if component_material.state == "recycle":
             return "manufacturing"
@@ -418,6 +423,9 @@ class ComponentMaterial:
         ------------------------------------
         transitions_table: Dict[StateTransition, NextState]
                 The dictionary that controls the state transitions.
+
+        HELP WANTED: Are there any other states or transitions we should
+        use int the state machine?
         """
         self.component_material_id = (
             unique_identifer_str()
