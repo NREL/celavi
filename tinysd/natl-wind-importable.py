@@ -2072,6 +2072,8 @@ def externalities_total():
                 externalities_from_recycling() + extraction_inputs() +
                 total_transportation_inputs()) / annual_demand()
 
+    return _out
+
 
 @cache('step')
 def total_transportation_inputs():
@@ -2207,13 +2209,8 @@ def reuse_transportation_inputs():
 @cache('run')
 def extraction_lci():
     """
-    Real Name: b'externality factor of extracting process'
-    Original Eqn: b'15'
-    Units: b'impact/metric ton'
-    Limits: (0.0, None)
-    Type: constant
-
-    b'Generic externality factor for extracting virgin materials'
+    Reads in LCI of materials and energy consumed per unit raw material extracted
+    and processed
     """
 
     # externalities are per metric ton raw material extracted
@@ -2258,7 +2255,7 @@ def externality_factor_of_remanufacturing_process():
 @cache('run')
 def transportation_lci():
     """
-    LCI per metric ton-mile of transport
+    Reads in LCI of materials and energy per metric ton-mile of transport
     @note I'm not aware of emission factors that will let us calculate emissions
     by mass and distance, only distance - we may need to change the calcs s.t.
     they're subject only to mass
