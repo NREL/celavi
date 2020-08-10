@@ -13,6 +13,7 @@ from pysd.py_backend import functions
 import pandas as pd
 
 
+
 _subscript_dict = {}
 
 _namespace = {
@@ -2099,9 +2100,9 @@ def extraction_transpo_impacts():
     @todo enforce units check eg don't combine gal diesel with MJ diesel
     """
     # pd.Series() with index = ['gal diesel', 'vehicles']
-    total_transportation_inputs()
+    #total_transportation_inputs()
     # pd.Series() with index = ['gal diesel', 'kWh electricity', 'kg explosive']
-    extraction_inputs()
+    #extraction_inputs()
 
     # output should be pd.Series with index = ['gal diesel', 'vehicles', 'kWh electricity', 'kg explosive']
     # this concatenates the two series, groups by index values, then sums within duplicate index values
@@ -2216,8 +2217,14 @@ def extraction_lci():
     """
 
     # externalities are per metric ton raw material extracted
-    return pd.Series(data = [1, 1, 1],
-                     index = ['gal diesel', 'kWh electricity', 'kg explosive'])
+
+    _extract_prod_lci = pd.read_csv('lci.csv',
+                                    usecols=['extraction and production',
+                                             'input name'],
+                                    index_col='input name',
+                                    squeeze=True)
+
+    return _extract_prod_lci
 
 
 @cache('run')
@@ -2256,8 +2263,12 @@ def transportation_lci():
     by mass and distance, only distance - we may need to change the calcs s.t.
     they're subject only to mass
     """
-    return pd.Series(data = [1, 1E-06],
-                     index = ['gal diesel', 'vehicles'])
+    _transpo_lci = pd.read_csv('lci.csv',
+                               usecols=['transportation', 'input name'],
+                               index_col='input name',
+                               squeeze=True)
+
+    return _transpo_lci
 
 
 @cache('run')
