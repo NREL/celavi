@@ -10,7 +10,8 @@ import xarray as xr
 from pysd.py_backend.functions import cache
 from pysd.py_backend import functions
 
-from pandas import read_csv
+import pandas as pd
+
 
 _subscript_dict = {}
 
@@ -152,28 +153,29 @@ _namespace = {
     'fraction reused product remanufactured': 'fraction_reused_product_remanufactured',
     'component lifetime': 'component_lifetime',
     'relative landfill': 'relative_landfill',
-    'externalities from landfill transportation': 'externalities_from_landfill_transportation',
+    'landfill transportation inputs': 'landfill_transportation_inputs',
     'externalities total': 'externalities_total',
-    'externalities from total transportation': 'externalities_from_total_transportation',
-    'externalities from extracting': 'externalities_from_extracting',
+    'total transportation inputs': 'total_transportation_inputs',
+    'extraction inputs': 'extraction_inputs',
     'externalities from recycling': 'externalities_from_recycling',
     'externalities from remanufacturing': 'externalities_from_remanufacturing',
     'externalities from reusing': 'externalities_from_reusing',
     'cumulative landfill fraction': 'cumulative_landfill_fraction',
-    'externalities from recycling transportation': 'externalities_from_recycling_transportation',
-    'externalities from remanufacturing transportation':
-    'externalities_from_remanufacturing_transportation',
-    'externalities from reuse transportation': 'externalities_from_reuse_transportation',
-    'externality factor of extracting process': 'externality_factor_of_extracting_process',
+    'recycling transportation inputs': 'recycling_transportation_inputs',
+    'remanufacturing transportation inputs':
+    'remanufacturing_transportation_inputs',
+    'reuse transportation inputs': 'reuse_transportation_inputs',
+    'extraction lci': 'extraction_lci',
     'externality factor of recycling process': 'externality_factor_of_recycling_process',
     'externality factor of remanufacturing process':
     'externality_factor_of_remanufacturing_process',
-    'externality factor of transportation': 'externality_factor_of_transportation',
+    'transportation lci': 'transportation_lci',
     'externality factor of reusing process': 'externality_factor_of_reusing_process',
     'FINAL TIME': 'final_time',
     'INITIAL TIME': 'initial_time',
     'SAVEPER': 'saveper',
-    'TIME STEP': 'time_step'
+    'TIME STEP': 'time_step',
+    'extraction transpo impacts': 'extraction_transpo_impacts'
 }
 
 __pysd_version__ = "0.10.0"
@@ -262,7 +264,7 @@ def unit_externalities_from_extracting():
     if annual_demand() == 0:
         _out = 0
     else:
-        _out = externalities_from_extracting() / annual_demand()
+        _out = extraction_inputs() / annual_demand()
 
     return _out
 
@@ -283,7 +285,7 @@ def unit_externalities_from_total_transportation():
     if annual_demand() == 0:
         _out = 0
     else:
-        _out = externalities_from_total_transportation() / annual_demand()
+        _out = total_transportation_inputs() / annual_demand()
 
     return _out
 
@@ -1022,8 +1024,8 @@ def average_turbine_capacity_data():
 
     b'Historical data on the average turbine capacity installed in each year \\n    \\t\\t1980 - 2019'
     """
-    capacity_data = read_csv('wind.csv',
-                             usecols=['year', 'avg turbine capacity mw'])
+    capacity_data = pd.read_csv('wind.csv',
+                                usecols=['year', 'avg turbine capacity mw'])
 
     return functions.lookup(time(),
                             np.array(capacity_data['year']),
@@ -1069,7 +1071,7 @@ def installed_capacity_per_year_data():
 
     b'Contains historical data on installed turbine capacity for years 1980 - \\n    \\t\\t2019 and projected installation for years 2020 - 2050.'
     """
-    installation_data = read_csv('wind.csv', usecols=['year', 'mw installed'])
+    installation_data = pd.read_csv('wind.csv', usecols=['year', 'mw installed'])
 
     return functions.lookup(time(),
                             np.array(installation_data['year']),
@@ -2035,7 +2037,7 @@ def relative_landfill():
 
 
 @cache('step')
-def externalities_from_landfill_transportation():
+def landfill_transportation_inputs():
     """
     Real Name: b'externalities from landfill transportation'
     Original Eqn: b'externality factor of transportation * landfilling * miles from end use location to landfill'
@@ -2045,7 +2047,7 @@ def externalities_from_landfill_transportation():
 
     b'Calculates externalities from transportation to landfill'
     """
-    return externality_factor_of_transportation() * landfilling(
+    return transportation_lci() * landfilling(
     ) * miles_from_end_use_location_to_landfill()
 
 
@@ -2066,39 +2068,46 @@ def externalities_total():
         _out = 0
     else:
         _out = (externalities_from_reusing() + externalities_from_remanufacturing() +
-                externalities_from_recycling() + externalities_from_extracting() +
-                externalities_from_total_transportation()) / annual_demand()
+                externalities_from_recycling() + extraction_inputs() +
+                total_transportation_inputs()) / annual_demand()
 
 
 @cache('step')
-def externalities_from_total_transportation():
+def total_transportation_inputs():
     """
-    Real Name: b'externalities from total transportation'
-    Original Eqn: b'externalities from recycling transportation+externalities from landfill transportation\\\\ +externalities from remanufacturing transportation+externalities from reuse transportation'
-    Units: b'impact/year'
-    Limits: (0.0, None)
-    Type: component
-
-    b'Calculates total externalities from all forms of transportation in the \\n    \\t\\tenergy technology system.'
+    Sums inputs from all four transportation types
     """
-    return externalities_from_recycling_transportation(
-    ) + externalities_from_landfill_transportation(
-    ) + externalities_from_remanufacturing_transportation(
-    ) + externalities_from_reuse_transportation()
+    return recycling_transportation_inputs(
+    ) + landfill_transportation_inputs(
+    ) + remanufacturing_transportation_inputs(
+    ) + reuse_transportation_inputs()
 
 
 @cache('step')
-def externalities_from_extracting():
+def extraction_inputs():
     """
-    Real Name: b'externalities from extracting'
-    Original Eqn: b'extracting * externality factor of extracting process'
-    Units: b'impact/year'
-    Limits: (0.0, None)
-    Type: component
+    Scales the extraction LCI by the amount of raw material extracted
+    """
+    return extracting() * extraction_lci()
 
-    b'Calculates total externalities due to extracting virgin materials'
+
+@cache('step')
+def extraction_transpo_impacts():
     """
-    return extracting() * externality_factor_of_extracting_process()
+    Sums inputs to extraction and all transportation by input type
+    (series index)
+    @todo enforce units check eg don't combine gal diesel with MJ diesel
+    """
+    # pd.Series() with index = ['gal diesel', 'vehicles']
+    total_transportation_inputs()
+    # pd.Series() with index = ['gal diesel', 'kWh electricity', 'kg explosive']
+    extraction_inputs()
+
+    # output should be pd.Series with index = ['gal diesel', 'vehicles', 'kWh electricity', 'kg explosive']
+    # this concatenates the two series, groups by index values, then sums within duplicate index values
+    _out = extraction_inputs().append(total_transportation_inputs()).groupby(level=0).sum()
+
+    return _out
 
 
 @cache('step')
@@ -2158,17 +2167,11 @@ def cumulative_landfill_fraction():
 
 
 @cache('step')
-def externalities_from_recycling_transportation():
+def recycling_transportation_inputs():
     """
-    Real Name: b'externalities from recycling transportation'
-    Original Eqn: b'externality factor of transportation * ( recycling * miles from end use location to recycling facility + recycling failed remanufactured * miles from remanufacturing facility to recycling facility + landfilling nonrecyclables * miles from recycling facility to landfill + aggregating recycled materials * miles from recycling to distribution facility )'
-    Units: b'impact/year'
-    Limits: (None, None)
-    Type: component
-
-    b'Calculates externalities from all transportation associated with the \\n    \\t\\trecycling pathway'
+    Inputs to transportation in the recycling pathway
     """
-    return externality_factor_of_transportation() * (
+    return transportation_lci() * (
         recycling() * miles_from_end_use_location_to_recycling_facility() +
         recycling_failed_remanufactured() *
         miles_from_remanufacturing_facility_to_recycling_facility() +
@@ -2177,17 +2180,11 @@ def externalities_from_recycling_transportation():
 
 
 @cache('step')
-def externalities_from_remanufacturing_transportation():
+def remanufacturing_transportation_inputs():
     """
-    Real Name: b'externalities from remanufacturing transportation'
-    Original Eqn: b'externality factor of transportation * ( remanufacturing * miles from end use location to remanufacturing facility + remanufacturing nonreusables * miles from reuse facility to remanufacturing facility + aggregating remanufactured products * miles from remanufacturing facility to product distribution facility\\\\ + landfilling failed remanufactured * miles from remanufacturing facility to landfill\\\\ )'
-    Units: b'impact/year'
-    Limits: (None, None)
-    Type: component
-
-    b'Calculates externalities from all transportation associated with the \\n    \\t\\tremanufacturing pathway'
+    Inputs to transportation in the remanufacturing pathway
     """
-    return externality_factor_of_transportation() * (
+    return transportation_lci() * (
         remanufacturing() * miles_from_end_use_location_to_remanufacturing_facility() +
         remanufacturing_nonreusables() * miles_from_reuse_facility_to_remanufacturing_facility() +
         aggregating_remanufactured_products() *
@@ -2196,24 +2193,18 @@ def externalities_from_remanufacturing_transportation():
 
 
 @cache('step')
-def externalities_from_reuse_transportation():
+def reuse_transportation_inputs():
     """
-    Real Name: b'externalities from reuse transportation'
-    Original Eqn: b'externality factor of transportation * ( reusing * miles from end use location to reuse facility + aggregating reused products * miles from reuse facility to product distribution facility\\\\ )'
-    Units: b'impact/year'
-    Limits: (None, None)
-    Type: component
-
-    b'Calculates externalities from all transportation associated with the \\n    \\t\\treusing pathway'
+    Inputs to transportation in the reuse pathway
     """
-    return externality_factor_of_transportation() * (
+    return transportation_lci() * (
         reusing() * miles_from_end_use_location_to_reuse_facility() +
         aggregating_reused_products() *
         miles_from_reuse_facility_to_product_distribution_facility())
 
 
 @cache('run')
-def externality_factor_of_extracting_process():
+def extraction_lci():
     """
     Real Name: b'externality factor of extracting process'
     Original Eqn: b'15'
@@ -2223,7 +2214,10 @@ def externality_factor_of_extracting_process():
 
     b'Generic externality factor for extracting virgin materials'
     """
-    return 15
+
+    # externalities are per metric ton raw material extracted
+    return pd.Series(data = [1, 1, 1],
+                     index = ['gal diesel', 'kWh electricity', 'kg explosive'])
 
 
 @cache('run')
@@ -2255,17 +2249,15 @@ def externality_factor_of_remanufacturing_process():
 
 
 @cache('run')
-def externality_factor_of_transportation():
+def transportation_lci():
     """
-    Real Name: b'externality factor of transportation'
-    Original Eqn: b'0.01'
-    Units: b'impact/(metric ton*mile)'
-    Limits: (0.0, None)
-    Type: constant
-
-    b'Generic externality factor for all types of transportation'
+    LCI per metric ton-mile of transport
+    @note I'm not aware of emission factors that will let us calculate emissions
+    by mass and distance, only distance - we may need to change the calcs s.t.
+    they're subject only to mass
     """
-    return 0.01
+    return pd.Series(data = [1, 1E-06],
+                     index = ['gal diesel', 'vehicles'])
 
 
 @cache('run')
