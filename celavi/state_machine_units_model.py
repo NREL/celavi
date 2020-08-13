@@ -194,6 +194,33 @@ class Inventory:
         else:
             return self.component_materials[material] <= threshold
 
+    def material_history(self, timesteps: int) -> List[Dict[str, float]]:
+        """
+        Returns the material level history for all the  materials in the
+        inventory.
+
+        Returns
+        -------
+        List[Dict[str, float]]
+            A list of the levels of all the materials that ended up in the
+            inventory at each timestep.
+        """
+        # component_materials_history will be mutated, so copy it first
+        component_materials_history_copy = self.component_materials_history.copy()
+        # First, get all the materials that ever existed in the inventory
+        _, all_stored_materials = component_materials_history_copy.popitem()
+        all_stored_materials = all_stored_materials.copy()
+        # Reset all stored material counts to 0
+        for key in all_stored_materials.keys():
+            all_stored_materials[key] = 0
+        # Then make a list to hold the levels of all materials over time
+        history = [all_stored_materials] * timesteps
+        for idx in range(timesteps):
+            if idx in self.component_materials_history:
+                for material, quantity in self.component_materials_history[idx].items():
+                    history[idx][material] = quantity
+        return history
+
 
 class Context:
     """

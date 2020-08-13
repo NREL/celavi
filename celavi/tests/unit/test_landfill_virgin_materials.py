@@ -72,3 +72,19 @@ def test_landfill_material(a_dummy_context_with_component_material):
         dummy_context.landfill_material_inventory.component_materials["Tower Steel"]
         == 1
     )
+
+
+def test_landfill_history(a_dummy_context_with_component_material):
+    (
+        dummy_context,
+        nacelle_aluminum,
+        tower_steel,
+    ) = a_dummy_context_with_component_material
+    nacelle_aluminum.transition("landfilling", 1)
+    tower_steel.transition("landfilling", 3)
+    landfill_material_inventory = dummy_context.landfill_material_inventory
+    actual = landfill_material_inventory.material_history(10)
+    expected = [{"Nacelle Aluminum": 0, "Tower Steel": 0}] * 10
+    expected[1]["Nacelle Aluminum"] = 1
+    expected[3]["Tower Steel"] = 1
+    assert actual == expected
