@@ -18,7 +18,7 @@ def a_dummy_context_with_component_material():
     component = Component(
         context=dummy_context, component_type="Nacelle", parent_turbine=turbine
     )
-    component_material = ComponentMaterial(
+    nacelle_aluminum = ComponentMaterial(
         parent_component=component,
         context=dummy_context,
         component_material="Nacelle Aluminum",
@@ -26,12 +26,12 @@ def a_dummy_context_with_component_material():
         material_tonnes=1,
         lifespan=50,
     )
-    return dummy_context, component_material
+    return dummy_context, nacelle_aluminum
 
 
 def test_virgin_material(a_dummy_context_with_component_material):
-    dummy_context, component_material = a_dummy_context_with_component_material
-    component_material.transition("landfilling", 1)
+    dummy_context, nacelle_aluminum = a_dummy_context_with_component_material
+    nacelle_aluminum.transition("landfilling", 1)
     assert (
         dummy_context.virgin_material_inventory.component_materials["Nacelle Aluminum"]
         == -1
@@ -39,8 +39,8 @@ def test_virgin_material(a_dummy_context_with_component_material):
 
 
 def test_landfill_material(a_dummy_context_with_component_material):
-    dummy_context, component_material = a_dummy_context_with_component_material
-    component_material.transition("landfilling", 1)
+    dummy_context, nacelle_aluminum = a_dummy_context_with_component_material
+    nacelle_aluminum.transition("landfilling", 1)
     assert (
         dummy_context.landfill_material_inventory.component_materials[
             "Nacelle Aluminum"
