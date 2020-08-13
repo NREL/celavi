@@ -625,8 +625,7 @@ class ComponentMaterial:
 
         # Check to see if this component material was landfilled because this
         # is a special case. In that case, the component material should
-        # immediately pass into the manufacture state to build a replace
-        # ment.
+        # immediately pass into the manufacture state to build a replacement.
 
         if self.state == "landfill":
             lookup = StateTransition(state=self.state, transition="manufacturing")
