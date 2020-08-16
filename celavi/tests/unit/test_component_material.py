@@ -9,8 +9,12 @@ class DummyContext:
     def __init__(self):
         timesteps = 10
         possible_component_materials = ["Tower Steel", "Nacelle Aluminum"]
-        self.landfill_material_inventory = Inventory(possible_component_materials, timesteps)
-        self.virgin_material_inventory = Inventory(possible_component_materials, timesteps)
+        self.landfill_material_inventory = Inventory(
+            possible_component_materials, timesteps
+        )
+        self.virgin_material_inventory = Inventory(
+            possible_component_materials, timesteps
+        )
 
 
 @pytest.fixture
