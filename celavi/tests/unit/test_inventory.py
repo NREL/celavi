@@ -40,7 +40,15 @@ def test_material_inventory_history_tower_steel(an_inventory):
 
 
 def test_material_inventory_cumulative_history(an_inventory):
-    expected = pd.DataFrame({"Tower Steel": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 75.0]),
-                             "Nacelle Aluminum": np.array([0.0, 0.0, 0.0, 0.0, 0.0, 25.0, 25.0, 50.0, 50.0, 50.0])})
+    expected = pd.DataFrame(
+        {
+            "Tower Steel": np.array(
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 75.0]
+            ),
+            "Nacelle Aluminum": np.array(
+                [0.0, 0.0, 0.0, 0.0, 0.0, 25.0, 25.0, 50.0, 50.0, 50.0]
+            ),
+        }
+    )
     actual = an_inventory.cumulative_history
     assert actual.equals(expected)

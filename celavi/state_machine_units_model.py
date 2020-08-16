@@ -97,7 +97,12 @@ class NextState:
 
 
 class Inventory:
-    def __init__(self, possible_component_materials: List[str], timesteps: int, quantity_unit: str = "tonne"):
+    def __init__(
+        self,
+        possible_component_materials: List[str],
+        timesteps: int,
+        quantity_unit: str = "tonne",
+    ):
         """
         The inventory class holds an inventory of materials and quantities
         for a landfill, virgin material extraction, or recycled material
@@ -191,7 +196,9 @@ class Inventory:
         component_materials_history_df = pd.DataFrame(self.component_materials_history)
         cumulative_history = pd.DataFrame()
         for column in component_materials_history_df.columns:
-            cumulative_history[column] = np.cumsum(component_materials_history_df[column].values)
+            cumulative_history[column] = np.cumsum(
+                component_materials_history_df[column].values
+            )
         return cumulative_history
 
 
@@ -265,10 +272,14 @@ class Context:
             "Foundation Concrete",
         ]
 
-        self.virgin_material_inventory = Inventory(possible_component_materials=possible_component_materials,
-                                                   timesteps=len(time_series))
-        self.landfill_material_inventory = Inventory(possible_component_materials=possible_component_materials,
-                                                   timesteps=len(time_series))
+        self.virgin_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=len(time_series),
+        )
+        self.landfill_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=len(time_series),
+        )
 
     @property
     def max_timestep(self) -> int:
