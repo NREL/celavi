@@ -179,6 +179,21 @@ class Inventory:
         # Return the new level
         return self.component_materials[component_material_name]
 
+    @property
+    def cumulative_history(self):
+        """
+        Returns
+        -------
+        pd.DataFrame
+            The cumulative history of all the transactions of the component
+            materials.
+        """
+        component_materials_history_df = pd.DataFrame(self.component_materials_history)
+        cumulative_history = pd.DataFrame()
+        for column in component_materials_history_df.columns:
+            cumulative_history[column] = np.cumsum(component_materials_history_df[column].values)
+        return cumulative_history
+
 
 class Context:
     """
