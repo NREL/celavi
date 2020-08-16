@@ -211,6 +211,8 @@ class Context:
         self, sd_model_filename: str, year_intercept: float, years_per_timestep
     ):
         """
+        TODO: This constructor really needs to be cleaned up.
+
         For converting from discrete timesteps to years, the formula is
             year_intercept + timestep * years_per_timestep.
 
@@ -250,8 +252,23 @@ class Context:
 
         self.component_material_event_log_list: List[Dict] = []
 
-        self.virgin_material_inventory = Inventory()
-        self.landfill_material_inventory = Inventory()
+        # Hard coding the possible component materials here is an inelegant
+        # solutions but gets by for now.
+
+        possible_component_materials = [
+            "Blade Glass Fiber",
+            "Foundation High Strength Steel",
+            "Nacelle Cast Iron",
+            "Tower High Strength Steel",
+            "Blade Carbon Fiber",
+            "Nacelle Highly alloyed Steel",
+            "Foundation Concrete",
+        ]
+
+        self.virgin_material_inventory = Inventory(possible_component_materials=possible_component_materials,
+                                                   timesteps=len(time_series))
+        self.landfill_material_inventory = Inventory(possible_component_materials=possible_component_materials,
+                                                   timesteps=len(time_series))
 
     @property
     def max_timestep(self) -> int:
