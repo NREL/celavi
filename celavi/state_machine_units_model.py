@@ -651,7 +651,8 @@ class ComponentMaterial:
             self.lifespan = manufacture_state.lifespan
             self.transition_list.append("manufacturing")
             process_function = manufacture_state.process_function
-            process_function(self.context, self, timestep)
+            if process_function is not None:
+                process_function(self.context, self, timestep)
 
     def eol_process(self, env):
         """
