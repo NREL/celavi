@@ -287,6 +287,7 @@ class Context:
             "Blade Carbon Fiber",
             "Nacelle Highly alloyed Steel",
             "Foundation Concrete",
+            "Nacelle High Strength Steel"
         ]
 
         self.virgin_material_inventory = Inventory(
