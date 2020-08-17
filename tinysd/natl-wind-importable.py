@@ -145,29 +145,26 @@ _namespace = {
     'fraction reused product remanufactured': 'fraction_reused_product_remanufactured',
     'component lifetime': 'component_lifetime',
     'relative landfill': 'relative_landfill',
-    'landfill transportation inputs': 'landfill_transportation_inputs',
-    'externalities total': 'externalities_total',
-    'total transportation inputs': 'total_transportation_inputs',
-    'extraction inputs': 'extraction_inputs',
-    'externalities from recycling': 'externalities_from_recycling',
-    'externalities from remanufacturing': 'externalities_from_remanufacturing',
-    'externalities from reusing': 'externalities_from_reusing',
     'cumulative landfill fraction': 'cumulative_landfill_fraction',
-    'recycling transportation inputs': 'recycling_transportation_inputs',
-    'remanufacturing transportation inputs':
-    'remanufacturing_transportation_inputs',
-    'reuse transportation inputs': 'reuse_transportation_inputs',
-    'extraction lci': 'extraction_lci',
-    'externality factor of recycling process': 'externality_factor_of_recycling_process',
-    'externality factor of remanufacturing process':
-    'externality_factor_of_remanufacturing_process',
+    'extract prod lci': 'extract_prod_lci',
+    'extract prod inputs': 'extract_prod_inputs',
     'transportation lci': 'transportation_lci',
-    'externality factor of reusing process': 'externality_factor_of_reusing_process',
+    'landfill transportation inputs': 'landfill_transportation_inputs',
+    'recycling transportation inputs': 'recycling_transportation_inputs',
+    'remanufacturing transportation inputs': 'remanufacturing_transportation_inputs',
+    'reuse transportation inputs': 'reuse_transportation_inputs',
+    'transportation inputs': 'transportation_inputs',
+    'recycling lci': 'recycling_lci',
+    'recycling inputs': 'recycling_inputs',
+    'reusing lci': 'reusing_lci',
+    'reusing inputs': 'reusing_inputs',
+    'remanufacturing lci': 'remanufacturing_lci',
+    'remanufacturing inputs': 'remanufacturing_inputs',
+    'aggregate inputs': 'aggregate_inputs',
     'FINAL TIME': 'final_time',
     'INITIAL TIME': 'initial_time',
     'SAVEPER': 'saveper',
-    'TIME STEP': 'time_step',
-    'extraction transpo impacts': 'extraction_transpo_impacts'
+    'TIME STEP': 'time_step'
 }
 
 __pysd_version__ = "0.10.0"
@@ -196,8 +193,6 @@ def recycle_research_annual_cost_reduction():
     b''
     """
     return 0.003
-
-# @todo Convert all externality functions to impact/LCI based
 
 @cache('run')
 def one_metric_ton():
@@ -1933,106 +1928,70 @@ def landfill_transportation_inputs():
 
 
 @cache('step')
-def externalities_total():
+def aggregate_inputs():
     """
-    Real Name: b'externalities total'
-    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, ( externalities from reusing + externalities from remanufacturing + externalities from recycling + externalities from extracting + externalities from total transportation ) / annual demand )'
-    Units: b'impact/metric ton'
-    Limits: (0.0, None)
-    Type: component
+    Calculates total material and energy inputs/gate-to-gate LCI for the entire
+    system, per time step
 
-    b'Calculates total externalities from energy technology system operation \\n    \\t\\twhen annual demand is greater than zero; otherwise, returns zero.'
+    Saves the total LCI in a data frame for postprocessing and impact calculation
+
+    @todo finish implementing calculation and data output
     """
     _out = np.nan
-
-    if annual_demand() == 0:
-        _out = 0
-    else:
-        _out = (externalities_from_reusing() + externalities_from_remanufacturing() +
-                externalities_from_recycling() + extraction_inputs() +
-                total_transportation_inputs()) / annual_demand()
+    #_out = extraction_inputs().append(transportation_inputs()).groupby(level=0).sum()
+    _out = reusing_inputs() + remanufacturing_inputs() + recycling_inputs() + \
+           extract_prod_inputs() + transportation_inputs()
 
     return _out
 
 
 @cache('step')
-def total_transportation_inputs():
+def transportation_inputs():
     """
     Sums inputs from all four transportation types
     """
-    return recycling_transportation_inputs(
-    ) + landfill_transportation_inputs(
-    ) + remanufacturing_transportation_inputs(
-    ) + reuse_transportation_inputs()
+    return recycling_transportation_inputs() + \
+           landfill_transportation_inputs() + \
+           remanufacturing_transportation_inputs() + \
+           reuse_transportation_inputs()
 
 
 @cache('step')
-def extraction_inputs():
+def extract_prod_inputs():
     """
     Scales the extraction LCI by the amount of raw material extracted
     """
-    return extracting() * extraction_lci()
+    return extracting() * extract_prod_lci()
 
 # @todo 2: update the output dataset from inside the impacts function
-@cache('step')
-def extraction_transpo_impacts():
-    """
-    Sums inputs to extraction and all transportation by input type
-    (series index)
-    @todo enforce units check eg don't combine gal diesel with MJ diesel
-    """
-    # pd.Series() with index = ['gal diesel', 'vehicles']
-    #total_transportation_inputs()
-    # pd.Series() with index = ['gal diesel', 'kWh electricity', 'kg explosive']
-    #extraction_inputs()
 
-    # output should be pd.Series with index = ['gal diesel', 'vehicles', 'kWh electricity', 'kg explosive']
-    # this concatenates the two series, groups by index values, then sums within duplicate index values
-    _out = extraction_inputs().append(total_transportation_inputs()).groupby(level=0).sum()
-
-    return _out
 # @todo 3: add impact calculations for other pathways
 # @todo 4: update aggregate impact calculation to include the entire system
 @cache('step')
-def externalities_from_recycling():
+def recycling_inputs():
     """
-    Real Name: b'externalities from recycling'
-    Original Eqn: b'aggregating recycled materials * externality factor of recycling process'
-    Units: b'impact/year'
-    Limits: (0.0, None)
-    Type: component
-
-    b'Calculates externalities from recycling process only ( no transportation )'
+    Scales the recycling LCI by metric tons of material sent through recycling
+    pathway
     """
-    return aggregating_recycled_materials() * externality_factor_of_recycling_process()
+    return aggregating_recycled_materials() * recycling_lci()
 
 
 @cache('step')
-def externalities_from_remanufacturing():
+def remanufacturing_inputs():
     """
-    Real Name: b'externalities from remanufacturing'
-    Original Eqn: b'aggregating remanufactured products * externality factor of remanufacturing process'
-    Units: b'impact/year'
-    Limits: (None, None)
-    Type: component
-
-    b'Calculates externalities from remanufacturing only, no transportation'
+    Scales the remanufacturing LCI by metric tons of material sent through
+    remanufacturing pathway
     """
-    return aggregating_remanufactured_products() * externality_factor_of_remanufacturing_process()
+    return aggregating_remanufactured_products() * remanufacturing_lci()
 
 
 @cache('step')
-def externalities_from_reusing():
+def reusing_inputs():
     """
-    Real Name: b'externalities from reusing'
-    Original Eqn: b'aggregating reused products * externality factor of reusing process'
-    Units: b'impact/year'
-    Limits: (0.0, None)
-    Type: component
-
-    b'Calculates externalities from reusing only, no transportation'
+    Scales the reusing LCI by metric tons of material sent through reusing
+    pathway
     """
-    return aggregating_reused_products() * externality_factor_of_reusing_process()
+    return aggregating_reused_products() * reusing_lci()
 
 
 @cache('step')
@@ -2080,20 +2039,20 @@ def reuse_transportation_inputs():
     """
     Inputs to transportation in the reuse pathway
     """
-    return transportation_lci() * (
-        reusing() * miles_from_end_use_location_to_reuse_facility() +
-        aggregating_reused_products() *
-        miles_from_reuse_facility_to_product_distribution_facility())
+    return transportation_lci() * \
+           ( reusing() * miles_from_end_use_location_to_reuse_facility() +
+             aggregating_reused_products() *
+             miles_from_reuse_facility_to_product_distribution_facility() )
 
 
 @cache('run')
-def extraction_lci():
+def extract_prod_lci():
     """
     Reads in LCI of materials and energy consumed per unit raw material extracted
     and processed
     """
 
-    # externalities are per metric ton raw material extracted
+    # all inputs are per metric ton raw material extracted
 
     _extract_prod_lci = pd.read_csv('lci.csv',
                                     usecols=['extraction and production',
@@ -2103,43 +2062,51 @@ def extraction_lci():
 
     return _extract_prod_lci
 
+# @todo Adjust LCI data connection in all LCI functions to filter by material name column
+# @todo Error handling and data checking for LCI data connection?
 
 @cache('run')
-def externality_factor_of_recycling_process():
+def recycling_lci():
     """
-    Real Name: b'externality factor of recycling process'
-    Original Eqn: b'11'
-    Units: b'impact/metric ton'
-    Limits: (0.0, None)
-    Type: constant
+    Reads in LCI of material and energy inputs per metric ton material sent
+    through recycling pathway
+    """
 
-    b'Generic externality factor for recycling technology'
-    """
-    return 11
+    _recycling_lci = pd.read_csv('lci.csv',
+                                 usecols=['recycling',
+                                          'input name'],
+                                 index_col='input name',
+                                 squeeze=True)
+
+    return _recycling_lci
 
 
 @cache('run')
-def externality_factor_of_remanufacturing_process():
+def remanufacturing_lci():
     """
-    Real Name: b'externality factor of remanufacturing process'
-    Original Eqn: b'8'
-    Units: b'impact/metric ton'
-    Limits: (0.0, None)
-    Type: constant
+    Reads in LCI of material and energy inputs per metric ton material sent
+    through remanufacturing pathway
+    """
 
-    b'Generic externality factor for remanufacturing technology'
-    """
-    return 8
+    _remanufacturing_lci = pd.read_csv('lci.csv',
+                                 usecols=['remanufacturing',
+                                          'input name'],
+                                 index_col='input name',
+                                 squeeze=True)
+
+    return _remanufacturing_lci
 
 
 @cache('run')
 def transportation_lci():
     """
-    Reads in LCI of materials and energy per metric ton-mile of transport
+    Reads in LCI of materials and energy inputs per metric ton-mile of transport
+
     @note I'm not aware of emission factors that will let us calculate emissions
     by mass and distance, only distance - we may need to change the calcs s.t.
     they're subject only to mass
     """
+    # @todo filtering by material column in lci.csv may work differently for transpo
     _transpo_lci = pd.read_csv('lci.csv',
                                usecols=['transportation', 'input name'],
                                index_col='input name',
@@ -2149,17 +2116,18 @@ def transportation_lci():
 
 
 @cache('run')
-def externality_factor_of_reusing_process():
+def reusing_lci():
     """
-    Real Name: b'externality factor of reusing process'
-    Original Eqn: b'5'
-    Units: b'impact/metric ton'
-    Limits: (0.0, None)
-    Type: constant
+    Reads in LCI of material and energy inputs per metric ton of material
+    sent through reusing pathway
+    """
 
-    b'Generic externality factor for reusing technology'
-    """
-    return 5
+    _reusing_lci = pd.read_csv('lci.csv',
+                               usecols=['reusing', 'input name'],
+                               index_col='input name',
+                               squeeze=True)
+
+    return _reusing_lci
 
 
 @cache('run')
