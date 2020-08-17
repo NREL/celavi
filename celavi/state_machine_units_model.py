@@ -232,7 +232,11 @@ class Context:
     """
 
     def __init__(
-        self, sd_model_filename: str, year_intercept: float, years_per_timestep, possible_component_materials: List[str]
+        self,
+        sd_model_filename: str,
+        year_intercept: float,
+        years_per_timestep,
+        possible_component_materials: List[str],
     ):
         """
         TODO: This constructor really needs to be cleaned up.
