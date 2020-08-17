@@ -3,28 +3,19 @@ Python model "natl-wind-importable.py"
 Translated using PySD version 0.10.0
 """
 from __future__ import division
-import numpy as np
-from pysd import utils
-import xarray as xr
 
 from pysd.py_backend.functions import cache
 from pysd.py_backend import functions
 
 import pandas as pd
-
-
+import numpy as np
 
 _subscript_dict = {}
-
+# @todo 1: Define the output data set as an empty data frame(?)
 _namespace = {
     'TIME': 'time',
     'Time': 'time',
     'recycle research annual cost reduction': 'recycle_research_annual_cost_reduction',
-    'unit externalities from recycling': 'unit_externalities_from_recycling',
-    'unit externalities from remanufacturing': 'unit_externalities_from_remanufacturing',
-    'unit externalities from extracting': 'unit_externalities_from_extracting',
-    'unit externalities from total transportation': 'unit_externalities_from_total_transportation',
-    'unit externalities from reusing': 'unit_externalities_from_reusing',
     'one metric ton': 'one_metric_ton',
     'one MW': 'one_mw',
     'one Year': 'one_year',
@@ -206,111 +197,7 @@ def recycle_research_annual_cost_reduction():
     """
     return 0.003
 
-
-@cache('step')
-def unit_externalities_from_recycling():
-    """
-    Real Name: b'unit externalities from recycling'
-    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from recycling / annual demand )'
-    Units: b''
-    Limits: (None, None)
-    Type: component
-
-    b''
-    """
-    _out = np.nan
-
-    if annual_demand() == 0:
-        _out = 0
-    else:
-        _out = externalities_from_recycling() / annual_demand()
-
-    return _out
-
-
-@cache('step')
-def unit_externalities_from_remanufacturing():
-    """
-    Real Name: b'unit externalities from remanufacturing'
-    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from remanufacturing / annual demand )'
-    Units: b''
-    Limits: (None, None)
-    Type: component
-
-    b''
-    """
-    _out = np.nan
-
-    if annual_demand() == 0:
-        _out = 0
-    else:
-        _out = externalities_from_remanufacturing() / annual_demand()
-
-    return _out
-
-
-@cache('step')
-def unit_externalities_from_extracting():
-    """
-    Real Name: b'unit externalities from extracting'
-    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from extracting / annual demand )'
-    Units: b''
-    Limits: (None, None)
-    Type: component
-
-    b''
-    """
-    _out = np.nan
-
-    if annual_demand() == 0:
-        _out = 0
-    else:
-        _out = extraction_inputs() / annual_demand()
-
-    return _out
-
-
-@cache('step')
-def unit_externalities_from_total_transportation():
-    """
-    Real Name: b'unit externalities from total transportation'
-    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from total transportation / annual demand )'
-    Units: b''
-    Limits: (None, None)
-    Type: component
-
-    b''
-    """
-    _out = np.nan
-
-    if annual_demand() == 0:
-        _out = 0
-    else:
-        _out = total_transportation_inputs() / annual_demand()
-
-    return _out
-
-
-@cache('step')
-def unit_externalities_from_reusing():
-    """
-    Real Name: b'unit externalities from reusing'
-    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from reusing / annual demand )'
-    Units: b''
-    Limits: (None, None)
-    Type: component
-
-    b''
-    """
-    _out = np.nan
-
-    if annual_demand() == 0:
-        _out = 0
-    else:
-        _out = externalities_from_reusing() / annual_demand()
-
-    return _out
-
+# @todo Convert all externality functions to impact/LCI based
 
 @cache('run')
 def one_metric_ton():
@@ -2040,16 +1927,9 @@ def relative_landfill():
 @cache('step')
 def landfill_transportation_inputs():
     """
-    Real Name: b'externalities from landfill transportation'
-    Original Eqn: b'externality factor of transportation * landfilling * miles from end use location to landfill'
-    Units: b'impact/year'
-    Limits: (None, None)
-    Type: component
-
-    b'Calculates externalities from transportation to landfill'
+    Calculates LCI for transportation to landfill
     """
-    return transportation_lci() * landfilling(
-    ) * miles_from_end_use_location_to_landfill()
+    return transportation_lci() * landfilling() * miles_from_end_use_location_to_landfill()
 
 
 @cache('step')
@@ -2093,7 +1973,7 @@ def extraction_inputs():
     """
     return extracting() * extraction_lci()
 
-
+# @todo 2: update the output dataset from inside the impacts function
 @cache('step')
 def extraction_transpo_impacts():
     """
@@ -2111,8 +1991,8 @@ def extraction_transpo_impacts():
     _out = extraction_inputs().append(total_transportation_inputs()).groupby(level=0).sum()
 
     return _out
-
-
+# @todo 3: add impact calculations for other pathways
+# @todo 4: update aggregate impact calculation to include the entire system
 @cache('step')
 def externalities_from_recycling():
     """
