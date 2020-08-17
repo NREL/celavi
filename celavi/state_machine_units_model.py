@@ -97,7 +97,12 @@ class NextState:
 
 
 class Inventory:
-    def __init__(self, quantity_unit: str = "tonne"):
+    def __init__(
+        self,
+        possible_component_materials: List[str],
+        timesteps: int,
+        quantity_unit: str = "tonne",
+    ):
         """
         The inventory class holds an inventory of materials and quantities
         for a landfill, virgin material extraction, or recycled material
@@ -108,33 +113,40 @@ class Inventory:
         quantity_unit: str
             The unit in which the quantity is recorded.
 
+        possible_component_materials: List[str]
+            A list of strings (e.g., "Nacelle Aluminum") that represent all
+            possible component materials that may be stored in this inventory
+
+        timesteps: int
+            The number of discrete timesteps in the simulation that this
+            inventory will hold.
 
         Other instance variables
         ------------------------
-        materials: Dict[str, int]
-           The key of the dictionary is a string that is the name of the
-           material. The value is an integer that is the quantity of the
-           material.
+        self.component_materials: Dict[str, float]
+            The cumulative amount of component materials over the entire
+            lifetime of the simulation.
 
-        self.materials_history: OrderedDict[int, Dict[str, int]]:
-            A history of the levels of the materials each time
-            a deposit or withdrawal is made. It is an OrderedDict to
-            ensure that keys are iterated in the same order they are
-            inserted.
+        self.component_materials_deposits: List[Dict[str, float]]
+            The HISTORY of the deposits and withdrawals from this
+            inventory. These are instantaneous, not cumulative, values.
         """
         self.quantity_unit = quantity_unit
         self.component_materials: Dict[str, float] = {}
-        self.component_materials_history: OrderedDict[
-            int, Dict[str, float]
-        ] = OrderedDict()
+        for possible_component_material in possible_component_materials:
+            self.component_materials[possible_component_material] = 0.0
+
+        # Populate the deposit and with drawal history with copies of the
+        # initialized dictionary from above that has all values set to 0.0
+        self.transactions: List[Dict[str, float]] = []
+        for _ in range(timesteps):
+            self.transactions.append(self.component_materials.copy())
 
     def increment_material_quantity(
-        self, material: str, quantity: float, timestep: int
+        self, component_material_name: str, quantity: float, timestep: int
     ) -> float:
         """
-        Changes the material quantity in this inventory. If the material
-        is not already present, then it is added to the inventory at a
-        quantity of 0 before it is incremented.
+        Changes the material quantity in this inventory.
 
         For virgin material extractions, the quantity should be negative
         to indicate a withdrawal.
@@ -148,7 +160,7 @@ class Inventory:
 
         Parameters
         ----------
-        material: str
+        component_material_name: str
             The material being deposited or withdrawn
 
         quantity: int
@@ -163,36 +175,48 @@ class Inventory:
         int
             The new quantity of the material.
         """
-        if material not in self.component_materials:
-            self.component_materials[material] = 0
-        self.component_materials[material] += quantity
-        copy_of_materials = {}
-        for k, v in self.component_materials.items():
-            copy_of_materials[k] = v
-        self.component_materials_history[timestep] = copy_of_materials
-        return self.component_materials[material]
+        # Place this transaction in the history
+        self.transactions[timestep][component_material_name] = quantity
 
-    def check_material(self, material: str, threshold: int) -> bool:
+        # Now increment the inventory
+        self.component_materials[component_material_name] += quantity
+
+        # Return the new level
+        return self.component_materials[component_material_name]
+
+    @property
+    def cumulative_history(self) -> pd.DataFrame:
         """
-        Check to see if a material is present in a particular quantity.
+        Because this method instantiates a DataFrame, it should be celled
+        sparingly, as this is a resource consuming procedure.
 
-        If the amount of material is greater than at_least, then it returns
-        True. Otherwise it returns False.
-
-        The use case for this is generally for using recycled material
-
-        Parameters
-        ----------
-        material: str
-            The name of the material in question.
-
-        threshold: int
-            The minimum amount of material being tested for.
+        Returns
+        -------
+        pd.DataFrame
+            The cumulative history of all the transactions of the component
+            materials.
         """
-        if material not in self.component_materials:
-            return False
-        else:
-            return self.component_materials[material] <= threshold
+        component_materials_history_df = pd.DataFrame(self.transactions)
+        cumulative_history = pd.DataFrame()
+        for column in component_materials_history_df.columns:
+            cumulative_history[column] = np.cumsum(
+                component_materials_history_df[column].values
+            )
+        return cumulative_history
+
+    @property
+    def transaction_history(self) -> pd.DataFrame:
+        """
+        Because this method instantiates a DataFrame, it should be celled
+        sparingly, as this is a resource consuming procedure.
+
+        Returns
+        -------
+        pd.DataFrame
+            The history of transactions in dataframe form.
+        """
+        transactions_df = pd.DataFrame(self.transactions)
+        return transactions_df
 
 
 class Context:
@@ -211,6 +235,8 @@ class Context:
         self, sd_model_filename: str, year_intercept: float, years_per_timestep
     ):
         """
+        TODO: This constructor really needs to be cleaned up.
+
         For converting from discrete timesteps to years, the formula is
             year_intercept + timestep * years_per_timestep.
 
@@ -250,8 +276,28 @@ class Context:
 
         self.component_material_event_log_list: List[Dict] = []
 
-        self.virgin_material_inventory = Inventory()
-        self.landfill_material_inventory = Inventory()
+        # Hard coding the possible component materials here is an inelegant
+        # solutions but gets by for now.
+
+        possible_component_materials = [
+            "Blade Glass Fiber",
+            "Foundation High Strength Steel",
+            "Nacelle Cast Iron",
+            "Tower High Strength Steel",
+            "Blade Carbon Fiber",
+            "Nacelle Highly alloyed Steel",
+            "Foundation Concrete",
+            "Nacelle High Strength Steel"
+        ]
+
+        self.virgin_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=len(time_series),
+        )
+        self.landfill_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=len(time_series),
+        )
 
     @property
     def max_timestep(self) -> int:
@@ -547,7 +593,7 @@ class ComponentMaterial:
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
         context.virgin_material_inventory.increment_material_quantity(
-            material=component_material.component_material,
+            component_material_name=component_material.component_material,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -573,7 +619,7 @@ class ComponentMaterial:
             f"Landfill process component_material {component_material.component_material_id}"
         )
         context.landfill_material_inventory.increment_material_quantity(
-            material=component_material.component_material,
+            component_material_name=component_material.component_material,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -634,7 +680,8 @@ class ComponentMaterial:
             self.lifespan = manufacture_state.lifespan
             self.transition_list.append("manufacturing")
             process_function = manufacture_state.process_function
-            process_function(self.context, self, timestep)
+            if process_function is not None:
+                process_function(self.context, self, timestep)
 
     def eol_process(self, env):
         """
