@@ -93,9 +93,21 @@ def make_plots(report_df, context):
 
 
 def run_and_report():
+    possible_component_materials = [
+        "Blade Glass Fiber",
+        "Foundation High Strength Steel",
+        "Nacelle Cast Iron",
+        "Tower High Strength Steel",
+        "Blade Carbon Fiber",
+        "Nacelle Highly alloyed Steel",
+        "Foundation Concrete",
+        "Nacelle High Strength Steel"
+    ]
+
     print(os.getcwd())
     context = Context(
-        "natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25
+        "natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25,
+        possible_component_materials=possible_component_materials
     )
     context.populate_components("celavi_sample_10_turbines.csv")
     material_component_log = context.run()
