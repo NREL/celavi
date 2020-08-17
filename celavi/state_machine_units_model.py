@@ -138,9 +138,9 @@ class Inventory:
 
         # Populate the deposit and with drawal history with copies of the
         # initialized dictionary from above that has all values set to 0.0
-        self.component_materials_history: List[Dict[str, float]] = []
+        self.transactions: List[Dict[str, float]] = []
         for _ in range(timesteps):
-            self.component_materials_history.append(self.component_materials.copy())
+            self.transactions.append(self.component_materials.copy())
 
     def increment_material_quantity(
         self, component_material_name: str, quantity: float, timestep: int
@@ -176,7 +176,7 @@ class Inventory:
             The new quantity of the material.
         """
         # Place this transaction in the history
-        self.component_materials_history[timestep][component_material_name] = quantity
+        self.transactions[timestep][component_material_name] = quantity
 
         # Now increment the inventory
         self.component_materials[component_material_name] += quantity
@@ -185,21 +185,38 @@ class Inventory:
         return self.component_materials[component_material_name]
 
     @property
-    def cumulative_history(self):
+    def cumulative_history(self) -> pd.DataFrame:
         """
+        Because this method instantiates a DataFrame, it should be celled
+        sparingly, as this is a resource consuming procedure.
+
         Returns
         -------
         pd.DataFrame
             The cumulative history of all the transactions of the component
             materials.
         """
-        component_materials_history_df = pd.DataFrame(self.component_materials_history)
+        component_materials_history_df = pd.DataFrame(self.transactions)
         cumulative_history = pd.DataFrame()
         for column in component_materials_history_df.columns:
             cumulative_history[column] = np.cumsum(
                 component_materials_history_df[column].values
             )
         return cumulative_history
+
+    @property
+    def transaction_history(self) -> pd.DataFrame:
+        """
+        Because this method instantiates a DataFrame, it should be celled
+        sparingly, as this is a resource consuming procedure.
+
+        Returns
+        -------
+        pd.DataFrame
+            The history of transactions in dataframe form.
+        """
+        transactions_df = pd.DataFrame(self.transactions)
+        return transactions_df
 
 
 class Context:
