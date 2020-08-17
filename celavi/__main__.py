@@ -9,14 +9,16 @@ import numpy as np
 
 def plot_landfill_and_virgin_material_inventories(context: Context, possible_component_materials: List[str]) -> None:
     landfill_cumulative = context.landfill_material_inventory.cumulative_history
-    timesteps = np.arange(len(landfill_cumulative))
-    landfill_cumulative["timestep"] = timesteps
-    landfill_melt = pd.melt(landfill_cumulative, id_vars=["timestep"], value_vars=possible_component_materials)
-    fig, axs = plt.subplots(ncols=1, nrows=len(possible_component_materials), figsize=(10, 10))
-    for cm, ax in zip(possible_component_materials, axs):
-        ax.set_title(cm)
+    fig, axs = plt.subplots(ncols=2, nrows=len(possible_component_materials), figsize=(10, 10))
+    xs = range(len(landfill_cumulative))
+    for cm, ax in zip(possible_component_materials, axs[:, 0]):
+        ax.set_title(f"Landfill cumulative {cm}")
+        ax.plot(xs, landfill_cumulative[cm])
+        ax.set_ylabel("tonnes")
+        ax.set_xlim(0, len(landfill_cumulative))
     plt.tight_layout()
     plt.show()
+
 
 def run_and_report():
     possible_component_materials = [
