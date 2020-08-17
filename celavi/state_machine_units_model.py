@@ -232,7 +232,7 @@ class Context:
     """
 
     def __init__(
-        self, sd_model_filename: str, year_intercept: float, years_per_timestep
+        self, sd_model_filename: str, year_intercept: float, years_per_timestep, possible_component_materials: List[str]
     ):
         """
         TODO: This constructor really needs to be cleaned up.
@@ -278,17 +278,6 @@ class Context:
 
         # Hard coding the possible component materials here is an inelegant
         # solutions but gets by for now.
-
-        possible_component_materials = [
-            "Blade Glass Fiber",
-            "Foundation High Strength Steel",
-            "Nacelle Cast Iron",
-            "Tower High Strength Steel",
-            "Blade Carbon Fiber",
-            "Nacelle Highly alloyed Steel",
-            "Foundation Concrete",
-            "Nacelle High Strength Steel"
-        ]
 
         self.virgin_material_inventory = Inventory(
             possible_component_materials=possible_component_materials,
