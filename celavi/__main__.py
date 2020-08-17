@@ -9,13 +9,23 @@ import numpy as np
 
 def plot_landfill_and_virgin_material_inventories(context: Context, possible_component_materials: List[str]) -> None:
     landfill_cumulative = context.landfill_material_inventory.cumulative_history
+    virgin_cumulative = context.virgin_material_inventory.cumulative_history
+
     fig, axs = plt.subplots(ncols=2, nrows=len(possible_component_materials), figsize=(10, 10))
+
     xs = range(len(landfill_cumulative))
     for cm, ax in zip(possible_component_materials, axs[:, 0]):
         ax.set_title(f"Landfill cumulative {cm}")
         ax.plot(xs, landfill_cumulative[cm])
         ax.set_ylabel("tonnes")
         ax.set_xlim(0, len(landfill_cumulative))
+
+    xs = range(len(virgin_cumulative))
+    for cm, ax in zip(possible_component_materials, axs[:, 1]):
+        ax.set_title(f"Virgin cumulative {cm}")
+        ax.plot(xs, virgin_cumulative[cm])
+        ax.set_xlim(0, len(virgin_cumulative))
+
     plt.tight_layout()
     plt.show()
 
