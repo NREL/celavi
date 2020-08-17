@@ -11,7 +11,7 @@ def plot_landfill_and_virgin_material_inventories(context: Context, possible_com
     landfill_cumulative = context.landfill_material_inventory.cumulative_history
     virgin_cumulative = context.virgin_material_inventory.cumulative_history
 
-    fig, axs = plt.subplots(ncols=2, nrows=len(possible_component_materials), figsize=(10, 10))
+    fig, axs = plt.subplots(ncols=3, nrows=len(possible_component_materials), figsize=(15, 10))
 
     xs = range(len(landfill_cumulative))
     for cm, ax in zip(possible_component_materials, axs[:, 0]):
@@ -23,7 +23,14 @@ def plot_landfill_and_virgin_material_inventories(context: Context, possible_com
     xs = range(len(virgin_cumulative))
     for cm, ax in zip(possible_component_materials, axs[:, 1]):
         ax.set_title(f"Virgin cumulative {cm}")
-        ax.plot(xs, virgin_cumulative[cm])
+        ax.plot(xs, virgin_cumulative[cm], color="r")
+        ax.set_xlim(0, len(virgin_cumulative))
+
+    xs = range(len(virgin_cumulative))
+    for cm, ax in zip(possible_component_materials, axs[:, 2]):
+        ax.set_title(f"Landfill/virgin {cm}")
+        ax.plot(xs, landfill_cumulative[cm], color="b")
+        ax.plot(xs, virgin_cumulative[cm], color="r")
         ax.set_xlim(0, len(virgin_cumulative))
 
     plt.tight_layout()
