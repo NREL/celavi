@@ -15,6 +15,26 @@ class DummyContext:
         self.virgin_material_inventory = Inventory(
             possible_component_materials, timesteps
         )
+        self.remanufacture_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.use_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.remanufacture_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.reuse_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.recycle_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
 
 
 @pytest.fixture
@@ -60,12 +80,6 @@ def test_use_remanufacture(a_component_material):
     a_component_material.state = "use"
     a_component_material.transition("remanufacturing", 1)
     assert a_component_material.state == "remanufacture"
-
-
-def test_use_recycle(a_component_material):
-    a_component_material.state = "use"
-    a_component_material.transition("recycling", 1)
-    assert a_component_material.state == "recycle"
 
 
 def test_reuse_landfill(a_component_material):
