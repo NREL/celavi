@@ -136,7 +136,7 @@ class Inventory:
         for possible_component_material in possible_component_materials:
             self.component_materials[possible_component_material] = 0.0
 
-        # Populate the deposit and with drawal history with copies of the
+        # Populate the deposit and withdrawal history with copies of the
         # initialized dictionary from above that has all values set to 0.0
         self.transactions: List[Dict[str, float]] = []
         for _ in range(timesteps):
@@ -239,8 +239,6 @@ class Context:
         possible_component_materials: List[str],
     ):
         """
-        TODO: This constructor really needs to be cleaned up.
-
         For converting from discrete timesteps to years, the formula is
             year_intercept + timestep * years_per_timestep.
 
@@ -413,6 +411,37 @@ class Context:
                         }
                     )
 
+    def concatenate_inventory_cumulative_logs(self):
+        """
+        Concatenates all the cumulative history logs from all the inventories.
+        """
+
+        # First, make a series of years
+        years: List[float] = []
+        for timestep in range(len(self.sd_model_run)):
+            years.append(self.year_intercept + timestep * self.years_per_timestep)
+        years_series = pd.Series(years)
+
+        # Now get all the inventories, and store them in a dictionary
+        states = {
+            "use": self.use_material_inventory.cumulative_history,
+            "reuse": self.reuse_material_inventory.cumulative_history,
+            "recycle": self.recycle_material_inventory.cumulative_history,
+            "remanufacture": self.remanufacture_material_inventory.cumulative_history,
+            "landfill": self.landfill_material_inventory.cumulative_history,
+            "virgin_material": self.virgin_material_inventory.cumulative_history,
+        }
+
+        # Append the years column to all of them
+        for state, cumulative_history in states.items():
+            cumulative_history["Year"] = years_series.copy()
+            cumulative_history["State"] = state
+
+        # Concatenate the cumulative history dataframes
+        concatenated = pd.concat(states.values())
+
+        return concatenated
+
     def run(self) -> pd.DataFrame:
         """
         This runs the model. Note that it does not initially populate the model
@@ -426,7 +455,8 @@ class Context:
         self.env.process(self.log_process(self.env))
         self.env.run(self.max_timestep)
         material_component_log_df = pd.DataFrame(self.component_material_event_log_list)
-        return material_component_log_df
+        inventory_cumulative_logs = self.concatenate_inventory_cumulative_logs()
+        return material_component_log_df, inventory_cumulative_logs
 
 
 class ComponentMaterial:

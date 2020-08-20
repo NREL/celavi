@@ -56,9 +56,10 @@ def run_and_report():
         possible_component_materials=possible_component_materials
     )
     context.populate_components("celavi_sample_10_turbines.csv")
-    material_component_log = context.run()
+    material_component_log, inventory_cumulative_logs = context.run()
 
     plot_landfill_and_virgin_material_inventories(context, possible_component_materials)
+    inventory_cumulative_logs.to_csv("inventory_cumulative_logs.csv", index=True)
 
 
 if __name__ == "__main__":
