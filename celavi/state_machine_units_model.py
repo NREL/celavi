@@ -255,24 +255,11 @@ class Context:
         years_per_timestep: float
             The number of years per timestep for timestep conversion.
         """
-        sd_model = pysd.load(sd_model_filename)
-        sd = sd_model.run()
-        self.sd_variables = sd.columns
-        time_series = sd[
-            ["Fraction Recycle", "Fraction Remanufacture", "Fraction Reuse"]
-        ]
-        self.fraction_recycle = time_series["Fraction Recycle"].values
-        self.fraction_remanufacture = time_series["Fraction Remanufacture"].values
-        self.fraction_reuse = time_series["Fraction Reuse"].values
+        self.sd_model_run = pysd.load(sd_model_filename).run()
+        timesteps = len(self.sd_model_run)
+
         self.year_intercept = year_intercept
         self.years_per_timestep = years_per_timestep
-
-        self.fraction_landfill = (
-            1.0
-            - self.fraction_recycle
-            - self.fraction_reuse
-            - self.fraction_remanufacture
-        )
 
         self.env = simpy.Environment()
         self.components: List[Component] = []
@@ -280,16 +267,13 @@ class Context:
 
         self.component_material_event_log_list: List[Dict] = []
 
-        # Hard coding the possible component materials here is an inelegant
-        # solutions but gets by for now.
-
         self.virgin_material_inventory = Inventory(
             possible_component_materials=possible_component_materials,
-            timesteps=len(time_series),
+            timesteps=timesteps,
         )
         self.landfill_material_inventory = Inventory(
             possible_component_materials=possible_component_materials,
-            timesteps=len(time_series),
+            timesteps=timesteps,
         )
 
     @property
@@ -303,7 +287,7 @@ class Context:
         int
             The maximum timestep.
         """
-        return len(self.fraction_reuse)
+        return len(self.sd_model_run)
 
     @staticmethod
     def choose_transition(component_material, ts: int) -> str:
