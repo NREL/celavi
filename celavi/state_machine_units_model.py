@@ -596,16 +596,36 @@ class ComponentMaterial:
 
         if self.state == "use":
             self.transition_list.append("using")
-            self.context.use_material_inventory.increment_material_quantity(
-                component_material_name=self.component_material, quantity=self.material_tonnes, timestep=0)
+            context.use_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
         elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
+            context.remanufacture_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
         elif self.state == "recycle":
             self.transition_list.append("recycling")
-        elif self.state == "manufacture":
-            self.transition_list.append("manufacturing")
+            context.recycle_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
         elif self.state == "reuse":
             self.transition_list.append("reusing")
+            context.reuse_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
+        else:
+            raise ValueError(
+                f"Component material {component_material} cannot be initialized into {self.state}"
+            )
 
     @staticmethod
     def manufacture(context: Context, component_material, timestep: int):
