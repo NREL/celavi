@@ -592,10 +592,12 @@ class ComponentMaterial:
 
         # When the component material is initialized, it will be initialized
         # into a particular state. Record the transition into this initial
-        # state here.
+        # state here. and place it into its initial inventory.
 
         if self.state == "use":
             self.transition_list.append("using")
+            self.context.use_material_inventory.increment_material_quantity(
+                component_material_name=self.component_material, quantity=self.material_tonnes, timestep=0)
         elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
         elif self.state == "recycle":
@@ -706,7 +708,6 @@ class ComponentMaterial:
         print(
             f"Use process component_material {component_material.component_material_id}, timestep={timestep}"
         )
-        component_material.recycle_counter += 1
         context.use_material_inventory.increment_material_quantity(
             component_material_name=component_material.component_material,
             quantity=component_material.material_tonnes,
