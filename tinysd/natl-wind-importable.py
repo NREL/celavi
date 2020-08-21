@@ -12,12 +12,6 @@ import numpy as np
 
 _subscript_dict = {}
 
-# Define the output data set as an empty data frame
-# columns will be defined as process inputs are calculated
-total_lci = pd.DataFrame(data=None, index=None,
-                         columns=['input unit', 'input name', 'material',
-                                  'process', 'quantity', 'model time'])
-
 _namespace = {
     'TIME': 'time',
     'Time': 'time',
@@ -1949,9 +1943,9 @@ def material_name():
 
     # @todo Update the material filtering with addl values
     if material_selection() == 1:
-        _material_name = 'steel'
-    elif material_selection()== 0:
         _material_name = 'fiberglass'
+    elif material_selection()== 0:
+        _material_name = 'steel'
     else:
         _material_name = 'carbon fiber'
 
@@ -2040,6 +2034,8 @@ def extract_prod_transportation_inputs():
                         landfilling_nonrecyclables() * miles_from_recycling_facility_to_landfill()
 
     _inputs.loc[:,'quantity'] = _inputs.loc[:,'quantity'] * _scaling_quantity
+
+    return _inputs
 
 
 @cache('step')
@@ -2180,17 +2176,19 @@ def aggregate_inputs():
     """
 
     _out = pd.concat([extract_prod_inputs(), recycling_inputs(),
-                      reusing_inputs(), remanufacturing_inputs()]).groupby(['input unit',
-                                                                            'input name',
-                                                                            'material',
-                                                                            'process'],
-                                                                           as_index=False)
+                      reusing_inputs(), remanufacturing_inputs(),
+                      transportation_inputs()])
 
     # add Time column that contains model time (years+quarters)
     _out.insert(len(_out.columns), 'model time', time(), allow_duplicates=False)
 
-    # update external data frame of inputs by time step
-    total_lci.append(_out, ignore_index=True)
+    if time()==1982.00:
+        # create new file to store results
+        _out.to_csv('total_lci.csv',index=False,header=True,mode='a+')
+
+    else:
+        # update file with results from this time step
+        _out.to_csv('total_lci.csv',header=False,index=False,mode='a+')
 
     return None
 
