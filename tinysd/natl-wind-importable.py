@@ -11,7 +11,11 @@ import pandas as pd
 import numpy as np
 
 _subscript_dict = {}
-# @todo 1: Define the output data set as an empty data frame(?)
+
+# Define the output data set as an empty data frame
+# columns will be defined as process inputs are calculated
+total_lci = pd.DataFrame(data=None)
+
 _namespace = {
     'TIME': 'time',
     'Time': 'time',
@@ -170,6 +174,22 @@ _namespace = {
 __pysd_version__ = "0.10.0"
 
 __data = {'scope': None, 'time': lambda: 0}
+
+
+# read in input data as-is
+# @todo Error handling and data checking for LCI data connection?
+_lci_input = pd.read_csv('lci.csv')
+
+# Melt to a dataframe with columns: input unit, input name, material,
+# process, quantity
+# ignore original index columns created when data was read in
+lci_melt = pd.melt(_lci_input,
+                   id_vars=['input unit', 'input name', 'material'],
+                   value_vars=['extraction and production',
+                               'transportation',
+                               'reusing', 'remanufacturing', 'recycling',
+                               'landfilling'],
+                   var_name='process', value_name='quantity')
 
 
 def _init_outer_references(data):
@@ -1942,7 +1962,18 @@ def aggregate_inputs():
     _out = reusing_inputs() + remanufacturing_inputs() + recycling_inputs() + \
            extract_prod_inputs() + transportation_inputs()
 
-    return _out
+    # construct a disaggregated data frame of inputs by process
+    # each set of inputs-by-process is one pd.Series
+    # the various pd.Series are appended together to form a pd.DataFrame with two
+    # extra columns that identify the process (where the inputs were consumed)
+    # and the model Time
+    # then this data frame is appended onto the external pd.DataFrame that stores
+    # all inputs by time step
+
+    # update external data frame of inputs by time step
+    total_lci.append(_out)
+
+    return None
 
 
 @cache('step')
@@ -1963,10 +1994,11 @@ def extract_prod_inputs():
     """
     return extracting() * extract_prod_lci()
 
+# @todo 1: format input(s) data to match the output DataFrame before doing any scaling/aggregating
 # @todo 2: update the output dataset from inside the impacts function
-
 # @todo 3: add impact calculations for other pathways
 # @todo 4: update aggregate impact calculation to include the entire system
+
 @cache('step')
 def recycling_inputs():
     """
@@ -2046,86 +2078,75 @@ def reuse_transportation_inputs():
 
 
 @cache('run')
-def extract_prod_lci():
+def extract_prod_lci(lci_data=lci_melt):
     """
-    Reads in LCI of materials and energy consumed per unit raw material extracted
-    and processed
+    Filters complete LCI input dataset to include only inputs to the extraction
+    and production processes
     """
 
-    # all inputs are per metric ton raw material extracted
+    # @todo Filter melted LCI data by material
 
-    _extract_prod_lci = pd.read_csv('lci.csv',
-                                    usecols=['extraction and production',
-                                             'input name'],
-                                    index_col='input name',
-                                    squeeze=True)
+    _extract_prod_lci = lci_data[lci_data['process']=='extraction and production']
 
     return _extract_prod_lci
 
-# @todo Adjust LCI data connection in all LCI functions to filter by material name column
-# @todo Error handling and data checking for LCI data connection?
 
 @cache('run')
-def recycling_lci():
+def recycling_lci(lci_data=lci_melt):
     """
-    Reads in LCI of material and energy inputs per metric ton material sent
-    through recycling pathway
+    Filters complete LCI input dataset to include only inputs to the recycling
+    process
     """
 
-    _recycling_lci = pd.read_csv('lci.csv',
-                                 usecols=['recycling',
-                                          'input name'],
-                                 index_col='input name',
-                                 squeeze=True)
+    # @todo Filter melted LCI data by material
+
+    _recycling_lci = lci_data[lci_data['process']=='recycling']
 
     return _recycling_lci
 
 
 @cache('run')
-def remanufacturing_lci():
+def remanufacturing_lci(lci_data=lci_melt):
     """
-    Reads in LCI of material and energy inputs per metric ton material sent
-    through remanufacturing pathway
+    Filters complete LCI input dataset to include only inputs to the
+    remanufcturing process
     """
 
-    _remanufacturing_lci = pd.read_csv('lci.csv',
-                                 usecols=['remanufacturing',
-                                          'input name'],
-                                 index_col='input name',
-                                 squeeze=True)
+    # @todo Filter melted LCI data by material
+
+    _remanufacturing_lci = lci_data[lci_data['process']=='remanufacturing']
 
     return _remanufacturing_lci
 
 
 @cache('run')
-def transportation_lci():
+def transportation_lci(lci_data=lci_melt):
     """
-    Reads in LCI of materials and energy inputs per metric ton-mile of transport
+    Filters complete LCI input dataset to include only inputs to the transpo
+    process
 
     @note I'm not aware of emission factors that will let us calculate emissions
     by mass and distance, only distance - we may need to change the calcs s.t.
     they're subject only to mass
     """
-    # @todo filtering by material column in lci.csv may work differently for transpo
-    _transpo_lci = pd.read_csv('lci.csv',
-                               usecols=['transportation', 'input name'],
-                               index_col='input name',
-                               squeeze=True)
+
+    # @todo filtering by material may work differently for transpo
+
+    _transpo_lci = lci_data[lci_data['process']=='transportation']
 
     return _transpo_lci
 
 
 @cache('run')
-def reusing_lci():
+def reusing_lci(lci_data=lci_melt):
     """
-    Reads in LCI of material and energy inputs per metric ton of material
-    sent through reusing pathway
+    Filters complete LCI input dataset to include only inputs to the reusing
+    process
     """
 
-    _reusing_lci = pd.read_csv('lci.csv',
-                               usecols=['reusing', 'input name'],
-                               index_col='input name',
-                               squeeze=True)
+    # @todo Filter melted LCI data by material
+
+    _reusing_lci = lci_data[lci_data['process']=='reusing']
 
     return _reusing_lci
 
