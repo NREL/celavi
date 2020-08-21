@@ -9,7 +9,7 @@ from pysd.py_backend import functions
 from time import gmtime, strftime
 import pandas as pd
 import numpy as np
-import pdb
+
 _subscript_dict = {}
 
 _namespace = {
@@ -2021,7 +2021,7 @@ def reusing_lci(lci_data=lci_melt):
     _reusing_lci = lci_data[(lci_data['process']=='reusing') & (lci_data['material']==material_name())]
 
     return _reusing_lci
-pdb.set_trace()
+
 
 @cache('step')
 def extract_prod_transportation_inputs():
