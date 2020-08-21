@@ -6,10 +6,10 @@ from __future__ import division
 
 from pysd.py_backend.functions import cache
 from pysd.py_backend import functions
-
+from time import gmtime, strftime
 import pandas as pd
 import numpy as np
-
+import pdb
 _subscript_dict = {}
 
 _namespace = {
@@ -186,6 +186,10 @@ lci_melt = pd.melt(_lci_input,
                                'reusing', 'remanufacturing', 'recycling',
                                'landfilling'],
                    var_name='process', value_name='quantity')
+
+# use the date and time of the model run to identify different results files
+# @todo create functionality to include scenario name or replace date/time with scenario name
+_run_id = strftime('%m-%d-%Y_%H:%M:%S')
 
 
 def _init_outer_references(data):
@@ -2017,7 +2021,7 @@ def reusing_lci(lci_data=lci_melt):
     _reusing_lci = lci_data[(lci_data['process']=='reusing') & (lci_data['material']==material_name())]
 
     return _reusing_lci
-
+pdb.set_trace()
 
 @cache('step')
 def extract_prod_transportation_inputs():
@@ -2167,7 +2171,7 @@ def reusing_inputs():
 
 
 @cache('step')
-def aggregate_inputs():
+def aggregate_inputs(run_id_string=_run_id):
     """
     Calculates total material and energy inputs/gate-to-gate LCI for the entire
     system, per time step
@@ -2184,11 +2188,14 @@ def aggregate_inputs():
 
     if time()==1982.00:
         # create new file to store results
-        _out.to_csv('total_lci.csv',index=False,header=True,mode='a+')
+        _out.to_csv('total_lci' + run_id_string + '.csv',
+                    index=False,header=True,mode='a+')
 
     else:
-        # update file with results from this time step
-        _out.to_csv('total_lci.csv',header=False,index=False,mode='a+')
+        # update file with results from this time step without writing
+        # a header row
+        _out.to_csv('total_lci' + run_id_string + '.csv',
+                    index=False,header=False,mode='a+')
 
     return None
 
