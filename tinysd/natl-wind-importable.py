@@ -2026,7 +2026,7 @@ def extract_prod_transportation_inputs():
     including material leakage from the circular system to the landfill
     """
 
-    _inputs = transportation_lci()
+    _inputs = transportation_lci().copy()
 
     _scaling_quantity = landfilling() * miles_from_end_use_location_to_landfill() + \
                         extracting() * miles_from_extraction_to_production_facility() + \
@@ -2044,7 +2044,7 @@ def recycling_transportation_inputs():
     Scales LCI transpo inputs for transportation in the recycling pathway
     """
 
-    _inputs = transportation_lci()
+    _inputs = transportation_lci().copy()
 
     _scaling_quantity = recycling() * miles_from_end_use_location_to_recycling_facility() + \
                         recycling_failed_remanufactured() * miles_from_remanufacturing_facility_to_recycling_facility() + \
@@ -2062,7 +2062,7 @@ def remanufacturing_transportation_inputs():
     Scales LCI transpo inputs for transportation in the remanufacturing pathway
     """
 
-    _inputs = transportation_lci()
+    _inputs = transportation_lci().copy()
 
     _scaling_quantity = remanufacturing() * miles_from_end_use_location_to_remanufacturing_facility() + \
                         remanufacturing_nonreusables() * miles_from_reuse_facility_to_remanufacturing_facility() + \
@@ -2080,7 +2080,7 @@ def reuse_transportation_inputs():
     Scales LCI transpo inputs for transportation in the reuse pathway
     """
 
-    _inputs = transportation_lci()
+    _inputs = transportation_lci().copy()
 
     _scaling_quantity = reusing() * miles_from_end_use_location_to_reuse_facility() + \
                         aggregating_reused_products() * miles_from_reuse_facility_to_product_distribution_facility()
