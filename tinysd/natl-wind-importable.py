@@ -2101,7 +2101,7 @@ def extract_prod_inputs():
     """
     Scales the extraction LCI by the amount of raw material extracted
     """
-    _inputs = extract_prod_lci()
+    _inputs = extract_prod_lci().copy()
 
     _scaling_quantity = extracting()
 
@@ -2116,7 +2116,7 @@ def recycling_inputs():
     Scales the recycling LCI by metric tons of material sent through recycling
     pathway
     """
-    _inputs = recycling_lci()
+    _inputs = recycling_lci().copy()
 
     _scaling_quantity = aggregating_recycled_materials()
 
@@ -2131,7 +2131,7 @@ def remanufacturing_inputs():
     Scales the remanufacturing LCI by metric tons of material sent through
     remanufacturing pathway
     """
-    _inputs = remanufacturing_lci()
+    _inputs = remanufacturing_lci().copy()
 
     _scaling_quantity = aggregating_remanufactured_products()
 
@@ -2146,7 +2146,7 @@ def reusing_inputs():
     Scales the reusing LCI by metric tons of material sent through reusing
     pathway
     """
-    _inputs = reusing_lci()
+    _inputs = reusing_lci().copy()
 
     _scaling_quantity = aggregating_reused_products()
 
