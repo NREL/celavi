@@ -122,6 +122,7 @@ def simple_plot(result, names):
     plt.plot(stocks)
     plt.ylabel(stock_names[0])
     plt.xlabel('Time')
+    plt.legend(stock_names)
 
 
 # set parameters and initial conditions for steel; get results
