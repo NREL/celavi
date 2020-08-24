@@ -125,7 +125,8 @@ def simple_plot(result, names):
 
 
 # set parameters and initial conditions for steel; get results
-steel = model.run(params={'material selection':1,
+steel = model.run(params={'scenario name':'steel base',
+                          'material selection':'steel',
                           'fraction used product recycled initial value':0.30,
                           'fraction used product reused initial value':0,
                           'fraction used product remanufactured initial value':0,
@@ -139,7 +140,8 @@ steel = model.run(params={'material selection':1,
                           'recycle learning rate':0.05,
                           'recycle research annual cost reduction':0})
 
-blade_lbd_no_rd = model.run(params={'material selection':0,
+blade_lbd_no_rd = model.run(params={'scenario name':'blade_lbd_no_rd',
+                                    'material selection':'fiberglass',
                                     'fraction used product recycled initial value':0,
                                     'initial cost of reuse process':100000,
                                     'initial cost of remanufacturing process':75000,
@@ -154,7 +156,8 @@ blade_lbd_no_rd = model.run(params={'material selection':0,
                                     'recycle learning rate':0.05,
                                     'recycle research annual cost reduction':0})
 
-blade_lbd_with_rd = model.run(params={'material selection':0,
+blade_lbd_with_rd = model.run(params={'scenario name':'blade_lbd_with_rd',
+                                      'material selection':'fiberglass',
                                       'fraction used product recycled initial value':0,
                                       'initial cost of reuse process':100000,
                                       'initial cost of remanufacturing process':75000,
