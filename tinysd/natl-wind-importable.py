@@ -846,17 +846,18 @@ def fiberglass_use_metric_ton_per_mw():
 @cache('step')
 def material_use_per_year():
     """
-    Real Name: b'material use per year'
-    Original Eqn: b'installed capacity per year data * ( steel use metric ton per MW*material selection + fiberglass use metric ton per MW\\\\ *(1-material selection) )'
-    Units: b'metric ton/year'
-    Limits: (0.0, None)
-    Type: component
-
-    b'Converts installed capacity data to material use using the materal use per MW data \\n    \\t\\tfor either steel or fiberglass, depending on the value of material \\n    \\t\\tselection. \\t\\tmaterial selection is a Boolean parameter that controls whether the steel \\n    \\t\\tor fiberglass data is used in this calculation'
+    Returns material use per year calculated from installed capacity data and
+    data on material use per MW installed
+    @todo expand to include additional materials
+    @note if a material other than steel or fiberglass is entered, steel data is returned
     """
-    return installed_capacity_per_year_data() * (
-        steel_use_metric_ton_per_mw() * material_selection() + fiberglass_use_metric_ton_per_mw() *
-        (1 - material_selection()))
+
+    if material_selection() == 'fiberglass':
+        _out = installed_capacity_per_year_data() * fiberglass_use_metric_ton_per_mw()
+    else:
+        _out = installed_capacity_per_year_data() * steel_use_metric_ton_per_mw()
+
+    return  _out
 
 
 @cache('run')
@@ -870,7 +871,7 @@ def material_selection():
 
     b'select 1 for steel, 0 for fiberglass'
     """
-    return 1
+    return 'steel'
 
 
 @cache('step')
@@ -1942,23 +1943,6 @@ def relative_landfill():
             (landfilling() + landfilling_failed_remanufactured() +
              landfilling_nonrecyclables())) / (reaching_end_of_life() + 0.001)
 
-@cache('run')
-def material_name():
-    """:key
-    An attempt to convert the material_selection() numeric Boolean into a
-    string that can filter the LCI input dataset
-    """
-
-    # @todo Update the material filtering with addl values
-    if material_selection() == 1:
-        _material_name = 'fiberglass'
-    elif material_selection()== 0:
-        _material_name = 'steel'
-    else:
-        _material_name = 'carbon fiber'
-
-    return _material_name
-
 
 @cache('run')
 def extract_prod_lci(lci_data=lci_melt):
@@ -1967,7 +1951,7 @@ def extract_prod_lci(lci_data=lci_melt):
     and production processes
     """
 
-    _extract_prod_lci = lci_data[(lci_data['process']=='extraction and production') & (lci_data['material']==material_name())]
+    _extract_prod_lci = lci_data[(lci_data['process']=='extraction and production') & (lci_data['material'] == material_selection())]
 
     return _extract_prod_lci
 
@@ -1979,7 +1963,7 @@ def recycling_lci(lci_data=lci_melt):
     process
     """
 
-    _recycling_lci = lci_data[(lci_data['process']=='recycling') & (lci_data['material']==material_name())]
+    _recycling_lci = lci_data[(lci_data['process']=='recycling') & (lci_data['material'] == material_selection())]
 
     return _recycling_lci
 
@@ -1991,7 +1975,7 @@ def remanufacturing_lci(lci_data=lci_melt):
     remanufcturing process
     """
 
-    _remanufacturing_lci = lci_data[(lci_data['process']=='remanufacturing') & (lci_data['material']==material_name())]
+    _remanufacturing_lci = lci_data[(lci_data['process']=='remanufacturing') & (lci_data['material'] == material_selection())]
 
     return _remanufacturing_lci
 
@@ -2019,7 +2003,7 @@ def reusing_lci(lci_data=lci_melt):
     process
     """
 
-    _reusing_lci = lci_data[(lci_data['process']=='reusing') & (lci_data['material']==material_name())]
+    _reusing_lci = lci_data[(lci_data['process']=='reusing') & (lci_data['material'] == material_selection())]
 
     return _reusing_lci
 
@@ -2189,13 +2173,13 @@ def aggregate_inputs():
 
     if time()==1982.00:
         # create new file to store results
-        _out.to_csv('total_lci_' + scenario_name() + '.csv',
+        _out.to_csv('total_lci_' + scenario_name().replace(' ','_') + '.csv',
                     index=False,header=True,mode='a+')
 
     else:
         # update file with results from this time step without writing
         # a header row
-        _out.to_csv('total_lci_' + scenario_name() + '.csv',
+        _out.to_csv('total_lci_' + scenario_name().replace(' ','_') + '.csv',
                     index=False,header=False,mode='a+')
 
     return None
