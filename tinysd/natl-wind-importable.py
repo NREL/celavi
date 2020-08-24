@@ -161,6 +161,7 @@ _namespace = {
     'remanufacturing lci': 'remanufacturing_lci',
     'remanufacturing inputs': 'remanufacturing_inputs',
     'aggregate inputs': 'aggregate_inputs',
+    'scenario name': 'scenario_name',
     'FINAL TIME': 'final_time',
     'INITIAL TIME': 'initial_time',
     'SAVEPER': 'saveper',
@@ -196,12 +197,13 @@ def time():
     return __data['time']()
 
 @cache('run')
-def run_id():
-    # use the date and time of the model run to identify different results files
-    # @todo create functionality to include scenario name or replace date/time with scenario name
-    _run_id = strftime('%m-%d-%Y_%H%M%S')
+def scenario_name():
+    """
+    # returns scenario name defined in model parameter definition if given,
+    # otherwise uses the date and time of the model run
+    """
 
-    return _run_id
+    return strftime('%m-%d-%Y_%H%M%S')
 
 @cache('run')
 def recycle_research_annual_cost_reduction():
@@ -2000,9 +2002,6 @@ def transportation_lci(lci_data=lci_melt):
     Filters complete LCI input dataset to include only inputs to the transpo
     process
 
-    @note I'm not aware of emission factors that will let us calculate emissions
-    by mass and distance, only distance - we may need to change the calcs s.t.
-    they're subject only to mass
     @todo add data and calcualtions to convert mass moved into trips taken
     """
 
@@ -2190,13 +2189,13 @@ def aggregate_inputs():
 
     if time()==1982.00:
         # create new file to store results
-        _out.to_csv('total_lci' + run_id() + '.csv',
+        _out.to_csv('total_lci_' + scenario_name() + '.csv',
                     index=False,header=True,mode='a+')
 
     else:
         # update file with results from this time step without writing
         # a header row
-        _out.to_csv('total_lci' + run_id() + '.csv',
+        _out.to_csv('total_lci_' + scenario_name() + '.csv',
                     index=False,header=False,mode='a+')
 
     return None
