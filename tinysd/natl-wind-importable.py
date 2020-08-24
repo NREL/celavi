@@ -6,10 +6,10 @@ from __future__ import division
 
 from pysd.py_backend.functions import cache
 from pysd.py_backend import functions
-from time import gmtime, strftime
+from time import strftime
 import pandas as pd
 import numpy as np
-import pdb
+
 _subscript_dict = {}
 
 _namespace = {
@@ -2167,6 +2167,8 @@ def aggregate_inputs():
     _out = pd.concat([extract_prod_inputs(), recycling_inputs(),
                       reusing_inputs(), remanufacturing_inputs(),
                       transportation_inputs()])
+
+    _out = _out[_out.loc[:,'quantity'] != 0]
 
     # add Time column that contains model time (years+quarters)
     _out.insert(len(_out.columns), 'model time', time(), allow_duplicates=False)
