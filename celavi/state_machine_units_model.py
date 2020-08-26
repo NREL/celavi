@@ -211,6 +211,11 @@ class Inventory:
                 component_materials_history_df[column].values
             )
         return cumulative_history
+        # component_materials_history_df = pd.DataFrame(self.transactions)
+        # cumulative_history = pd.DataFrame()
+        # for column in component_materials_history_df.columns:
+        #     cumulative_history[column] = component_materials_history_df[column].values
+        # return cumulative_history
 
     @property
     def transaction_history(self) -> pd.DataFrame:
@@ -337,9 +342,10 @@ class Context:
         elif component_material.state == "remanufacture":
             return "using"
         else:  # "use" state
-            return np.random.choice(
-                ["reusing", "recycling", "remanufacturing", "landfilling"]
-            )
+            # return np.random.choice(
+            #     ["reusing", "recycling", "remanufacturing", "landfilling"]
+            # )
+            return "remanufacturing"
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -370,7 +376,8 @@ class Context:
                 self.components.append(component)
                 turbine.components.append(component)
 
-                component_material_lifespan = randint(40, 80)
+                # component_material_lifespan = randint(40, 80)
+                component_material_lifespan = 1
 
                 single_component = turbine_df.query("Component == @component_type")
                 for _, material_row in single_component.iterrows():
@@ -551,8 +558,10 @@ class ComponentMaterial:
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture",
-                lifespan_min=4,
-                lifespan_max=4,
+                # lifespan_min=4,
+                # lifespan_max=4,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.remanufacture,
                 state_exit_function=self.leave_use,
             ),
@@ -589,8 +598,10 @@ class ComponentMaterial:
             # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
                 state="use",
-                lifespan_min=40,
-                lifespan_max=80,
+                # lifespan_min=40,
+                # lifespan_max=80,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.use,
                 state_exit_function=self.leave_remanufacture,
             ),
