@@ -66,16 +66,24 @@ class NextState:
     lifespan_max: int
         The maximum duration of the state in discrete timesteps.
 
+    The following two instance attributes point to function that
+    handle bookkeeping.
+
     state_entry_function: Optional[Callable]
-        A callable (in other words, a function) that can be called
+        A callable (in other words, a function) that is called
         to process an entry into a state, such as a manufacture, landfill,
         or remanufacture process.
+
+    state_exit_function: Optional[Callable]
+        A callable that is called when a component material leaves the
+        previous state.
     """
 
     state: str
     lifespan_min: int = 40
     lifespan_max: int = 80
     state_entry_function: Optional[Callable] = None
+    state_exit_function: Optional[Callable] = None
 
     @property
     def lifespan(self) -> int:
@@ -525,24 +533,28 @@ class ComponentMaterial:
                 lifespan_min=1000,
                 lifespan_max=1000,
                 state_entry_function=self.landfill,
+                state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="reusing"): NextState(
                 state="reuse",
                 lifespan_min=40,
                 lifespan_max=80,
                 state_entry_function=self.reuse,
+                state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="recycling"): NextState(
                 state="recycle",
                 lifespan_min=4,
                 lifespan_max=4,
                 state_entry_function=self.recycle,
+                state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture",
                 lifespan_min=4,
                 lifespan_max=4,
                 state_entry_function=self.remanufacture,
+                state_exit_function=self.leave_use,
             ),
             # Outbound reuse states
             StateTransition(state="reuse", transition="ramnufacturing"): NextState(
@@ -550,18 +562,21 @@ class ComponentMaterial:
                 lifespan_min=4,
                 lifespan_max=4,
                 state_entry_function=self.remanufacture,
+                state_exit_function=self.leave_reuse,
             ),
             StateTransition(state="reuse", transition="landfilling"): NextState(
                 state="landfill",
                 lifespan_min=1000,
                 lifespan_max=1000,
                 state_entry_function=self.landfill,
+                state_exit_function=self.leave_reuse,
             ),
             StateTransition(state="reuse", transition="recycling"): NextState(
                 state="recycle",
                 lifespan_min=4,
                 lifespan_max=4,
                 state_entry_function=self.recycle,
+                state_exit_function=self.leave_reuse,
             ),
             # Recycle outbound
             StateTransition(state="recycle", transition="manufacturing"): NextState(
@@ -569,17 +584,19 @@ class ComponentMaterial:
                 lifespan_min=4,
                 lifespan_max=4,
                 state_entry_function=self.manufacture,
+                state_exit_function=self.leave_recycle,
             ),
             # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
                 state="use",
                 lifespan_min=40,
                 lifespan_max=80,
-                state_entry_function=self.remanufacture,
+                state_entry_function=self.use,
+                state_exit_function=self.leave_remanufacture,
             ),
             # Manufacture outbound
             StateTransition(state="manufacture", transition="using"): NextState(
-                state="use", lifespan_min=40, lifespan_max=80
+                state="use", lifespan_min=40, lifespan_max=80, state_entry_function=self.use,
             ),
             # Landfill outbound
             StateTransition(state="landfill", transition="manufacturing"): NextState(
@@ -587,6 +604,9 @@ class ComponentMaterial:
                 lifespan_min=4,
                 lifespan_max=8,
                 state_entry_function=self.manufacture,
+                # No state exit function here, because the manufacturing does
+                # not mine the landfill; rather manufacturing extracts
+                # virgin materials that are not in the landfill.
             ),
         }
 
@@ -628,6 +648,57 @@ class ComponentMaterial:
             )
 
     @staticmethod
+    def remanufacture(context: Context, component_material, timestep: int):
+        """
+        Remanufactures the component material by incrementing its
+        remanufacture counter.
+        """
+        print(
+            f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        component_material.remanufacture_counter += 1
+        context.remanufacture_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def leave_remanufacture(context: Context, component_material, timestep: int):
+        """
+        This leaves the remanufacture of a component material by decrementing
+        the counter.
+        """
+        print(
+            f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        component_material.remanufacture_counter += 1
+        context.remanufacture_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=-component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def landfill(context: Context, component_material, timestep: int):
+        """
+        Landfills a component material by incrementing the material in the
+        landfill.
+
+        The landfill process is special because there is no corresponding
+        leave_landfill method since component materials never leave the
+        landfill.
+        """
+        print(
+            f"Landfill process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        context.landfill_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
     def manufacture(context: Context, component_material, timestep: int):
         """
         Manufactures the component referenced by component_material.
@@ -660,37 +731,6 @@ class ComponentMaterial:
         )
 
     @staticmethod
-    def remanufacture(context: Context, component_material, timestep: int):
-        """
-        Remanufactures the component material by incrementing its
-        remanufacture counter.
-        """
-        print(
-            f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
-        )
-        component_material.remanufacture_counter += 1
-        context.remanufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
-            quantity=component_material.material_tonnes,
-            timestep=timestep,
-        )
-
-    @staticmethod
-    def landfill(context: Context, component_material, timestep: int):
-        """
-        Landfills a component material by incrementing the material in the
-        landfill.
-        """
-        print(
-            f"Landfill process component_material {component_material.component_material_id}, timestep={timestep}"
-        )
-        context.landfill_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
-            quantity=component_material.material_tonnes,
-            timestep=timestep,
-        )
-
-    @staticmethod
     def reuse(context: Context, component_material, timestep: int):
         """
         Reuses a component material by incrementing its reuse counter
@@ -702,6 +742,21 @@ class ComponentMaterial:
         context.reuse_material_inventory.increment_material_quantity(
             component_material_name=component_material.component_material,
             quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def leave_reuse(context: Context, component_material, timestep: int):
+        """
+        This method leaves the reuse state of a component material
+        """
+        print(
+            f"Leave reuse process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        component_material.reuse_counter += 1
+        context.reuse_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
 
@@ -721,6 +776,21 @@ class ComponentMaterial:
         )
 
     @staticmethod
+    def leave_recycle(context: Context, component_material, timestep: int):
+        """
+        This recycles a component material
+        """
+        print(
+            f"Recycle process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        component_material.recycle_counter += 1
+        context.recycle_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=-component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
     def use(context: Context, component_material, timestep: int):
         """
         This recycles a component material
@@ -731,6 +801,20 @@ class ComponentMaterial:
         context.use_material_inventory.increment_material_quantity(
             component_material_name=component_material.component_material,
             quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def leave_use(context: Context, component_material, timestep: int):
+        """
+        This method decrements the use inventory when a component material leaves use.
+        """
+        print(
+            f"Leave use process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        context.use_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
 
@@ -768,6 +852,8 @@ class ComponentMaterial:
         self.transition_list.append(transition)
         if next_state.state_entry_function is not None:
             next_state.state_entry_function(self.context, self, timestep)
+        if next_state.state_exit_function is not None:
+            next_state.state_exit_function(self.context, self, timestep)
 
         # If the component material is landfilled, it needs to be manufactured
         # again through the virgin material manufacturing process.
