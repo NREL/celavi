@@ -136,7 +136,7 @@ class Inventory:
         for possible_component_material in possible_component_materials:
             self.component_materials[possible_component_material] = 0.0
 
-        # Populate the deposit and with drawal history with copies of the
+        # Populate the deposit and withdrawal history with copies of the
         # initialized dictionary from above that has all values set to 0.0
         self.transactions: List[Dict[str, float]] = []
         for _ in range(timesteps):
@@ -239,8 +239,6 @@ class Context:
         possible_component_materials: List[str],
     ):
         """
-        TODO: This constructor really needs to be cleaned up.
-
         For converting from discrete timesteps to years, the formula is
             year_intercept + timestep * years_per_timestep.
 
@@ -255,41 +253,44 @@ class Context:
         years_per_timestep: float
             The number of years per timestep for timestep conversion.
         """
-        sd_model = pysd.load(sd_model_filename)
-        sd = sd_model.run()
-        self.sd_variables = sd.columns
-        time_series = sd[
-            ["Fraction Recycle", "Fraction Remanufacture", "Fraction Reuse"]
-        ]
-        self.fraction_recycle = time_series["Fraction Recycle"].values
-        self.fraction_remanufacture = time_series["Fraction Remanufacture"].values
-        self.fraction_reuse = time_series["Fraction Reuse"].values
+        self.sd_model_run = pysd.load(sd_model_filename).run()
+        timesteps = len(self.sd_model_run)
         self.year_intercept = year_intercept
         self.years_per_timestep = years_per_timestep
-
-        self.fraction_landfill = (
-            1.0
-            - self.fraction_recycle
-            - self.fraction_reuse
-            - self.fraction_remanufacture
-        )
-
         self.env = simpy.Environment()
         self.components: List[Component] = []
         self.turbines: List[Turbine] = []
-
         self.component_material_event_log_list: List[Dict] = []
 
-        # Hard coding the possible component materials here is an inelegant
-        # solutions but gets by for now.
+        # Setup all the inventories
 
         self.virgin_material_inventory = Inventory(
             possible_component_materials=possible_component_materials,
-            timesteps=len(time_series),
+            timesteps=timesteps,
         )
         self.landfill_material_inventory = Inventory(
             possible_component_materials=possible_component_materials,
-            timesteps=len(time_series),
+            timesteps=timesteps,
+        )
+        self.remanufacture_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.use_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.remanufacture_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.reuse_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
+        self.recycle_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
         )
 
     @property
@@ -303,7 +304,7 @@ class Context:
         int
             The maximum timestep.
         """
-        return len(self.fraction_reuse)
+        return len(self.sd_model_run)
 
     @staticmethod
     def choose_transition(component_material, ts: int) -> str:
@@ -410,6 +411,37 @@ class Context:
                         }
                     )
 
+    def concatenate_inventory_cumulative_logs(self):
+        """
+        Concatenates all the cumulative history logs from all the inventories.
+        """
+
+        # First, make a series of years
+        years: List[float] = []
+        for timestep in range(len(self.sd_model_run)):
+            years.append(self.year_intercept + timestep * self.years_per_timestep)
+        years_series = pd.Series(years)
+
+        # Now get all the inventories, and store them in a dictionary
+        states = {
+            "use": self.use_material_inventory.cumulative_history,
+            "reuse": self.reuse_material_inventory.cumulative_history,
+            "recycle": self.recycle_material_inventory.cumulative_history,
+            "remanufacture": self.remanufacture_material_inventory.cumulative_history,
+            "landfill": self.landfill_material_inventory.cumulative_history,
+            "virgin_material": self.virgin_material_inventory.cumulative_history,
+        }
+
+        # Append the years column to all of them
+        for state, cumulative_history in states.items():
+            cumulative_history["Year"] = years_series.copy()
+            cumulative_history["State"] = state
+
+        # Concatenate the cumulative history dataframes
+        concatenated = pd.concat(states.values())
+
+        return concatenated
+
     def run(self) -> pd.DataFrame:
         """
         This runs the model. Note that it does not initially populate the model
@@ -423,7 +455,8 @@ class Context:
         self.env.process(self.log_process(self.env))
         self.env.run(self.max_timestep)
         material_component_log_df = pd.DataFrame(self.component_material_event_log_list)
-        return material_component_log_df
+        inventory_cumulative_logs = self.concatenate_inventory_cumulative_logs()
+        return material_component_log_df, inventory_cumulative_logs
 
 
 class ComponentMaterial:
@@ -480,9 +513,10 @@ class ComponentMaterial:
         self.state = state
         self.transition_list: List[str] = []
 
-        # The reuse and remanufacture counters
+        # Setup the counters
         self.reuse_counter = 0
         self.remanufacture_counter = 0
+        self.recycle_counter = 0
 
         self.transitions_table = {
             # Outbound use states
@@ -493,10 +527,16 @@ class ComponentMaterial:
                 process_function=self.landfill,
             ),
             StateTransition(state="use", transition="reusing"): NextState(
-                state="reuse", lifespan_min=40, lifespan_max=80
+                state="reuse",
+                lifespan_min=40,
+                lifespan_max=80,
+                process_function=self.reuse,
             ),
             StateTransition(state="use", transition="recycling"): NextState(
-                state="recycle", lifespan_min=4, lifespan_max=4
+                state="recycle",
+                lifespan_min=4,
+                lifespan_max=4,
+                process_function=self.recycle,
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture",
@@ -518,7 +558,10 @@ class ComponentMaterial:
                 process_function=self.landfill,
             ),
             StateTransition(state="reuse", transition="recycling"): NextState(
-                state="recycle", lifespan_min=4, lifespan_max=4
+                state="recycle",
+                lifespan_min=4,
+                lifespan_max=4,
+                process_function=self.recycle,
             ),
             # Recycle outbound
             StateTransition(state="recycle", transition="manufacturing"): NextState(
@@ -549,18 +592,40 @@ class ComponentMaterial:
 
         # When the component material is initialized, it will be initialized
         # into a particular state. Record the transition into this initial
-        # state here.
+        # state here. and place it into its initial inventory.
 
         if self.state == "use":
             self.transition_list.append("using")
+            context.use_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
         elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
+            context.remanufacture_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
         elif self.state == "recycle":
             self.transition_list.append("recycling")
-        elif self.state == "manufacture":
-            self.transition_list.append("manufacturing")
+            context.recycle_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
         elif self.state == "reuse":
             self.transition_list.append("reusing")
+            context.reuse_material_inventory.increment_material_quantity(
+                component_material_name=component_material,
+                quantity=material_tonnes,
+                timestep=0,
+            )
+        else:
+            raise ValueError(
+                f"Component material {component_material} cannot be initialized into {self.state}"
+            )
 
     @staticmethod
     def manufacture(context: Context, component_material, timestep: int):
@@ -583,6 +648,9 @@ class ComponentMaterial:
         timestep: int
             The discrete timestep at which this is happening.
         """
+        print(
+            f"Manufacture process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
         context.virgin_material_inventory.increment_material_quantity(
@@ -598,9 +666,14 @@ class ComponentMaterial:
         remanufacture counter.
         """
         print(
-            f"Remanufacture process component_material {component_material.component_material_id}"
+            f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.remanufacture_counter += 1
+        context.remanufacture_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
 
     @staticmethod
     def landfill(context: Context, component_material, timestep: int):
@@ -609,7 +682,7 @@ class ComponentMaterial:
         landfill.
         """
         print(
-            f"Landfill process component_material {component_material.component_material_id}"
+            f"Landfill process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         context.landfill_material_inventory.increment_material_quantity(
             component_material_name=component_material.component_material,
@@ -623,9 +696,43 @@ class ComponentMaterial:
         Reuses a component material by incrementing its reuse counter
         """
         print(
-            f"Reuse process component_material {component_material.component_material_id}"
+            f"Reuse process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.reuse_counter += 1
+        context.reuse_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def recycle(context: Context, component_material, timestep: int):
+        """
+        This recycles a component material
+        """
+        print(
+            f"Recycle process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        component_material.recycle_counter += 1
+        context.recycle_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def use(context: Context, component_material, timestep: int):
+        """
+        This recycles a component material
+        """
+        print(
+            f"Use process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        context.use_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
 
     def transition(self, transition: str, timestep: int) -> None:
         """
@@ -662,9 +769,12 @@ class ComponentMaterial:
         if next_state.process_function is not None:
             next_state.process_function(self.context, self, timestep)
 
-        # Check to see if this component material was landfilled because this
-        # is a special case. In that case, the component material should
-        # immediately pass into the manufacture state to build a replacement.
+        # If the component material is landfilled, it needs to be manufactured
+        # again through the virgin material manufacturing process.
+        #
+        # This isn't intended to be like landfill mining, but it's independece
+        # of task scheduling is here to indicate that the component material
+        # is undergoing two processes that are outside of the 3 Rs
 
         if self.state == "landfill":
             lookup = StateTransition(state=self.state, transition="manufacturing")
