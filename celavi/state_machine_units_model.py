@@ -204,18 +204,18 @@ class Inventory:
             The cumulative history of all the transactions of the component
             materials.
         """
-        component_materials_history_df = pd.DataFrame(self.transactions)
-        cumulative_history = pd.DataFrame()
-        for column in component_materials_history_df.columns:
-            cumulative_history[column] = np.cumsum(
-                component_materials_history_df[column].values
-            )
-        return cumulative_history
         # component_materials_history_df = pd.DataFrame(self.transactions)
         # cumulative_history = pd.DataFrame()
         # for column in component_materials_history_df.columns:
-        #     cumulative_history[column] = component_materials_history_df[column].values
+        #     cumulative_history[column] = np.cumsum(
+        #         component_materials_history_df[column].values
+        #     )
         # return cumulative_history
+        component_materials_history_df = pd.DataFrame(self.transactions)
+        cumulative_history = pd.DataFrame()
+        for column in component_materials_history_df.columns:
+            cumulative_history[column] = component_materials_history_df[column].values
+        return cumulative_history
 
     @property
     def transaction_history(self) -> pd.DataFrame:
@@ -342,10 +342,9 @@ class Context:
         elif component_material.state == "remanufacture":
             return "using"
         else:  # "use" state
-            # return np.random.choice(
-            #     ["reusing", "recycling", "remanufacturing", "landfilling"]
-            # )
-            return "remanufacturing"
+            return np.random.choice(
+                ["reusing", "recycling", "remanufacturing", "landfilling"]
+            )
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -544,32 +543,30 @@ class ComponentMaterial:
             ),
             StateTransition(state="use", transition="reusing"): NextState(
                 state="reuse",
-                lifespan_min=40,
-                lifespan_max=80,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.reuse,
                 state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="recycling"): NextState(
                 state="recycle",
-                lifespan_min=4,
-                lifespan_max=4,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.recycle,
                 state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture",
-                # lifespan_min=4,
-                # lifespan_max=4,
-                lifespan_min=1,
-                lifespan_max=1,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.remanufacture,
                 state_exit_function=self.leave_use,
             ),
             # Outbound reuse states
             StateTransition(state="reuse", transition="ramnufacturing"): NextState(
                 state="remanufacture",
-                lifespan_min=4,
-                lifespan_max=4,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.remanufacture,
                 state_exit_function=self.leave_reuse,
             ),
@@ -582,38 +579,36 @@ class ComponentMaterial:
             ),
             StateTransition(state="reuse", transition="recycling"): NextState(
                 state="recycle",
-                lifespan_min=4,
-                lifespan_max=4,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.recycle,
                 state_exit_function=self.leave_reuse,
             ),
             # Recycle outbound
             StateTransition(state="recycle", transition="manufacturing"): NextState(
                 state="manufacture",
-                lifespan_min=4,
-                lifespan_max=4,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.manufacture,
                 state_exit_function=self.leave_recycle,
             ),
             # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
                 state="use",
-                # lifespan_min=40,
-                # lifespan_max=80,
-                lifespan_min=1,
-                lifespan_max=1,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.use,
                 state_exit_function=self.leave_remanufacture,
             ),
             # Manufacture outbound
             StateTransition(state="manufacture", transition="using"): NextState(
-                state="use", lifespan_min=40, lifespan_max=80, state_entry_function=self.use,
+                state="use", lifespan_min=20, lifespan_max=20, state_entry_function=self.use,
             ),
             # Landfill outbound
             StateTransition(state="landfill", transition="manufacturing"): NextState(
                 state="manufacture",
-                lifespan_min=4,
-                lifespan_max=8,
+                lifespan_min=20,
+                lifespan_max=20,
                 state_entry_function=self.manufacture,
                 # No state exit function here, because the manufacturing does
                 # not mine the landfill; rather manufacturing extracts
