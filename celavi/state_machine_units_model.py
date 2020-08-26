@@ -66,7 +66,7 @@ class NextState:
     lifespan_max: int
         The maximum duration of the state in discrete timesteps.
 
-    process_function: Optional[Callable]
+    state_entry_function: Optional[Callable]
         A callable (in other words, a function) that can be called
         to process an entry into a state, such as a manufacture, landfill,
         or remanufacture process.
@@ -75,7 +75,7 @@ class NextState:
     state: str
     lifespan_min: int = 40
     lifespan_max: int = 80
-    process_function: Optional[Callable] = None
+    state_entry_function: Optional[Callable] = None
 
     @property
     def lifespan(self) -> int:
@@ -524,58 +524,58 @@ class ComponentMaterial:
                 state="landfill",
                 lifespan_min=1000,
                 lifespan_max=1000,
-                process_function=self.landfill,
+                state_entry_function=self.landfill,
             ),
             StateTransition(state="use", transition="reusing"): NextState(
                 state="reuse",
                 lifespan_min=40,
                 lifespan_max=80,
-                process_function=self.reuse,
+                state_entry_function=self.reuse,
             ),
             StateTransition(state="use", transition="recycling"): NextState(
                 state="recycle",
                 lifespan_min=4,
                 lifespan_max=4,
-                process_function=self.recycle,
+                state_entry_function=self.recycle,
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture",
                 lifespan_min=4,
                 lifespan_max=4,
-                process_function=self.remanufacture,
+                state_entry_function=self.remanufacture,
             ),
             # Outbound reuse states
             StateTransition(state="reuse", transition="ramnufacturing"): NextState(
                 state="remanufacture",
                 lifespan_min=4,
                 lifespan_max=4,
-                process_function=self.remanufacture,
+                state_entry_function=self.remanufacture,
             ),
             StateTransition(state="reuse", transition="landfilling"): NextState(
                 state="landfill",
                 lifespan_min=1000,
                 lifespan_max=1000,
-                process_function=self.landfill,
+                state_entry_function=self.landfill,
             ),
             StateTransition(state="reuse", transition="recycling"): NextState(
                 state="recycle",
                 lifespan_min=4,
                 lifespan_max=4,
-                process_function=self.recycle,
+                state_entry_function=self.recycle,
             ),
             # Recycle outbound
             StateTransition(state="recycle", transition="manufacturing"): NextState(
                 state="manufacture",
                 lifespan_min=4,
                 lifespan_max=4,
-                process_function=self.manufacture,
+                state_entry_function=self.manufacture,
             ),
             # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
                 state="use",
                 lifespan_min=40,
                 lifespan_max=80,
-                process_function=self.remanufacture,
+                state_entry_function=self.remanufacture,
             ),
             # Manufacture outbound
             StateTransition(state="manufacture", transition="using"): NextState(
@@ -586,7 +586,7 @@ class ComponentMaterial:
                 state="manufacture",
                 lifespan_min=4,
                 lifespan_max=8,
-                process_function=self.manufacture,
+                state_entry_function=self.manufacture,
             ),
         }
 
@@ -766,8 +766,8 @@ class ComponentMaterial:
         self.state = next_state.state
         self.lifespan = next_state.lifespan
         self.transition_list.append(transition)
-        if next_state.process_function is not None:
-            next_state.process_function(self.context, self, timestep)
+        if next_state.state_entry_function is not None:
+            next_state.state_entry_function(self.context, self, timestep)
 
         # If the component material is landfilled, it needs to be manufactured
         # again through the virgin material manufacturing process.
@@ -782,9 +782,9 @@ class ComponentMaterial:
             self.state = manufacture_state.state
             self.lifespan = manufacture_state.lifespan
             self.transition_list.append("manufacturing")
-            process_function = manufacture_state.process_function
-            if process_function is not None:
-                process_function(self.context, self, timestep)
+            state_entry_function = manufacture_state.state_entry_function
+            if state_entry_function is not None:
+                state_entry_function(self.context, self, timestep)
 
     def eol_process(self, env):
         """
