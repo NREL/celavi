@@ -197,7 +197,7 @@ class Inventory:
         # Now increment the inventory
         self.component_materials[component_material_name] += quantity
 
-        if self.component_materials[component_material_name] < 0 and not self.can_be_negative:
+        if round(self.component_materials[component_material_name], 2) < 0 and not self.can_be_negative:
             raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
 
         # Return the new level
