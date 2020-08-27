@@ -273,6 +273,7 @@ class Context:
             The number of years per timestep for timestep conversion.
         """
         self.sd_model_run = pysd.load(sd_model_filename).run()
+        self.sd_model_run.to_csv("celavi_sd_model.csv")
         timesteps = len(self.sd_model_run)
         self.year_intercept = year_intercept
         self.years_per_timestep = years_per_timestep
@@ -345,19 +346,9 @@ class Context:
         """
         return len(self.sd_model_run)
 
-    @staticmethod
-    def choose_transition(component_material, ts: int) -> str:
+    def choose_transition(self, component_material, ts: int) -> str:
         """
-        Does not support landfilling at the present time.
-
-        Does not use sophisticated decision making at this time.
-
-        Does not keep track of the number of times it has been remanufactured
-
-        HELP WANTED: How can I use the SD model to make more informed decisions
-           about what to do with the SD model to capture better state
-           transition decisions. I am still using probability distributions
-           and this has been flagged as an area for improvement.
+        Makes choices about lifecycle events.
         """
 
         # 3Rs with recycling
