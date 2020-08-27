@@ -300,6 +300,10 @@ class Context:
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
         )
+        self.manufacture_material_inventory = Inventory(
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+        )
 
     @property
     def max_timestep(self) -> int:
@@ -444,6 +448,7 @@ class Context:
             "remanufacture": self.remanufacture_material_inventory.cumulative_history,
             "landfill": self.landfill_material_inventory.cumulative_history,
             "virgin_material": self.virgin_material_inventory.cumulative_history,
+            "manufacture": self.manufacture_material_inventory.cumulative_history
         }
 
         # Append the years column to all of them
@@ -602,7 +607,11 @@ class ComponentMaterial:
             ),
             # Manufacture outbound
             StateTransition(state="manufacture", transition="using"): NextState(
-                state="use", lifespan_min=20, lifespan_max=20, state_entry_function=self.use,
+                state="use",
+                lifespan_min=20,
+                lifespan_max=20,
+                state_entry_function=self.use,
+                state_exit_function=self.leave_manufacture
             ),
             # Landfill outbound
             StateTransition(state="landfill", transition="manufacturing"): NextState(
@@ -612,7 +621,8 @@ class ComponentMaterial:
                 state_entry_function=self.manufacture,
                 # No state exit function here, because the manufacturing does
                 # not mine the landfill; rather manufacturing extracts
-                # virgin materials that are not in the landfill.
+                # virgin materials that are not in the landfill. See the
+                # self.manufacture function
             ),
         }
 
@@ -729,7 +739,30 @@ class ComponentMaterial:
         )
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
+
+        # Extract virgin material
         context.virgin_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=-component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+        # Place the material into the manufacturing inventory
+        context.manufacture_material_inventory.increment_material_quantity(
+            component_material_name=component_material.component_material,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def leave_manufacture(context: Context, component_material, timestep: int):
+        """
+        Pulls a component material out of the manufacturing inventory.
+        """
+        print(
+            f"Leave manufacture process component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        context.manufacture_material_inventory.increment_material_quantity(
             component_material_name=component_material.component_material,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
