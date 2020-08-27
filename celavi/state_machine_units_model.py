@@ -197,8 +197,13 @@ class Inventory:
         # Now increment the inventory
         self.component_materials[component_material_name] += quantity
 
-        if round(self.component_materials[component_material_name], 2) < 0 and not self.can_be_negative:
-            raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
+        if (
+            round(self.component_materials[component_material_name], 2) < 0
+            and not self.can_be_negative
+        ):
+            raise ValueError(
+                f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}"
+            )
 
         # Return the new level
         return self.component_materials[component_material_name]
@@ -351,23 +356,48 @@ class Context:
         Makes choices about lifecycle events.
         """
 
-        # 3Rs with recycling
+        # # 3Rs with recycling, purely random
+        # if component_material.state == "recycle":
+        #     return "manufacturing"
+        # elif component_material.state == "manufacture":
+        #     return "using"
+        # elif component_material.state == "reuse":
+        #     return np.random.choice(["recycling", "landfilling"])
+        # elif component_material.state == "remanufacture":
+        #     return "using"
+        # elif component_material.state == "landfill":
+        #     # This isn't landfill mining--landfilled component materials need
+        #     # to be replenished through manufacturing.
+        #     return "manufacturing"
+        # else:  # "use" state
+        #     return np.random.choice(
+        #         ["reusing", "recycling", "remanufacturing", "landfilling"]
+        #     )
+
+        # The current choice is landfill versus recycle
+        cost_of_landfilling = self.sd_model_run["cost of landfilling"].values
+        recycle_process_cost = self.sd_model_run["recycle process cost"].values
+        remanufacture_process_cost = self.sd_model_run["remanufacture process cost"].values
+        reuse_process_cost = self.sd_model_run["reuse process cost"]
+
         if component_material.state == "recycle":
             return "manufacturing"
         elif component_material.state == "manufacture":
-            return "using"
-        elif component_material.state == "reuse":
-            return np.random.choice(["recycling", "landfilling"])
-        elif component_material.state == "remanufacture":
             return "using"
         elif component_material.state == "landfill":
             # This isn't landfill mining--landfilled component materials need
             # to be replenished through manufacturing.
             return "manufacturing"
         else:  # "use" state
-            return np.random.choice(
-                ["reusing", "recycling", "remanufacturing", "landfilling"]
-            )
+            # choices = {
+            #     "recycling": recycle_process_cost[ts],
+            #     "landfilling": cost_of_landfilling[ts],
+            # }
+            # if component_material.reuse_counter < 1:
+            #     choices["reusing"] = reuse_process_cost[ts]
+            # if component_material.remanufacture_counter < 2:
+            #     choices["remanufacturing"] = remanufacture_process_cost[ts]
+            return "landfilling" if cost_of_landfilling[ts] <= recycle_process_cost[ts] else "recycling"
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -469,7 +499,7 @@ class Context:
             "remanufacture": self.remanufacture_material_inventory.cumulative_history,
             "landfill": self.landfill_material_inventory.cumulative_history,
             "virgin_material": self.virgin_material_inventory.cumulative_history,
-            "manufacture": self.manufacture_material_inventory.cumulative_history
+            "manufacture": self.manufacture_material_inventory.cumulative_history,
         }
 
         # Append the years column to all of them
@@ -632,7 +662,7 @@ class ComponentMaterial:
                 lifespan_min=20,
                 lifespan_max=20,
                 state_entry_function=self.use,
-                state_exit_function=self.leave_manufacture
+                state_exit_function=self.leave_manufacture,
             ),
             # Landfill outbound
             StateTransition(state="landfill", transition="manufacturing"): NextState(
@@ -654,30 +684,22 @@ class ComponentMaterial:
         if self.state == "use":
             self.transition_list.append("using")
             context.use_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
             context.remanufacture_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "recycle":
             self.transition_list.append("recycling")
             context.recycle_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "reuse":
             self.transition_list.append("reusing")
             context.reuse_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         else:
             raise ValueError(
@@ -735,7 +757,9 @@ class ComponentMaterial:
         )
 
     @staticmethod
-    def manufacture_virgin_material(context: Context, component_material, timestep: int):
+    def manufacture_virgin_material(
+        context: Context, component_material, timestep: int
+    ):
         """
         Manufactures the component referenced by component_material.
 
@@ -775,7 +799,9 @@ class ComponentMaterial:
         )
 
     @staticmethod
-    def manufacture_recycled_material(context: Context, component_material, timestep: int):
+    def manufacture_recycled_material(
+        context: Context, component_material, timestep: int
+    ):
         """
         Manufactures from recycled material.
 
