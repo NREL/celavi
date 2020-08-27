@@ -332,6 +332,8 @@ class Context:
            transition decisions. I am still using probability distributions
            and this has been flagged as an area for improvement.
         """
+
+        # 3Rs with recycling
         # if component_material.state == "recycle":
         #     return "manufacturing"
         # elif component_material.state == "manufacture":
@@ -344,10 +346,19 @@ class Context:
         #     return np.random.choice(
         #         ["reusing", "recycling", "remanufacturing", "landfilling"]
         #     )
+
+        # Uncomment these lines for a totally linear pathway
+        # if component_material.state == "manufacture":
+        #     return "using"
+        # else:
+        #     return "landfilling"
+
         if component_material.state == "manufacture":
             return "using"
-        else:
-            return "landfilling"
+        elif component_material.state == "recycle":
+            return "manufacturing"
+        else:    # "use" state
+            return "recycling"
 
 
     def populate_components(self, turbine_data_filename: str) -> None:
@@ -390,7 +401,7 @@ class Context:
                         material_type=material_type,
                         context=self,
                         material_tonnes=material_tonnes,
-                        component_material=f"{component_type} {material_type}",
+                        name=f"{component_type} {material_type}",
                         lifespan=component_material_lifespan,
                         parent_component=component,
                     )
@@ -421,7 +432,7 @@ class Context:
                             "turbine_id": material.parent_component.parent_turbine.turbine_id,
                             "state": material.state,
                             "component_material_id": material.component_material_id,
-                            "component_material": material.component_material,
+                            "component_material": material.name,
                             "material_type": material.material_type,
                             "material_tonnes": material.material_tonnes,
                             "latitude": material.parent_component.parent_turbine.latitude,
@@ -487,7 +498,7 @@ class ComponentMaterial:
         self,
         parent_component,  # Should be of type Component not defined yet.
         context: Context,
-        component_material: str,
+        name: str,
         material_type: str,
         material_tonnes: float,
         lifespan: int,
@@ -503,7 +514,7 @@ class ComponentMaterial:
         material: str
             The name of the type of material.
 
-        component_material: str
+        name: str
             The name of the component followed by the name of the material.
 
         component_material_id: str
@@ -525,7 +536,7 @@ class ComponentMaterial:
         )
         self.parent_component = parent_component
         self.context = context
-        self.component_material = component_material
+        self.name = name
         self.material_type = material_type
         self.material_tonnes = material_tonnes
         self.lifespan = lifespan
@@ -633,34 +644,34 @@ class ComponentMaterial:
         if self.state == "use":
             self.transition_list.append("using")
             context.use_material_inventory.increment_material_quantity(
-                component_material_name=component_material,
+                component_material_name=name,
                 quantity=material_tonnes,
                 timestep=0,
             )
         elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
             context.remanufacture_material_inventory.increment_material_quantity(
-                component_material_name=component_material,
+                component_material_name=name,
                 quantity=material_tonnes,
                 timestep=0,
             )
         elif self.state == "recycle":
             self.transition_list.append("recycling")
             context.recycle_material_inventory.increment_material_quantity(
-                component_material_name=component_material,
+                component_material_name=name,
                 quantity=material_tonnes,
                 timestep=0,
             )
         elif self.state == "reuse":
             self.transition_list.append("reusing")
             context.reuse_material_inventory.increment_material_quantity(
-                component_material_name=component_material,
+                component_material_name=name,
                 quantity=material_tonnes,
                 timestep=0,
             )
         else:
             raise ValueError(
-                f"Component material {component_material} cannot be initialized into {self.state}"
+                f"Component material {name} cannot be initialized into {self.state}"
             )
 
     @staticmethod
@@ -674,7 +685,7 @@ class ComponentMaterial:
         )
         component_material.remanufacture_counter += 1
         context.remanufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -689,7 +700,7 @@ class ComponentMaterial:
             f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         context.remanufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -708,7 +719,7 @@ class ComponentMaterial:
             f"Landfill process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         context.landfill_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -740,16 +751,15 @@ class ComponentMaterial:
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
 
-        # Extract virgin material
         context.virgin_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
 
         # Place the material into the manufacturing inventory
         context.manufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -763,7 +773,7 @@ class ComponentMaterial:
             f"Leave manufacture process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         context.manufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -778,7 +788,7 @@ class ComponentMaterial:
         )
         component_material.reuse_counter += 1
         context.reuse_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -793,7 +803,7 @@ class ComponentMaterial:
         )
         component_material.reuse_counter += 1
         context.reuse_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -808,7 +818,7 @@ class ComponentMaterial:
         )
         component_material.recycle_counter += 1
         context.recycle_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -823,7 +833,7 @@ class ComponentMaterial:
         )
         component_material.recycle_counter += 1
         context.recycle_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -837,7 +847,7 @@ class ComponentMaterial:
             f"Use process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         context.use_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -851,7 +861,7 @@ class ComponentMaterial:
             f"Leave use process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         context.use_material_inventory.increment_material_quantity(
-            component_material_name=component_material.component_material,
+            component_material_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )

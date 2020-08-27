@@ -46,7 +46,7 @@ def a_component_material():
     component_material = ComponentMaterial(
         parent_component=component,
         context=DummyContext(),
-        component_material="Nacelle Aluminum",
+        name="Nacelle Aluminum",
         material_type="Aluminum",
         material_tonnes=1,
         lifespan=50,
