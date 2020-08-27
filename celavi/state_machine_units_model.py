@@ -353,13 +353,13 @@ class Context:
         # else:
         #     return "landfilling"
 
+        # Purely circular
         if component_material.state == "manufacture":
             return "using"
         elif component_material.state == "recycle":
             return "manufacturing"
         else:    # "use" state
             return "recycling"
-
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -605,7 +605,7 @@ class ComponentMaterial:
                 state="manufacture",
                 lifespan_min=20,
                 lifespan_max=20,
-                state_entry_function=self.manufacture,
+                state_entry_function=self.manufacture_recycled_material,
                 state_exit_function=self.leave_recycle,
             ),
             # Remanufacture outbound
@@ -629,7 +629,7 @@ class ComponentMaterial:
                 state="manufacture",
                 lifespan_min=20,
                 lifespan_max=20,
-                state_entry_function=self.manufacture,
+                state_entry_function=self.manufacture_virgin_material,
                 # No state exit function here, because the manufacturing does
                 # not mine the landfill; rather manufacturing extracts
                 # virgin materials that are not in the landfill. See the
@@ -725,7 +725,7 @@ class ComponentMaterial:
         )
 
     @staticmethod
-    def manufacture(context: Context, component_material, timestep: int):
+    def manufacture_virgin_material(context: Context, component_material, timestep: int):
         """
         Manufactures the component referenced by component_material.
 
@@ -746,12 +746,38 @@ class ComponentMaterial:
             The discrete timestep at which this is happening.
         """
         print(
-            f"Manufacture process component_material {component_material.component_material_id}, timestep={timestep}"
+            f"Manufacture from virgin material component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
 
         context.virgin_material_inventory.increment_material_quantity(
+            component_material_name=component_material.name,
+            quantity=-component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+        # Place the material into the manufacturing inventory
+        context.manufacture_material_inventory.increment_material_quantity(
+            component_material_name=component_material.name,
+            quantity=component_material.material_tonnes,
+            timestep=timestep,
+        )
+
+    @staticmethod
+    def manufacture_recycled_material(context: Context, component_material, timestep: int):
+        """
+        Manufactures from recycled material.
+
+        TODO: Integrate the material manufacturing methods
+        """
+        print(
+            f"Manufacture from recycled material component_material {component_material.component_material_id}, timestep={timestep}"
+        )
+        component_material.reuse_counter = 0
+        component_material.remanufacture_counter = 0
+
+        context.recycle_material_inventory.increment_material_quantity(
             component_material_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
