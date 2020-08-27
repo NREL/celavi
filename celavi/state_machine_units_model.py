@@ -361,30 +361,22 @@ class Context:
         """
 
         # 3Rs with recycling
-        # if component_material.state == "recycle":
-        #     return "manufacturing"
-        # elif component_material.state == "manufacture":
-        #     return "using"
-        # elif component_material.state == "reuse":
-        #     return np.random.choice(["recycling", "landfilling"])
-        # elif component_material.state == "remanufacture":
-        #     return "using"
-        # else:  # "use" state
-        #     return np.random.choice(
-        #         ["reusing", "recycling", "remanufacturing", "landfilling"]
-        #     )
-
-        # Linearity and circularity
-        if component_material.state == "landfill":
-            # This is not landfill mining--in the manufacturing process, virgin
-            # materials are extracted.
+        if component_material.state == "recycle":
             return "manufacturing"
         elif component_material.state == "manufacture":
             return "using"
-        elif component_material.state == "recycle":
-            return "manufacturing"
-        else:  # use state
+        elif component_material.state == "reuse":
             return np.random.choice(["recycling", "landfilling"])
+        elif component_material.state == "remanufacture":
+            return "using"
+        elif component_material.state == "landfill":
+            # This isn't landfill mining--landfilled component materials need
+            # to be replenished through manufacturing.
+            return "manufacturing"
+        else:  # "use" state
+            return np.random.choice(
+                ["reusing", "recycling", "remanufacturing", "landfilling"]
+            )
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
