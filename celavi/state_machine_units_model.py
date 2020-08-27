@@ -353,13 +353,15 @@ class Context:
         # else:
         #     return "landfilling"
 
-        # Purely circular
-        if component_material.state == "manufacture":
-            return "using"
-        elif component_material.state == "recycle":
+        # Linearity only
+        if component_material.state == "landfill":
+            # This is not landfill mining--in the manufacturing process, virgin
+            # materials are extracted.
             return "manufacturing"
-        elif component_material.state == "use":    # "use" state
-            return np.random.choice(["landfilling", "recycling"])
+        elif component_material.state == "manufacture":
+            return "using"
+        else:  # use state
+            return "landfilling"
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -552,8 +554,8 @@ class ComponentMaterial:
             # Outbound use states
             StateTransition(state="use", transition="landfilling"): NextState(
                 state="landfill",
-                lifespan_min=1000,
-                lifespan_max=1000,
+                lifespan_min=10,
+                lifespan_max=10,
                 state_entry_function=self.landfill,
                 state_exit_function=self.leave_use,
             ),
@@ -627,8 +629,8 @@ class ComponentMaterial:
             # Landfill outbound
             StateTransition(state="landfill", transition="manufacturing"): NextState(
                 state="manufacture",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=10,
+                lifespan_max=10,
                 state_entry_function=self.manufacture_virgin_material,
                 # No state exit function here, because the manufacturing does
                 # not mine the landfill; rather manufacturing extracts
@@ -928,23 +930,6 @@ class ComponentMaterial:
             next_state.state_entry_function(self.context, self, timestep)
         if next_state.state_exit_function is not None:
             next_state.state_exit_function(self.context, self, timestep)
-
-        # If the component material is landfilled, it needs to be manufactured
-        # again through the virgin material manufacturing process.
-        #
-        # This isn't intended to be like landfill mining, but it's independece
-        # of task scheduling is here to indicate that the component material
-        # is undergoing two processes that are outside of the 3 Rs
-
-        if self.state == "landfill":
-            lookup = StateTransition(state=self.state, transition="manufacturing")
-            manufacture_state = self.transitions_table[lookup]
-            self.state = manufacture_state.state
-            self.lifespan = manufacture_state.lifespan
-            self.transition_list.append("manufacturing")
-            state_entry_function = manufacture_state.state_entry_function
-            if state_entry_function is not None:
-                state_entry_function(self.context, self, timestep)
 
     def eol_process(self, env):
         """
