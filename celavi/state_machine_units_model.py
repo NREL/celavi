@@ -204,17 +204,12 @@ class Inventory:
             The cumulative history of all the transactions of the component
             materials.
         """
-        # component_materials_history_df = pd.DataFrame(self.transactions)
-        # cumulative_history = pd.DataFrame()
-        # for column in component_materials_history_df.columns:
-        #     cumulative_history[column] = np.cumsum(
-        #         component_materials_history_df[column].values
-        #     )
-        # return cumulative_history
         component_materials_history_df = pd.DataFrame(self.transactions)
         cumulative_history = pd.DataFrame()
         for column in component_materials_history_df.columns:
-            cumulative_history[column] = component_materials_history_df[column].values
+            cumulative_history[column] = np.cumsum(
+                component_materials_history_df[column].values
+            )
         return cumulative_history
 
     @property
@@ -333,18 +328,23 @@ class Context:
            transition decisions. I am still using probability distributions
            and this has been flagged as an area for improvement.
         """
-        if component_material.state == "recycle":
-            return "manufacturing"
-        elif component_material.state == "manufacture":
+        # if component_material.state == "recycle":
+        #     return "manufacturing"
+        # elif component_material.state == "manufacture":
+        #     return "using"
+        # elif component_material.state == "reuse":
+        #     return np.random.choice(["recycling", "landfilling"])
+        # elif component_material.state == "remanufacture":
+        #     return "using"
+        # else:  # "use" state
+        #     return np.random.choice(
+        #         ["reusing", "recycling", "remanufacturing", "landfilling"]
+        #     )
+        if component_material.state == "manufacture":
             return "using"
-        elif component_material.state == "reuse":
-            return np.random.choice(["recycling", "landfilling"])
-        elif component_material.state == "remanufacture":
-            return "using"
-        else:  # "use" state
-            return np.random.choice(
-                ["reusing", "recycling", "remanufacturing", "landfilling"]
-            )
+        else:
+            return "landfilling"
+
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -678,7 +678,6 @@ class ComponentMaterial:
         print(
             f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
         )
-        component_material.remanufacture_counter += 1
         context.remanufacture_material_inventory.increment_material_quantity(
             component_material_name=component_material.component_material,
             quantity=-component_material.material_tonnes,
