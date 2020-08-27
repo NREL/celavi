@@ -107,9 +107,11 @@ class NextState:
 class Inventory:
     def __init__(
         self,
+        name: str,
         possible_component_materials: List[str],
         timesteps: int,
         quantity_unit: str = "tonne",
+        can_be_negative: bool = False,
     ):
         """
         The inventory class holds an inventory of materials and quantities
@@ -129,6 +131,10 @@ class Inventory:
             The number of discrete timesteps in the simulation that this
             inventory will hold.
 
+        can_be_negative: bool
+            True if the quantity in this inventory can be negative. If False,
+            the quantity must always be positive.
+
         Other instance variables
         ------------------------
         self.component_materials: Dict[str, float]
@@ -139,6 +145,8 @@ class Inventory:
             The HISTORY of the deposits and withdrawals from this
             inventory. These are instantaneous, not cumulative, values.
         """
+        self.name = name
+        self.can_be_negative = can_be_negative
         self.quantity_unit = quantity_unit
         self.component_materials: Dict[str, float] = {}
         for possible_component_material in possible_component_materials:
@@ -188,6 +196,9 @@ class Inventory:
 
         # Now increment the inventory
         self.component_materials[component_material_name] += quantity
+
+        if self.component_materials[component_material_name] < 0 and not self.can_be_negative:
+            raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
 
         # Return the new level
         return self.component_materials[component_material_name]
@@ -273,36 +284,52 @@ class Context:
         # Setup all the inventories
 
         self.virgin_material_inventory = Inventory(
+            name="virgin materials",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=True,
         )
         self.landfill_material_inventory = Inventory(
+            name="landfill",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=False,
         )
         self.remanufacture_material_inventory = Inventory(
+            name="remanufacture",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=False,
         )
         self.use_material_inventory = Inventory(
+            name="use",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=False,
         )
         self.remanufacture_material_inventory = Inventory(
+            name="remanufacture",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=False,
         )
         self.reuse_material_inventory = Inventory(
+            name="reuse",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=False,
         )
         self.recycle_material_inventory = Inventory(
+            name="recycle",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=False,
         )
         self.manufacture_material_inventory = Inventory(
+            name="manufacture",
             possible_component_materials=possible_component_materials,
             timesteps=timesteps,
+            can_be_negative=False,
         )
 
     @property
@@ -347,21 +374,27 @@ class Context:
         #         ["reusing", "recycling", "remanufacturing", "landfilling"]
         #     )
 
-        # Uncomment these lines for a totally linear pathway
-        # if component_material.state == "manufacture":
+        # Linearity only
+        # if component_material.state == "landfill":
+        #     # This is not landfill mining--in the manufacturing process, virgin
+        #     # materials are extracted.
+        #     return "manufacturing"
+        # elif component_material.state == "manufacture":
         #     return "using"
-        # else:
+        # else:  # use state
         #     return "landfilling"
 
-        # Linearity only
+        # Linearity and circularity
         if component_material.state == "landfill":
             # This is not landfill mining--in the manufacturing process, virgin
             # materials are extracted.
             return "manufacturing"
         elif component_material.state == "manufacture":
             return "using"
+        elif component_material.state == "recycle":
+            return "manufacturing"
         else:  # use state
-            return "landfilling"
+            return np.random.choice(["recycling", "landfilling"])
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
