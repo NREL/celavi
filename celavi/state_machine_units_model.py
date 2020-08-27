@@ -358,8 +358,8 @@ class Context:
             return "using"
         elif component_material.state == "recycle":
             return "manufacturing"
-        else:    # "use" state
-            return "recycling"
+        elif component_material.state == "use":    # "use" state
+            return np.random.choice(["landfilling", "recycling"])
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
