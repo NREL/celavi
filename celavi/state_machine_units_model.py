@@ -192,13 +192,13 @@ class Inventory:
             The new quantity of the material.
         """
         # Place this transaction in the history
-        self.transactions[timestep][component_material_name] = quantity
+        self.transactions[timestep][component_material_name] += quantity
 
         # Now increment the inventory
         self.component_materials[component_material_name] += quantity
 
-        if self.component_materials[component_material_name] < 0 and not self.can_be_negative:
-            raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
+        # if self.component_materials[component_material_name] < 0 and not self.can_be_negative:
+        #     raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
 
         # Return the new level
         return self.component_materials[component_material_name]
@@ -426,7 +426,7 @@ class Context:
                 turbine.components.append(component)
 
                 # component_material_lifespan = randint(40, 80)
-                component_material_lifespan = 1
+                component_material_lifespan = 10
 
                 single_component = turbine_df.query("Component == @component_type")
                 for _, material_row in single_component.iterrows():
@@ -439,9 +439,16 @@ class Context:
                         name=f"{component_type} {material_type}",
                         lifespan=component_material_lifespan,
                         parent_component=component,
+                        state="use",
                     )
+                    # self.use_material_inventory.increment_material_quantity(
+                    #     component_material_name=component_material.name,
+                    #     quantity=component_material.material_tonnes,
+                    #     timestep=0,
+                    # )
                     component.component_materials.append(component_material)
                     self.env.process(component_material.eol_process(self.env))
+        return
 
     def log_process(self, env):
         """
@@ -890,7 +897,7 @@ class ComponentMaterial:
         This recycles a component material
         """
         print(
-            f"Recycle process component_material {component_material.component_material_id}, timestep={timestep}"
+            f"Leave recycle process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.recycle_counter += 1
         context.recycle_material_inventory.increment_material_quantity(
