@@ -197,8 +197,8 @@ class Inventory:
         # Now increment the inventory
         self.component_materials[component_material_name] += quantity
 
-        # if self.component_materials[component_material_name] < 0 and not self.can_be_negative:
-        #     raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
+        if self.component_materials[component_material_name] < 0 and not self.can_be_negative:
+            raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
 
         # Return the new level
         return self.component_materials[component_material_name]
@@ -374,16 +374,6 @@ class Context:
         #         ["reusing", "recycling", "remanufacturing", "landfilling"]
         #     )
 
-        # Linearity only
-        # if component_material.state == "landfill":
-        #     # This is not landfill mining--in the manufacturing process, virgin
-        #     # materials are extracted.
-        #     return "manufacturing"
-        # elif component_material.state == "manufacture":
-        #     return "using"
-        # else:  # use state
-        #     return "landfilling"
-
         # Linearity and circularity
         if component_material.state == "landfill":
             # This is not landfill mining--in the manufacturing process, virgin
@@ -441,11 +431,6 @@ class Context:
                         parent_component=component,
                         state="use",
                     )
-                    # self.use_material_inventory.increment_material_quantity(
-                    #     component_material_name=component_material.name,
-                    #     quantity=component_material.material_tonnes,
-                    #     timestep=0,
-                    # )
                     component.component_materials.append(component_material)
                     self.env.process(component_material.eol_process(self.env))
         return
@@ -818,12 +803,6 @@ class ComponentMaterial:
         )
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
-
-        context.recycle_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
-            quantity=-component_material.material_tonnes,
-            timestep=timestep,
-        )
 
         # Place the material into the manufacturing inventory
         context.manufacture_material_inventory.increment_material_quantity(
