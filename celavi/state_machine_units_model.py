@@ -356,24 +356,6 @@ class Context:
         Makes choices about lifecycle events.
         """
 
-        # # 3Rs with recycling, purely random
-        # if component_material.state == "recycle":
-        #     return "manufacturing"
-        # elif component_material.state == "manufacture":
-        #     return "using"
-        # elif component_material.state == "reuse":
-        #     return np.random.choice(["recycling", "landfilling"])
-        # elif component_material.state == "remanufacture":
-        #     return "using"
-        # elif component_material.state == "landfill":
-        #     # This isn't landfill mining--landfilled component materials need
-        #     # to be replenished through manufacturing.
-        #     return "manufacturing"
-        # else:  # "use" state
-        #     return np.random.choice(
-        #         ["reusing", "recycling", "remanufacturing", "landfilling"]
-        #     )
-
         # The current choice is landfill versus recycle
         cost_of_landfilling = self.sd_model_run["cost of landfilling"].values
         recycle_process_cost = self.sd_model_run["recycle process cost"].values
@@ -389,15 +371,9 @@ class Context:
             # to be replenished through manufacturing.
             return "manufacturing"
         else:  # "use" state
-            # choices = {
-            #     "recycling": recycle_process_cost[ts],
-            #     "landfilling": cost_of_landfilling[ts],
-            # }
-            # if component_material.reuse_counter < 1:
-            #     choices["reusing"] = reuse_process_cost[ts]
-            # if component_material.remanufacture_counter < 2:
-            #     choices["remanufacturing"] = remanufacture_process_cost[ts]
             return "landfilling" if cost_of_landfilling[ts] <= recycle_process_cost[ts] else "recycling"
+
+        # TODO: Put in reuse, recycle, remanufacture pathways
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
