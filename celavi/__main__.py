@@ -1,10 +1,9 @@
 from celavi.state_machine_units_model import Context
 from typing import List, Dict
-import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import random
-import numpy as np
+import datetime
 
 
 def plot_landfill_and_virgin_material_inventories(context: Context, possible_component_materials: List[str]) -> None:
@@ -38,6 +37,8 @@ def plot_landfill_and_virgin_material_inventories(context: Context, possible_com
 
 
 def run_and_report():
+    print(f">>> Start {datetime.datetime.now()}")
+
     possible_component_materials = [
         "Blade Glass Fiber",
         "Foundation High Strength Steel",
@@ -58,8 +59,10 @@ def run_and_report():
     context.populate_components("celavi_sample_10_turbines.csv")
     material_component_log, inventory_cumulative_logs = context.run()
 
-    plot_landfill_and_virgin_material_inventories(context, possible_component_materials)
     inventory_cumulative_logs.to_csv("inventory_cumulative_logs.csv", index=True)
+    print(f"<<< End {datetime.datetime.now()}")
+
+    plot_landfill_and_virgin_material_inventories(context, possible_component_materials)
 
 
 if __name__ == "__main__":
