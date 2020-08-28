@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
-from collections import OrderedDict
-from typing import Dict, List, Callable, Optional
+from typing import Dict, List, Callable, Optional, Tuple, Union
 from random import randint
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -488,7 +487,7 @@ class Context:
 
         return concatenated
 
-    def run(self) -> pd.DataFrame:
+    def run(self) -> Tuple[pd.DataFrame, Union[pd.DataFrame, pd.Series]]:
         """
         This runs the model. Note that it does not initially populate the model
         first.
