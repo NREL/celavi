@@ -358,7 +358,9 @@ class Context:
         # The current choice is landfill versus recycle
         cost_of_landfilling = self.sd_model_run["cost of landfilling"].values
         recycle_process_cost = self.sd_model_run["recycle process cost"].values
-        remanufacture_process_cost = self.sd_model_run["remanufacture process cost"].values
+        remanufacture_process_cost = self.sd_model_run[
+            "remanufacture process cost"
+        ].values
         reuse_process_cost = self.sd_model_run["reuse process cost"]
 
         if component_material.state == "recycle":
@@ -370,7 +372,11 @@ class Context:
             # to be replenished through manufacturing.
             return "manufacturing"
         else:  # "use" state
-            return "landfilling" if cost_of_landfilling[ts] <= recycle_process_cost[ts] else "recycling"
+            return (
+                "landfilling"
+                if cost_of_landfilling[ts] <= recycle_process_cost[ts]
+                else "recycling"
+            )
 
         # TODO: Put in reuse, recycle, remanufacture pathways
 
