@@ -66,6 +66,7 @@ def run_and_report():
     material_component_log, inventory_cumulative_logs = context.run()
 
     inventory_cumulative_logs.to_csv("inventory_cumulative_logs.csv", index=True)
+    material_component_log.to_csv("material_component_log.csv", index=True)
     print(f"<<< End {datetime.datetime.now()}")
 
     plot_landfill_and_virgin_material_inventories(context, possible_component_materials)

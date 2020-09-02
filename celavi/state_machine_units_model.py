@@ -8,19 +8,24 @@ import simpy  # type: ignore
 from uuid import uuid4
 
 
-def unique_identifer_str():
-    """
-    This returns a UUID that can serve as a unique identifier for anything.
-    These UUIDs can be used as keys in a set or hash if needed.
+class UniqueIdentifier:
+    _unique_identifier_integer = 0
 
-    TODO: Replace this with an incrementing integer.
+    @classmethod
+    def unique_identifier(cls) -> int:
+        """
+        This returns a UUID that can serve as a unique identifier for anything.
+        These UUIDs can be used as keys in a set or hash if needed.
 
-    Returns
-    -------
-    str
-        A UUID to be used as a unique identifier.
-    """
-    return str(uuid4())
+        TODO: Replace this with an incrementing integer.
+
+        Returns
+        -------
+        str
+            A UUID to be used as a unique identifier.
+        """
+        cls._unique_identifier_integer += 1
+        return cls._unique_identifier_integer
 
 
 @dataclass(frozen=True)
@@ -551,7 +556,7 @@ class ComponentMaterial:
         use int the state machine?
         """
         self.component_material_id = (
-            unique_identifer_str()
+            UniqueIdentifier.unique_identifier()
             if component_material_id is None
             else component_material_id
         )
