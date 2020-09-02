@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
-from collections import OrderedDict
-from typing import Dict, List, Callable, Optional
+from typing import Dict, List, Callable, Optional, Tuple, Union
 from random import randint
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
@@ -9,19 +8,24 @@ import simpy  # type: ignore
 from uuid import uuid4
 
 
-def unique_identifer_str():
-    """
-    This returns a UUID that can serve as a unique identifier for anything.
-    These UUIDs can be used as keys in a set or hash if needed.
+class UniqueIdentifier:
+    _unique_identifier_integer = 0
 
-    TODO: Replace this with an incrementing integer.
+    @classmethod
+    def unique_identifier(cls) -> int:
+        """
+        This returns a UUID that can serve as a unique identifier for anything.
+        These UUIDs can be used as keys in a set or hash if needed.
 
-    Returns
-    -------
-    str
-        A UUID to be used as a unique identifier.
-    """
-    return str(uuid4())
+        TODO: Replace this with an incrementing integer.
+
+        Returns
+        -------
+        str
+            A UUID to be used as a unique identifier.
+        """
+        cls._unique_identifier_integer += 1
+        return cls._unique_identifier_integer
 
 
 @dataclass(frozen=True)
@@ -197,8 +201,13 @@ class Inventory:
         # Now increment the inventory
         self.component_materials[component_material_name] += quantity
 
-        if round(self.component_materials[component_material_name], 2) < 0 and not self.can_be_negative:
-            raise ValueError(f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}")
+        if (
+            round(self.component_materials[component_material_name], 2) < 0
+            and not self.can_be_negative
+        ):
+            raise ValueError(
+                f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}"
+            )
 
         # Return the new level
         return self.component_materials[component_material_name]
@@ -273,6 +282,7 @@ class Context:
             The number of years per timestep for timestep conversion.
         """
         self.sd_model_run = pysd.load(sd_model_filename).run()
+        self.sd_model_run.to_csv("celavi_sd_model.csv")
         timesteps = len(self.sd_model_run)
         self.year_intercept = year_intercept
         self.years_per_timestep = years_per_timestep
@@ -345,38 +355,35 @@ class Context:
         """
         return len(self.sd_model_run)
 
-    @staticmethod
-    def choose_transition(component_material, ts: int) -> str:
+    def choose_transition(self, component_material, ts: int) -> str:
         """
-        Does not support landfilling at the present time.
-
-        Does not use sophisticated decision making at this time.
-
-        Does not keep track of the number of times it has been remanufactured
-
-        HELP WANTED: How can I use the SD model to make more informed decisions
-           about what to do with the SD model to capture better state
-           transition decisions. I am still using probability distributions
-           and this has been flagged as an area for improvement.
+        Makes choices about lifecycle events.
         """
 
-        # 3Rs with recycling
+        # The current choice is landfill versus recycle
+        cost_of_landfilling = self.sd_model_run["cost of landfilling"].values
+        recycle_process_cost = self.sd_model_run["recycle process cost"].values
+        remanufacture_process_cost = self.sd_model_run[
+            "remanufacture process cost"
+        ].values
+        reuse_process_cost = self.sd_model_run["reuse process cost"]
+
         if component_material.state == "recycle":
             return "manufacturing"
         elif component_material.state == "manufacture":
-            return "using"
-        elif component_material.state == "reuse":
-            return np.random.choice(["recycling", "landfilling"])
-        elif component_material.state == "remanufacture":
             return "using"
         elif component_material.state == "landfill":
             # This isn't landfill mining--landfilled component materials need
             # to be replenished through manufacturing.
             return "manufacturing"
         else:  # "use" state
-            return np.random.choice(
-                ["reusing", "recycling", "remanufacturing", "landfilling"]
+            return (
+                "landfilling"
+                if cost_of_landfilling[ts] <= recycle_process_cost[ts]
+                else "recycling"
             )
+
+        # TODO: Put in reuse, recycle, remanufacture pathways
 
     def populate_components(self, turbine_data_filename: str) -> None:
         """
@@ -407,8 +414,8 @@ class Context:
                 self.components.append(component)
                 turbine.components.append(component)
 
-                # component_material_lifespan = randint(40, 80)
-                component_material_lifespan = 10
+                component_material_lifespan = randint(40, 80)
+                # component_material_lifespan = 10
 
                 single_component = turbine_df.query("Component == @component_type")
                 for _, material_row in single_component.iterrows():
@@ -478,7 +485,7 @@ class Context:
             "remanufacture": self.remanufacture_material_inventory.cumulative_history,
             "landfill": self.landfill_material_inventory.cumulative_history,
             "virgin_material": self.virgin_material_inventory.cumulative_history,
-            "manufacture": self.manufacture_material_inventory.cumulative_history
+            "manufacture": self.manufacture_material_inventory.cumulative_history,
         }
 
         # Append the years column to all of them
@@ -491,7 +498,7 @@ class Context:
 
         return concatenated
 
-    def run(self) -> pd.DataFrame:
+    def run(self) -> Tuple[pd.DataFrame, Union[pd.DataFrame, pd.Series]]:
         """
         This runs the model. Note that it does not initially populate the model
         first.
@@ -549,7 +556,7 @@ class ComponentMaterial:
         use int the state machine?
         """
         self.component_material_id = (
-            unique_identifer_str()
+            UniqueIdentifier.unique_identifier()
             if component_material_id is None
             else component_material_id
         )
@@ -571,83 +578,83 @@ class ComponentMaterial:
             # Outbound use states
             StateTransition(state="use", transition="landfilling"): NextState(
                 state="landfill",
-                lifespan_min=10,
-                lifespan_max=10,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.landfill,
                 state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="reusing"): NextState(
                 state="reuse",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=40,
+                lifespan_max=40,
                 state_entry_function=self.reuse,
                 state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="recycling"): NextState(
                 state="recycle",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.recycle,
                 state_exit_function=self.leave_use,
             ),
             StateTransition(state="use", transition="remanufacturing"): NextState(
                 state="remanufacture",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.remanufacture,
                 state_exit_function=self.leave_use,
             ),
             # Outbound reuse states
             StateTransition(state="reuse", transition="ramnufacturing"): NextState(
                 state="remanufacture",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.remanufacture,
                 state_exit_function=self.leave_reuse,
             ),
             StateTransition(state="reuse", transition="landfilling"): NextState(
                 state="landfill",
-                lifespan_min=1000,
-                lifespan_max=1000,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.landfill,
                 state_exit_function=self.leave_reuse,
             ),
             StateTransition(state="reuse", transition="recycling"): NextState(
                 state="recycle",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.recycle,
                 state_exit_function=self.leave_reuse,
             ),
             # Recycle outbound
             StateTransition(state="recycle", transition="manufacturing"): NextState(
                 state="manufacture",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.manufacture_recycled_material,
                 state_exit_function=self.leave_recycle,
             ),
             # Remanufacture outbound
             StateTransition(state="remanufacture", transition="using"): NextState(
                 state="use",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=40,
+                lifespan_max=40,
                 state_entry_function=self.use,
                 state_exit_function=self.leave_remanufacture,
             ),
             # Manufacture outbound
             StateTransition(state="manufacture", transition="using"): NextState(
                 state="use",
-                lifespan_min=20,
-                lifespan_max=20,
+                lifespan_min=40,
+                lifespan_max=40,
                 state_entry_function=self.use,
-                state_exit_function=self.leave_manufacture
+                state_exit_function=self.leave_manufacture,
             ),
             # Landfill outbound
             StateTransition(state="landfill", transition="manufacturing"): NextState(
                 state="manufacture",
-                lifespan_min=10,
-                lifespan_max=10,
+                lifespan_min=1,
+                lifespan_max=1,
                 state_entry_function=self.manufacture_virgin_material,
                 # No state exit function here, because the manufacturing does
                 # not mine the landfill; rather manufacturing extracts
@@ -663,30 +670,22 @@ class ComponentMaterial:
         if self.state == "use":
             self.transition_list.append("using")
             context.use_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
             context.remanufacture_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "recycle":
             self.transition_list.append("recycling")
             context.recycle_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "reuse":
             self.transition_list.append("reusing")
             context.reuse_material_inventory.increment_material_quantity(
-                component_material_name=name,
-                quantity=material_tonnes,
-                timestep=0,
+                component_material_name=name, quantity=material_tonnes, timestep=0,
             )
         else:
             raise ValueError(
@@ -744,7 +743,9 @@ class ComponentMaterial:
         )
 
     @staticmethod
-    def manufacture_virgin_material(context: Context, component_material, timestep: int):
+    def manufacture_virgin_material(
+        context: Context, component_material, timestep: int
+    ):
         """
         Manufactures the component referenced by component_material.
 
@@ -784,7 +785,9 @@ class ComponentMaterial:
         )
 
     @staticmethod
-    def manufacture_recycled_material(context: Context, component_material, timestep: int):
+    def manufacture_recycled_material(
+        context: Context, component_material, timestep: int
+    ):
         """
         Manufactures from recycled material.
 

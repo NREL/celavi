@@ -1,17 +1,20 @@
 from celavi.state_machine_units_model import Context
 from typing import List, Dict
-import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import random
-import numpy as np
+import datetime
 
 
-def plot_landfill_and_virgin_material_inventories(context: Context, possible_component_materials: List[str]) -> None:
+def plot_landfill_and_virgin_material_inventories(
+    context: Context, possible_component_materials: List[str]
+) -> None:
     landfill_cumulative = context.landfill_material_inventory.cumulative_history
     virgin_cumulative = context.virgin_material_inventory.cumulative_history
 
-    fig, axs = plt.subplots(ncols=3, nrows=len(possible_component_materials), figsize=(15, 10))
+    fig, axs = plt.subplots(
+        ncols=3, nrows=len(possible_component_materials), figsize=(15, 10)
+    )
 
     xs = range(len(landfill_cumulative))
     for cm, ax in zip(possible_component_materials, axs[:, 0]):
@@ -38,6 +41,8 @@ def plot_landfill_and_virgin_material_inventories(context: Context, possible_com
 
 
 def run_and_report():
+    print(f">>> Start {datetime.datetime.now()}")
+
     possible_component_materials = [
         "Blade Glass Fiber",
         "Foundation High Strength Steel",
@@ -46,20 +51,25 @@ def run_and_report():
         "Blade Carbon Fiber",
         "Nacelle Highly alloyed Steel",
         "Foundation Concrete",
-        "Nacelle High Strength Steel"
+        "Nacelle High Strength Steel",
     ]
 
     print(os.getcwd())
 
     context = Context(
-        "natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25,
-        possible_component_materials=possible_component_materials
+        "natl-wind-importable.py",
+        year_intercept=1980.0,
+        years_per_timestep=0.25,
+        possible_component_materials=possible_component_materials,
     )
     context.populate_components("celavi_sample_10_turbines.csv")
     material_component_log, inventory_cumulative_logs = context.run()
 
-    plot_landfill_and_virgin_material_inventories(context, possible_component_materials)
     inventory_cumulative_logs.to_csv("inventory_cumulative_logs.csv", index=True)
+    material_component_log.to_csv("material_component_log.csv", index=True)
+    print(f"<<< End {datetime.datetime.now()}")
+
+    plot_landfill_and_virgin_material_inventories(context, possible_component_materials)
 
 
 if __name__ == "__main__":
