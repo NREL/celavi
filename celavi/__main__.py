@@ -6,11 +6,15 @@ import random
 import datetime
 
 
-def plot_landfill_and_virgin_material_inventories(context: Context, possible_component_materials: List[str]) -> None:
+def plot_landfill_and_virgin_material_inventories(
+    context: Context, possible_component_materials: List[str]
+) -> None:
     landfill_cumulative = context.landfill_material_inventory.cumulative_history
     virgin_cumulative = context.virgin_material_inventory.cumulative_history
 
-    fig, axs = plt.subplots(ncols=3, nrows=len(possible_component_materials), figsize=(15, 10))
+    fig, axs = plt.subplots(
+        ncols=3, nrows=len(possible_component_materials), figsize=(15, 10)
+    )
 
     xs = range(len(landfill_cumulative))
     for cm, ax in zip(possible_component_materials, axs[:, 0]):
@@ -47,14 +51,16 @@ def run_and_report():
         "Blade Carbon Fiber",
         "Nacelle Highly alloyed Steel",
         "Foundation Concrete",
-        "Nacelle High Strength Steel"
+        "Nacelle High Strength Steel",
     ]
 
     print(os.getcwd())
 
     context = Context(
-        "natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25,
-        possible_component_materials=possible_component_materials
+        "natl-wind-importable.py",
+        year_intercept=1980.0,
+        years_per_timestep=0.25,
+        possible_component_materials=possible_component_materials,
     )
     context.populate_components("celavi_sample_10_turbines.csv")
     material_component_log, inventory_cumulative_logs = context.run()
