@@ -10,10 +10,46 @@ class DummyContext:
         timesteps = 10
         possible_component_materials = ["Tower Steel", "Nacelle Aluminum"]
         self.landfill_material_inventory = Inventory(
-            possible_component_materials, timesteps
+            name="landfill",
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+            can_be_negative=True,  # for testing, the inventory can go negative
         )
         self.virgin_material_inventory = Inventory(
-            possible_component_materials, timesteps
+            name="virgin material",
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+            can_be_negative=True,  # for testing, the inventory can go negative
+        )
+        self.remanufacture_material_inventory = Inventory(
+            name="remanufacture",
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+            can_be_negative=True,  # for testing, the inventory can go negative
+        )
+        self.use_material_inventory = Inventory(
+            name="use",
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+            can_be_negative=True,  # for testing, the inventory can go negative
+        )
+        self.reuse_material_inventory = Inventory(
+            name="reuse",
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+            can_be_negative=True,  # for testing, the inventory can go negative
+        )
+        self.recycle_material_inventory = Inventory(
+            name="recycle",
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+            can_be_negative=True,  # for testing, the inventory can go negative
+        )
+        self.manufacture_material_inventory = Inventory(
+            name="recycle",
+            possible_component_materials=possible_component_materials,
+            timesteps=timesteps,
+            can_be_negative=True,  # for testing, the inventory can go negative
         )
 
 
@@ -26,7 +62,7 @@ def a_component_material():
     component_material = ComponentMaterial(
         parent_component=component,
         context=DummyContext(),
-        component_material="Nacelle Aluminum",
+        name="Nacelle Aluminum",
         material_type="Aluminum",
         material_tonnes=1,
         lifespan=50,
@@ -41,7 +77,7 @@ def test_material_type(a_component_material):
 def test_use_landfill(a_component_material):
     a_component_material.state = "use"
     a_component_material.transition("landfilling", 1)
-    assert a_component_material.state == "manufacture"
+    assert a_component_material.state == "landfill"
 
 
 def test_use_reuse(a_component_material):
@@ -62,16 +98,10 @@ def test_use_remanufacture(a_component_material):
     assert a_component_material.state == "remanufacture"
 
 
-def test_use_recycle(a_component_material):
-    a_component_material.state = "use"
-    a_component_material.transition("recycling", 1)
-    assert a_component_material.state == "recycle"
-
-
 def test_reuse_landfill(a_component_material):
     a_component_material.state = "reuse"
     a_component_material.transition("landfilling", 1)
-    assert a_component_material.state == "manufacture"
+    assert a_component_material.state == "landfill"
 
 
 def test_recycle_manufacture(a_component_material):
