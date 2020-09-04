@@ -5,7 +5,7 @@ import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 import pysd  # type: ignore
 import simpy  # type: ignore
-from uuid import uuid4
+from csv import DictWriter
 
 
 class UniqueIdentifier:
@@ -262,6 +262,7 @@ class Context:
     def __init__(
         self,
         sd_model_filename: str,
+        component_material_state_log_filename: str,
         year_intercept: float,
         years_per_timestep,
         possible_component_materials: List[str],
@@ -275,6 +276,9 @@ class Context:
         sd_model_filename: str
             The filename that has the PySD model.
 
+        component_material_state_log_filename: str
+            The log filename of the component material states.
+
         year_intercept: float
             The intercept for timestep to year conversion
 
@@ -286,10 +290,30 @@ class Context:
         timesteps = len(self.sd_model_run)
         self.year_intercept = year_intercept
         self.years_per_timestep = years_per_timestep
+        self.component_material_state_log_filename = component_material_state_log_filename
         self.env = simpy.Environment()
         self.components: List[Component] = []
         self.turbines: List[Turbine] = []
         self.component_material_event_log_list: List[Dict] = []
+
+        # Start the component material log
+
+        self.component_material_event_log_fieldnames = [
+            "ts",
+            "year",
+            "turbine_id",
+            "state",
+            "component_material_id",
+            "component_material",
+            "material_type",
+            "material_tonnes",
+            "latitude",
+            "longitude",
+        ]
+
+        with open(component_material_state_log_filename, "w") as csvfile:
+            writer = DictWriter(csvfile, self.component_material_event_log_fieldnames)
+            writer.writeheader()
 
         # Setup all the inventories
 
@@ -448,10 +472,11 @@ class Context:
             print(f"Logging {env.now}...")
             yield env.timeout(1)
             year = self.year_intercept + env.now * self.years_per_timestep
+            component_material_log_for_timestep = []
 
             for component in self.components:
                 for material in component.component_materials:
-                    self.component_material_event_log_list.append(
+                    component_material_log_for_timestep.append(
                         {
                             "ts": env.now,
                             "year": year,
@@ -465,6 +490,10 @@ class Context:
                             "longitude": material.parent_component.parent_turbine.longitude,
                         }
                     )
+
+            with open(self.component_material_state_log_filename, "a") as csvfile:
+                writer = DictWriter(csvfile, self.component_material_event_log_fieldnames)
+                writer.writerows(component_material_log_for_timestep)
 
     def concatenate_inventory_cumulative_logs(self):
         """

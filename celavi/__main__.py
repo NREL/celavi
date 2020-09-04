@@ -57,12 +57,14 @@ def run_and_report():
     print(os.getcwd())
 
     context = Context(
-        "natl-wind-importable.py",
+        sd_model_filename="natl-wind-importable.py",
+        component_material_state_log_filename="component_material_state_log.csv",
         year_intercept=1980.0,
         years_per_timestep=0.25,
         possible_component_materials=possible_component_materials,
     )
     context.populate_components("celavi_sample_10_turbines.csv")
+    # context.populate_components("long_500_usgs_dataset_materials.csv")
     material_component_log, inventory_cumulative_logs = context.run()
 
     inventory_cumulative_logs.to_csv("inventory_cumulative_logs.csv", index=True)
