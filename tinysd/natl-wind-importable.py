@@ -9,7 +9,7 @@ from pysd.py_backend import functions
 from time import strftime
 import pandas as pd
 import numpy as np
-import pdb
+
 _subscript_dict = {}
 
 _namespace = {
@@ -27,12 +27,15 @@ _namespace = {
     'Cumulative Reuse': 'cumulative_reuse',
     'recycle process cost': 'recycle_process_cost',
     'cost of extracting': 'cost_of_extracting',
+    'cost of manufacturing': 'cost_of_manufacturing',
     'remanufacture process cost': 'remanufacture_process_cost',
     'reuse process cost': 'reuse_process_cost',
     'miles from extraction to production facility': 'miles_from_extraction_to_production_facility',
     'extracting learning rate': 'extracting_learning_rate',
+    'manufacturing learning rate': 'manufacturing_learning_rate',
     'recycle learning rate': 'recycle_learning_rate',
     'initial cost of extracting': 'initial_cost_of_extracting',
+    'initial cost of manufacturing': 'initial_cost_of_manufacturing',
     'remanufacture learning rate': 'remanufacture_learning_rate',
     'reuse learning rate': 'reuse_learning_rate',
     'remanufactured material cost': 'remanufactured_material_cost',
@@ -147,7 +150,10 @@ _namespace = {
     'relative landfill': 'relative_landfill',
     'cumulative landfill fraction': 'cumulative_landfill_fraction',
     'extracting lci': 'extracting_lci',
+    'manufacturing lci': 'manufacturing_lci',
     'extracting inputs': 'extracting_inputs',
+    'manufacturing inputs linear': 'manufacturing_inputs_linear',
+    'manufacturing inputs recycled': 'manufacturing_inputs_recycled',
     'transportation lci': 'transportation_lci',
     'extracting transportation inputs': 'extracting_transportation_inputs',
     'recycling transportation inputs': 'recycling_transportation_inputs',
@@ -182,7 +188,7 @@ _lci_input = pd.read_csv('lci.csv')
 # ignore original index columns created when data was read in
 lci_melt = pd.melt(_lci_input,
                    id_vars=['input unit', 'input name', 'material'],
-                   value_vars=['extracting',
+                   value_vars=['extracting', 'manufacturing',
                                'transportation',
                                'reusing', 'remanufacturing', 'recycling',
                                'landfilling'],
@@ -375,6 +381,14 @@ def cost_of_extracting():
         total_extraction() / one_metric_ton() + 1) ** (-1 *
                                                        extracting_learning_rate())
 
+@cache('step')
+def cost_of_manufacturing():
+    """
+    Units: USD/metric ton
+    :key
+    """
+    return initial_cost_of_manufacturing() * (distributing() / one_metric_ton() + 1) ** (-1*manufacturing_learning_rate())
+
 
 @cache('step')
 def remanufacture_process_cost():
@@ -433,6 +447,14 @@ def extracting_learning_rate():
     """
     return -0.357
 
+@cache('run')
+def manufacturing_learning_rate():
+    """
+    Units: USD/metric ton/year
+    :key
+    """
+    return -0.357
+
 
 @cache('run')
 def recycle_learning_rate():
@@ -459,7 +481,15 @@ def initial_cost_of_extracting():
 
     b''
     """
-    return 65
+    return 30
+
+@cache('run')
+def initial_cost_of_manufacturing():
+    """
+    Units: USD/metric ton
+    :key
+    """
+    return 35
 
 
 @cache('run')
@@ -512,19 +542,15 @@ def remanufactured_material_cost():
 @cache('step')
 def recycled_material_cost():
     """
-    Real Name: b'recycled material cost'
-    Original Eqn: b'miles from end use location to recycling facility * cost of transportation + recycle process cost + fraction remanufactured product to recycle * ( miles from remanufacturing facility to recycling facility\\\\ * cost of transportation + recycle process cost ) + miles from recycling to distribution facility * cost of transportation - recycled material strategic value'
-    Units: b'USD/metric ton'
-    Limits: (0.0, None)
-    Type: component
-
-    b'Total cost associated with using recycled materials in new turbines, \\n    \\t\\tincluding transportation.'
+    Total cost associated with using recycled materials in new turbines including transportation.
+    Units: USD/metric ton
     """
-    return miles_from_end_use_location_to_recycling_facility() * cost_of_transportation(
-    ) + recycle_process_cost() + fraction_remanufactured_product_to_recycle() * (
-        miles_from_remanufacturing_facility_to_recycling_facility() * cost_of_transportation() +
-        recycle_process_cost()) + miles_from_recycling_to_distribution_facility(
-        ) * cost_of_transportation() - recycled_material_strategic_value()
+    return miles_from_end_use_location_to_recycling_facility() * cost_of_transportation() +\
+           recycle_process_cost() + cost_of_manufacturing() + \
+           fraction_remanufactured_product_to_recycle() * (miles_from_remanufacturing_facility_to_recycling_facility() * cost_of_transportation() +
+                                                           recycle_process_cost()) + \
+           miles_from_recycling_to_distribution_facility() * cost_of_transportation() -\
+           recycled_material_strategic_value()
 
 
 @cache('step')
@@ -538,11 +564,11 @@ def linear_material_cost():
 
     b'Total cost associated with using virgin materials in new turbines and then \\n    \\t\\tlandfilling those materials at end of life, including transportation'
     """
-    return cost_of_extracting() + miles_from_extraction_to_production_facility(
-    ) * cost_of_transportation() + miles_from_end_use_location_to_landfill(
-    ) * cost_of_transportation() + miles_from_remanufacturing_facility_to_landfill(
-    ) * cost_of_transportation() + miles_from_recycling_facility_to_landfill(
-    ) * cost_of_transportation() + cost_of_landfilling()
+    return cost_of_extracting() + cost_of_manufacturing() + \
+           miles_from_extraction_to_production_facility() * cost_of_transportation() + \
+           miles_from_end_use_location_to_landfill() * cost_of_transportation() + \
+           miles_from_remanufacturing_facility_to_landfill() * cost_of_transportation() + \
+           miles_from_recycling_facility_to_landfill() * cost_of_transportation() + cost_of_landfilling()
 
 
 @cache('step')
@@ -1948,12 +1974,23 @@ def relative_landfill():
 def extracting_lci(lci_data=lci_melt):
     """
     Filters complete LCI input dataset to include only inputs to the extraction
-    and production processes
+    process
     """
 
     _extracting_lci = lci_data[(lci_data['process']=='extracting') & (lci_data['material'] == material_selection())]
 
     return _extracting_lci
+
+@cache('run')
+def manufacturing_lci(lci_data=lci_melt):
+    """
+    Filters complete LCI input dataset to include only inputs to the manufacturing
+    process
+    """
+
+    _manufacturing_lci = lci_data[(lci_data['process']=='manufacturing') & (lci_data['material']==material_selection())]
+
+    return _manufacturing_lci
 
 
 @cache('run')
@@ -2111,6 +2148,42 @@ def extracting_inputs():
 
 
 @cache('step')
+def manufacturing_inputs_linear():
+    """
+    Scales the manufacturing LCI by the amount of raw/linear/virgin material
+    sent through the process
+    """
+
+    _inputs = manufacturing_lci().copy()
+
+    _scaling_quantity = extracting()
+
+    _inputs.loc[:,'quantity'] = _inputs.loc[:,'quantity'] * _scaling_quantity
+
+    _inputs.loc[_inputs.loc[:,'process']=='manufacturing','process'] = 'manufacturing linear'
+
+    return _inputs
+
+
+@cache('step')
+def manufacturing_inputs_recycled():
+    """
+    Scales the manufacturing LCI by the amount of recycled/secondary material
+    sent through the process
+    """
+
+    _inputs = manufacturing_lci().copy()
+
+    _scaling_quantity = aggregating_recycled_materials()
+
+    _inputs.loc[:,'quantity'] = _inputs.loc[:,'quantity'] * _scaling_quantity
+
+    _inputs.loc[_inputs.loc[:,'process'] == 'manufacturing', 'process'] = 'manufacturing recycled'
+
+    return _inputs
+
+
+@cache('step')
 def recycling_inputs():
     """
     Scales the recycling LCI by metric tons of material sent through recycling
@@ -2164,7 +2237,8 @@ def aggregate_inputs():
     Saves the total LCI in a data frame for postprocessing and impact calculation
     """
 
-    _out = pd.concat([extracting_inputs(), recycling_inputs(),
+    _out = pd.concat([extracting_inputs(), manufacturing_inputs_linear(),
+                      manufacturing_inputs_recycled(), recycling_inputs(),
                       reusing_inputs(), remanufacturing_inputs(),
                       transportation_inputs()])
 
