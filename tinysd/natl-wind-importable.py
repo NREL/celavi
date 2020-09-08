@@ -9,7 +9,7 @@ from pysd.py_backend import functions
 from time import strftime
 import pandas as pd
 import numpy as np
-
+import pdb
 _subscript_dict = {}
 
 _namespace = {
@@ -26,13 +26,13 @@ _namespace = {
     'Cumulative Remanufacture': 'cumulative_remanufacture',
     'Cumulative Reuse': 'cumulative_reuse',
     'recycle process cost': 'recycle_process_cost',
-    'cost of extraction and production': 'cost_of_extraction_and_production',
+    'cost of extracting': 'cost_of_extracting',
     'remanufacture process cost': 'remanufacture_process_cost',
     'reuse process cost': 'reuse_process_cost',
     'miles from extraction to production facility': 'miles_from_extraction_to_production_facility',
-    'extraction and production learning rate': 'extraction_and_production_learning_rate',
+    'extracting learning rate': 'extracting_learning_rate',
     'recycle learning rate': 'recycle_learning_rate',
-    'initial cost of extraction and production': 'initial_cost_of_extraction_and_production',
+    'initial cost of extracting': 'initial_cost_of_extracting',
     'remanufacture learning rate': 'remanufacture_learning_rate',
     'reuse learning rate': 'reuse_learning_rate',
     'remanufactured material cost': 'remanufactured_material_cost',
@@ -146,10 +146,10 @@ _namespace = {
     'component lifetime': 'component_lifetime',
     'relative landfill': 'relative_landfill',
     'cumulative landfill fraction': 'cumulative_landfill_fraction',
-    'extract prod lci': 'extract_prod_lci',
-    'extract prod inputs': 'extract_prod_inputs',
+    'extracting lci': 'extracting_lci',
+    'extracting inputs': 'extracting_inputs',
     'transportation lci': 'transportation_lci',
-    'extract prod transportation inputs': 'extract_prod_transportation_inputs',
+    'extracting transportation inputs': 'extracting_transportation_inputs',
     'recycling transportation inputs': 'recycling_transportation_inputs',
     'remanufacturing transportation inputs': 'remanufacturing_transportation_inputs',
     'reuse transportation inputs': 'reuse_transportation_inputs',
@@ -182,7 +182,7 @@ _lci_input = pd.read_csv('lci.csv')
 # ignore original index columns created when data was read in
 lci_melt = pd.melt(_lci_input,
                    id_vars=['input unit', 'input name', 'material'],
-                   value_vars=['extraction and production',
+                   value_vars=['extracting',
                                'transportation',
                                'reusing', 'remanufacturing', 'recycling',
                                'landfilling'],
@@ -361,7 +361,7 @@ def recycle_process_cost():
 
 
 @cache('step')
-def cost_of_extraction_and_production():
+def cost_of_extracting():
     """
     Real Name: b'cost of extraction and production'
     Original Eqn: b'initial cost of extraction and production * (Total Extraction / one metric ton + 1)^\\\\ (-1*extraction and production learning rate)'
@@ -371,9 +371,9 @@ def cost_of_extraction_and_production():
 
     b'time dependent function for total extraction and production cost'
     """
-    return initial_cost_of_extraction_and_production() * (
-        total_extraction() / one_metric_ton() + 1)**(-1 *
-                                                     extraction_and_production_learning_rate())
+    return initial_cost_of_extracting() * (
+        total_extraction() / one_metric_ton() + 1) ** (-1 *
+                                                       extracting_learning_rate())
 
 
 @cache('step')
@@ -421,7 +421,7 @@ def miles_from_extraction_to_production_facility():
 
 
 @cache('run')
-def extraction_and_production_learning_rate():
+def extracting_learning_rate():
     """
     Real Name: b'extraction and production learning rate'
     Original Eqn: b'-0.357'
@@ -449,7 +449,7 @@ def recycle_learning_rate():
 
 
 @cache('run')
-def initial_cost_of_extraction_and_production():
+def initial_cost_of_extracting():
     """
     Real Name: b'initial cost of extraction and production'
     Original Eqn: b'65'
@@ -538,7 +538,7 @@ def linear_material_cost():
 
     b'Total cost associated with using virgin materials in new turbines and then \\n    \\t\\tlandfilling those materials at end of life, including transportation'
     """
-    return cost_of_extraction_and_production() + miles_from_extraction_to_production_facility(
+    return cost_of_extracting() + miles_from_extraction_to_production_facility(
     ) * cost_of_transportation() + miles_from_end_use_location_to_landfill(
     ) * cost_of_transportation() + miles_from_remanufacturing_facility_to_landfill(
     ) * cost_of_transportation() + miles_from_recycling_facility_to_landfill(
@@ -1945,15 +1945,15 @@ def relative_landfill():
 
 
 @cache('run')
-def extract_prod_lci(lci_data=lci_melt):
+def extracting_lci(lci_data=lci_melt):
     """
     Filters complete LCI input dataset to include only inputs to the extraction
     and production processes
     """
 
-    _extract_prod_lci = lci_data[(lci_data['process']=='extraction and production') & (lci_data['material'] == material_selection())]
+    _extracting_lci = lci_data[(lci_data['process']=='extracting') & (lci_data['material'] == material_selection())]
 
-    return _extract_prod_lci
+    return _extracting_lci
 
 
 @cache('run')
@@ -2009,7 +2009,7 @@ def reusing_lci(lci_data=lci_melt):
 
 
 @cache('step')
-def extract_prod_transportation_inputs():
+def extracting_transportation_inputs():
     """
     Scales LCI transpo inputs for all transpo involved in the linear pathway,
     including material leakage from the circular system to the landfill
@@ -2087,7 +2087,7 @@ def transportation_inputs():
     """
 
     # sum input quantity within input-material-process combinations
-    _transpo_inputs = pd.concat([extract_prod_transportation_inputs(),
+    _transpo_inputs = pd.concat([extracting_transportation_inputs(),
                                  recycling_transportation_inputs(),
                                  remanufacturing_transportation_inputs(),
                                  reuse_transportation_inputs()]).groupby(['input unit', 'input name', 'material', 'process'],
@@ -2097,11 +2097,11 @@ def transportation_inputs():
 
 
 @cache('step')
-def extract_prod_inputs():
+def extracting_inputs():
     """
     Scales the extraction LCI by the amount of raw material extracted
     """
-    _inputs = extract_prod_lci().copy()
+    _inputs = extracting_lci().copy()
 
     _scaling_quantity = extracting()
 
@@ -2164,7 +2164,7 @@ def aggregate_inputs():
     Saves the total LCI in a data frame for postprocessing and impact calculation
     """
 
-    _out = pd.concat([extract_prod_inputs(), recycling_inputs(),
+    _out = pd.concat([extracting_inputs(), recycling_inputs(),
                       reusing_inputs(), remanufacturing_inputs(),
                       transportation_inputs()])
 
