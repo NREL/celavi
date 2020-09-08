@@ -151,7 +151,9 @@ _namespace = {
     'cumulative landfill fraction': 'cumulative_landfill_fraction',
     'extracting lci': 'extracting_lci',
     'manufacturing lci': 'manufacturing_lci',
+    'landfilling lci': 'landfilling_lci',
     'extracting inputs': 'extracting_inputs',
+    'lanfilling inputs': 'landfilling_inputs',
     'manufacturing inputs linear': 'manufacturing_inputs_linear',
     'manufacturing inputs recycled': 'manufacturing_inputs_recycled',
     'transportation lci': 'transportation_lci',
@@ -1981,6 +1983,18 @@ def extracting_lci(lci_data=lci_melt):
 
     return _extracting_lci
 
+
+@cache('run')
+def landfilling_lci(lci_data=lci_melt):
+    """
+    Filters LCI dataset to leave only inputs to landfilling process
+    """
+
+    _landfilling_lci = lci_data[(lci_data['process'] == 'landfilling') & (lci_data['material'] == material_selection())]
+
+    return _landfilling_lci
+
+
 @cache('run')
 def manufacturing_lci(lci_data=lci_melt):
     """
@@ -2148,6 +2162,20 @@ def extracting_inputs():
 
 
 @cache('step')
+def landfilling_inputs():
+    """
+    :return:
+    """
+    _inputs = landfilling_lci().copy()
+
+    _scaling_quantity = landfilling() + landfilling_failed_remanufactured() +\
+                        landfilling_nonrecyclables()
+
+    _inputs.loc[:,'quantity'] = _inputs.loc[:,'quantity'] * _scaling_quantity
+
+    return _inputs
+
+@cache('step')
 def manufacturing_inputs_linear():
     """
     Scales the manufacturing LCI by the amount of raw/linear/virgin material
@@ -2240,6 +2268,7 @@ def aggregate_inputs():
     _out = pd.concat([extracting_inputs(), manufacturing_inputs_linear(),
                       manufacturing_inputs_recycled(), recycling_inputs(),
                       reusing_inputs(), remanufacturing_inputs(),
+                      landfilling_inputs(),
                       transportation_inputs()])
 
     _out = _out[_out.loc[:,'quantity'] != 0]
