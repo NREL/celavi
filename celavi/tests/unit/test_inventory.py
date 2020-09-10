@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import pytest
-from celavi.state_machine_units_model import Inventory
+from celavi.inventory import Inventory
 
 
 @pytest.fixture()
