@@ -11,6 +11,7 @@ class Component:
     def __init__(
         self, context, type: str, xlat: float, ylon: float, parent_turbine_id: int, year: int
     ):
+        self.state = ""  # There is no state until beginning of life
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.type = type
@@ -19,7 +20,7 @@ class Component:
         self.parent_turbine_id = parent_turbine_id
         self.year = year
         self.transitions_table = self.make_transitions_table()
-        self.transitions_list: List[str] = []
+        self.transition_list: List[str] = []
 
     def make_transitions_table(self) -> Dict[StateTransition, NextState]:
         """
@@ -117,7 +118,11 @@ class Component:
         )
 
     def begin_life(self, env):
-        pass
+        timestep = self.context.years_to_timesteps(self.year)
+        yield env.timeout(timestep)
+        print(f"yr: {self.year}, ts: {timestep}. Component {self.id} beginning life.")
+        self.state = "use"
+        self.transition_list.append("using")
 
 
 class Context:
@@ -157,5 +162,17 @@ class Context:
     def years_to_timesteps(self, year):
         return (year - self.min_year) / self.years_per_step
 
+    def populate(self, df):
+        for _, row in df.iterrows():
+            component = Component(
+                type=row["type"],
+                xlat=row["xlat"],
+                ylon=row["ylon"],
+                year=row["year"],
+                context=self,
+                parent_turbine_id=0,
+            )
+            self.components.append(component)
+
     def run(self):
-        pass
+        self.env.run(until=self.max_timesteps)
