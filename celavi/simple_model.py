@@ -1,14 +1,17 @@
 from typing import Dict, List
-from dataclasses import dataclass, field
+
+import simpy
 
 from .unique_identifier import UniqueIdentifier
 from .states import StateTransition, NextState
+from .inventory import Inventory
 
 
 class Component:
     def __init__(
-        self, type: str, xlat: float, ylon: float, parent_turbine_id: int, year: int
+        self, context, type: str, xlat: float, ylon: float, parent_turbine_id: int, year: int
     ):
+        self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.type = type
         self.xlat = xlat
@@ -112,3 +115,47 @@ class Component:
         context.use_material_inventory.increment_quantity(
             item_name=component.type, quantity=-1, timestep=timestep,
         )
+
+    def begin_life(self, env):
+        pass
+
+
+class Context:
+    def __init__(self):
+        self.max_timesteps = 272
+        self.min_year = 1980
+        self.years_per_step = 0.25
+        self.components: List[Component] = []
+        self.env: simpy.Environment()
+
+        self.landfill_component_inventory = Inventory(
+            name="components landfill",
+            possible_items=[
+                "nacelle",
+                "blade",
+                "tower",
+                "foundation",
+            ],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+        self.use_component_inventory = Inventory(
+            name="components use",
+            possible_items=[
+                "nacelle",
+                "blade",
+                "tower",
+                "foundation",
+            ],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+    def years_to_timesteps(self, year):
+        return (year - self.min_year) / self.years_per_step
+
+    def run(self):
+        pass
