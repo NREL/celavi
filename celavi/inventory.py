@@ -7,7 +7,7 @@ class Inventory:
     def __init__(
         self,
         name: str,
-        possible_component_materials: List[str],
+        possible_items: List[str],
         timesteps: int,
         quantity_unit: str = "tonne",
         can_be_negative: bool = False,
@@ -22,7 +22,7 @@ class Inventory:
         quantity_unit: str
             The unit in which the quantity is recorded.
 
-        possible_component_materials: List[str]
+        possible_items: List[str]
             A list of strings (e.g., "Nacelle Aluminum") that represent all
             possible component materials that may be stored in this inventory
 
@@ -48,8 +48,8 @@ class Inventory:
         self.can_be_negative = can_be_negative
         self.quantity_unit = quantity_unit
         self.component_materials: Dict[str, float] = {}
-        for possible_component_material in possible_component_materials:
-            self.component_materials[possible_component_material] = 0.0
+        for possible_item in possible_items:
+            self.component_materials[possible_item] = 0.0
 
         # Populate the deposit and withdrawal history with copies of the
         # initialized dictionary from above that has all values set to 0.0
@@ -57,8 +57,8 @@ class Inventory:
         for _ in range(timesteps):
             self.transactions.append(self.component_materials.copy())
 
-    def increment_material_quantity(
-        self, component_material_name: str, quantity: float, timestep: int
+    def increment_quantity(
+        self, item_name: str, quantity: float, timestep: int
     ) -> float:
         """
         Changes the material quantity in this inventory.
@@ -75,7 +75,7 @@ class Inventory:
 
         Parameters
         ----------
-        component_material_name: str
+        item_name: str
             The material being deposited or withdrawn
 
         quantity: int
@@ -91,21 +91,21 @@ class Inventory:
             The new quantity of the material.
         """
         # Place this transaction in the history
-        self.transactions[timestep][component_material_name] += quantity
+        self.transactions[timestep][item_name] += quantity
 
         # Now increment the inventory
-        self.component_materials[component_material_name] += quantity
+        self.component_materials[item_name] += quantity
 
         if (
-            round(self.component_materials[component_material_name], 2) < 0
+            round(self.component_materials[item_name], 2) < 0
             and not self.can_be_negative
         ):
             raise ValueError(
-                f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}"
+                f"Inventory {self.name} cannot go negative. {self.component_materials[item_name]}"
             )
 
         # Return the new level
-        return self.component_materials[component_material_name]
+        return self.component_materials[item_name]
 
     @property
     def cumulative_history(self) -> pd.DataFrame:

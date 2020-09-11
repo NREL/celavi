@@ -10,18 +10,18 @@ def an_inventory():
     possible_component_materials = ["Tower Steel", "Nacelle Aluminum"]
     inventory = Inventory(
             name="test",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
     )
-    inventory.increment_material_quantity(
-        component_material_name="Nacelle Aluminum", quantity=25, timestep=5
+    inventory.increment_quantity(
+        item_name="Nacelle Aluminum", quantity=25, timestep=5
     )
-    inventory.increment_material_quantity(
-        component_material_name="Nacelle Aluminum", quantity=25, timestep=7
+    inventory.increment_quantity(
+        item_name="Nacelle Aluminum", quantity=25, timestep=7
     )
-    inventory.increment_material_quantity(
-        component_material_name="Tower Steel", quantity=75, timestep=9
+    inventory.increment_quantity(
+        item_name="Tower Steel", quantity=75, timestep=9
     )
     return inventory
 
