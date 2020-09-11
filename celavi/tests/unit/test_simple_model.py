@@ -63,3 +63,8 @@ def test_population(context, components):
     expected = 6
     actual = len(context.components)
     assert expected == actual
+
+
+def test_context_run(context, components):
+    context.populate(components)
+    context.run()

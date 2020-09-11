@@ -64,7 +64,7 @@ class Component:
             The component which is being landfilled.
         """
         print(f"Landfill process component {component.id}, timestep={timestep}")
-        context.landfill_material_inventory.increment_quantity(
+        context.landfill_component_inventory.increment_quantity(
             item_name=component.type, quantity=1, timestep=timestep,
         )
 
@@ -88,8 +88,8 @@ class Component:
             The component which is being landfilled.
         """
         print(f"Use process component {component.id}, timestep={timestep}")
-        context.use_material_inventory.increment_quantity(
-            item_name=component.name, quantity=1, timestep=timestep,
+        context.use_component_inventory.increment_quantity(
+            item_name=component.type, quantity=1, timestep=timestep,
         )
 
     @staticmethod
@@ -113,7 +113,7 @@ class Component:
         print(
             f"Leave use process component_material {component.id}, timestep={timestep}"
         )
-        context.use_material_inventory.increment_quantity(
+        context.use_component_inventory.increment_quantity(
             item_name=component.type, quantity=-1, timestep=timestep,
         )
 
@@ -131,7 +131,7 @@ class Context:
         self.min_year = 1980
         self.years_per_step = 0.25
         self.components: List[Component] = []
-        self.env: simpy.Environment()
+        self.env = simpy.Environment()
 
         self.landfill_component_inventory = Inventory(
             name="components landfill",
@@ -172,6 +172,7 @@ class Context:
                 context=self,
                 parent_turbine_id=0,
             )
+            self.env.process(component.begin_life(self.env))
             self.components.append(component)
 
     def run(self):
