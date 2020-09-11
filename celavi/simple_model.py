@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Callable
 
 import simpy
 import pandas as pd
@@ -10,7 +10,7 @@ from .inventory import Inventory
 
 class Component:
     def __init__(
-        self, context, kind: str, xlat: float, ylon: float, parent_turbine_id: int, year: int
+        self, context, kind: str, xlat: float, ylon: float, parent_turbine_id: int, year: int, lifespan_years: float,
     ):
         self.state = ""  # There is no state until beginning of life
         self.context = context
@@ -20,6 +20,7 @@ class Component:
         self.ylon: ylon
         self.parent_turbine_id = parent_turbine_id
         self.year = year
+        self.lifespan_years = lifespan_years
         self.transitions_table = self.make_transitions_table()
         self.transition_list: List[str] = []
 
@@ -125,6 +126,11 @@ class Component:
         self.state = "use"
         self.transition_list.append("using")
 
+    # def eol_process(self, env):
+    #     while True:
+    #         yield env.timeout(self.lifespan_years / self.context.years_to_timesteps)
+    #         print(f"yr: {}, ts: {env.now}")
+
 
 class Context:
     def __init__(self):
@@ -163,7 +169,10 @@ class Context:
     def years_to_timesteps(self, year: float):
         return (year - self.min_year) / self.years_per_step
 
-    def populate(self, df: pd.DataFrame):
+    def timesteps_to_years(self, timesteps: int):
+        return self.years_per_step  * timesteps + self.min_year
+
+    def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
         for _, row in df.iterrows():
             component = Component(
                 kind=row["kind"],
@@ -172,6 +181,7 @@ class Context:
                 year=row["year"],
                 context=self,
                 parent_turbine_id=0,
+                lifespan_years=lifespan_fns[row["kind"]]()
             )
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
