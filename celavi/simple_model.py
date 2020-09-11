@@ -1,6 +1,7 @@
 from typing import Dict, List
 
 import simpy
+import pandas as pd
 
 from .unique_identifier import UniqueIdentifier
 from .states import StateTransition, NextState
@@ -9,12 +10,12 @@ from .inventory import Inventory
 
 class Component:
     def __init__(
-        self, context, type: str, xlat: float, ylon: float, parent_turbine_id: int, year: int
+        self, context, kind: str, xlat: float, ylon: float, parent_turbine_id: int, year: int
     ):
         self.state = ""  # There is no state until beginning of life
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
-        self.type = type
+        self.kind = kind
         self.xlat = xlat
         self.ylon: ylon
         self.parent_turbine_id = parent_turbine_id
@@ -159,13 +160,13 @@ class Context:
             can_be_negative=False,
         )
 
-    def years_to_timesteps(self, year):
+    def years_to_timesteps(self, year: float):
         return (year - self.min_year) / self.years_per_step
 
-    def populate(self, df):
+    def populate(self, df: pd.DataFrame):
         for _, row in df.iterrows():
             component = Component(
-                type=row["type"],
+                kind=row["kind"],
                 xlat=row["xlat"],
                 ylon=row["ylon"],
                 year=row["year"],

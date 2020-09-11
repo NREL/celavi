@@ -8,37 +8,37 @@ from celavi.simple_model import Context
 def components():
     turbine = [
         {
-            "type": "blade",
+            "kind": "blade",
             "xlat": 39.9106,
             "ylon": -105.2347,
             "year": 2020,
         },
         {
-            "type": "blade",
+            "kind": "blade",
             "xlat": 39.9106,
             "ylon": -105.2347,
             "year": 2020,
         },
         {
-            "type": "blade",
+            "kind": "blade",
             "xlat": 39.9106,
             "ylon": -105.2347,
             "year": 2020,
         },
         {
-            "type": "nacelle",
+            "kind": "nacelle",
             "xlat": 39.9106,
             "ylon": -105.2347,
             "year": 2020,
         },
         {
-            "type": "tower",
+            "kind": "tower",
             "xlat": 39.9106,
             "ylon": -105.2347,
             "year": 2020,
         },
         {
-            "type": "foundation",
+            "kind": "foundation",
             "xlat": 39.9106,
             "ylon": -105.2347,
             "year": 2020,
