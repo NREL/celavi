@@ -122,14 +122,16 @@ class Component:
     def begin_life(self, env):
         begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        print(f"yr: {self.year}, ts: {begin_timestep}. Component {self.id} beginning life.")
+        print(f"yr: {self.year}, ts: {begin_timestep}. {self.kind} {self.id} beginning life.")
         self.state = "use"
         self.transition_list.append("using")
+        env.process(self.eol_process(env))
 
-    # def eol_process(self, env):
-    #     while True:
-    #         yield env.timeout(self.lifespan_years / self.context.years_to_timesteps)
-    #         print(f"yr: {}, ts: {env.now}")
+    def eol_process(self, env):
+        while True:
+            yield env.timeout(self.lifespan_years / self.context.years_per_timestep)
+            year = self.context.timesteps_to_years(env.now)
+            print(f"yr: {year}, ts: {env.now}. {self.kind} {self.id} ending use.")
 
 
 class Context:
