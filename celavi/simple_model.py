@@ -120,9 +120,9 @@ class Component:
         )
 
     def begin_life(self, env):
-        timestep = self.context.years_to_timesteps(self.year)
-        yield env.timeout(timestep)
-        print(f"yr: {self.year}, ts: {timestep}. Component {self.id} beginning life.")
+        begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
+        yield env.timeout(begin_timestep)
+        print(f"yr: {self.year}, ts: {begin_timestep}. Component {self.id} beginning life.")
         self.state = "use"
         self.transition_list.append("using")
 
@@ -136,7 +136,7 @@ class Context:
     def __init__(self):
         self.max_timesteps = 272
         self.min_year = 1980
-        self.years_per_step = 0.25
+        self.years_per_timestep = 0.25
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
@@ -167,10 +167,10 @@ class Context:
         )
 
     def years_to_timesteps(self, year: float):
-        return year / self.years_per_step
+        return year / self.years_per_timestep
 
     def timesteps_to_years(self, timesteps: int):
-        return self.years_per_step  * timesteps + self.min_year
+        return self.years_per_timestep * timesteps + self.min_year
 
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
         for _, row in df.iterrows():
