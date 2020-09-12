@@ -63,7 +63,7 @@ def context():
 
 def test_years_to_timestep(context):
     expected = 160
-    actual = context.years_to_timesteps(2020)
+    actual = context.years_to_timesteps(40)
     assert expected == actual
 
 

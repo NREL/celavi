@@ -167,7 +167,7 @@ class Context:
         )
 
     def years_to_timesteps(self, year: float):
-        return (year - self.min_year) / self.years_per_step
+        return year / self.years_per_step
 
     def timesteps_to_years(self, timesteps: int):
         return self.years_per_step  * timesteps + self.min_year
