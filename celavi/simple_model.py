@@ -10,7 +10,14 @@ from .inventory import Inventory
 
 class Component:
     def __init__(
-        self, context, kind: str, xlat: float, ylon: float, parent_turbine_id: int, year: int, lifespan_years: float,
+        self,
+        context,
+        kind: str,
+        xlat: float,
+        ylon: float,
+        parent_turbine_id: int,
+        year: int,
+        lifespan_years: float,
     ):
         self.state = ""  # There is no state until beginning of life
         self.context = context
@@ -120,9 +127,13 @@ class Component:
         )
 
     def begin_life(self, env):
-        begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
+        begin_timestep = (
+            self.year - self.context.min_year
+        ) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        print(f"yr: {self.year}, ts: {begin_timestep}. {self.kind} {self.id} beginning life.")
+        print(
+            f"yr: {self.year}, ts: {begin_timestep}. {self.kind} {self.id} beginning life."
+        )
         self.state = "use"
         self.transition_list.append("using")
         env.process(self.eol_process(env))
@@ -144,12 +155,7 @@ class Context:
 
         self.landfill_component_inventory = Inventory(
             name="components landfill",
-            possible_items=[
-                "nacelle",
-                "blade",
-                "tower",
-                "foundation",
-            ],
+            possible_items=["nacelle", "blade", "tower", "foundation",],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
             can_be_negative=False,
@@ -157,12 +163,7 @@ class Context:
 
         self.use_component_inventory = Inventory(
             name="components use",
-            possible_items=[
-                "nacelle",
-                "blade",
-                "tower",
-                "foundation",
-            ],
+            possible_items=["nacelle", "blade", "tower", "foundation",],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
             can_be_negative=False,
@@ -183,7 +184,7 @@ class Context:
                 year=row["year"],
                 context=self,
                 parent_turbine_id=0,
-                lifespan_years=lifespan_fns[row["kind"]]()
+                lifespan_years=lifespan_fns[row["kind"]](),
             )
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
