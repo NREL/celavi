@@ -55,7 +55,9 @@ def components():
             "year": 2000,
         },
     ]
-    return pd.DataFrame(turbine)
+
+    # Return a population of 10 turbines
+    return pd.DataFrame(turbine * 10)
 
 
 @pytest.fixture
@@ -78,7 +80,7 @@ def test_timesteps_to_years(context):
 def test_population(context, components):
     seed(0)
     context.populate(components, lifespan_fns)
-    expected = 6
+    expected = 60
     actual = len(context.components)
     assert expected == actual
 
