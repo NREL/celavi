@@ -139,10 +139,13 @@ class Component:
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
-        while True:
-            yield env.timeout(self.lifespan_years / self.context.years_per_timestep)
-            year = self.context.timesteps_to_years(env.now)
-            print(f"yr: {year}, ts: {env.now}. {self.kind} {self.id} ending use.")
+        # while True:
+        #     yield env.timeout(self.lifespan_years / self.context.years_per_timestep)
+        #     year = self.context.timesteps_to_years(env.now)
+        #     print(f"yr: {year}, ts: {env.now}. {self.kind} {self.id} ending use.")
+        yield env.timeout(self.lifespan_years / self.context.years_per_timestep)
+        year = self.context.timesteps_to_years(env.now)
+        print(f"yr: {year}, ts: {env.now}. {self.kind} {self.id} ending use.")
 
 
 class Context:

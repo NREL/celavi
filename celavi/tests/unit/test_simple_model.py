@@ -1,14 +1,16 @@
 import pytest
 import pandas as pd
 from random import randint, seed
+import numpy as np
+from scipy.stats import weibull_min
 
 from celavi.simple_model import Context
 
-
+np.random.seed(0)
 lifespan_fns = {
-    "nacelle": lambda: randint(30, 40),
-    "blade": lambda: 20,
-    "foundation": lambda: randint(50, 100),
+    "nacelle": lambda: 30,
+    "blade": lambda: round(float(weibull_min.rvs(2, loc=0, scale=17, size=1))),
+    "foundation": lambda: 50,
     "tower": lambda: 50,
 }
 
