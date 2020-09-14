@@ -91,6 +91,7 @@ class Inventory:
             The new quantity of the material.
         """
         # Place this transaction in the history
+        timestep = int(timestep)
         self.transactions[timestep][item_name] += quantity
 
         # Now increment the inventory

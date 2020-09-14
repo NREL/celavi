@@ -27,7 +27,7 @@ class Component:
         self.ylon: ylon
         self.parent_turbine_id = parent_turbine_id
         self.year = year
-        self.lifespan_years = lifespan_years
+        self.lifespan = context.years_to_timesteps(lifespan_years)
         self.transitions_table = self.make_transitions_table()
         self.transition_list: List[str] = []
 
@@ -47,6 +47,21 @@ class Component:
         }
 
         return transitions_table
+
+    def transition(self, transition: str, timestep: int) -> None:
+        lookup = StateTransition(state=self.state, transition=transition)
+        if lookup not in self.transitions_table:
+            raise KeyError(
+                f"transition: {transition} not allowed from current state {self.state}"
+            )
+        next_state = self.transitions_table[lookup]
+        self.state = next_state.state
+        self.lifespan = next_state.lifespan
+        self.transition_list.append(transition)
+        if next_state.state_entry_function is not None:
+            next_state.state_entry_function(self.context, self, timestep)
+        if next_state.state_exit_function is not None:
+            next_state.state_exit_function(self.context, self, timestep)
 
     @staticmethod
     def landfill(context, component, timestep: int) -> None:
@@ -74,7 +89,7 @@ class Component:
         """
         print(f"Landfill process component {component.id}, timestep={timestep}")
         context.landfill_component_inventory.increment_quantity(
-            item_name=component.type, quantity=1, timestep=timestep,
+            item_name=component.kind, quantity=1, timestep=timestep,
         )
 
     @staticmethod
@@ -98,7 +113,7 @@ class Component:
         """
         print(f"Use process component {component.id}, timestep={timestep}")
         context.use_component_inventory.increment_quantity(
-            item_name=component.type, quantity=1, timestep=timestep,
+            item_name=component.kind, quantity=1, timestep=timestep,
         )
 
     @staticmethod
@@ -123,7 +138,7 @@ class Component:
             f"Leave use process component_material {component.id}, timestep={timestep}"
         )
         context.use_component_inventory.increment_quantity(
-            item_name=component.type, quantity=-1, timestep=timestep,
+            item_name=component.kind, quantity=-1, timestep=timestep,
         )
 
     def begin_life(self, env):
@@ -136,16 +151,51 @@ class Component:
         )
         self.state = "use"
         self.transition_list.append("using")
+        self.use(self.context, self, env.now)
         env.process(self.eol_process(env))
 
+    def transition(self, transition: str, timestep: int) -> None:
+        """
+        Transition the component's state machine from the current state based on a
+        transition.
+
+        Parameters
+        ----------
+        transition: str
+            The next state to transition into.
+
+        timestep: int
+            The discrete timestep.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        KeyError
+            Raises a KeyError if the transition is not accessible from the
+            current state.
+        """
+        lookup = StateTransition(state=self.state, transition=transition)
+        if lookup not in self.transitions_table:
+            raise KeyError(
+                f"transition: {transition} not allowed from current state {self.state}"
+            )
+        next_state = self.transitions_table[lookup]
+        self.state = next_state.state
+        self.lifespan = next_state.lifespan
+        self.transition_list.append(transition)
+        if next_state.state_entry_function is not None:
+            next_state.state_entry_function(self.context, self, timestep)
+        if next_state.state_exit_function is not None:
+            next_state.state_exit_function(self.context, self, timestep)
+
     def eol_process(self, env):
-        # while True:
-        #     yield env.timeout(self.lifespan_years / self.context.years_per_timestep)
-        #     year = self.context.timesteps_to_years(env.now)
-        #     print(f"yr: {year}, ts: {env.now}. {self.kind} {self.id} ending use.")
-        yield env.timeout(self.lifespan_years / self.context.years_per_timestep)
-        year = self.context.timesteps_to_years(env.now)
-        print(f"yr: {year}, ts: {env.now}. {self.kind} {self.id} ending use.")
+        while True:
+            yield env.timeout(self.lifespan)
+            next_transition = self.context.choose_transition(self, env.now)
+            self.transition(next_transition, env.now)
 
 
 class Context:
@@ -172,10 +222,10 @@ class Context:
             can_be_negative=False,
         )
 
-    def years_to_timesteps(self, year: float):
-        return year / self.years_per_timestep
+    def years_to_timesteps(self, year: float) -> int:
+        return int(year / self.years_per_timestep)
 
-    def timesteps_to_years(self, timesteps: int):
+    def timesteps_to_years(self, timesteps: int) -> float:
         return self.years_per_timestep * timesteps + self.min_year
 
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
@@ -192,5 +242,12 @@ class Context:
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
 
+    def choose_transition(self, component, timestep: int) -> str:
+        if component.state == "use":
+            return "landfilling"
+        else:
+            raise ValueError("Components must always be in the state use.")
+
     def run(self):
-        self.env.run(until=self.max_timesteps)
+        print(f">>> {self.max_timesteps}")
+        self.env.run(until=int(self.max_timesteps))
