@@ -87,7 +87,7 @@ class Component:
         component: Component
             The component which is being landfilled.
         """
-        print(f"Landfill process component {component.id}, timestep={timestep}")
+        # print(f"Landfill process component {component.id}, timestep={timestep}")
         context.landfill_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep,
         )
@@ -111,7 +111,7 @@ class Component:
         component: Component
             The component which is being landfilled.
         """
-        print(f"Use process component {component.id}, timestep={timestep}")
+        # print(f"Use process component {component.id}, timestep={timestep}")
         context.use_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep,
         )
@@ -134,9 +134,9 @@ class Component:
         component: Component
             The component which is being taken out of use.
         """
-        print(
-            f"Leave use process component_material {component.id}, timestep={timestep}"
-        )
+        # print(
+        #     f"Leave use process component_material {component.id}, timestep={timestep}"
+        # )
         context.use_component_inventory.increment_quantity(
             item_name=component.kind, quantity=-1, timestep=timestep,
         )
@@ -146,9 +146,9 @@ class Component:
             self.year - self.context.min_year
         ) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        print(
-            f"yr: {self.year}, ts: {begin_timestep}. {self.kind} {self.id} beginning life."
-        )
+        # print(
+        #     f"yr: {self.year}, ts: {begin_timestep}. {self.kind} {self.id} beginning life."
+        # )
         self.state = "use"
         self.transition_list.append("using")
         self.use(self.context, self, env.now)
