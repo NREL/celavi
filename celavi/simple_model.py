@@ -249,5 +249,5 @@ class Context:
             raise ValueError("Components must always be in the state use.")
 
     def run(self):
-        print(f">>> {self.max_timesteps}")
         self.env.run(until=int(self.max_timesteps))
+        return self.landfill_component_inventory.cumulative_history
