@@ -87,7 +87,7 @@ class Component:
         component: Component
             The component which is being landfilled.
         """
-        # print(f"Landfill process component {component.id}, timestep={timestep}")
+        # print(f"Landfill process component {component.id}, kind {component.kind} timestep={timestep}")
         context.landfill_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep,
         )
