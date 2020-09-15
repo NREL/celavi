@@ -11,43 +11,43 @@ class DummyContext:
         possible_component_materials = ["Tower Steel", "Nacelle Aluminum"]
         self.landfill_material_inventory = Inventory(
             name="landfill",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
         self.virgin_material_inventory = Inventory(
             name="virgin material",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
         self.remanufacture_material_inventory = Inventory(
             name="remanufacture",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
         self.use_material_inventory = Inventory(
             name="use",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
         self.reuse_material_inventory = Inventory(
             name="reuse",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
         self.recycle_material_inventory = Inventory(
             name="recycle",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
         self.manufacture_material_inventory = Inventory(
             name="recycle",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
