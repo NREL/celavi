@@ -1,4 +1,4 @@
-from celavi.state_machine_units_model import Context
+from celavi.deprecated_state_machine_units_model import Context
 from typing import List, Dict
 import os
 import matplotlib.pyplot as plt

@@ -1,8 +1,8 @@
 import pytest
-from celavi.state_machine_units_model import Component
-from celavi.state_machine_units_model import ComponentMaterial
-from celavi.state_machine_units_model import Turbine
-from celavi.state_machine_units_model import Inventory
+from celavi.deprecated_state_machine_units_model import Component
+from celavi.deprecated_state_machine_units_model import ComponentMaterial
+from celavi.deprecated_state_machine_units_model import Turbine
+from celavi.deprecated_state_machine_units_model import Inventory
 
 
 class DummyContext:
