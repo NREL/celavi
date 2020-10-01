@@ -199,10 +199,15 @@ class Component:
 
 
 class Context:
-    def __init__(self):
-        self.max_timesteps = 272
-        self.min_year = 1980
-        self.years_per_timestep = 0.25
+    def __init__(
+        self,
+        min_year: int = 1980,
+        max_timesteps: int = 272,
+        years_per_timestep: float = 0.25,
+    ):
+        self.max_timesteps = max_timesteps
+        self.min_year = min_year
+        self.years_per_timestep = years_per_timestep
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
