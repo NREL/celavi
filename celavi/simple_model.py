@@ -13,8 +13,8 @@ class Component:
         self,
         context,
         kind: str,
-        xlat: float,
-        ylon: float,
+        xlong: float,
+        ylat: float,
         parent_turbine_id: int,
         year: int,
         lifespan_years: float,
@@ -23,8 +23,8 @@ class Component:
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.kind = kind
-        self.xlat = xlat
-        self.ylon: ylon
+        self.xlong = xlong
+        self.ylat = ylat
         self.parent_turbine_id = parent_turbine_id
         self.year = year
         self.lifespan = context.years_to_timesteps(lifespan_years)
@@ -237,8 +237,8 @@ class Context:
         for _, row in df.iterrows():
             component = Component(
                 kind=row["kind"],
-                xlat=row["xlat"],
-                ylon=row["ylon"],
+                xlong=row["xlong"],
+                ylat=row["ylat"],
                 year=row["year"],
                 context=self,
                 parent_turbine_id=0,
