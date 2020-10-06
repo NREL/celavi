@@ -16,7 +16,7 @@ def get_model(pysdfile):
     return _out
 
 
-def first_step(pysdmodel, init_time, timestep, scen_name=None, **kwargs):
+def first_step(pysdmodel, init_time, timestep, param_dict=None, **kwargs):
     """
     - Runs an already-created PySD model for the first time step if init_time is
     set to the model start time, otherwise runs from the model start time up to
@@ -26,11 +26,15 @@ def first_step(pysdmodel, init_time, timestep, scen_name=None, **kwargs):
     :returns the results data frame for the first time step and the model time
     """
 
-    if scen_name is not None:
+    if param_dict is not None:
+        # run the model with user-provided parameter values
+        # (may include scenario name)
         _res = pysdmodel.run(initial_condition='original',
-                             params={'scenario_name': scen_name},
+                             params=param_dict,
                              return_timestamps=init_time)
+
     else:
+        # run the model with a generic scenario name
         _res = pysdmodel.run(initial_condition='original',
                              params={'scenario_name': 'stepwise'},
                              return_timestamps=init_time)
