@@ -23,36 +23,42 @@ def components():
             "ylat": 39.9106,
             "xlong": -105.2347,
             "year": 2000,
+            "mass_tonnes": 1,
         },
         {
             "kind": "blade",
             "ylat": 39.9106,
             "xlong": -105.2347,
             "year": 2000,
+            "mass_tonnes": 1,
         },
         {
             "kind": "blade",
             "ylat": 39.9106,
             "xlong": -105.2347,
             "year": 2000,
+            "mass_tonnes": 1,
         },
         {
             "kind": "nacelle",
             "ylat": 39.9106,
             "xlong": -105.2347,
             "year": 2000,
+            "mass_tonnes": 1,
         },
         {
             "kind": "tower",
             "ylat": 39.9106,
             "xlong": -105.2347,
             "year": 2000,
+            "mass_tonnes": 1,
         },
         {
             "kind": "foundation",
             "ylat": 39.9106,
             "xlong": -105.2347,
             "year": 2000,
+            "mass_tonnes": 1,
         },
     ]
 

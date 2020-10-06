@@ -18,6 +18,7 @@ class Component:
         parent_turbine_id: int,
         year: int,
         lifespan_years: float,
+        mass_tonnes: float,
     ):
         self.state = ""  # There is no state until beginning of life
         self.context = context
@@ -27,6 +28,7 @@ class Component:
         self.ylat = ylat
         self.parent_turbine_id = parent_turbine_id
         self.year = year
+        self.mass_tonnes = mass_tonnes
         self.lifespan = context.years_to_timesteps(lifespan_years)
         self.transitions_table = self.make_transitions_table()
         self.transition_list: List[str] = []
@@ -240,6 +242,7 @@ class Context:
                 xlong=row["xlong"],
                 ylat=row["ylat"],
                 year=row["year"],
+                mass_tonnes=row["mass_tonnes"],
                 context=self,
                 parent_turbine_id=0,
                 lifespan_years=lifespan_fns[row["kind"]](),
