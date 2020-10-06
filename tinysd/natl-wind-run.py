@@ -2,7 +2,8 @@ import os
 import shutil
 import pysd
 import matplotlib.pyplot as plt
-
+import numpy as np
+from stepwise import get_model, first_step, step, reset_model
 
 vensimdir = os.getcwd() + "\\vensim\\national-scale\\"
 pysdfile = 'natl-wind-importable.py'
@@ -178,3 +179,30 @@ blade_lbd_with_rd = model.run(params={'scenario name':'blade_lbd_with_rd',
                                       'remanufacture learning rate':0.05,
                                       'recycle learning rate':0.05,
                                       'recycle research annual cost reduction':0.003})
+
+
+## Stepwise model running
+test_model = get_model(pysdfile)
+
+first_step_results = first_step(test_model, init_time=1982, timestep=0.25, scen_name='test-case')
+
+second_step_results = step(test_model, time=first_step_results[1], timestep=0.25)
+
+third_step_results = step(test_model, time=second_step_results[1], timestep=0.25)
+
+new_model = reset_model(test_model, pysdfile)
+
+
+## Stepwise model running in a loop
+start_time=1982
+final_time=1992
+quarters=0.25
+
+loop_model=get_model(pysdfile)
+
+first = first_step(loop_model, init_time=start_time, timestep=quarters, scen_name='loop-case')
+model_time = first[1]
+
+for i in np.arange(start_time+quarters, final_time+quarters, quarters):
+    step_results = step(loop_model,time=model_time,timestep=quarters)
+    model_time += quarters
