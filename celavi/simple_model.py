@@ -93,6 +93,9 @@ class Component:
         context.landfill_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep,
         )
+        context.landfill_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep,
+        )
 
     @staticmethod
     def use(context, component, timestep: int) -> None:
@@ -116,6 +119,9 @@ class Component:
         # print(f"Use process component {component.id}, timestep={timestep}")
         context.use_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep,
+        )
+        context.use_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep,
         )
 
     @staticmethod
@@ -141,6 +147,9 @@ class Component:
         # )
         context.use_component_inventory.increment_quantity(
             item_name=component.kind, quantity=-1, timestep=timestep,
+        )
+        context.use_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=-component.mass_tonnes, timestep=timestep,
         )
 
     def begin_life(self, env):
@@ -214,7 +223,7 @@ class Context:
         self.env = simpy.Environment()
 
         self.landfill_component_inventory = Inventory(
-            name="components landfill",
+            name="components in landfill",
             possible_items=["nacelle", "blade", "tower", "foundation",],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
@@ -222,10 +231,26 @@ class Context:
         )
 
         self.use_component_inventory = Inventory(
-            name="components use",
+            name="components in use",
             possible_items=["nacelle", "blade", "tower", "foundation",],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+        self.landfill_mass_inventory = Inventory(
+            name="mass in landfill",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="tonne",
+            can_be_negative=False,
+        )
+
+        self.use_mass_inventory = Inventory(
+            name="mass in use",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="tonne",
             can_be_negative=False,
         )
 
@@ -258,4 +283,4 @@ class Context:
 
     def run(self):
         self.env.run(until=int(self.max_timesteps))
-        return self.landfill_component_inventory.cumulative_history
+        return self.landfill_component_inventory.cumulative_history, self.landfill_mass_inventory.cumulative_history
