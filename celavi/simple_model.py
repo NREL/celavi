@@ -13,21 +13,23 @@ class Component:
         self,
         context,
         kind: str,
-        xlat: float,
-        ylon: float,
+        xlong: float,
+        ylat: float,
         parent_turbine_id: int,
         year: int,
-        lifespan_years: float,
+        lifespan: float,
+        mass_tonnes: float,
     ):
         self.state = ""  # There is no state until beginning of life
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.kind = kind
-        self.xlat = xlat
-        self.ylon: ylon
+        self.xlong = xlong
+        self.ylat = ylat
         self.parent_turbine_id = parent_turbine_id
         self.year = year
-        self.lifespan = context.years_to_timesteps(lifespan_years)
+        self.mass_tonnes = mass_tonnes
+        self.lifespan = lifespan  # timesteps
         self.transitions_table = self.make_transitions_table()
         self.transition_list: List[str] = []
 
@@ -91,6 +93,9 @@ class Component:
         context.landfill_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep,
         )
+        context.landfill_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep,
+        )
 
     @staticmethod
     def use(context, component, timestep: int) -> None:
@@ -114,6 +119,9 @@ class Component:
         # print(f"Use process component {component.id}, timestep={timestep}")
         context.use_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep,
+        )
+        context.use_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep,
         )
 
     @staticmethod
@@ -139,6 +147,9 @@ class Component:
         # )
         context.use_component_inventory.increment_quantity(
             item_name=component.kind, quantity=-1, timestep=timestep,
+        )
+        context.use_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=-component.mass_tonnes, timestep=timestep,
         )
 
     def begin_life(self, env):
@@ -199,15 +210,20 @@ class Component:
 
 
 class Context:
-    def __init__(self):
-        self.max_timesteps = 272
-        self.min_year = 1980
-        self.years_per_timestep = 0.25
+    def __init__(
+        self,
+        min_year: int = 1980,
+        max_timesteps: int = 272,
+        years_per_timestep: float = 0.25,
+    ):
+        self.max_timesteps = max_timesteps
+        self.min_year = min_year
+        self.years_per_timestep = years_per_timestep
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
         self.landfill_component_inventory = Inventory(
-            name="components landfill",
+            name="components in landfill",
             possible_items=["nacelle", "blade", "tower", "foundation",],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
@@ -215,10 +231,26 @@ class Context:
         )
 
         self.use_component_inventory = Inventory(
-            name="components use",
+            name="components in use",
             possible_items=["nacelle", "blade", "tower", "foundation",],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+        self.landfill_mass_inventory = Inventory(
+            name="mass in landfill",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="tonne",
+            can_be_negative=False,
+        )
+
+        self.use_mass_inventory = Inventory(
+            name="mass in use",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="tonne",
             can_be_negative=False,
         )
 
@@ -232,12 +264,13 @@ class Context:
         for _, row in df.iterrows():
             component = Component(
                 kind=row["kind"],
-                xlat=row["xlat"],
-                ylon=row["ylon"],
+                xlong=row["xlong"],
+                ylat=row["ylat"],
                 year=row["year"],
+                mass_tonnes=row["mass_tonnes"],
                 context=self,
                 parent_turbine_id=0,
-                lifespan_years=lifespan_fns[row["kind"]](),
+                lifespan=lifespan_fns[row["kind"]](),
             )
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
@@ -250,4 +283,4 @@ class Context:
 
     def run(self):
         self.env.run(until=int(self.max_timesteps))
-        return self.landfill_component_inventory.cumulative_history
+        return self.landfill_component_inventory.cumulative_history, self.landfill_mass_inventory.cumulative_history
