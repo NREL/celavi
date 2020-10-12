@@ -173,7 +173,8 @@ _namespace = {
     'FINAL TIME': 'final_time',
     'INITIAL TIME': 'initial_time',
     'SAVEPER': 'saveper',
-    'TIME STEP': 'time_step'
+    'TIME STEP': 'time_step',
+    'extraction transpo impacts': 'extraction_transpo_impacts'
 }
 
 __pysd_version__ = "0.10.0"
@@ -225,6 +226,125 @@ def recycle_research_annual_cost_reduction():
     b''
     """
     return 0.003
+
+@cache('run')
+def recycle_research_annual_cost_reduction():
+    """
+    Real Name: b'recycle research annual cost reduction'
+    Original Eqn: b'0.003'
+    Units: b''
+    Limits: (None, None)
+    Type: constant
+
+    b''
+    """
+    return 0.003
+
+
+@cache('step')
+def unit_externalities_from_recycling():
+    """
+    Real Name: b'unit externalities from recycling'
+    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from recycling / annual demand )'
+    Units: b''
+    Limits: (None, None)
+    Type: component
+
+    b''
+    """
+    _out = np.nan
+
+    if annual_demand() == 0:
+        _out = 0
+    else:
+        _out = externalities_from_recycling() / annual_demand()
+
+    return _out
+
+
+@cache('step')
+def unit_externalities_from_remanufacturing():
+    """
+    Real Name: b'unit externalities from remanufacturing'
+    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from remanufacturing / annual demand )'
+    Units: b''
+    Limits: (None, None)
+    Type: component
+
+    b''
+    """
+    _out = np.nan
+
+    if annual_demand() == 0:
+        _out = 0
+    else:
+        _out = externalities_from_remanufacturing() / annual_demand()
+
+    return _out
+
+
+@cache('step')
+def unit_externalities_from_extracting():
+    """
+    Real Name: b'unit externalities from extracting'
+    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from extracting / annual demand )'
+    Units: b''
+    Limits: (None, None)
+    Type: component
+
+    b''
+    """
+    _out = np.nan
+
+    if annual_demand() == 0:
+        _out = 0
+    else:
+        _out = extraction_inputs() / annual_demand()
+
+    return _out
+
+
+@cache('step')
+def unit_externalities_from_total_transportation():
+    """
+    Real Name: b'unit externalities from total transportation'
+    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from total transportation / annual demand )'
+    Units: b''
+    Limits: (None, None)
+    Type: component
+
+    b''
+    """
+    _out = np.nan
+
+    if annual_demand() == 0:
+        _out = 0
+    else:
+        _out = total_transportation_inputs() / annual_demand()
+
+    return _out
+
+
+@cache('step')
+def unit_externalities_from_reusing():
+    """
+    Real Name: b'unit externalities from reusing'
+    Original Eqn: b'IF THEN ELSE(annual demand = 0, 0, externalities from reusing / annual demand )'
+    Units: b''
+    Limits: (None, None)
+    Type: component
+
+    b''
+    """
+    _out = np.nan
+
+    if annual_demand() == 0:
+        _out = 0
+    else:
+        _out = externalities_from_reusing() / annual_demand()
+
+    return _out
+
 
 @cache('run')
 def one_metric_ton():
@@ -382,6 +502,7 @@ def cost_of_extracting():
     return initial_cost_of_extracting() * (
         total_extraction() / one_metric_ton() + 1) ** (-1 *
                                                        extracting_learning_rate())
+ 
 
 @cache('step')
 def cost_of_manufacturing():
@@ -449,6 +570,7 @@ def extracting_learning_rate():
     """
     return -0.357
 
+
 @cache('run')
 def manufacturing_learning_rate():
     """
@@ -457,7 +579,7 @@ def manufacturing_learning_rate():
     """
     return -0.357
 
-
+  
 @cache('run')
 def recycle_learning_rate():
     """
@@ -1978,7 +2100,6 @@ def extracting_lci(lci_data=lci_melt):
     Filters complete LCI input dataset to include only inputs to the extraction
     process
     """
-
     _extracting_lci = lci_data[(lci_data['process']=='extracting') & (lci_data['material'] == material_selection())]
 
     return _extracting_lci
@@ -2181,7 +2302,6 @@ def manufacturing_inputs_linear():
     Scales the manufacturing LCI by the amount of raw/linear/virgin material
     sent through the process
     """
-
     _inputs = manufacturing_lci().copy()
 
     _scaling_quantity = extracting()

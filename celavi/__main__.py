@@ -1,106 +1,77 @@
-from celavi.state_machine_units_model import Context
+from celavi.deprecated_state_machine_units_model import Context
 from typing import List, Dict
-import pandas as pd
 import os
 import matplotlib.pyplot as plt
 import random
-import numpy as np
+import datetime
 
 
-def report(result):
-    max_timestep = int(result["ts"].max())
-    report_list: List[Dict] = []
-    for ts in range(1, max_timestep + 1):
-        timestep_result = result[result["ts"] == ts]
-        number_use = len(timestep_result[timestep_result["state"] == "use"])
-        number_recycle = len(timestep_result[timestep_result["state"] == "recycle"])
-        number_remanufacture = len(
-            timestep_result[timestep_result["state"] == "remanufacture"]
-        )
-        number_landfill = len(timestep_result[timestep_result["state"] == "landfill"])
-        total_component_materials = len(timestep_result)
-        report_list.append(
-            {
-                "ts": ts,
-                "total_components": total_component_materials,
-                "fraction_use": number_use / total_component_materials,
-                "fraction_recycle": number_recycle / total_component_materials,
-                "fraction_remanufacture": number_remanufacture
-                / total_component_materials,
-                "fraction_landfill": number_landfill / total_component_materials,
-            }
-        )
-    report_df = pd.DataFrame(report_list)
-    return report_df
+def plot_landfill_and_virgin_material_inventories(
+    context: Context, possible_component_materials: List[str]
+) -> None:
+    landfill_cumulative = context.landfill_material_inventory.cumulative_history
+    virgin_cumulative = context.virgin_material_inventory.cumulative_history
 
+    fig, axs = plt.subplots(
+        ncols=3, nrows=len(possible_component_materials), figsize=(15, 10)
+    )
 
-def make_plots(report_df, context):
-    fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(10, 7))
+    xs = range(len(landfill_cumulative))
+    for cm, ax in zip(possible_component_materials, axs[:, 0]):
+        ax.set_title(f"Landfill cumulative {cm}")
+        ax.plot(xs, landfill_cumulative[cm])
+        ax.set_ylabel("tonnes")
+        ax.set_xlim(0, len(landfill_cumulative))
+
+    xs = range(len(virgin_cumulative))
+    for cm, ax in zip(possible_component_materials, axs[:, 1]):
+        ax.set_title(f"Virgin cumulative {cm}")
+        ax.plot(xs, virgin_cumulative[cm], color="r")
+        ax.set_xlim(0, len(virgin_cumulative))
+
+    xs = range(len(virgin_cumulative))
+    for cm, ax in zip(possible_component_materials, axs[:, 2]):
+        ax.set_title(f"Landfill/virgin {cm}")
+        ax.plot(xs, landfill_cumulative[cm], color="b")
+        ax.plot(xs, virgin_cumulative[cm], color="r")
+        ax.set_xlim(0, len(virgin_cumulative))
+
     plt.tight_layout()
-    plt.subplots_adjust(top=0.93, bottom=0.07, hspace=0.7)
-
-    xs = report_df["ts"].values
-
-    axs[0, 0].set_title("(a) Discrete Fraction Use")
-    axs[0, 0].set_ylim(-0.1, 1.1)
-    axs[0, 0].plot(xs, report_df["fraction_use"])
-
-    axs[1, 0].set_title("(c) Discrete Fraction Remanufacture")
-    axs[1, 0].set_ylim(-0.1, 1.1)
-    axs[1, 0].plot(xs, report_df["fraction_remanufacture"])
-
-    axs[2, 0].set_title("(e) Discrete Fraction Recycle")
-    axs[2, 0].set_ylim(-0.1, 1.1)
-    axs[2, 0].plot(xs, report_df["fraction_recycle"])
-
-    axs[3, 0].set_title("(g) Discrete Fraction Landfill")
-    axs[3, 0].set_ylim(-0.1, 1.1)
-    axs[3, 0].set_xlabel("discrete timestep")
-    axs[3, 0].plot(xs, report_df["fraction_landfill"])
-
-    axs[0, 1].set_title("(b) SD Fraction Reus(ing)")
-    axs[0, 1].set_ylim(-0.1, 1.1)
-    axs[0, 1].plot(
-        np.arange(len(context.fraction_reuse)), context.fraction_reuse, c="r"
-    )
-
-    axs[1, 1].set_title("(d) SD Fraction Remanufactur(ing)")
-    axs[1, 1].set_ylim(-0.1, 1.1)
-    axs[1, 1].plot(
-        np.arange(len(context.fraction_remanufacture)),
-        context.fraction_remanufacture,
-        c="r",
-    )
-
-    axs[2, 1].set_title("(f) SD Fraction Recycl(ing)")
-    axs[2, 1].set_ylim(-0.1, 1.1)
-    axs[2, 1].plot(
-        np.arange(len(context.fraction_remanufacture)), context.fraction_recycle, c="r"
-    )
-
-    axs[3, 1].set_title("(h) Discrete Fraction Landfill(ing)")
-    axs[3, 1].set_ylim(-0.1, 1.1)
-    axs[3, 1].set_xlabel("discrete timestep")
-    axs[3, 1].plot(
-        np.arange(len(context.fraction_remanufacture)), context.fraction_landfill, c="r"
-    )
-
     plt.show()
 
 
 def run_and_report():
+    print(f">>> Start {datetime.datetime.now()}")
+
+    possible_component_materials = [
+        "Blade Glass Fiber",
+        "Foundation High Strength Steel",
+        "Nacelle Cast Iron",
+        "Tower High Strength Steel",
+        "Blade Carbon Fiber",
+        "Nacelle Highly alloyed Steel",
+        "Foundation Concrete",
+        "Nacelle High Strength Steel",
+    ]
+
     print(os.getcwd())
+
     context = Context(
-        "natl-wind-importable.py", year_intercept=1980.0, years_per_timestep=0.25
+        sd_model_filename="natl-wind-importable.py",
+        component_material_state_log_filename="component_material_state_log.csv",
+        year_intercept=1980.0,
+        years_per_timestep=0.25,
+        possible_component_materials=possible_component_materials,
     )
     context.populate_components("celavi_sample_10_turbines.csv")
-    material_component_log = context.run()
-    report_df = report(material_component_log)
-    make_plots(report_df, context)
-    print("writing material component log...")
-    material_component_log.to_csv(
-        "material_component_log.csv", index=False, float_format="%.3f"
-    )
+    # context.populate_components("long_500_usgs_dataset_materials.csv")
+    material_component_log, inventory_cumulative_logs = context.run()
+
+    inventory_cumulative_logs.to_csv("inventory_cumulative_logs.csv", index=True)
+    material_component_log.to_csv("material_component_log.csv", index=True)
+    print(f"<<< End {datetime.datetime.now()}")
+
+    plot_landfill_and_virgin_material_inventories(context, possible_component_materials)
 
 
 if __name__ == "__main__":
