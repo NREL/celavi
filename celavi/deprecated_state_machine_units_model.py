@@ -1,251 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Dict, List, Callable, Optional, Tuple, Union
 from random import randint
-import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
 import pysd  # type: ignore
 import simpy  # type: ignore
 from csv import DictWriter
 
-
-class UniqueIdentifier:
-    _unique_identifier_integer = 0
-
-    @classmethod
-    def unique_identifier(cls) -> int:
-        """
-        This returns a UUID that can serve as a unique identifier for anything.
-        These UUIDs can be used as keys in a set or hash if needed.
-
-        TODO: Replace this with an incrementing integer.
-
-        Returns
-        -------
-        str
-            A UUID to be used as a unique identifier.
-        """
-        cls._unique_identifier_integer += 1
-        return cls._unique_identifier_integer
-
-
-@dataclass(frozen=True)
-class StateTransition:
-    """
-    This class specifies the starting point for a transition in a state machine.
-
-    StateTransition and NextState are used together in a state transition
-    dictionary, where the key is a StateTransition instance and the
-    value is a NextState instance.
-
-    Instance attributes
-    -------------------
-    state: str
-        The starting state in the state machine.
-
-    transition: str
-        The transition away from the current state.
-    """
-
-    state: str
-    transition: str
-
-
-@dataclass(frozen=True)
-class NextState:
-    """
-    This class specifies the target for a state machine transition.
-
-    StateTransition and NextState are used together in a state transition
-    dictionary, where the key is a StateTransition instance and the
-    value is a NextState instance.
-
-    Instance attributes
-    -------------------
-    state: str
-        The target state after the state transition.
-
-    lifespan_min: int
-        The minimum duration of the state in discrete timesteps.
-
-    lifespan_max: int
-        The maximum duration of the state in discrete timesteps.
-
-    The following two instance attributes point to function that
-    handle bookkeeping.
-
-    state_entry_function: Optional[Callable]
-        A callable (in other words, a function) that is called
-        to process an entry into a state, such as a manufacture, landfill,
-        or remanufacture process.
-
-    state_exit_function: Optional[Callable]
-        A callable that is called when a component material leaves the
-        previous state.
-    """
-
-    state: str
-    lifespan_min: int = 40
-    lifespan_max: int = 80
-    state_entry_function: Optional[Callable] = None
-    state_exit_function: Optional[Callable] = None
-
-    @property
-    def lifespan(self) -> int:
-        """
-        This calculates a random integer for the duration of a state
-        transition.
-
-        Returns
-        -------
-        int
-            The discrete timesteps until end-of-life or the lifespan
-            of the state.
-        """
-        return (
-            self.lifespan_min
-            if self.lifespan_min == self.lifespan_max
-            else randint(self.lifespan_min, self.lifespan_max + 1)
-        )
-
-
-class Inventory:
-    def __init__(
-        self,
-        name: str,
-        possible_component_materials: List[str],
-        timesteps: int,
-        quantity_unit: str = "tonne",
-        can_be_negative: bool = False,
-    ):
-        """
-        The inventory class holds an inventory of materials and quantities
-        for a landfill, virgin material extraction, or recycled material
-        availability
-
-        Parameters
-        ----------
-        quantity_unit: str
-            The unit in which the quantity is recorded.
-
-        possible_component_materials: List[str]
-            A list of strings (e.g., "Nacelle Aluminum") that represent all
-            possible component materials that may be stored in this inventory
-
-        timesteps: int
-            The number of discrete timesteps in the simulation that this
-            inventory will hold.
-
-        can_be_negative: bool
-            True if the quantity in this inventory can be negative. If False,
-            the quantity must always be positive.
-
-        Other instance variables
-        ------------------------
-        self.component_materials: Dict[str, float]
-            The cumulative amount of component materials over the entire
-            lifetime of the simulation.
-
-        self.component_materials_deposits: List[Dict[str, float]]
-            The HISTORY of the deposits and withdrawals from this
-            inventory. These are instantaneous, not cumulative, values.
-        """
-        self.name = name
-        self.can_be_negative = can_be_negative
-        self.quantity_unit = quantity_unit
-        self.component_materials: Dict[str, float] = {}
-        for possible_component_material in possible_component_materials:
-            self.component_materials[possible_component_material] = 0.0
-
-        # Populate the deposit and withdrawal history with copies of the
-        # initialized dictionary from above that has all values set to 0.0
-        self.transactions: List[Dict[str, float]] = []
-        for _ in range(timesteps):
-            self.transactions.append(self.component_materials.copy())
-
-    def increment_material_quantity(
-        self, component_material_name: str, quantity: float, timestep: int
-    ) -> float:
-        """
-        Changes the material quantity in this inventory.
-
-        For virgin material extractions, the quantity should be negative
-        to indicate a withdrawal.
-
-        For landfill additions, the quantity should be positive to
-        indicate a deposit of material.
-
-        For recycling, the quantity can either be positive or negative,
-        depending on if there is an increase in supply or a decrease in
-        supply through consumption.
-
-        Parameters
-        ----------
-        component_material_name: str
-            The material being deposited or withdrawn
-
-        quantity: int
-            The quantity of the material, either positive or negative.
-
-        timestep: int
-            The timestep of this deposit or withdrawal or deposit
-            (depending on the sign the quantity)
-
-        Returns
-        -------
-        int
-            The new quantity of the material.
-        """
-        # Place this transaction in the history
-        self.transactions[timestep][component_material_name] += quantity
-
-        # Now increment the inventory
-        self.component_materials[component_material_name] += quantity
-
-        if (
-            round(self.component_materials[component_material_name], 2) < 0
-            and not self.can_be_negative
-        ):
-            raise ValueError(
-                f"Inventory {self.name} cannot go negative. {self.component_materials[component_material_name]}"
-            )
-
-        # Return the new level
-        return self.component_materials[component_material_name]
-
-    @property
-    def cumulative_history(self) -> pd.DataFrame:
-        """
-        Because this method instantiates a DataFrame, it should be celled
-        sparingly, as this is a resource consuming procedure.
-
-        Returns
-        -------
-        pd.DataFrame
-            The cumulative history of all the transactions of the component
-            materials.
-        """
-        component_materials_history_df = pd.DataFrame(self.transactions)
-        cumulative_history = pd.DataFrame()
-        for column in component_materials_history_df.columns:
-            cumulative_history[column] = np.cumsum(
-                component_materials_history_df[column].values
-            )
-        return cumulative_history
-
-    @property
-    def transaction_history(self) -> pd.DataFrame:
-        """
-        Because this method instantiates a DataFrame, it should be celled
-        sparingly, as this is a resource consuming procedure.
-
-        Returns
-        -------
-        pd.DataFrame
-            The history of transactions in dataframe form.
-        """
-        transactions_df = pd.DataFrame(self.transactions)
-        return transactions_df
-
+from .inventory import Inventory
+from .unique_identifier import UniqueIdentifier
+from .states import NextState, StateTransition
 
 class Context:
     """
@@ -319,49 +82,49 @@ class Context:
 
         self.virgin_material_inventory = Inventory(
             name="virgin materials",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,
         )
         self.landfill_material_inventory = Inventory(
             name="landfill",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
         self.remanufacture_material_inventory = Inventory(
             name="remanufacture",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
         self.use_material_inventory = Inventory(
             name="use",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
         self.remanufacture_material_inventory = Inventory(
             name="remanufacture",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
         self.reuse_material_inventory = Inventory(
             name="reuse",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
         self.recycle_material_inventory = Inventory(
             name="recycle",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
         self.manufacture_material_inventory = Inventory(
             name="manufacture",
-            possible_component_materials=possible_component_materials,
+            possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
@@ -698,23 +461,23 @@ class ComponentMaterial:
 
         if self.state == "use":
             self.transition_list.append("using")
-            context.use_material_inventory.increment_material_quantity(
-                component_material_name=name, quantity=material_tonnes, timestep=0,
+            context.use_material_inventory.increment_quantity(
+                item_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "remanufacture":
             self.transition_list.append("remanufacturing")
-            context.remanufacture_material_inventory.increment_material_quantity(
-                component_material_name=name, quantity=material_tonnes, timestep=0,
+            context.remanufacture_material_inventory.increment_quantity(
+                item_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "recycle":
             self.transition_list.append("recycling")
-            context.recycle_material_inventory.increment_material_quantity(
-                component_material_name=name, quantity=material_tonnes, timestep=0,
+            context.recycle_material_inventory.increment_quantity(
+                item_name=name, quantity=material_tonnes, timestep=0,
             )
         elif self.state == "reuse":
             self.transition_list.append("reusing")
-            context.reuse_material_inventory.increment_material_quantity(
-                component_material_name=name, quantity=material_tonnes, timestep=0,
+            context.reuse_material_inventory.increment_quantity(
+                item_name=name, quantity=material_tonnes, timestep=0,
             )
         else:
             raise ValueError(
@@ -731,8 +494,8 @@ class ComponentMaterial:
             f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.remanufacture_counter += 1
-        context.remanufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.remanufacture_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -746,8 +509,8 @@ class ComponentMaterial:
         print(
             f"Remanufacture process component_material {component_material.component_material_id}, timestep={timestep}"
         )
-        context.remanufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.remanufacture_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -765,8 +528,8 @@ class ComponentMaterial:
         print(
             f"Landfill process component_material {component_material.component_material_id}, timestep={timestep}"
         )
-        context.landfill_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.landfill_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -800,15 +563,15 @@ class ComponentMaterial:
         component_material.reuse_counter = 0
         component_material.remanufacture_counter = 0
 
-        context.virgin_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.virgin_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
 
         # Place the material into the manufacturing inventory
-        context.manufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.manufacture_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -829,8 +592,8 @@ class ComponentMaterial:
         component_material.remanufacture_counter = 0
 
         # Place the material into the manufacturing inventory
-        context.manufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.manufacture_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -843,8 +606,8 @@ class ComponentMaterial:
         print(
             f"Leave manufacture process component_material {component_material.component_material_id}, timestep={timestep}"
         )
-        context.manufacture_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.manufacture_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -858,8 +621,8 @@ class ComponentMaterial:
             f"Reuse process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.reuse_counter += 1
-        context.reuse_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.reuse_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -873,8 +636,8 @@ class ComponentMaterial:
             f"Leave reuse process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.reuse_counter += 1
-        context.reuse_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.reuse_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -888,8 +651,8 @@ class ComponentMaterial:
             f"Recycle process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.recycle_counter += 1
-        context.recycle_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.recycle_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -903,8 +666,8 @@ class ComponentMaterial:
             f"Leave recycle process component_material {component_material.component_material_id}, timestep={timestep}"
         )
         component_material.recycle_counter += 1
-        context.recycle_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.recycle_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
@@ -917,8 +680,8 @@ class ComponentMaterial:
         print(
             f"Use process component_material {component_material.component_material_id}, timestep={timestep}"
         )
-        context.use_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.use_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=component_material.material_tonnes,
             timestep=timestep,
         )
@@ -931,8 +694,8 @@ class ComponentMaterial:
         print(
             f"Leave use process component_material {component_material.component_material_id}, timestep={timestep}"
         )
-        context.use_material_inventory.increment_material_quantity(
-            component_material_name=component_material.name,
+        context.use_material_inventory.increment_quantity(
+            item_name=component_material.name,
             quantity=-component_material.material_tonnes,
             timestep=timestep,
         )
