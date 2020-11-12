@@ -9,24 +9,69 @@ from .inventory import Inventory
 
 
 class Component:
+    """
+    This class models a component in the discrete event simulation (DES) model.
+
+    This class defines the following instnace attributes:
+
+    context: Context
+        The context that contains this component.
+
+    kind: str
+        The type of this component. The word "type", however, is also a Python
+        keyword, so this attribute is named kind.
+
+    xlong: float
+        The longitude of the component.
+
+    xlat: float
+        The latitude of the component.
+
+    year: int
+        The year in which this component enters the use state for the first
+        time.
+
+    lifespan: int
+        The lifespan, in timesteps, of the component.
+
+    mass_tonnes: float
+        The total mass of the component, in tonnes.
+
+    transitions_table: Dict[StateTransition, NextState]
+        The transition table for the state machine. E.g., when a component
+        begins life, it enters the "use" state. When a component is in the
+        "use" state, it can receive the transition "landfilling", which
+        transitions the component into the "landfill" state.
+    """
+
     def __init__(
         self,
         context,
         kind: str,
         xlong: float,
         ylat: float,
-        parent_turbine_id: int,
         year: int,
-        lifespan: float,
+        lifespan: int,
         mass_tonnes: float,
     ):
+        """
+        This takes parameters named the same as the instance variables. See
+        the comments for the class for further information about instance
+        attributes.
+
+        It sets the initial state, which is an empty string. This is
+        because there is no state until the component begins life, when
+        the process defined in method begin_life() is called by SimPy.
+
+
+        """
+
         self.state = ""  # There is no state until beginning of life
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.kind = kind
         self.xlong = xlong
         self.ylat = ylat
-        self.parent_turbine_id = parent_turbine_id
         self.year = year
         self.mass_tonnes = mass_tonnes
         self.lifespan = lifespan  # timesteps
@@ -35,8 +80,16 @@ class Component:
 
     def make_transitions_table(self) -> Dict[StateTransition, NextState]:
         """
-        This is an expensive method to execute, so just call it once during
-        instantiation of a component.
+        This method should be called once during instantiation of a component.
+
+        It creates the table of states, transitions, and next states.
+
+        Returns
+        -------
+        Dict[StateTransition, NextState]
+            A dictionary mapping current states and transitions (the key) into
+            the next state (the value). See the documentation for the
+            StateTransition and NextState classes.
         """
         transitions_table = {
             StateTransition(state="use", transition="landfilling"): NextState(
@@ -51,6 +104,20 @@ class Component:
         return transitions_table
 
     def transition(self, transition: str, timestep: int) -> None:
+        """
+        This method changes the state of the component's state machine
+        according to the transition parameter. If the transition is not
+        allowed from the current state (for example, a "using" transition
+        from a "landfill" state), this method raises a KeyError.
+
+        This method calls the state entry and exit functions for the
+        for the next and prior states. These functions perform any necessary
+        computations for each transition (such as updating a landfill
+        inventory).
+
+        This method also keeps a list of transitions in the
+        self.transition_list attribute.
+        """
         lookup = StateTransition(state=self.state, transition=transition)
         if lookup not in self.transitions_table:
             raise KeyError(
@@ -153,6 +220,18 @@ class Component:
         )
 
     def begin_life(self, env):
+        """
+        This process should be called exactly once during the discrete event
+        simulation. It is what starts the lifetime this component. Since it is
+        only called once, it does not have a loop, like most other SimPy
+        processes. When the component enters life, this method immediately
+        sets the end-of-life (EOL) process for the use state.
+
+        Parameters
+        ----------
+        env: simpy.Environment
+            The SimPy environment running the DES timesteps.
+        """
         begin_timestep = (
             self.year - self.context.min_year
         ) / self.context.years_per_timestep
@@ -203,6 +282,15 @@ class Component:
             next_state.state_exit_function(self.context, self, timestep)
 
     def eol_process(self, env):
+        """
+        This process controls the state transitions for the component at
+        each end-of-life (EOL) event.
+
+        Parameters
+        ----------
+        env: simpy.Environment
+            The environment in which this process is running.
+        """
         while True:
             yield env.timeout(self.lifespan)
             next_transition = self.context.choose_transition(self, env.now)
@@ -210,12 +298,36 @@ class Component:
 
 
 class Context:
+    """
+    The Context class:
+
+    - Provides the discrete time sequence for the model
+    - Holds all the components in the model
+    - Links the SD model to the DES model
+    - Provides translation of years to timesteps and back again
+    """
+
     def __init__(
         self,
         min_year: int = 1980,
         max_timesteps: int = 272,
         years_per_timestep: float = 0.25,
     ):
+        """
+        Parameters
+        ----------
+        min_year: int
+            The starting year of the model.
+
+        max_timesteps: int
+            The maximum number of discrete timesteps in the model.
+
+        years_per_timestep: float
+            The number of years covered by each timestep. Fractional
+            values are allowed for timesteps that have a duration of
+            less than one year.
+        """
+
         self.max_timesteps = max_timesteps
         self.min_year = min_year
         self.years_per_timestep = years_per_timestep
@@ -255,12 +367,82 @@ class Context:
         )
 
     def years_to_timesteps(self, year: float) -> int:
+        """
+        Converts years into the corresponding timestep number of the discrete
+        event model.
+
+        Parameters
+        ----------
+        year: float
+            The year can have a fractional part. The result of the conversion
+            is rounding to the nearest integer.
+
+        Returns
+        -------
+        int
+            The discrete timestep that corresponds to the year.
+        """
+
         return int(year / self.years_per_timestep)
 
     def timesteps_to_years(self, timesteps: int) -> float:
+        """
+        Converts the discrete timestep to a year.
+
+        Parameters
+        ----------
+        timesteps: int
+            The discrete timestep number. Must be an integer.
+
+        Returns
+        -------
+        float
+            The year converted from the discrete timestep.
+        """
         return self.years_per_timestep * timesteps + self.min_year
 
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
+        """
+        Before a model can run, components must be loaded into it. This method
+        loads components from a DataFrame, has the following columns which
+        correspond to the attributes of a component object:
+
+        kind: str
+            The type of component as a string. It isn't called "type" because
+            "type" is a keyword in Python.
+
+        xlong: float
+            The longitude of the component.
+
+        xlat: float
+            The latitude of the component.
+
+        year: float
+            The year the component goes into use.
+
+        mass_tonnes: float
+            The mass of the component in tonnes.
+
+        Each component is placed into a process that will timeout when the
+        component begins its useful life, as specified in year. From there,
+        choices about the component's lifecycle are made as further processes
+        time out and decisions are made at subsequent timesteps.
+
+        Parameters
+        ----------
+        df: pd.DataFrame
+            The DataFrame which has components specified in the columns
+            listed above.
+
+        lifespan_fns: lifespan_fns: Dict[str, Callable[[], float]]
+            A dictionary with the kind of component as the key and a Callable
+            (probably a lambda function) that takes no arguments and returns
+            a float as the value. When called, the value should return a value
+            sampled from a probability distribution that corresponds to a
+            predicted lifespan of the component. The key is used to call the
+            value in a way similar to the following: lifespan_fns[row["kind"]]()
+        """
+
         for _, row in df.iterrows():
             component = Component(
                 kind=row["kind"],
@@ -269,18 +451,44 @@ class Context:
                 year=row["year"],
                 mass_tonnes=row["mass_tonnes"],
                 context=self,
-                parent_turbine_id=0,
                 lifespan=lifespan_fns[row["kind"]](),
             )
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
 
     def choose_transition(self, component, timestep: int) -> str:
+        """
+        This chooses the transition (pathway) for a component when it reaches
+        end of life. Currently, this only models the linear pathway where
+        components are landfilled at the end of life
+
+        The timestep of the discrete sequence is used to query the SD model
+        for the current costs of each pathway as given from the learning
+        by doing model.
+
+        Parameters
+        ----------
+        component: Component
+            The component for which a pathway is being chosen.
+
+        timestep: int
+            The timestep at which the pathway is being chosen.
+
+        Returns
+        -------
+        str
+            The name of the transition to make. This is then passed to
+            the state machine in the component to move into the next
+            state as chosen here.
+        """
         if component.state == "use":
             return "landfilling"
         else:
             raise ValueError("Components must always be in the state use.")
 
     def run(self):
+        """
+        This method starts the discrete event simulation running.
+        """
         self.env.run(until=int(self.max_timesteps))
         return self.landfill_component_inventory.cumulative_history, self.landfill_mass_inventory.cumulative_history
