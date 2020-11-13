@@ -12,31 +12,6 @@ class Component:
     """
     This class models a component in the discrete event simulation (DES) model.
 
-    This class defines the following instnace attributes:
-
-    context: Context
-        The context that contains this component.
-
-    kind: str
-        The type of this component. The word "type", however, is also a Python
-        keyword, so this attribute is named kind.
-
-    xlong: float
-        The longitude of the component.
-
-    xlat: float
-        The latitude of the component.
-
-    year: int
-        The year in which this component enters the use state for the first
-        time.
-
-    lifespan: int
-        The lifespan, in timesteps, of the component.
-
-    mass_tonnes: float
-        The total mass of the component, in tonnes.
-
     transitions_table: Dict[StateTransition, NextState]
         The transition table for the state machine. E.g., when a component
         begins life, it enters the "use" state. When a component is in the
@@ -51,7 +26,7 @@ class Component:
         xlong: float,
         ylat: float,
         year: int,
-        lifespan: int,
+        lifespan_timesteps: int,
         mass_tonnes: float,
     ):
         """
@@ -63,7 +38,34 @@ class Component:
         because there is no state until the component begins life, when
         the process defined in method begin_life() is called by SimPy.
 
+        Parameters
+        ----------
+        context: Context
+            The context that contains this component.
 
+        kind: str
+            The type of this component. The word "type", however, is also a Python
+            keyword, so this attribute is named kind.
+
+        xlong: float
+            The longitude of the component.
+
+        xlat: float
+            The latitude of the component.
+
+        year: int
+            The year in which this component enters the use state for the first
+            time.
+
+        lifespan_timesteps: float
+            The lifespan, in timesteps, of the component. The argument can be
+            provided as a floating point value, but it is converted into an
+            integer before it is assigned to the instance attribute. This allows
+            more intuitive integration with random number generators defined
+            outside this class which may return floating point values.
+
+        mass_tonnes: float
+            The total mass of the component, in tonnes.
         """
 
         self.state = ""  # There is no state until beginning of life
@@ -74,7 +76,7 @@ class Component:
         self.ylat = ylat
         self.year = year
         self.mass_tonnes = mass_tonnes
-        self.lifespan = lifespan  # timesteps
+        self.lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.transitions_table = self.make_transitions_table()
         self.transition_list: List[str] = []
 
@@ -125,7 +127,7 @@ class Component:
             )
         next_state = self.transitions_table[lookup]
         self.state = next_state.state
-        self.lifespan = next_state.lifespan
+        self.lifespan_timesteps = next_state.lifespan
         self.transition_list.append(transition)
         if next_state.state_entry_function is not None:
             next_state.state_entry_function(self.context, self, timestep)
@@ -274,7 +276,7 @@ class Component:
             )
         next_state = self.transitions_table[lookup]
         self.state = next_state.state
-        self.lifespan = next_state.lifespan
+        self.lifespan_timesteps = next_state.lifespan
         self.transition_list.append(transition)
         if next_state.state_entry_function is not None:
             next_state.state_entry_function(self.context, self, timestep)
@@ -292,7 +294,7 @@ class Component:
             The environment in which this process is running.
         """
         while True:
-            yield env.timeout(self.lifespan)
+            yield env.timeout(self.lifespan_timesteps)
             next_transition = self.context.choose_transition(self, env.now)
             self.transition(next_transition, env.now)
 
