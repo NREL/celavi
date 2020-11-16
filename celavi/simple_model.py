@@ -514,15 +514,20 @@ class Context:
         else:
             raise ValueError("Components must always be in the state use.")
 
-    def run(self):
+    def run(self) -> Dict[str, pd.DataFrame]:
         """
         This method starts the discrete event simulation running.
 
         Returns
         -------
-        Tuple[Inventory, Inventory]
-            A tuple with the landfill_component_inventory and the
-            landfill_mass_inventory.
+        Dict[str, pd.DataFrame]
+            A dictionary of inventories mapped to their cumulative histories.
         """
         self.env.run(until=int(self.max_timesteps))
-        return self.landfill_component_inventory.cumulative_history, self.landfill_mass_inventory.cumulative_history
+        inventories = {
+            "landfill_component_inventory": self.landfill_component_inventory.cumulative_history,
+            "landfill_mass_inventory": self.landfill_mass_inventory.cumulative_history,
+            "virgin_component_inventory": self.virgin_component_inventory.cumulative_history,
+            "virgin_material_inventory": self.virgin_material_inventory.cumulative_history,
+        }
+        return inventories
