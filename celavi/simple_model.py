@@ -517,6 +517,12 @@ class Context:
     def run(self):
         """
         This method starts the discrete event simulation running.
+
+        Returns
+        -------
+        Tuple[Inventory, Inventory]
+            A tuple with the landfill_component_inventory and the
+            landfill_mass_inventory.
         """
         self.env.run(until=int(self.max_timesteps))
         return self.landfill_component_inventory.cumulative_history, self.landfill_mass_inventory.cumulative_history
