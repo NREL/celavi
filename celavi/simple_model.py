@@ -2,6 +2,7 @@ from typing import Dict, List, Callable
 
 import simpy
 import pandas as pd
+import pysd  # type: ignore
 
 from .unique_identifier import UniqueIdentifier
 from .states import StateTransition, NextState
@@ -293,6 +294,7 @@ class Context:
 
     def __init__(
         self,
+        sd_model_filename: str = None,
         min_year: int = 1980,
         max_timesteps: int = 272,
         years_per_timestep: float = 0.25,
@@ -300,8 +302,14 @@ class Context:
         """
         Parameters
         ----------
+        sd_model_filename: str
+            Optional. If specified, it loads the PySD model in the given
+            filename and writes it to a .csv in the current working
+            directory.
+
         min_year: int
-            The starting year of the model.
+            The starting year of the model. Optional. If left unspecified
+            defualts to 1980.
 
         max_timesteps: int
             The maximum number of discrete timesteps in the model.
@@ -312,9 +320,14 @@ class Context:
             less than one year.
         """
 
+        if sd_model_filename is not None:
+            self.sd_model_run = pysd.load(sd_model_filename).run()
+            self.sd_model_run.to_csv("celavi_sd_model.csv")
+
         self.max_timesteps = max_timesteps
         self.min_year = min_year
         self.years_per_timestep = years_per_timestep
+
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
