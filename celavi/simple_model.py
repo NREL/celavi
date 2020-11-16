@@ -26,7 +26,7 @@ class Component:
         xlong: float,
         ylat: float,
         year: int,
-        lifespan_timesteps: int,
+        lifespan_timesteps: float,
         mass_tonnes: float,
     ):
         """
@@ -101,38 +101,14 @@ class Component:
                 state_entry_function=self.landfill,
                 state_exit_function=self.leave_use,
             ),
+            StateTransition(state="use", transition="recycling"): NextState(
+                state="recycle",
+                lifespan_min=1000,
+                lifespan_max=1000,
+            )
         }
 
         return transitions_table
-
-    def transition(self, transition: str, timestep: int) -> None:
-        """
-        This method changes the state of the component's state machine
-        according to the transition parameter. If the transition is not
-        allowed from the current state (for example, a "using" transition
-        from a "landfill" state), this method raises a KeyError.
-
-        This method calls the state entry and exit functions for the
-        for the next and prior states. These functions perform any necessary
-        computations for each transition (such as updating a landfill
-        inventory).
-
-        This method also keeps a list of transitions in the
-        self.transition_list attribute.
-        """
-        lookup = StateTransition(state=self.state, transition=transition)
-        if lookup not in self.transitions_table:
-            raise KeyError(
-                f"transition: {transition} not allowed from current state {self.state}"
-            )
-        next_state = self.transitions_table[lookup]
-        self.state = next_state.state
-        self.lifespan_timesteps = next_state.lifespan
-        self.transition_list.append(transition)
-        if next_state.state_entry_function is not None:
-            next_state.state_entry_function(self.context, self, timestep)
-        if next_state.state_exit_function is not None:
-            next_state.state_exit_function(self.context, self, timestep)
 
     @staticmethod
     def landfill(context, component, timestep: int) -> None:
@@ -191,6 +167,12 @@ class Component:
         )
         context.use_mass_inventory.increment_quantity(
             item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep,
+        )
+        context.virgin_component_inventory.increment_quantity(
+            item_name=component.kind, quantity=-1, timestep=timestep
+        )
+        context.virgin_material_inventory.increment_quantity(
+            item_name=component.kind, quantity=-component.mass_tonnes, timestep=timestep,
         )
 
     @staticmethod
@@ -336,6 +318,11 @@ class Context:
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
+        # Inventories hold the simple counts of materials at stages of
+        # their lifecycle. The "component" inventories hold the counts
+        # of whole components. The "material" inventories hold the mass
+        # of those components.
+
         self.landfill_component_inventory = Inventory(
             name="components in landfill",
             possible_items=["nacelle", "blade", "tower", "foundation",],
@@ -347,6 +334,25 @@ class Context:
         self.use_component_inventory = Inventory(
             name="components in use",
             possible_items=["nacelle", "blade", "tower", "foundation",],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+        # The virgin component inventory can go negative because it is
+        # decremented every time a new component goes into service.
+
+        self.virgin_component_inventory = Inventory(
+            name="virgin components manufactured",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=True,
+        )
+
+        self.recycle_component_inventory = Inventory(
+            name="components that have been recycled",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
             can_be_negative=False,
@@ -366,6 +372,26 @@ class Context:
             timesteps=self.max_timesteps,
             quantity_unit="tonne",
             can_be_negative=False,
+        )
+
+        self.recycle_mass_inventory = Inventory(
+            name="mass that has been recycled",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+        # The virgin component inventory can go negative because it is
+        # decremented every time newly manufactured material goes into
+        # service.
+
+        self.virgin_material_inventory = Inventory(
+            name="virgin material manufactured",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=True,
         )
 
     def years_to_timesteps(self, year: float) -> int:
@@ -453,7 +479,7 @@ class Context:
                 year=row["year"],
                 mass_tonnes=row["mass_tonnes"],
                 context=self,
-                lifespan=lifespan_fns[row["kind"]](),
+                lifespan_timesteps=lifespan_fns[row["kind"]](),
             )
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
