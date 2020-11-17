@@ -305,7 +305,8 @@ class Context:
         sd_model_filename: str
             Optional. If specified, it loads the PySD model in the given
             filename and writes it to a .csv in the current working
-            directory.
+            directory. Also, it overrides min_year, max_timesteps,
+            and years_per_timestep if specified.
 
         min_year: int
             The starting year of the model. Optional. If left unspecified
@@ -323,10 +324,16 @@ class Context:
         if sd_model_filename is not None:
             self.sd_model_run = pysd.load(sd_model_filename).run()
             self.sd_model_run.to_csv("celavi_sd_model.csv")
-
-        self.max_timesteps = max_timesteps
-        self.min_year = min_year
-        self.years_per_timestep = years_per_timestep
+            self.max_timesteps = len(self.sd_model_run)
+            self.min_year = min(self.sd_model_run.loc[:, "TIME"])
+            self.max_year = max(self.sd_model_run.loc[:, "TIME"])
+            self.years_per_timestep = \
+                (self.max_year - self.min_year) / len(self.sd_model_run)
+        else:
+            self.sd_model_run = None
+            self.max_timesteps = max_timesteps
+            self.min_year = min_year
+            self.years_per_timestep = years_per_timestep
 
         self.components: List[Component] = []
         self.env = simpy.Environment()
