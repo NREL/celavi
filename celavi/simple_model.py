@@ -529,8 +529,34 @@ class Context:
             the state machine in the component to move into the next
             state as chosen here.
         """
+
+        # If there is no SD model, just landfill everything.
+        if self.sd_model_run is None:
+            if component.state == "use":
+                return "landfilling"
+            else:
+                raise ValueError("Components must always be in the state use.")
+
+        # Normalized per metric tonne
+        # aggregate ALL the costs: strategic value, transportation costs, etc
+
+        cost_of_landfilling = self.sd_model_run['cost of landfilling'].values[int(timestep)]
+        cost_of_recycling = self.sd_model_run['recycle process cost'].values[int(timestep)]
+        # Also get the strategic value of recycling
+
+        # Calculate the pathway cost per tonne of stuff sent through the
+        # pathway and that is how we will make our decision.
+
+        # Capacity of recycling plant will need to be accounted for here.
+        # Keep a cumulative tally of how much has been put through the
+        # recycling facility.
+        #
+        # Keep track of capacity utilization at each timestep.
+
         if component.state == "use":
             return "landfilling"
+            # stratgeic value could be a tie breaker.
+            # return "landfilling if cost_of_landfilling < cost_of_recycling else "recycling"
         else:
             raise ValueError("Components must always be in the state use.")
 
@@ -549,5 +575,7 @@ class Context:
             "landfill_mass_inventory": self.landfill_mass_inventory.cumulative_history,
             "virgin_component_inventory": self.virgin_component_inventory.cumulative_history,
             "virgin_material_inventory": self.virgin_material_inventory.cumulative_history,
+            "recycle_component_inventory": self.recycle_component_inventory.cumulative_history,
+            "recycle_mass_inventory": self.recycle_mass_inventory.cumulative_history,
         }
         return inventories
