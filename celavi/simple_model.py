@@ -87,6 +87,9 @@ class Component:
 
         It creates the table of states, transitions, and next states.
 
+        Both recycling and landfilling have long lifetimes. For an explanation
+        of why, see their state entry functions.
+
         Returns
         -------
         Dict[StateTransition, NextState]
@@ -106,16 +109,41 @@ class Component:
                 state="recycle",
                 lifespan_min=1000,
                 lifespan_max=1000,
+                state_entry_function=self.recycle,
+                state_exit_function=self.leave_use,
             )
         }
 
         return transitions_table
 
     @staticmethod
+    def recycle(context, component, timestep: int) -> None:
+        """
+        Recycles a component by incrementing the material in recycling storage.
+
+        Currently, there is no corresponding leave_recycle because only other
+        processes deduct from the recycling inventory (e.g., manufacturing)
+
+        Parameters
+        ----------
+        context: Context
+            The context in which this component lives. There is no type
+            in the method signature to prevent a circular dependency.
+
+        component: Component
+            The component which is being landfilled.
+        """
+        context.recycle_component_inventory.increment_quantity(
+            item_name=component.kind, quantity=1, timestep=timestep
+        )
+        context.recycle_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep
+        )
+
+    @staticmethod
     def landfill(context, component, timestep: int) -> None:
         """
-        Landfills a component material by incrementing the material in the
-        landfill.
+        Landfills a component by incrementing the material in the landfill.
 
         The landfill process is special because there is no corresponding
         leave_landfill method since component materials never leave the
@@ -555,9 +583,9 @@ class Context:
         # Keep track of capacity utilization at each timestep.
 
         if component.state == "use":
-            return "landfilling"
+            # return "landfilling"
             # stratgeic value could be a tie breaker.
-            # return "landfilling if cost_of_landfilling < cost_of_recycling else "recycling"
+            return "landfilling" if cost_of_landfilling < cost_of_recycling else "recycling"
         else:
             raise ValueError("Components must always be in the state use.")
 
