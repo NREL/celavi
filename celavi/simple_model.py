@@ -540,8 +540,9 @@ class Context:
         # Normalized per metric tonne
         # aggregate ALL the costs: strategic value, transportation costs, etc
 
-        cost_of_landfilling = self.sd_model_run['cost of landfilling'].values[int(timestep)]
-        cost_of_recycling = self.sd_model_run['recycle process cost'].values[int(timestep)]
+        ts = int(timestep)
+        cost_of_landfilling = self.sd_model_run['cost of landfilling'].values[ts]
+        cost_of_recycling = self.sd_model_run['recycle process cost'].values[ts]
         # Also get the strategic value of recycling
 
         # Calculate the pathway cost per tonne of stuff sent through the
