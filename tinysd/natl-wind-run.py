@@ -5,8 +5,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from stepwise import get_model, first_step, step, reset_model
 
-vensimdir = os.getcwd() + "\\vensim\\national-scale\\"
+vensimdir = os.getcwd() + "\\tinysd\\"
 pysdfile = 'natl-wind-importable.py'
+
+os.chdir(vensimdir)
 
 # if there's no pre-imported python file in this directory, convert an updated
 # model located in vensimdir and move it to this directory
