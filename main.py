@@ -372,7 +372,7 @@ class Model:
                 rows.append({
                     "Inventory": node_id,
                     "Unit name": unit.name,
-                    "Unit lifespan": unit.lifespan,
+                    "Unit lifespan": unit.lifespan_timesteps,
                     "Unit ID": unit.functional_unit_id
                 })
         result = pd.DataFrame(rows)
