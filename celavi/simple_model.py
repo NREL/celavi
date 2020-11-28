@@ -2,13 +2,15 @@ from typing import Dict, List, Callable
 
 import simpy
 import pandas as pd
+import numpy as np
 import pysd  # type: ignore
+import os
 
 from .unique_identifier import UniqueIdentifier
 from .states import StateTransition, NextState
 from .inventory import Inventory
 
-
+import pdb
 class Component:
     """
     This class models a component in the discrete event simulation (DES) model.
@@ -105,11 +107,18 @@ class Component:
                 state_entry_function=self.landfill,
                 state_exit_function=self.leave_use,
             ),
-            StateTransition(state="use", transition="recycling"): NextState(
-                state="recycle",
+            StateTransition(state="use", transition="recycling_to_raw"): NextState(
+                state="recycle_to_raw",
                 lifespan_min=1000,
                 lifespan_max=1000,
-                state_entry_function=self.recycle,
+                state_entry_function=self.recycle_to_raw,
+                state_exit_function=self.leave_use,
+            ),
+            StateTransition(state="use", transition="recycling_to_clinker"): NextState(
+                state="recycle_to_clinker",
+                lifespan_min=1000,
+                lifespan_max=1000,
+                state_entry_function=self.recycle_to_clinker,
                 state_exit_function=self.leave_use,
             )
         }
@@ -117,7 +126,7 @@ class Component:
         return transitions_table
 
     @staticmethod
-    def recycle(context, component, timestep: int) -> None:
+    def recycle_to_raw(context, component, timestep: int) -> None:
         """
         Recycles a component by incrementing the material in recycling storage.
 
@@ -133,10 +142,40 @@ class Component:
         component: Component
             The component which is being landfilled.
         """
-        context.recycle_component_inventory.increment_quantity(
+        context.recycle_to_raw_component_inventory.increment_quantity(
             item_name=component.kind, quantity=1, timestep=timestep
         )
-        context.recycle_mass_inventory.increment_quantity(
+        context.recycle_to_raw_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=0.7*component.mass_tonnes, timestep=timestep
+        )
+        context.landfill_component_inventory.increment_quantity(
+            item_name=component.kind, quantity=0.3, timestep=timestep
+        )
+        context.landfill_mass_inventory.increment_quantity(
+            item_name=component.kind, quantity=0.3*component.mass_tonnes, timestep=timestep)
+
+    @staticmethod
+    def recycle_to_clinker(context, component, timestep: int) -> None:
+        """
+        Recycles a component to clinker by incrementing the material in
+        recycling-to-clinker storage.
+
+        Currently, there is no corresponding leave_recycle because only other
+        processes deduct from the recycling inventory (e.g., manufacturing)
+
+        Parameters
+        ----------
+        context: Context
+            The context in which this component lives. There is no type
+            in the method signature to prevent a circular dependency.
+
+        component: Component
+            The component which is being landfilled.
+        """
+        context.recycle_to_clinker_component_inventory.increment_quantity(
+            item_name=component.kind, quantity=1, timestep=timestep
+        )
+        context.recycle_to_clinker_mass_inventory.increment_quantity(
             item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep
         )
 
@@ -197,12 +236,16 @@ class Component:
         context.use_mass_inventory.increment_quantity(
             item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep,
         )
+
         context.virgin_component_inventory.increment_quantity(
             item_name=component.kind, quantity=-1, timestep=timestep
         )
         context.virgin_material_inventory.increment_quantity(
-            item_name=component.kind, quantity=-component.mass_tonnes, timestep=timestep,
+            item_name=component.kind, quantity=-component.mass_tonnes,
+            timestep=timestep,
         )
+
+
 
     @staticmethod
     def leave_use(context, component, timestep: int):
@@ -316,6 +359,7 @@ class Context:
 
     - Provides the discrete time sequence for the model
     - Holds all the components in the model
+    - Holds parameters for pathway cost models (dictionary)
     - Links the SD model to the DES model
     - Provides translation of years to timesteps and back again
     """
@@ -323,8 +367,9 @@ class Context:
     def __init__(
         self,
         sd_model_filename: str = None,
-        min_year: int = 1980,
-        max_timesteps: int = 272,
+        cost_params: Dict = None,
+        min_year: int = 2000,
+        max_timesteps: int = 200,
         years_per_timestep: float = 0.25,
     ):
         """
@@ -336,17 +381,22 @@ class Context:
             directory. Also, it overrides min_year, max_timesteps,
             and years_per_timestep if specified.
 
+        cost_params: Dict
+            Dictionary of parameters for the learning-by-doing models and all
+            other pathway cost models
+
         min_year: int
             The starting year of the model. Optional. If left unspecified
-            defualts to 1980.
+            defualts to 2000.
 
         max_timesteps: int
-            The maximum number of discrete timesteps in the model.
+            The maximum number of discrete timesteps in the model. Defaults to
+            200 or an end year of 2050.
 
         years_per_timestep: float
             The number of years covered by each timestep. Fractional
             values are allowed for timesteps that have a duration of
-            less than one year.
+            less than one year. Default value is 0.25 or quarters (3 months).
         """
 
         if sd_model_filename is not None:
@@ -359,6 +409,7 @@ class Context:
                 (self.max_year - self.min_year) / len(self.sd_model_run)
         else:
             self.sd_model_run = None
+            self.cost_params = cost_params
             self.max_timesteps = max_timesteps
             self.min_year = min_year
             self.years_per_timestep = years_per_timestep
@@ -398,8 +449,16 @@ class Context:
             can_be_negative=True,
         )
 
-        self.recycle_component_inventory = Inventory(
-            name="components that have been recycled",
+        self.recycle_to_raw_component_inventory = Inventory(
+            name="components that have been recycled to a raw material",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+        self.recycle_to_clinker_component_inventory = Inventory(
+            name="components that have been recycled to clinker",
             possible_items=["nacelle", "blade", "tower", "foundation", ],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
@@ -422,8 +481,16 @@ class Context:
             can_be_negative=False,
         )
 
-        self.recycle_mass_inventory = Inventory(
-            name="mass that has been recycled",
+        self.recycle_to_raw_mass_inventory = Inventory(
+            name="mass that has been recycled to a raw material",
+            possible_items=["nacelle", "blade", "tower", "foundation", ],
+            timesteps=self.max_timesteps,
+            quantity_unit="unit",
+            can_be_negative=False,
+        )
+
+        self.recycle_to_clinker_mass_inventory = Inventory(
+            name="mass that has been recycled to clinker",
             possible_items=["nacelle", "blade", "tower", "foundation", ],
             timesteps=self.max_timesteps,
             quantity_unit="unit",
@@ -441,6 +508,13 @@ class Context:
             quantity_unit="unit",
             can_be_negative=True,
         )
+
+        # initialize dictionary to hold pathway costs over time
+        self.cost_history = {'year': [],
+                             'landfilling cost': [],
+                             'recycling to clinker cost': [],
+                             'recycling to raw material cost': []}
+
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -532,6 +606,75 @@ class Context:
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
 
+
+    def learning_by_doing(self, timestep):
+        """
+        This function so far only gets called if component.kind=='blade'
+        :key
+        """
+
+        # needed for capacity expansion
+        # blade_rec_count_ts = self.recycle_to_raw_component_inventory.component_materials['blade']
+
+        blade_rec_raw_mass_ts = self.recycle_to_raw_mass_inventory.component_materials['blade']
+        blade_rec_clk_mass_ts = self.recycle_to_clinker_mass_inventory.component_materials['blade']
+
+        # Calculate the pathway cost per tonne of stuff sent through the
+        # pathway and that is how we will make our decision.
+
+        # calculate tipping fee, USD/metric tonne
+        landfill_tipping_fee = (3.0E-29) * np.exp(0.0344 * self.timesteps_to_years(timestep))
+
+        # Recycling to Raw Materials: pathway net cost, USD per metric tonne
+        recycling_process_cost_ts = self.cost_params['coarse_grinding_cost_init'] * (blade_rec_clk_mass_ts + blade_rec_raw_mass_ts + 1.0) ** -self.cost_params['recycling_learning_rate'] +\
+        self.cost_params['fine_grinding_cost_init'] * (blade_rec_raw_mass_ts + 1.0) ** -self.cost_params['recycling_learning_rate']
+
+        recycling_transpo_cost_ts = self.cost_params['recycling_transpo'] + self.cost_params['recycling_landfilling_transpo'] +\
+        self.cost_params['recycling_to_raw_material_transpo']
+
+        recycling_revenue_ts = self.cost_params['recycling_to_raw_material_revenue']
+
+        # include the loss rate in this calculation - elsewhere it's built into
+        # the input data
+        recycling_landfill_cost_ts = 0.3 * landfill_tipping_fee
+
+        cost_of_recycling_to_raw_material = recycling_process_cost_ts + recycling_transpo_cost_ts + recycling_landfill_cost_ts + recycling_revenue_ts
+
+        # Recycling to Clinker: pathway net cost, USD per metric tonne
+        recycling_clinker_process_cost_ts = self.cost_params['coarse_grinding_cost_init'] * (blade_rec_clk_mass_ts + blade_rec_raw_mass_ts + 1.0) ** -self.cost_params['recycling_learning_rate']
+
+        recycling_clinker_transpo_cost_ts = self.cost_params['recycling_transpo'] + self.cost_params['recycling_to_clinker_transpo']
+
+        recycling_clinker_revenue_ts = self.cost_params['recycling_to_clinker_revenue']
+
+        cost_of_recycling_to_clinker = recycling_clinker_process_cost_ts + recycling_clinker_transpo_cost_ts + recycling_clinker_revenue_ts
+
+        # Landfilling: pathway net cost, USD per metric tonne
+        cost_of_landfilling = landfill_tipping_fee + self.cost_params['landfilling_transpo']
+
+        # append the three pathway costs to the end of the cost-history dict,
+        # but only if at least one of the values has changed
+        if len(self.cost_history['year'])==0:
+
+            self.cost_history['year'].append(self.timesteps_to_years(timestep))
+            self.cost_history['landfilling cost'].append(cost_of_landfilling)
+            self.cost_history['recycling to clinker cost'].append(cost_of_recycling_to_clinker)
+            self.cost_history['recycling to raw material cost'].append(cost_of_recycling_to_raw_material)
+
+        elif (self.cost_history['landfilling cost'][-1] != cost_of_landfilling) or\
+                (self.cost_history['recycling to clinker cost'][-1] != cost_of_recycling_to_clinker) or\
+                (self.cost_history['recycling to raw material cost'][-1] != cost_of_recycling_to_raw_material):
+
+            self.cost_history['year'].append(self.timesteps_to_years(timestep))
+            self.cost_history['landfilling cost'].append(cost_of_landfilling)
+            self.cost_history['recycling to clinker cost'].append(cost_of_recycling_to_clinker)
+            self.cost_history['recycling to raw material cost'].append(cost_of_recycling_to_raw_material)
+
+
+
+        return cost_of_recycling_to_raw_material, cost_of_recycling_to_clinker, cost_of_landfilling
+
+
     def choose_transition(self, component, timestep: int) -> str:
         """
         This chooses the transition (pathway) for a component when it reaches
@@ -559,22 +702,11 @@ class Context:
         """
 
         # If there is no SD model, just landfill everything.
-        if self.sd_model_run is None:
-            if component.state == "use":
-                return "landfilling"
-            else:
-                raise ValueError("Components must always be in the state use.")
-
-        # Normalized per metric tonne
-        # aggregate ALL the costs: strategic value, transportation costs, etc
-
-        ts = int(timestep)
-        cost_of_landfilling = self.sd_model_run['cost of landfilling'].values[ts]
-        cost_of_recycling = self.sd_model_run['recycle process cost'].values[ts]
-        # Also get the strategic value of recycling
-
-        # Calculate the pathway cost per tonne of stuff sent through the
-        # pathway and that is how we will make our decision.
+        # if self.sd_model_run is None:
+        #     if component.state == "use":
+        #         return "landfilling"
+        #     else:
+        #         raise ValueError("Components must always be in the state use.")
 
         # Capacity of recycling plant will need to be accounted for here.
         # Keep a cumulative tally of how much has been put through the
@@ -582,10 +714,37 @@ class Context:
         #
         # Keep track of capacity utilization at each timestep.
 
+        _out = None
+
+        # for BLADES ONLY
+        # if the landfilling pathway cost is strictly less than recycling to raw
+        # material pathway cost, then landfill. If the recycling pathway cost is
+        # strictly less than landfilling, then recycling. If the two costs are
+        # equal, then use the recycled material strategic value to decide: a
+        # strategic value of zero means landfill while a strictly positive
+        # strategic value means recycle.
         if component.state == "use":
-            # return "landfilling"
-            # stratgeic value could be a tie breaker.
-            return "landfilling" if cost_of_landfilling < cost_of_recycling else "recycling"
+            if component.kind == 'blade':
+
+                (cost_of_recycling_to_raw_material,
+                 cost_of_recycling_to_clinker,
+                 cost_of_landfilling) = self.learning_by_doing(timestep)
+
+                if min(cost_of_landfilling, cost_of_recycling_to_clinker,
+                       cost_of_recycling_to_raw_material) == cost_of_landfilling:
+                    _out = "landfilling"
+                elif min(cost_of_landfilling, cost_of_recycling_to_clinker,
+                             cost_of_recycling_to_raw_material) == cost_of_recycling_to_clinker:
+                    _out = "recycling_to_clinker"
+                else:
+                    _out = "recycling_to_raw"
+
+            else:
+                # all other components get landfilled
+                _out = "landfilling"
+
+            return _out
+
         else:
             raise ValueError("Components must always be in the state use.")
 
@@ -604,7 +763,10 @@ class Context:
             "landfill_mass_inventory": self.landfill_mass_inventory.cumulative_history,
             "virgin_component_inventory": self.virgin_component_inventory.cumulative_history,
             "virgin_material_inventory": self.virgin_material_inventory.cumulative_history,
-            "recycle_component_inventory": self.recycle_component_inventory.cumulative_history,
-            "recycle_mass_inventory": self.recycle_mass_inventory.cumulative_history,
+            "recycle_to_raw_component_inventory": self.recycle_to_raw_component_inventory.cumulative_history,
+            "recycle_to_raw_mass_inventory": self.recycle_to_raw_mass_inventory.cumulative_history,
+            "recycle_to_clinker_component_inventory": self.recycle_to_clinker_component_inventory.cumulative_history,
+            "recycle_to_clinker_mass_inventory": self.recycle_to_clinker_mass_inventory.cumulative_history,
+            "cost_history": self.cost_history
         }
         return inventories
