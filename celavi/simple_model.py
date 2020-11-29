@@ -739,7 +739,13 @@ class Context:
                     _out = "recycling_to_clinker"
                 else:
                     _out = "recycling_to_raw"
-
+            elif component.kind == 'blade' and self.timesteps_to_years(timestep) <= 2019:
+                # this just saves the cost history for the results; everything
+                # still gets landfilled
+                (cost_of_recycling_to_raw_material,
+                 cost_of_recycling_to_clinker,
+                 cost_of_landfilling) = self.learning_by_doing(timestep)
+                _out = "landfilling"
             else:
                 # all other components get landfilled
                 _out = "landfilling"
