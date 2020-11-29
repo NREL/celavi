@@ -143,7 +143,7 @@ class Component:
             The component which is being landfilled.
         """
         context.recycle_to_raw_component_inventory.increment_quantity(
-            item_name=component.kind, quantity=1, timestep=timestep
+            item_name=component.kind, quantity=0.7, timestep=timestep
         )
         context.recycle_to_raw_mass_inventory.increment_quantity(
             item_name=component.kind, quantity=0.7*component.mass_tonnes, timestep=timestep
@@ -616,7 +616,10 @@ class Context:
         # needed for capacity expansion
         # blade_rec_count_ts = self.recycle_to_raw_component_inventory.component_materials['blade']
 
-        blade_rec_raw_mass_ts = self.recycle_to_raw_mass_inventory.component_materials['blade']
+        # divide out the loss factor that's applied to the inventory
+        # entire blades are processed through, but only 70% is kept in the supply chain
+        # cost models should be based on mass processed, not mass output
+        blade_rec_raw_mass_ts = self.recycle_to_raw_mass_inventory.component_materials['blade'] / 0.7
         blade_rec_clk_mass_ts = self.recycle_to_clinker_mass_inventory.component_materials['blade']
 
         # Calculate the pathway cost per tonne of stuff sent through the
@@ -670,8 +673,6 @@ class Context:
             self.cost_history['recycling to clinker cost'].append(cost_of_recycling_to_clinker)
             self.cost_history['recycling to raw material cost'].append(cost_of_recycling_to_raw_material)
 
-
-
         return cost_of_recycling_to_raw_material, cost_of_recycling_to_clinker, cost_of_landfilling
 
 
@@ -724,7 +725,7 @@ class Context:
         # strategic value of zero means landfill while a strictly positive
         # strategic value means recycle.
         if component.state == "use":
-            if component.kind == 'blade':
+            if component.kind == 'blade' and self.timesteps_to_years(timestep) > 2019.0:
 
                 (cost_of_recycling_to_raw_material,
                  cost_of_recycling_to_clinker,
