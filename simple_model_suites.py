@@ -92,6 +92,7 @@ for lifespan in lifespans:
 def postprocess_df(inventory_bundle,
                    scenario_name: str,
                    coarse_grind_loc: str, turb_landfill_dist: float):
+
     inventory_list = ['landfill',
                       'virgin',
                       'recycle_to_raw',
@@ -104,16 +105,21 @@ def postprocess_df(inventory_bundle,
             df_mass = inventory_bundle[df_name + '_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
             new_df = pd.merge(left=df_count[['blade count', 'foundation count']], right=df_mass[['blade mass', 'foundation mass']],
                               left_index=True, right_index=True)
+            filename='inventories.csv'
+
+            new_df['year'] = new_df.index * 0.25 + 2000.0
 
         else:
-            new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).drop_duplicates().groupby(['year']).mean()
+            new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year']).mean()
+            filename='cost-histories.csv'
 
 
         new_df['scenario'] = scenario_name
         new_df['coarse grinding location'] = coarse_grind_loc
         new_df['turbine to landfill distance'] = turb_landfill_dist
+        new_df['inventory'] = df_name
 
-        filename=scenario_name + '_' + df_name + '.csv'
+
         if not os.path.isfile(filename):
             new_df.to_csv(filename,
                           header=True, mode='a+')
