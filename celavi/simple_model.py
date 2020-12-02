@@ -621,7 +621,7 @@ class Context:
         UNITS: USD/tonne
         """
         _year = self.timesteps_to_years(timestep)
-        _fee = (3.0E-29) * np.exp(0.0344 * self.timesteps_to_years(timestep))
+        _fee = (3.0E-29) * np.exp(0.0344 * _year)
         return _fee
 
     def blade_removal_year(self, timestep):
