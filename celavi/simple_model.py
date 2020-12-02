@@ -739,9 +739,9 @@ class Context:
 
         # Recycling to Clinker: pathway net cost, USD per metric tonne
         recycle_to_clink_pathway = blade_removal_cost + \
-                                    onsite_size_red + \
-                                    segment_rec_dist * segment_transpo_cost + \
-                                    shredded_rec_dist * self.cost_params['shred_transpo_cost'] + \
+                                   onsite_size_red + \
+                                   segment_rec_dist * segment_transpo_cost + \
+                                   shredded_rec_dist * self.cost_params['shred_transpo_cost'] + \
                                    rec_clink_process + \
                                    self.cost_params['distances']['recycling facility']['cement plant'] * self.cost_params['shred_transpo_cost'] + \
                                    self.cost_params['coarse_grind_yield'] * self.cost_params['rec_clink_revenue'] + \
@@ -749,7 +749,9 @@ class Context:
                                    (1 - self.cost_params['coarse_grind_yield']) * landfill_tipping_fee
 
         # Landfilling: pathway net cost, USD per metric tonne
-        landfill_pathway = segment_landfill_dist * segment_transpo_cost + \
+        landfill_pathway = blade_removal_cost + \
+                           onsite_size_red + \
+                           segment_landfill_dist * segment_transpo_cost + \
                            shredded_landfill_dist * self.cost_params['shred_transpo_cost'] + \
                            landfill_tipping_fee
 
