@@ -91,7 +91,7 @@ for lifespan in lifespans:
 
 def postprocess_df(inventory_bundle,
                    scenario_name: str,
-                   coarse_grind_loc: str, turb_landfill_dist: float):
+                   coarse_grind_loc: str, turb_recfacility_dist: float):
 
     inventory_list = ['landfill',
                       'virgin',
@@ -116,7 +116,7 @@ def postprocess_df(inventory_bundle,
 
         new_df['scenario'] = scenario_name
         new_df['coarse grinding location'] = coarse_grind_loc
-        new_df['turbine to landfill distance'] = turb_landfill_dist
+        new_df['turbine to recycle facility distance'] = turb_recfacility_dist
         new_df['inventory'] = df_name
 
 
@@ -128,11 +128,11 @@ def postprocess_df(inventory_bundle,
                           header=False, mode='a+')
 
 
-def run_suite(ltd:float, coarse_grind:str):
+def run_suite(turb_rec:float, coarse_grind:str):
 
-    dist_df = pd.DataFrame(data=np.array([[0.0,   ltd, 51.5,  204.4],
-                                          [ltd,  0.0,  1.6,   4.8],
-                                          [51.5,  1.6,  0.0,   217.3],
+    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, 204.4],
+                                          [69.2, 0.0, 1.6, 4.8],
+                                          [turb_rec,  1.6,  0.0,   217.3],
                                           [204.4, 4.8,  217.3, 0.0]]),
                            columns=['turbine', 'landfill',
                                     'recycling facility', 'cement plant'],
@@ -199,7 +199,7 @@ def run_suite(ltd:float, coarse_grind:str):
 
         # create the Context
         print("Creating Context...\n")
-        context = Context(min_year=start_yr, max_timesteps=timesteps_per_year*(end_yr-start_yr),
+        context = Context(min_year=start_yr, max_timesteps=timesteps_per_year*(end_yr-start_yr)+1,
                           cost_params=params)
         context.populate(components, lifespan_fns)
         print("Context created.\n")
@@ -213,15 +213,15 @@ def run_suite(ltd:float, coarse_grind:str):
         postprocess_df(inventory_bundle=all_inventories,
                        scenario_name=scenario,
                        coarse_grind_loc=coarse_grind,
-                       turb_landfill_dist=ltd)
+                       turb_recfacility_dist=turb_rec)
         print("Postprocessing complete.\n")
 
 
 # vary the km between the turbine location and the landfill
 # vary the location of the coarse grinding
-run_suite(ltd=9.0,   coarse_grind='onsite')
-run_suite(ltd=9.0,   coarse_grind='facility')
-run_suite(ltd=69.2,  coarse_grind='onsite')
-run_suite(ltd=69.2,  coarse_grind='facility')
-run_suite(ltd=765.0, coarse_grind='onsite')
-run_suite(ltd=765.0, coarse_grind='facility')
+run_suite(turb_rec=9.0, coarse_grind='onsite')
+run_suite(turb_rec=9.0, coarse_grind='facility')
+run_suite(turb_rec=69.2, coarse_grind='onsite')
+run_suite(turb_rec=69.2, coarse_grind='facility')
+run_suite(turb_rec=765.0, coarse_grind='onsite')
+run_suite(turb_rec=765.0, coarse_grind='facility')
