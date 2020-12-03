@@ -204,8 +204,8 @@ def postprocess_df(inventory_bundle,
 
         new_df['scenario'] = scenario_name
         new_df['coarse grinding location'] = coarse_grind_loc
-        new_df['turbine to recycle facility distance'] = turb_recfacility_dist
-        new_df['turbine to cement plant distance'] = turb_cement_loc
+        new_df['distance to recycling facility'] = turb_recfacility_dist
+        new_df['distance to cement plant'] = turb_cement_loc
         new_df['inventory'] = df_name
 
         if not os.path.isfile(filename):
