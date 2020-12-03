@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
-import pdb
+
 from celavi.simple_model import Context
 
 np.random.seed(123)
@@ -140,7 +140,7 @@ def postprocess_df(inventory_bundle,
     rec_rawmat_melt['mass'] = rec_rawmat_melt['cumul_mass'].diff()
     rec_rawmat_melt['process'] = 'fine grinding'
 
-    landfill_mass = inventory_bundle['landfill_component_inventory'][['blade']].rename(columns={'blade': 'glass fiber reinforced polymer'})
+    landfill_mass = inventory_bundle['landfill_material_inventory'][['blade']].rename(columns={'blade': 'glass fiber reinforced polymer'})
     landfill_mass['year'] = landfill_mass.index * 0.25 + 2000.0
 
     landfill_melt = pd.melt(landfill_mass, id_vars=['year'],
@@ -205,6 +205,7 @@ def postprocess_df(inventory_bundle,
         new_df['scenario'] = scenario_name
         new_df['coarse grinding location'] = coarse_grind_loc
         new_df['turbine to recycle facility distance'] = turb_recfacility_dist
+        new_df['turbine to cement plant distance'] = turb_cement_loc
         new_df['inventory'] = df_name
 
         if not os.path.isfile(filename):
