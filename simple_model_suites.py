@@ -3,10 +3,23 @@ import pandas as pd
 import os
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
-
+import pdb
 from celavi.simple_model import Context
 
 np.random.seed(123)
+
+# read in input data as-is
+_lci_input = pd.read_csv('lci.csv')
+
+# Melt to a dataframe with columns: input unit, input name, material,
+# process, quantity
+# ignore original index columns created when data was read in
+lci_melt = pd.melt(_lci_input,
+                   id_vars=['input unit', 'input name', 'material'],
+                   value_vars=['manufacturing',
+                               'coarse grinding', 'fine grinding',
+                               'landfilling'],
+                   var_name='process', value_name='quantity').dropna()
 
 usgs = pd.read_csv("TX_input_data_with_masses.csv")
 
@@ -90,26 +103,98 @@ for lifespan in lifespans:
 
 def postprocess_df(inventory_bundle,
                    scenario_name: str,
-                   coarse_grind_loc: str, turb_recfacility_dist: float):
+                   coarse_grind_loc: str,
+                   turb_recfacility_dist: float,
+                   turb_cement_loc: float,
+                   lci=lci_melt):
+    """
 
-    inventory_list = ['landfill',
-                      'virgin',
-                      'recycle_to_raw',
-                      'recycle_to_clinker',
-                      'cost_history',
+    """
+
+    # postprocess the virgin material inventory (inputs) to calculate LCI by timestep
+    virgin_mass = -1.0 * inventory_bundle['virgin_material_inventory'][['blade', 'foundation']].rename(columns={'blade': 'glass fiber reinforced polymer', 'foundation': 'concrete'})
+    virgin_mass['year'] =  virgin_mass.index * 0.25 + 2000.0
+
+    virgin_melt = pd.melt(virgin_mass, id_vars=['year'],
+                               value_vars=['glass fiber reinforced polymer',
+                                           'concrete'],
+                               var_name='material', value_name='cumul_mass')
+    virgin_melt['mass'] = virgin_melt['cumul_mass'].diff()
+    virgin_melt['process'] = 'manufacturing'
+
+    rec_clinker_mass = inventory_bundle['recycle_to_clinker_material_inventory'][['blade']].rename(columns={'blade': 'glass fiber reinforced polymer'})
+    rec_clinker_mass['year'] = rec_clinker_mass.index * 0.25 + 2000.0
+
+    rec_clinker_melt = pd.melt(rec_clinker_mass, id_vars=['year'],
+                               value_vars=['glass fiber reinforced polymer'],
+                               var_name='material', value_name='cumul_mass')
+    rec_clinker_melt['mass'] = rec_clinker_melt['cumul_mass'].diff()
+    rec_clinker_melt['process'] = 'coarse grinding'
+
+    rec_rawmat_mass = inventory_bundle['recycle_to_raw_material_inventory'][['blade']].rename(columns={'blade': 'glass fiber reinforced polymer'})
+    rec_rawmat_mass['year'] = rec_rawmat_mass.index * 0.25 + 2000.0
+
+    rec_rawmat_melt = pd.melt(rec_rawmat_mass, id_vars=['year'],
+                               value_vars=['glass fiber reinforced polymer'],
+                               var_name='material', value_name='cumul_mass')
+    rec_rawmat_melt['mass'] = rec_rawmat_melt['cumul_mass'].diff()
+    rec_rawmat_melt['process'] = 'fine grinding'
+
+    landfill_mass = inventory_bundle['landfill_component_inventory'][['blade']].rename(columns={'blade': 'glass fiber reinforced polymer'})
+    landfill_mass['year'] = landfill_mass.index * 0.25 + 2000.0
+
+    landfill_melt = pd.melt(landfill_mass, id_vars=['year'],
+                               value_vars=['glass fiber reinforced polymer'],
+                               var_name='material', value_name='cumul_mass')
+    landfill_melt['mass'] = landfill_melt['cumul_mass'].diff()
+    landfill_melt['process'] = 'landfilling'
+
+    # aggregate together the various inventories
+    inventory_lci = virgin_melt.append(rec_clinker_melt,
+                                       ignore_index=True).append(rec_rawmat_melt,
+                                                                 ignore_index=True).append(landfill_melt,
+                                                                                           ignore_index=True)
+    inventory_lci.loc[inventory_lci['mass'] < 0.0, 'mass'] = 0.0
+
+    inventory_lci['scenario'] = scenario_name
+    inventory_lci['coarse grinding location'] = coarse_grind_loc
+    inventory_lci['distance to recycling facility'] = turb_recfacility_dist
+    inventory_lci['distance to cement plant'] = turb_cement_loc
+
+    filename='inventories'
+
+    if not os.path.isfile(filename + '.csv'):
+        inventory_lci.to_csv(filename + '.csv',
+                      header=True, mode='a+')
+    else:
+       inventory_lci.to_csv(filename + '.csv',
+                      header=False, mode='a+')
+
+
+    lci_out = inventory_lci.merge(lci, how='outer', on=['material','process']).dropna()
+    lci_out['input quantity'] = lci_out['mass'] * lci_out['quantity']
+
+    filename='celavi-results-lci'
+
+    if not os.path.isfile(filename + '.csv'):
+        lci_out.to_csv(filename + '.csv',
+                      header=True, mode='a+')
+    else:
+       lci_out.to_csv(filename + '.csv',
+                      header=False, mode='a+')
+
+    # find the rows where process = coarse grinding (only gfrp has this process)
+    # pull the years from these rows
+
+    # rec_clinker_mass = inventory_bundle['recycle_to_clinker_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
+    # rec_rawmat_mass = inventory_bundle['recycle_to_raw_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
+    # landfill_mass = inventory_bundle['landfill_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
+
+    inventory_list = ['cost_history',
                       'transpo_eol']
 
     for df_name in inventory_list:
-        if df_name != 'cost_history' and df_name != 'transpo_eol':
-            df_count = inventory_bundle[df_name + '_component_inventory'].rename(columns={'blade': 'blade count', 'foundation': 'foundation count'})
-            df_mass = inventory_bundle[df_name + '_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
-            new_df = pd.merge(left=df_count[['blade count', 'foundation count']], right=df_mass[['blade mass', 'foundation mass']],
-                              left_index=True, right_index=True)
-            filename='inventories.csv'
-
-            new_df['year'] = new_df.index * 0.25 + 2000.0
-
-        elif df_name == 'cost_history':
+        if df_name == 'cost_history':
             new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year']).mean()
             filename='cost-histories.csv'
         else:
@@ -121,7 +206,6 @@ def postprocess_df(inventory_bundle,
         new_df['coarse grinding location'] = coarse_grind_loc
         new_df['turbine to recycle facility distance'] = turb_recfacility_dist
         new_df['inventory'] = df_name
-
 
         if not os.path.isfile(filename):
             new_df.to_csv(filename,
@@ -215,7 +299,8 @@ def run_once(scenario:str, turb_rec:float, turb_cement:float,
     postprocess_df(inventory_bundle=all_inventories,
                    scenario_name=scenario,
                    coarse_grind_loc=coarse_grind,
-                   turb_recfacility_dist=turb_rec)
+                   turb_recfacility_dist=turb_rec,
+                   turb_cement_loc=turb_cement)
     print("Postprocessing complete.\n")
 
 
@@ -305,18 +390,19 @@ def run_suite(turb_rec:float, turb_cement:float, coarse_grind:str):
         postprocess_df(inventory_bundle=all_inventories,
                        scenario_name=scenario,
                        coarse_grind_loc=coarse_grind,
-                       turb_recfacility_dist=turb_rec)
+                       turb_recfacility_dist=turb_rec,
+                       turb_cement_loc=turb_cement)
         print("Postprocessing complete.\n")
 
 
 # scenario def for debugging
-run_once(scenario='bau', turb_rec=69.2, turb_cement=204.0, coarse_grind='onsite')
+run_once(scenario='bau', turb_rec=51.0, turb_cement=204.0, coarse_grind='onsite')
 
 # vary the km between the turbine location and the landfill
 # vary the location of the coarse grinding
 run_suite(turb_rec=9.0, turb_cement=187.0, coarse_grind='onsite')
 run_suite(turb_rec=9.0, turb_cement=187.0, coarse_grind='facility')
-run_suite(turb_rec=69.2, turb_cement=204.0,coarse_grind='onsite')
-run_suite(turb_rec=69.2, turb_cement=204.0, coarse_grind='facility')
+run_suite(turb_rec=51.0, turb_cement=204.0,coarse_grind='onsite')
+run_suite(turb_rec=51.0, turb_cement=204.0, coarse_grind='facility')
 run_suite(turb_rec=765.0, turb_cement=803.0, coarse_grind='onsite')
 run_suite(turb_rec=765.0, turb_cement=803.0, coarse_grind='facility')
