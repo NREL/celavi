@@ -6,7 +6,7 @@ import numpy as np
 import pysd  # type: ignore
 import os
 import warnings
-
+import pdb
 from .unique_identifier import UniqueIdentifier
 from .states import StateTransition, NextState
 from .inventory import Inventory
@@ -525,6 +525,10 @@ class Context:
                              'recycling to clinker cost': [],
                              'recycling to raw material cost': []}
 
+        # initialize dictionary to hold transportation requirements in each step
+        self.transpo_eol = {'year': [],
+                            'total eol transportation': []}
+
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -652,7 +656,7 @@ class Context:
             _cost = 21.0
         elif 2031.0 <= _year < 2044.0:
             _cost = 28.0
-        elif 2044.0 <= _year < 2050.0:
+        elif 2044.0 <= _year <= 2050.0:
             _cost = 35.0
         else:
             warnings.warn('Year out of range for segment transport; setting cost = 21')
@@ -701,7 +705,8 @@ class Context:
             segment_rec_dist = 0.0
             segment_landfill_dist = 0.0
             shredded_rec_dist = self.cost_params['distances']['turbine']['cement plant']
-            shredded_landfill_dist = 0.0
+            shredded_landfill_dist = self.cost_params['distances']['turbine']['landfill']
+            clinker_transpo_dist = 0.0 + self.cost_params['distances']['cement plant']['turbine']
             clinker_waste_landfill_dist = self.cost_params['distances']['turbine']['landfill']
             onsite_size_red = 0.0
             rec_raw_process = self.cost_params['coarse_grinding_onsite'] * coarse_grind_learning + self.cost_params['fine_grinding'] * fine_grind_learning
@@ -711,6 +716,7 @@ class Context:
             segment_landfill_dist = self.cost_params['distances']['turbine']['landfill']
             shredded_rec_dist = 0.0
             shredded_landfill_dist = 0.0
+            clinker_transpo_dist = self.cost_params['distances']['recycling facility']['cement plant'] + self.cost_params['distances']['cement plant']['turbine']
             clinker_waste_landfill_dist = self.cost_params['distances']['recycling facility']['landfill']
             onsite_size_red = self.cost_params['onsite_size_red_cost']
             rec_raw_process = self.cost_params['coarse_grinding_facility'] * coarse_grind_learning + self.cost_params['fine_grinding'] * fine_grind_learning
@@ -721,21 +727,30 @@ class Context:
             segment_landfill_dist = self.cost_params['distances']['turbine']['landfill']
             shredded_rec_dist = 0.0
             shredded_landfill_dist = 0.0
+            clinker_transpo_dist = self.cost_params['distances']['recycling facility']['cement plant'] + self.cost_params['distances']['cement plant']['turbine']
             clinker_waste_landfill_dist = self.cost_params['distances']['recycling facility']['landfill']
             onsite_size_red = self.cost_params['onsite_size_reduction']
             rec_raw_process = self.cost_params['coarse_grinding_facility'] * coarse_grind_learning + self.cost_params['fine_grinding'] * fine_grind_learning
             rec_clink_process = self.cost_params['coarse_grinding_facility'] * coarse_grind_learning
 
         # Recycling to Raw Materials: pathway net cost, USD per tonne
+        # BN the facility-to-cement-plant distance is used here to proxy transpo
+        # to a facility that uses the raw material
         recycle_to_rawmat_pathway = blade_removal_cost + \
                                     onsite_size_red + \
                                     segment_rec_dist * segment_transpo_cost + \
                                     shredded_rec_dist * self.cost_params['shred_transpo_cost'] + \
                                     rec_raw_process + \
-                                    self.cost_params['distances']['recycling facility']['cement plant'] * self.cost_params['shred_transpo_cost'] + \
+                                    self.cost_params['coarse_grind_yield'] * self.cost_params['fine_grind_yield'] * self.cost_params['distances']['recycling facility']['cement plant'] * self.cost_params['shred_transpo_cost'] + \
                                     self.cost_params['coarse_grind_yield'] * self.cost_params['fine_grind_yield'] * self.cost_params['rec_rawmat_revenue'] +\
-                                    (1 - self.cost_params['fine_grind_yield']) * self.cost_params['distances']['recycling facility']['landfill'] * self.cost_params['shred_transpo_cost'] + \
-                                    (1 - self.cost_params['fine_grind_yield']) * landfill_tipping_fee
+                                    (1 - self.cost_params['coarse_grind_yield'] * self.cost_params['fine_grind_yield']) * self.cost_params['distances']['recycling facility']['landfill'] * self.cost_params['shred_transpo_cost'] + \
+                                    (1 - self.cost_params['coarse_grind_yield'] * self.cost_params['fine_grind_yield']) * landfill_tipping_fee
+
+        # pathway transportation, tonnes-km
+        recycle_to_rawmat_transpo = component.mass_tonnes * \
+                                    (segment_rec_dist + shredded_rec_dist  + \
+                                    self.cost_params['coarse_grind_yield'] * self.cost_params['fine_grind_yield'] * self.cost_params['distances']['recycling facility']['cement plant'] +
+                                     (1 - self.cost_params['coarse_grind_yield'] * self.cost_params['fine_grind_yield']) * self.cost_params['distances']['recycling facility']['landfill'])
 
         # Recycling to Clinker: pathway net cost, USD per metric tonne
         recycle_to_clink_pathway = blade_removal_cost + \
@@ -743,10 +758,16 @@ class Context:
                                    segment_rec_dist * segment_transpo_cost + \
                                    shredded_rec_dist * self.cost_params['shred_transpo_cost'] + \
                                    rec_clink_process + \
-                                   self.cost_params['distances']['recycling facility']['cement plant'] * self.cost_params['shred_transpo_cost'] + \
+                                   self.cost_params['coarse_grind_yield'] * clinker_transpo_dist * self.cost_params['shred_transpo_cost'] + \
                                    self.cost_params['coarse_grind_yield'] * self.cost_params['rec_clink_revenue'] + \
                                    (1 - self.cost_params['coarse_grind_yield']) * clinker_waste_landfill_dist * self.cost_params['shred_transpo_cost'] + \
                                    (1 - self.cost_params['coarse_grind_yield']) * landfill_tipping_fee
+
+        # pathway transportation, tonnes-km
+        recycle_to_clink_transpo = component.mass_tonnes * \
+                                   (segment_rec_dist + shredded_rec_dist  +
+                                    self.cost_params['coarse_grind_yield'] * clinker_transpo_dist +
+                                    (1 - self.cost_params['coarse_grind_yield']) * clinker_waste_landfill_dist)
 
         # Landfilling: pathway net cost, USD per metric tonne
         landfill_pathway = blade_removal_cost + \
@@ -754,6 +775,10 @@ class Context:
                            segment_landfill_dist * segment_transpo_cost + \
                            shredded_landfill_dist * self.cost_params['shred_transpo_cost'] + \
                            landfill_tipping_fee
+
+        # pathway transportation, tonnes-km
+        landfill_transpo = component.mass_tonnes * \
+                           (segment_landfill_dist + shredded_landfill_dist)
 
         # append the three pathway costs to the end of the cost-history dict,
         # but only if at least one of the values has changed
@@ -772,6 +797,18 @@ class Context:
             self.cost_history['landfilling cost'].append(landfill_pathway)
             self.cost_history['recycling to clinker cost'].append(recycle_to_clink_pathway)
             self.cost_history['recycling to raw material cost'].append(recycle_to_rawmat_pathway)
+
+        # append the three transportation requirements to the end of the transpo-eol
+        # dict
+        self.transpo_eol['year'].append(self.timesteps_to_years(timestep))
+
+        # save the transportation value for the lowest-cost pathway
+        if min(recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway)==recycle_to_rawmat_pathway:
+            self.transpo_eol['total eol transportation'].append(recycle_to_rawmat_transpo)
+        elif min(recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway)==recycle_to_clink_pathway:
+            self.transpo_eol['total eol transportation'].append(recycle_to_clink_transpo)
+        else:
+            self.transpo_eol['total eol transportation'].append(landfill_transpo)
 
         return recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway
 
@@ -825,7 +862,7 @@ class Context:
         # strategic value of zero means landfill while a strictly positive
         # strategic value means recycle.
         if component.state == "use":
-            if component.kind == 'blade' and self.timesteps_to_years(timestep) > 2020.0:
+            if component.kind == 'blade' and self.timesteps_to_years(timestep) >= 2019.0:
 
                 (recycle_to_rawmat_pathway,
                  recycle_to_clink_pathway,
@@ -875,6 +912,7 @@ class Context:
             "recycle_to_raw_material_inventory": self.recycle_to_raw_material_inventory.cumulative_history,
             "recycle_to_clinker_component_inventory": self.recycle_to_clinker_component_inventory.cumulative_history,
             "recycle_to_clinker_material_inventory": self.recycle_to_clinker_material_inventory.cumulative_history,
-            "cost_history": self.cost_history
+            "cost_history": self.cost_history,
+            "transpo_eol": self.transpo_eol
         }
         return inventories
