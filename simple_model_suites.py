@@ -4,7 +4,6 @@ import os
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
 
-
 from celavi.simple_model import Context
 
 np.random.seed(123)
@@ -97,10 +96,11 @@ def postprocess_df(inventory_bundle,
                       'virgin',
                       'recycle_to_raw',
                       'recycle_to_clinker',
-                      'cost_history']
+                      'cost_history',
+                      'transpo_eol']
 
     for df_name in inventory_list:
-        if df_name != 'cost_history':
+        if df_name != 'cost_history' and df_name != 'transpo_eol':
             df_count = inventory_bundle[df_name + '_component_inventory'].rename(columns={'blade': 'blade count', 'foundation': 'foundation count'})
             df_mass = inventory_bundle[df_name + '_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
             new_df = pd.merge(left=df_count[['blade count', 'foundation count']], right=df_mass[['blade mass', 'foundation mass']],
@@ -109,9 +109,12 @@ def postprocess_df(inventory_bundle,
 
             new_df['year'] = new_df.index * 0.25 + 2000.0
 
-        else:
+        elif df_name == 'cost_history':
             new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year']).mean()
             filename='cost-histories.csv'
+        else:
+            new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year']).sum()
+            filename='transpo-eol.csv'
 
 
         new_df['scenario'] = scenario_name
@@ -127,13 +130,102 @@ def postprocess_df(inventory_bundle,
             new_df.to_csv(filename,
                           header=False, mode='a+')
 
+def run_once(scenario:str, turb_rec:float, turb_cement:float,
+             coarse_grind:str):
 
-def run_suite(turb_rec:float, coarse_grind:str):
-
-    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, 204.4],
+    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, turb_cement],
                                           [69.2, 0.0, 1.6, 4.8],
                                           [turb_rec,  1.6,  0.0,   217.3],
-                                          [204.4, 4.8,  217.3, 0.0]]),
+                                          [turb_cement, 4.8,  217.3, 0.0]]),
+                           columns=['turbine', 'landfill',
+                                    'recycling facility', 'cement plant'],
+                           index=['turbine', 'landfill',
+                                  'recycling facility', 'cement plant'])
+
+
+    bau_cost_params = {'recycling_learning_rate': 0.05,    #unitless
+                       'coarse_grinding_loc': coarse_grind, #'onsite' or 'facility'
+                       'distances':dist_df,                #km
+                       'coarse_grinding_onsite': 121.28,   #USD/tonne, initial cost
+                       'coarse_grinding_facility': 121.28, #USD/tonne, initial cost
+                       'fine_grinding': 165.38,            #USD/tonne, initial cost
+                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'shred_transpo_cost': 0.08,         #USD/tonne-km
+                       'coarse_grind_yield': 1.0,          #unitless
+                       'fine_grind_yield': 0.7,            #unitless
+                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_clink_revenue': -10.37,        #USD/tonne
+                       'rec_rawmat_strategic_value': 0.0,  #USD/tonne
+                       'rec_clink_strategic_value': 0.0}   #USD/tonne
+
+    mc_cost_params = {'recycling_learning_rate': 0.05,     #unitless
+                       'coarse_grinding_loc': coarse_grind, #'onsite' or 'facility'
+                       'distances':dist_df,                #km
+                       'coarse_grinding_onsite': 106.40,    #USD/tonne, initial cost
+                       'coarse_grinding_facility': 106.40,  #USD/tonne, initial cost
+                       'fine_grinding': 165.38,            #USD/tonne, initial cost
+                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'shred_transpo_cost': 0.08,         #USD/tonne-km
+                       'coarse_grind_yield': 1.0,          #unitless
+                       'fine_grind_yield': 0.7,            #unitless
+                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_clink_revenue': -10.37,        #USD/tonne
+                       'rec_rawmat_strategic_value': 0.0,  #USD/tonne
+                       'rec_clink_strategic_value': 0.0}   #USD/tonne
+
+    hc_cost_params = {'recycling_learning_rate': 0.05,     #unitless
+                       'coarse_grinding_loc': coarse_grind, #'onsite' or 'facility'
+                       'distances':dist_df,                #km
+                       'coarse_grinding_onsite': 91.51,    #USD/tonne, initial cost
+                       'coarse_grinding_facility': 91.51,  #USD/tonne, initial cost
+                       'fine_grinding': 165.38,            #USD/tonne, initial cost
+                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'shred_transpo_cost': 0.08,         #USD/tonne-km
+                       'coarse_grind_yield': 1.0,          #unitless
+                       'fine_grind_yield': 0.7,            #unitless
+                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_clink_revenue': -10.37,        #USD/tonne
+                       'rec_rawmat_strategic_value': 0.0,  #USD/tonne
+                       'rec_clink_strategic_value': 0.0}   #USD/tonne
+
+    if scenario == 'bau':
+        params=bau_cost_params
+    elif scenario == 'mc':
+        params=mc_cost_params
+    elif scenario == 'hc':
+        params=hc_cost_params
+    else:
+        params=bau_cost_params
+
+    print("Scenario " + scenario + ':\n')
+
+    # create the Context
+    print("Creating Context...\n")
+    context = Context(min_year=start_yr, max_timesteps=timesteps_per_year*(end_yr-start_yr)+1,
+                      cost_params=params)
+    context.populate(components, lifespan_fns)
+    print("Context created.\n")
+
+    # run the DES model and get all material inventories
+    print("Model run starting...\n")
+    all_inventories = context.run()
+    print("Model run complete.\n")
+
+    print("Postprocessing files...\n")
+    postprocess_df(inventory_bundle=all_inventories,
+                   scenario_name=scenario,
+                   coarse_grind_loc=coarse_grind,
+                   turb_recfacility_dist=turb_rec)
+    print("Postprocessing complete.\n")
+
+
+
+def run_suite(turb_rec:float, turb_cement:float, coarse_grind:str):
+
+    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, turb_cement],
+                                          [69.2, 0.0, 1.6, 4.8],
+                                          [turb_rec,  1.6,  0.0,   217.3],
+                                          [turb_cement, 4.8,  217.3, 0.0]]),
                            columns=['turbine', 'landfill',
                                     'recycling facility', 'cement plant'],
                            index=['turbine', 'landfill',
@@ -217,11 +309,14 @@ def run_suite(turb_rec:float, coarse_grind:str):
         print("Postprocessing complete.\n")
 
 
+# scenario def for debugging
+run_once(scenario='bau', turb_rec=69.2, turb_cement=204.0, coarse_grind='onsite')
+
 # vary the km between the turbine location and the landfill
 # vary the location of the coarse grinding
-run_suite(turb_rec=9.0, coarse_grind='onsite')
-run_suite(turb_rec=9.0, coarse_grind='facility')
-run_suite(turb_rec=69.2, coarse_grind='onsite')
-run_suite(turb_rec=69.2, coarse_grind='facility')
-run_suite(turb_rec=765.0, coarse_grind='onsite')
-run_suite(turb_rec=765.0, coarse_grind='facility')
+run_suite(turb_rec=9.0, turb_cement=187.0, coarse_grind='onsite')
+run_suite(turb_rec=9.0, turb_cement=187.0, coarse_grind='facility')
+run_suite(turb_rec=69.2, turb_cement=204.0,coarse_grind='onsite')
+run_suite(turb_rec=69.2, turb_cement=204.0, coarse_grind='facility')
+run_suite(turb_rec=765.0, turb_cement=803.0, coarse_grind='onsite')
+run_suite(turb_rec=765.0, turb_cement=803.0, coarse_grind='facility')
