@@ -215,17 +215,15 @@ def postprocess_df(inventory_bundle,
             new_df.to_csv(filename,
                           header=False, mode='a+')
 
-def run_once(scenario:str, turb_rec:float, turb_cement:float,
-             coarse_grind:str):
+def run_once(scenario:str, turb_rec:float, turb_cement:float, coarse_grind:str):
 
-    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, turb_cement],
-                                          [69.2, 0.0, 1.6, 4.8],
-                                          [turb_rec,  1.6,  0.0,   217.3],
-                                          [turb_cement, 4.8,  217.3, 0.0]]),
-                           columns=['turbine', 'landfill',
-                                    'recycling facility', 'cement plant'],
-                           index=['turbine', 'landfill',
-                                  'recycling facility', 'cement plant'])
+    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, turb_cement, turb_cement],
+                                          [69.2, 0.0, 1.6, 4.8, 4.8],
+                                          [turb_rec,  1.6,  0.0,   217.3, 217.3],
+                                          [turb_cement, 4.8,  217.3, 0.0, 0.0],
+                                          [turb_cement, 4.8, 217.3, 0.0, 0.0]]),
+                           columns=['turbine', 'landfill', 'recycling facility', 'cement plant', 'next use facility'],
+                           index=['turbine', 'landfill', 'recycling facility', 'cement plant', 'next use facility'])
 
 
     bau_cost_params = {'recycling_learning_rate': 0.05,    #unitless
@@ -234,11 +232,11 @@ def run_once(scenario:str, turb_rec:float, turb_cement:float,
                        'coarse_grinding_onsite': 121.28,   #USD/tonne, initial cost
                        'coarse_grinding_facility': 121.28, #USD/tonne, initial cost
                        'fine_grinding': 165.38,            #USD/tonne, initial cost
-                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'onsite_segmenting_cost': 27.56,      #USD/tonne
                        'shred_transpo_cost': 0.08,         #USD/tonne-km
                        'coarse_grind_yield': 1.0,          #unitless
                        'fine_grind_yield': 0.7,            #unitless
-                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_rawmat_revenue': -242.56,      #USD/tonne
                        'rec_clink_revenue': -10.37,        #USD/tonne
                        'rec_rawmat_strategic_value': 0.0,  #USD/tonne
                        'rec_clink_strategic_value': 0.0}   #USD/tonne
@@ -248,12 +246,12 @@ def run_once(scenario:str, turb_rec:float, turb_cement:float,
                        'distances':dist_df,                #km
                        'coarse_grinding_onsite': 106.40,    #USD/tonne, initial cost
                        'coarse_grinding_facility': 106.40,  #USD/tonne, initial cost
-                       'fine_grinding': 165.38,            #USD/tonne, initial cost
-                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'fine_grinding': 143.33,            #USD/tonne, initial cost
+                       'onsite_segmenting_cost': 27.56,      #USD/tonne
                        'shred_transpo_cost': 0.08,         #USD/tonne-km
                        'coarse_grind_yield': 1.0,          #unitless
                        'fine_grind_yield': 0.7,            #unitless
-                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_rawmat_revenue': -272.88,      #USD/tonne
                        'rec_clink_revenue': -10.37,        #USD/tonne
                        'rec_rawmat_strategic_value': 0.0,  #USD/tonne
                        'rec_clink_strategic_value': 0.0}   #USD/tonne
@@ -263,12 +261,12 @@ def run_once(scenario:str, turb_rec:float, turb_cement:float,
                        'distances':dist_df,                #km
                        'coarse_grinding_onsite': 91.51,    #USD/tonne, initial cost
                        'coarse_grinding_facility': 91.51,  #USD/tonne, initial cost
-                       'fine_grinding': 165.38,            #USD/tonne, initial cost
-                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'fine_grinding': 121.28,            #USD/tonne, initial cost
+                       'onsite_segmenting_cost': 27.56,      #USD/tonne
                        'shred_transpo_cost': 0.08,         #USD/tonne-km
                        'coarse_grind_yield': 1.0,          #unitless
                        'fine_grind_yield': 0.7,            #unitless
-                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_rawmat_revenue': -303.20,      #USD/tonne
                        'rec_clink_revenue': -10.37,        #USD/tonne
                        'rec_rawmat_strategic_value': 0.0,  #USD/tonne
                        'rec_clink_strategic_value': 0.0}   #USD/tonne
@@ -304,19 +302,15 @@ def run_once(scenario:str, turb_rec:float, turb_cement:float,
                    turb_cement_loc=turb_cement)
     print("Postprocessing complete.\n")
 
-
-
 def run_suite(turb_rec:float, turb_cement:float, coarse_grind:str):
 
-    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, turb_cement],
-                                          [69.2, 0.0, 1.6, 4.8],
-                                          [turb_rec,  1.6,  0.0,   217.3],
-                                          [turb_cement, 4.8,  217.3, 0.0]]),
-                           columns=['turbine', 'landfill',
-                                    'recycling facility', 'cement plant'],
-                           index=['turbine', 'landfill',
-                                  'recycling facility', 'cement plant'])
-
+    dist_df = pd.DataFrame(data=np.array([[0.0, 69.2, turb_rec, turb_cement, turb_cement],
+                                          [69.2, 0.0, 1.6, 4.8, 4.8],
+                                          [turb_rec,  1.6,  0.0,   217.3, 217.3],
+                                          [turb_cement, 4.8,  217.3, 0.0, 0.0],
+                                          [turb_cement, 4.8, 217.3, 0.0, 0.0]]),
+                           columns=['turbine', 'landfill', 'recycling facility', 'cement plant', 'next use facility'],
+                           index=['turbine', 'landfill', 'recycling facility', 'cement plant', 'next use facility'])
 
     bau_cost_params = {'recycling_learning_rate': 0.05,    #unitless
                        'coarse_grinding_loc': coarse_grind, #'onsite' or 'facility'
@@ -324,11 +318,11 @@ def run_suite(turb_rec:float, turb_cement:float, coarse_grind:str):
                        'coarse_grinding_onsite': 121.28,   #USD/tonne, initial cost
                        'coarse_grinding_facility': 121.28, #USD/tonne, initial cost
                        'fine_grinding': 165.38,            #USD/tonne, initial cost
-                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'onsite_segmenting_cost': 27.56,      #USD/tonne
                        'shred_transpo_cost': 0.08,         #USD/tonne-km
                        'coarse_grind_yield': 1.0,          #unitless
                        'fine_grind_yield': 0.7,            #unitless
-                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_rawmat_revenue': -242.56,      #USD/tonne
                        'rec_clink_revenue': -10.37,        #USD/tonne
                        'rec_rawmat_strategic_value': 0.0,  #USD/tonne
                        'rec_clink_strategic_value': 0.0}   #USD/tonne
@@ -338,12 +332,12 @@ def run_suite(turb_rec:float, turb_cement:float, coarse_grind:str):
                        'distances':dist_df,                #km
                        'coarse_grinding_onsite': 106.40,    #USD/tonne, initial cost
                        'coarse_grinding_facility': 106.40,  #USD/tonne, initial cost
-                       'fine_grinding': 165.38,            #USD/tonne, initial cost
-                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'fine_grinding': 143.33,            #USD/tonne, initial cost
+                       'onsite_segmenting_cost': 27.56,      #USD/tonne
                        'shred_transpo_cost': 0.08,         #USD/tonne-km
                        'coarse_grind_yield': 1.0,          #unitless
                        'fine_grind_yield': 0.7,            #unitless
-                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_rawmat_revenue': -272.88,      #USD/tonne
                        'rec_clink_revenue': -10.37,        #USD/tonne
                        'rec_rawmat_strategic_value': 0.0,  #USD/tonne
                        'rec_clink_strategic_value': 0.0}   #USD/tonne
@@ -353,12 +347,12 @@ def run_suite(turb_rec:float, turb_cement:float, coarse_grind:str):
                        'distances':dist_df,                #km
                        'coarse_grinding_onsite': 91.51,    #USD/tonne, initial cost
                        'coarse_grinding_facility': 91.51,  #USD/tonne, initial cost
-                       'fine_grinding': 165.38,            #USD/tonne, initial cost
-                       'onsite_size_red_cost': 27.56,      #USD/tonne
+                       'fine_grinding': 121.28,            #USD/tonne, initial cost
+                       'onsite_segmenting_cost': 27.56,      #USD/tonne
                        'shred_transpo_cost': 0.08,         #USD/tonne-km
                        'coarse_grind_yield': 1.0,          #unitless
                        'fine_grind_yield': 0.7,            #unitless
-                       'rec_rawmat_revenue': -191.02,      #USD/tonne
+                       'rec_rawmat_revenue': -303.20,      #USD/tonne
                        'rec_clink_revenue': -10.37,        #USD/tonne
                        'rec_rawmat_strategic_value': 0.0,  #USD/tonne
                        'rec_clink_strategic_value': 0.0}   #USD/tonne
