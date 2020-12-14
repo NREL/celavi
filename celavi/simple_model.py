@@ -524,7 +524,14 @@ class Context:
         self.cost_history = {'year': [],
                              'landfilling cost': [],
                              'recycling to clinker cost': [],
-                             'recycling to raw material cost': []}
+                             'recycling to raw material cost': [],
+                             'blade removal cost, per tonne': [],
+                             'blade removal cost, per blade': [],
+                             'blade mass, tonne': [],
+                             'coarse grinding cost': [],
+                             'fine grinding cost': [],
+                             'segment transpo cost': [],
+                             'landfill tipping fee': []}
 
         # initialize dictionary to hold transportation requirements in each step
         self.transpo_eol = {'year': [],
@@ -1036,6 +1043,13 @@ class Context:
             self.cost_history['landfilling cost'].append(landfill_pathway)
             self.cost_history['recycling to clinker cost'].append(recycle_to_clink_pathway)
             self.cost_history['recycling to raw material cost'].append(recycle_to_rawmat_pathway)
+            self.cost_history['blade removal cost, per tonne'].append(blade_removal_cost)
+            self.cost_history['blade removal cost, per blade'].append(component.mass_tonnes * blade_removal_cost)
+            self.cost_history['blade mass, tonne'].append(component.mass_tonnes)
+            self.cost_history['coarse grinding cost'].append(coarse_grind_process)
+            self.cost_history['fine grinding cost'].append(fine_grind_process)
+            self.cost_history['segment transpo cost'].append(segment_transpo_cost)
+            self.cost_history['landfill tipping fee'].append(landfill_tipping_fee)
 
         elif (self.cost_history['landfilling cost'][-1] != landfill_pathway) or\
                 (self.cost_history['recycling to clinker cost'][-1] != recycle_to_clink_pathway) or\
@@ -1045,6 +1059,13 @@ class Context:
             self.cost_history['landfilling cost'].append(landfill_pathway)
             self.cost_history['recycling to clinker cost'].append(recycle_to_clink_pathway)
             self.cost_history['recycling to raw material cost'].append(recycle_to_rawmat_pathway)
+            self.cost_history['blade removal cost, per tonne'].append(blade_removal_cost)
+            self.cost_history['blade removal cost, per blade'].append(component.mass_tonnes * blade_removal_cost)
+            self.cost_history['blade mass, tonne'].append(component.mass_tonnes)
+            self.cost_history['coarse grinding cost'].append(coarse_grind_process)
+            self.cost_history['fine grinding cost'].append(fine_grind_process)
+            self.cost_history['segment transpo cost'].append(segment_transpo_cost)
+            self.cost_history['landfill tipping fee'].append(landfill_tipping_fee)
 
         # append the three transportation requirements to the end of the transpo-eol
         # dict
