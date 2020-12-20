@@ -11,15 +11,30 @@ np.random.seed(123)
 # read in input data as-is
 _lci_input = pd.read_csv('lci.csv')
 
-# Melt to a dataframe with columns: input unit, input name, material,
+# Melt to a dataframe with columns: flow unit, flow name, material, direction,
 # process, quantity
 # ignore original index columns created when data was read in
 lci_melt = pd.melt(_lci_input,
-                   id_vars=['input unit', 'input name', 'material'],
+                   id_vars=['flow unit', 'flow name', 'material', 'direction'],
                    value_vars=['manufacturing',
-                               'coarse grinding', 'fine grinding',
+                               'recycle to clinker',
+                               'recycle to raw material',
                                'landfilling'],
                    var_name='process', value_name='quantity').dropna()
+
+# emission factors for calculating process-level emissions from cement
+# co-processing
+# COAL factors are in KG / KG
+# GFRP factors are in KG / METRIC TON
+# this is so the mass flows themselves don't need to be converted during the calculation
+em_factors = pd.DataFrame(data=[['kg', 'carbon dioxide, fossil', 'coal', 'output', 'manufacturing', 2.562873063],
+                                ['kg', 'methane',                'coal', 'output', 'manufacturing', 0.00302033],
+                                ['kg', 'dinitrogen monoxide',    'coal', 'output', 'manufacturing', 4.40924e-5],
+                                ['kg', 'carbon dioxide, fossil', 'glass fiber reinforced polymer', 'output', 'manufacturing', 994.2845175],
+                                ['kg', 'methane',                'glass fiber reinforced polymer', 'output', 'manufacturing', 0.350534896],
+                                ['kg', 'dinitrogen monoxide',    'glass fiber reinforced polymer', 'output', 'manufacturing', 0.046297062]],
+                          index=None,
+                          columns=['flow unit', 'flow name', 'material', 'direction', 'process', 'quantity'])
 
 usgs = pd.read_csv("TX_input_data_with_masses.csv")
 
@@ -106,12 +121,14 @@ def postprocess_df(inventory_bundle,
                    coarse_grind_loc: str,
                    turb_recfacility_dist: float,
                    turb_cement_loc: float,
-                   lci=lci_melt):
+                   lci=lci_melt,
+                   ems=em_factors):
     """
 
     """
 
-    # postprocess the virgin material inventory (inputs) to calculate LCI by timestep
+    # postprocess the virgin material inventory (inputs) to calculate
+    # cumulative material flows by timestep
     virgin_mass = -1.0 * inventory_bundle['virgin_material_inventory'][['blade', 'foundation']].rename(columns={'blade': 'glass fiber reinforced polymer', 'foundation': 'concrete'})
     virgin_mass['year'] =  virgin_mass.index * 0.25 + 2000.0
 
@@ -129,7 +146,7 @@ def postprocess_df(inventory_bundle,
                                value_vars=['glass fiber reinforced polymer'],
                                var_name='material', value_name='cumul_mass')
     rec_clinker_melt['mass'] = rec_clinker_melt['cumul_mass'].diff()
-    rec_clinker_melt['process'] = 'coarse grinding'
+    rec_clinker_melt['process'] = 'recycle to clinker'
 
     rec_rawmat_mass = inventory_bundle['recycle_to_raw_material_inventory'][['blade']].rename(columns={'blade': 'glass fiber reinforced polymer'})
     rec_rawmat_mass['year'] = rec_rawmat_mass.index * 0.25 + 2000.0
@@ -138,7 +155,7 @@ def postprocess_df(inventory_bundle,
                                value_vars=['glass fiber reinforced polymer'],
                                var_name='material', value_name='cumul_mass')
     rec_rawmat_melt['mass'] = rec_rawmat_melt['cumul_mass'].diff()
-    rec_rawmat_melt['process'] = 'fine grinding'
+    rec_rawmat_melt['process'] = 'recycle to raw material'
 
     landfill_mass = inventory_bundle['landfill_material_inventory'][['blade']].rename(columns={'blade': 'glass fiber reinforced polymer'})
     landfill_mass['year'] = landfill_mass.index * 0.25 + 2000.0
@@ -150,70 +167,224 @@ def postprocess_df(inventory_bundle,
     landfill_melt['process'] = 'landfilling'
 
     # aggregate together the various inventories
-    inventory_lci = virgin_melt.append(rec_clinker_melt,
+    inventory = virgin_melt.append(rec_clinker_melt,
                                        ignore_index=True).append(rec_rawmat_melt,
                                                                  ignore_index=True).append(landfill_melt,
                                                                                            ignore_index=True)
-    inventory_lci.loc[inventory_lci['mass'] < 0.0, 'mass'] = 0.0
 
-    inventory_lci['scenario'] = scenario_name
-    inventory_lci['coarse grinding location'] = coarse_grind_loc
-    inventory_lci['distance to recycling facility'] = turb_recfacility_dist
-    inventory_lci['distance to cement plant'] = turb_cement_loc
+    #.diff turns some initial mass values to negative instead of zero, so set
+    # those to zero
+    inventory.loc[inventory['mass'] < 0.0, 'mass'] = 0.0
+
+    inventory['scenario'] = scenario_name
+    inventory['coarse grinding location'] = coarse_grind_loc
+    inventory['distance to recycling facility'] = turb_recfacility_dist
+    inventory['distance to cement plant'] = turb_cement_loc
+
+    inventory.sort_values(by=['process'],inplace=True)
+
+    # create slightly altered copy of the inventories dataframe for saving
+    inventory_save = inventory.copy()
 
     filename='inventories'
 
     if not os.path.isfile(filename + '.csv'):
-        inventory_lci.to_csv(filename + '.csv',
-                      header=True, mode='a+')
+        inventory_save.to_csv(filename + '.csv',
+                              header=True, mode='a+',
+                              index=False)
     else:
-       inventory_lci.to_csv(filename + '.csv',
-                      header=False, mode='a+')
+       inventory_save.to_csv(filename + '.csv',
+                             header=False, mode='a+',
+                             index=False)
 
+    # calculate input file for pylca
+    pylca_mat = inventory.merge(lci, how='outer', on=['material','process']).dropna()
+    pylca_mat['flow quantity'] = pylca_mat['mass'] * pylca_mat['quantity']
 
-    lci_out = inventory_lci.merge(lci, how='outer', on=['material','process']).dropna()
-    lci_out['input quantity'] = lci_out['mass'] * lci_out['quantity']
+    ## perform displacement calculations
 
-    filename='celavi-results-lci'
+    # convert years to integer: manufacturing only happens in integer valued
+    # timesteps (ie 2000, 2001), so other EOL processes need to be summed to
+    # the annual level to calculate offsets correctly
+    pylca_mat['year'] = pylca_mat['year'].astype(int)
+    pylca_mat = pylca_mat.groupby(['year', 'material', 'process', 'scenario',
+                                   'coarse grinding location',
+                                   'distance to recycling facility',
+                                   'distance to cement plant',
+                                   'flow unit', 'flow name', 'direction',
+                                   'quantity'],as_index=False).sum().copy()
 
-    if not os.path.isfile(filename + '.csv'):
-        lci_out.to_csv(filename + '.csv',
-                      header=True, mode='a+')
-    else:
-       lci_out.to_csv(filename + '.csv',
-                      header=False, mode='a+')
+    # remove rows with zero flow quantity
+    # these are inactive pathways and don't cause impacts
+    pylca_mat = pylca_mat.loc[pylca_mat['flow quantity'] != 0].copy()
 
-    # find the rows where process = coarse grinding (only gfrp has this process)
-    # pull the years from these rows
+    # remove columns that we don't need for calculating impacts
+    # BN that 'quantity' is the amount per ton material from the input LCI file,
+    # not the total amount of input to the system
+    pylca_mat.drop(columns=['cumul_mass', 'quantity'], inplace=True)
 
-    # rec_clinker_mass = inventory_bundle['recycle_to_clinker_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
-    # rec_rawmat_mass = inventory_bundle['recycle_to_raw_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
-    # landfill_mass = inventory_bundle['landfill_material_inventory'].rename(columns={'blade': 'blade mass', 'foundation': 'foundation mass'})
+    for i in pylca_mat.year.unique():
+        _yr_pylca = pylca_mat.loc[pylca_mat['year']==i]
+        if 'recycle to clinker' in _yr_pylca.process.unique():
+            # from Nagle et al: 1 kg blades can simultaneously displace 0.3
+            # kg coal and 0.155 kg SiO2/sand and gravel
+            _max_gfrp_coal = _yr_pylca.loc[(_yr_pylca['material']=='glass fiber reinforced polymer') &
+                                               (_yr_pylca['process']=='recycle to clinker'),
+                                               'mass'] * 0.3
+            # blade mass in metric tons. 1000 kg blade material to displace 560 kg clinker material
+            _max_gfrp_sandandgravel = _yr_pylca.loc[(_yr_pylca['material']=='glass fiber reinforced polymer') &
+                                               (_yr_pylca['process']=='recycle to clinker'),
+                                               'mass'] * 0.155
+            # convert kg to metric ton, can displace max 30%
+            _max_coal_capacity = _yr_pylca.loc[(_yr_pylca['material']=='concrete') &
+                                               (_yr_pylca['process']=='manufacturing') &
+                                               (_yr_pylca['flow name']=='coal'),
+                                               'flow quantity'] / 1000.0
+            # convert kg to metric ton, can displace max 15.4%
+            _max_sandandgravel_capacity = _yr_pylca.loc[(_yr_pylca['material']=='concrete') &
+                                                        (_yr_pylca['process']=='manufacturing') &
+                                                        (_yr_pylca['flow name']=='sand and gravel'),
+                                                        'flow quantity'] / 1000.0
 
-    inventory_list = ['cost_history',
-                      'transpo_eol']
+            # if there is sufficient capcity to use all allowed gfrp as sand and gravel,
+            # reduce the 'flow quantity' for sand and gravel by 15.5%
+            if any(_max_sandandgravel_capacity.values >= _max_gfrp_sandandgravel.values):
+                pylca_mat.loc[(pylca_mat['year']==i) &
+                              (pylca_mat['material']=='concrete') &
+                              (pylca_mat['process']=='manufacturing') &
+                              (pylca_mat['flow name']=='sand and gravel'),
+                              'flow quantity'] = pylca_mat.loc[(pylca_mat['year']==i) &
+                                                               (pylca_mat['material']=='concrete') &
+                                                               (pylca_mat['process']=='manufacturing') &
+                                                               (pylca_mat['flow name']=='sand and gravel'),
+                                                               'flow quantity'] - _max_gfrp_sandandgravel.values
+            # if there is NOT sufficient capacity to use all allowed gfrp as
+            # sand and gravel, reduce the sand and gravel 'flow quantity' by the maximum
+            # amount - some clinker is left over but @note this is not currently
+            # accounted for
+            else:
+                pylca_mat.loc[(pylca_mat['year']==i) &
+                              (pylca_mat['material']=='concrete') &
+                              (pylca_mat['process']=='manufacturing') &
+                              (pylca_mat['flow name']=='sand and gravel'),
+                              'flow quantity'] = (1-0.155) * pylca_mat.loc[(pylca_mat['year']==i) &
+                                                                           (pylca_mat['material']=='concrete') &
+                                                                           (pylca_mat['process']=='manufacturing') &
+                                                                           (pylca_mat['flow name']=='sand and gravel'),
+                                                                           'flow quantity']
 
+            if any(_max_coal_capacity.values >= _max_gfrp_coal.values):
+                pylca_mat.loc[(pylca_mat['year']==i) &
+                              (pylca_mat['material']=='concrete') &
+                              (pylca_mat['process']=='manufacturing') &
+                              (pylca_mat['flow name']=='coal'),
+                              'flow quantity'] = pylca_mat.loc[(pylca_mat['year']==i) &
+                                                               (pylca_mat['material']=='concrete') &
+                                                               (pylca_mat['process']=='manufacturing') &
+                                                               (pylca_mat['flow name']=='coal'),
+                                                               'flow quantity'] - _max_gfrp_coal.values
+                pylca_mat.loc[(pylca_mat['year'] == i) &
+                              (pylca_mat['material'] == 'concrete') &
+                              (pylca_mat['process'] == 'manufacturing') &
+                              (pylca_mat['flow name'] == 'carbon dioxide, fossil'),
+                              'flow quantity'] = (1 - (_max_gfrp_coal.values / _max_coal_capacity.values) * 0.16) * pylca_mat.loc[(pylca_mat['year'] == i) &
+                                                                                                                                  (pylca_mat['material'] == 'concrete') &
+                                                                                                                                  (pylca_mat['process'] == 'manufacturing') &
+                                                                                                                                  (pylca_mat['flow name'] == 'carbon dioxide, fossil'),
+                                                                                                                                  'flow quantity']
+
+            else:
+                pylca_mat.loc[(pylca_mat['year']==i) &
+                              (pylca_mat['material']=='concrete') &
+                              (pylca_mat['process']=='manufacturing') &
+                              (pylca_mat['flow name']=='coal'),
+                              'flow quantity'] = (1 - 0.3) * pylca_mat.loc[(pylca_mat['year']==i) &
+                                                                           (pylca_mat['material']=='concrete') &
+                                                                           (pylca_mat['process']=='manufacturing') &
+                                                                           (pylca_mat['flow name']=='coal'),
+                                                                           'flow quantity']
+                pylca_mat.loc[(pylca_mat['year'] == i) &
+                              (pylca_mat['material'] == 'concrete') &
+                              (pylca_mat['process'] == 'manufacturing') &
+                              (pylca_mat['flow name'] == 'carbon dioxide, fossil'),
+                              'flow quantity'] = (1 - 0.16) * pylca_mat.loc[(pylca_mat['year'] == i) &
+                                                                            (pylca_mat['material'] == 'concrete') &
+                                                                            (pylca_mat['process'] == 'manufacturing') &
+                                                                            (pylca_mat['flow name'] == 'carbon dioxide, fossil'),
+                                                                            'flow quantity']
+
+    pylca_mat.drop(columns=['mass'],axis=1,inplace=True)
+    # get the cost history file saved, and append transportation to the
+    # pylca input file
+    inventory_list = ['cost_history', 'transpo_eol']
     for df_name in inventory_list:
+        # postprocess, melt and save the cost history
         if df_name == 'cost_history':
-            new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year']).mean()
+            new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year'],
+                                                                               as_index=False).mean()
+            new_df['scenario'] = scenario_name
+            new_df['coarse grinding location'] = coarse_grind_loc
+            new_df['distance to recycling facility'] = turb_recfacility_dist
+            new_df['distance to cement plant'] = turb_cement_loc
+
+            df_melt = pd.melt(new_df,
+                              id_vars=['year', 'scenario',
+                                       'coarse grinding location',
+                                       'distance to recycling facility',
+                                       'distance to cement plant'],
+                              value_vars=['landfilling cost',
+                                          'recycling to clinker cost',
+                                          'recycling to raw material cost',
+                                          'blade removal cost, per tonne',
+                                          'blade removal cost, per blade',
+                                          'blade mass, tonne',
+                                          'coarse grinding cost',
+                                          'fine grinding cost',
+                                          'segment transpo cost',
+                                          'landfill tipping fee'],
+                              var_name='pathway', value_name='cost')
+
             filename='cost-histories.csv'
+
+            if not os.path.isfile(filename):
+                df_melt.to_csv(filename,
+                               header=True, mode='a+',
+                               index=False)
+            else:
+                df_melt.to_csv(filename,
+                               header=False, mode='a+',
+                               index=False)
         else:
-            new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year']).sum()
-            filename='transpo-eol.csv'
+            new_df = pd.DataFrame.from_dict(inventory_bundle[df_name]).groupby(['year'],
+                                                                               as_index=False).sum()
+            new_df['year'] = new_df['year'].astype(int)
+            new_df = new_df.groupby(['year'], as_index=False).sum()
+            new_df['scenario'] = scenario_name
+            new_df['coarse grinding location'] = coarse_grind_loc
+            new_df['distance to recycling facility'] = turb_recfacility_dist
+            new_df['distance to cement plant'] = turb_cement_loc
+            new_df['flow unit'] = 'tonne-km'
+            new_df['flow name'] = 'transportation'
+            new_df['direction'] = 'input'
+            new_df['material'] = 'glass fiber reinforced polymer'
+            new_df['process'] = 'transportation'
+            new_df.rename(columns={'total eol transportation': "flow quantity"},
+                          inplace=True)
 
+            # append to the existing pylca input dataframe
+            pylca_input = pylca_mat.copy().append(new_df, ignore_index=True)
 
-        new_df['scenario'] = scenario_name
-        new_df['coarse grinding location'] = coarse_grind_loc
-        new_df['distance to recycling facility'] = turb_recfacility_dist
-        new_df['distance to cement plant'] = turb_cement_loc
-        new_df['inventory'] = df_name
+            # save the pylca input dataframe as .csv
+            filename = 'celavi-pylca-input'
+            if not os.path.isfile(filename + '.csv'):
+                pylca_input.to_csv(filename + '.csv',
+                               header=True, mode='a+',
+                               index=False)
+            else:
+                pylca_input.to_csv(filename + '.csv',
+                               header=False, mode='a+',
+                               index=False)
 
-        if not os.path.isfile(filename):
-            new_df.to_csv(filename,
-                          header=True, mode='a+')
-        else:
-            new_df.to_csv(filename,
-                          header=False, mode='a+')
 
 def run_once(scenario:str, turb_rec:float, turb_cement:float, coarse_grind:str):
 
