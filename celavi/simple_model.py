@@ -905,7 +905,7 @@ class Context:
                                                     pars['distances']['cement plant']['turbine']])
 
             # total pathway transpo, tonne-km
-            recycle_to_clink_transpo = component.mass_tonne *\
+            recycle_to_clink_transpo = component.mass_tonnes *\
                                        np.sum([ # segments from turbine to recycling facility
                                                 pars['distances']['turbine']['recycling facility'],
                                                 # waste shred from recycling facility to landfill
@@ -1007,7 +1007,7 @@ class Context:
                                                     pars['distances']['cement plant']['turbine']])
 
             # total pathway transpo, tonne-km
-            recycle_to_clink_transpo = component.mass_tonne *\
+            recycle_to_clink_transpo = component.mass_tonnes *\
                                        np.sum([ # segments from turbine to recycling facility
                                                 pars['distances']['turbine']['recycling facility'],
                                                 # waste shred from recycling facility to landfill
