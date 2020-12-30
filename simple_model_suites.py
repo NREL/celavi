@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
-import matplotlib.pyplot as plt
+
 from scipy.stats import weibull_min
 
 from celavi.simple_model import Context
@@ -21,20 +21,6 @@ lci_melt = pd.melt(_lci_input,
                                'recycle to raw material',
                                'landfilling'],
                    var_name='process', value_name='quantity').dropna()
-
-# emission factors for calculating process-level emissions from cement
-# co-processing
-# COAL factors are in KG / KG
-# GFRP factors are in KG / METRIC TON
-# this is so the mass flows themselves don't need to be converted during the calculation
-em_factors = pd.DataFrame(data=[['kg', 'carbon dioxide, fossil', 'coal', 'output', 'manufacturing', 2.562873063],
-                                ['kg', 'methane',                'coal', 'output', 'manufacturing', 0.00302033],
-                                ['kg', 'dinitrogen monoxide',    'coal', 'output', 'manufacturing', 4.40924e-5],
-                                ['kg', 'carbon dioxide, fossil', 'glass fiber reinforced polymer', 'output', 'manufacturing', 994.2845175],
-                                ['kg', 'methane',                'glass fiber reinforced polymer', 'output', 'manufacturing', 0.350534896],
-                                ['kg', 'dinitrogen monoxide',    'glass fiber reinforced polymer', 'output', 'manufacturing', 0.046297062]],
-                          index=None,
-                          columns=['flow unit', 'flow name', 'material', 'direction', 'process', 'quantity'])
 
 usgs = pd.read_csv("TX_input_data_with_masses.csv")
 
@@ -121,8 +107,7 @@ def postprocess_df(inventory_bundle,
                    coarse_grind_loc: str,
                    turb_recfacility_dist: float,
                    turb_cement_loc: float,
-                   lci=lci_melt,
-                   ems=em_factors):
+                   lci=lci_melt):
     """
 
     """
