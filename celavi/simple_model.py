@@ -4,14 +4,14 @@ import simpy
 import pandas as pd
 import numpy as np
 import pysd  # type: ignore
-import os
+
 import warnings
-import pdb
+
 from .unique_identifier import UniqueIdentifier
 from .states import StateTransition, NextState
 from .inventory import Inventory
 
-import pdb
+
 class Component:
     """
     This class models a component in the discrete event simulation (DES) model.
@@ -54,7 +54,7 @@ class Component:
         xlong: float
             The longitude of the component.
 
-        xlat: float
+        ylat: float
             The latitude of the component.
 
         year: int
@@ -142,6 +142,9 @@ class Component:
 
         component: Component
             The component which is being landfilled.
+
+        timestep: int
+            Current model timestep
         """
         _yield = context.cost_params['fine_grind_yield'] * context.cost_params['coarse_grind_yield']
         _loss = 1 - _yield
@@ -159,7 +162,7 @@ class Component:
             item_name=component.kind, quantity=_loss*component.mass_tonnes, timestep=timestep)
 
     @staticmethod
-    def recycle_to_clinker(context, component, timestep: int) -> None:
+    def recycle_to_clinker(context, component, timestep:int) -> None:
         """
         Recycles a component to clinker by incrementing the material in
         recycling-to-clinker storage.
@@ -175,6 +178,9 @@ class Component:
 
         component: Component
             The component which is being landfilled.
+
+        timestep: int
+            Current model timestep
         """
         _yield = context.cost_params['coarse_grind_yield']
         _loss = 1.0 - _yield
@@ -191,7 +197,7 @@ class Component:
             item_name=component.kind, quantity=_loss*component.mass_tonnes, timestep=timestep)
 
     @staticmethod
-    def landfill(context, component, timestep: int) -> None:
+    def landfill(context, component, timestep:int) -> None:
         """
         Landfills a component by incrementing the material in the landfill.
 
@@ -212,6 +218,9 @@ class Component:
 
         component: Component
             The component which is being landfilled.
+
+        timestep:int
+            Current model timestep
         """
         # print(f"Landfill process component {component.id}, kind {component.kind} timestep={timestep}")
         context.landfill_component_inventory.increment_quantity(
@@ -222,7 +231,7 @@ class Component:
         )
 
     @staticmethod
-    def use(context, component, timestep: int) -> None:
+    def use(context, component, timestep:int) -> None:
         """
         Makes a material enter the use phases from another state.
 
@@ -239,6 +248,9 @@ class Component:
 
         component: Component
             The component which is being landfilled.
+
+        timestep:int
+            Current model timestep
         """
         # print(f"Use process component {component.id}, timestep={timestep}")
         context.use_component_inventory.increment_quantity(
@@ -259,7 +271,7 @@ class Component:
 
 
     @staticmethod
-    def leave_use(context, component, timestep: int):
+    def leave_use(context, component, timestep:int):
         """
         This method decrements the use inventory when a component material leaves use.
 
@@ -275,6 +287,9 @@ class Component:
 
         component: Component
             The component which is being taken out of use.
+
+        timestep: int
+            Current model timestep
         """
         # print(
         #     f"Leave use process component_material {component.id}, timestep={timestep}"
@@ -1148,9 +1163,7 @@ class Context:
             elif component.kind == 'blade' and self.timesteps_to_years(timestep) <= 2020:
                 # this just saves the cost history for the results; everything
                 # still gets landfilled
-                (recycle_to_rawmat_pathway,
-                 recycle_to_clink_pathway,
-                 landfill_pathway) = self.learning_by_doing(component, timestep)
+                self.learning_by_doing(component, timestep)
 
                 _out = "landfilling"
             else:
