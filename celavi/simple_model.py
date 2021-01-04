@@ -397,6 +397,7 @@ class Context:
         min_year: int = 2000,
         max_timesteps: int = 200,
         years_per_timestep: float = 0.25,
+        learning_by_doing_timesteps: int = 1
     ):
         """
         Parameters
@@ -423,6 +424,10 @@ class Context:
             The number of years covered by each timestep. Fractional
             values are allowed for timesteps that have a duration of
             less than one year. Default value is 0.25 or quarters (3 months).
+
+        learning_by_doing_timesteps: int
+            The number of timesteps that happen between each learning by
+            doing recalculation.
         """
 
         if sd_model_filename is not None:
@@ -552,6 +557,14 @@ class Context:
         self.transpo_eol = {'year': [],
                             'total eol transportation': []}
 
+        # These are the costs from the learning by doing model
+        self.learning_by_doing_costs = {
+            "landfilling": 1.0,
+            "recycle_to_clink_pathway": 2.0,
+            "recycle_to_rawmat_pathway": 2.0
+        }
+
+        self.learning_by_doing_timesteps = learning_by_doing_timesteps
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -687,8 +700,7 @@ class Context:
 
         return _cost
 
-
-    def learning_by_doing(self, component, timestep):
+    def learning_by_doing(self, timestep, mass_tonnes):
         """
         This function so far only gets called if component.kind=='blade'
         returns the total pathway cost for a single blade
@@ -697,6 +709,7 @@ class Context:
 
         # rename the cost parameter dictionary for more compact equation writing
         pars = self.cost_params
+        lbdc = self.learning_by_doing_costs
 
         # needed for capacity expansion
         # blade_rec_count_ts = self.recycle_to_raw_component_inventory.component_materials['blade']
@@ -710,11 +723,11 @@ class Context:
 
         # blade removal cost is the same regardless of pathway
         # UNITS: USD/blade / tonnes/blade [=] USD/tonnes
-        blade_removal_cost = self.blade_removal_year(timestep) / component.mass_tonnes
+        blade_removal_cost = self.blade_removal_year(timestep) / mass_tonnes
 
         # segment transportation cost is also the same regardless of pathway
         # UNITS: USD/blade / tonnes/blade [=] USD/tonnes
-        segment_transpo_cost = self.segment_transpo_cost(timestep) / component.mass_tonnes
+        segment_transpo_cost = self.segment_transpo_cost(timestep) / mass_tonnes
 
         # divide out the loss factors that are applied to the inventory
         # entire blades are processed through raw material recycling, but only 70% is kept in the supply chain
@@ -774,7 +787,7 @@ class Context:
                                                     pars['rec_rawmat_revenue']])
 
             # total transportation in tonnes-km
-            recycle_to_rawmat_transpo = component.mass_tonnes * \
+            recycle_to_rawmat_transpo = mass_tonnes * \
                                         np.sum([ # lost shred from turbine to landfill
                                                 (1 - pars['coarse_grind_yield']) *
                                                     pars['distances']['turbine']['landfill'],
@@ -817,7 +830,7 @@ class Context:
                                                     pars['distances']['cement plant']['cement plant']])
 
             # total transportation in tonnes-km
-            recycle_to_clink_transpo = component.mass_tonnes * \
+            recycle_to_clink_transpo = mass_tonnes * \
                                         np.sum([ # lost shred from turbine to landfill
                                                 (1 - pars['coarse_grind_yield']) *
                                                     pars['distances']['turbine']['landfill'],
@@ -841,7 +854,7 @@ class Context:
                                         landfill_tipping_fee])
 
             # total transportation in tonnes-km
-            landfill_transpo = component.mass_tonnes * \
+            landfill_transpo = mass_tonnes * \
                                pars['distances']['turbine']['landfill']
 
         elif pars['coarse_grinding_loc'] == 'facility':
@@ -877,7 +890,7 @@ class Context:
                                                     pars['rec_rawmat_revenue']])
 
             # total pathway transpo, tonne-km
-            recycle_to_rawmat_transpo = component.mass_tonnes *\
+            recycle_to_rawmat_transpo = mass_tonnes *\
                                         np.sum([# segments from turbine to recycling facility
                                                 pars['distances']['turbine']['recycling facility'],
                                                 # waste shred from recycling facility to landfill
@@ -920,7 +933,7 @@ class Context:
                                                     pars['distances']['cement plant']['turbine']])
 
             # total pathway transpo, tonne-km
-            recycle_to_clink_transpo = component.mass_tonnes *\
+            recycle_to_clink_transpo = mass_tonnes *\
                                        np.sum([ # segments from turbine to recycling facility
                                                 pars['distances']['turbine']['recycling facility'],
                                                 # waste shred from recycling facility to landfill
@@ -943,7 +956,7 @@ class Context:
                                         segment_transpo_cost * pars['distances']['turbine']['landfill']])
 
             # total pathway transportation, tonnes-km
-            landfill_transpo = component.mass_tonnes * \
+            landfill_transpo = mass_tonnes * \
                                pars['distances']['turbine']['landfill']
         else:
             warnings.warn('Assuming coarse grinding happens at facility')
@@ -979,7 +992,7 @@ class Context:
                                                     pars['rec_rawmat_revenue']])
 
             # total pathway transpo, tonne-km
-            recycle_to_rawmat_transpo = component.mass_tonnes *\
+            recycle_to_rawmat_transpo = mass_tonnes *\
                                         np.sum([# segments from turbine to recycling facility
                                                 pars['distances']['turbine']['recycling facility'],
                                                 # waste shred from recycling facility to landfill
@@ -1022,7 +1035,7 @@ class Context:
                                                     pars['distances']['cement plant']['turbine']])
 
             # total pathway transpo, tonne-km
-            recycle_to_clink_transpo = component.mass_tonnes *\
+            recycle_to_clink_transpo = mass_tonnes *\
                                        np.sum([ # segments from turbine to recycling facility
                                                 pars['distances']['turbine']['recycling facility'],
                                                 # waste shred from recycling facility to landfill
@@ -1047,7 +1060,7 @@ class Context:
                                         landfill_tipping_fee])
 
             # total pathway transportation, tonnes-km
-            landfill_transpo = component.mass_tonnes * \
+            landfill_transpo = mass_tonnes * \
                                pars['distances']['turbine']['landfill']
 
         # append the three pathway costs to the end of the cost-history dict,
@@ -1059,8 +1072,8 @@ class Context:
             self.cost_history['recycling to clinker cost'].append(recycle_to_clink_pathway)
             self.cost_history['recycling to raw material cost'].append(recycle_to_rawmat_pathway)
             self.cost_history['blade removal cost, per tonne'].append(blade_removal_cost)
-            self.cost_history['blade removal cost, per blade'].append(component.mass_tonnes * blade_removal_cost)
-            self.cost_history['blade mass, tonne'].append(component.mass_tonnes)
+            self.cost_history['blade removal cost, per blade'].append(mass_tonnes * blade_removal_cost)
+            self.cost_history['blade mass, tonne'].append(mass_tonnes)
             self.cost_history['coarse grinding cost'].append(coarse_grind_process)
             self.cost_history['fine grinding cost'].append(fine_grind_process)
             self.cost_history['segment transpo cost'].append(segment_transpo_cost)
@@ -1075,8 +1088,8 @@ class Context:
             self.cost_history['recycling to clinker cost'].append(recycle_to_clink_pathway)
             self.cost_history['recycling to raw material cost'].append(recycle_to_rawmat_pathway)
             self.cost_history['blade removal cost, per tonne'].append(blade_removal_cost)
-            self.cost_history['blade removal cost, per blade'].append(component.mass_tonnes * blade_removal_cost)
-            self.cost_history['blade mass, tonne'].append(component.mass_tonnes)
+            self.cost_history['blade removal cost, per blade'].append(mass_tonnes * blade_removal_cost)
+            self.cost_history['blade mass, tonne'].append(mass_tonnes)
             self.cost_history['coarse grinding cost'].append(coarse_grind_process)
             self.cost_history['fine grinding cost'].append(fine_grind_process)
             self.cost_history['segment transpo cost'].append(segment_transpo_cost)
@@ -1093,6 +1106,11 @@ class Context:
             self.transpo_eol['total eol transportation'].append(recycle_to_clink_transpo)
         else:
             self.transpo_eol['total eol transportation'].append(landfill_transpo)
+
+        # Update learning by doing costs
+        lbdc["recycle_to_rawmat_pathway"] = recycle_to_rawmat_pathway
+        lbdc["recycle_to_clink_pathway"] = recycle_to_clink_pathway
+        lbdc["landfilling"] = landfill_pathway
 
         return recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway
 
@@ -1148,9 +1166,13 @@ class Context:
         if component.state == "use":
             if component.kind == 'blade' and self.timesteps_to_years(timestep) >= 2019.0:
 
-                (recycle_to_rawmat_pathway,
-                 recycle_to_clink_pathway,
-                 landfill_pathway) = self.learning_by_doing(component, timestep)
+                # (recycle_to_rawmat_pathway,
+                #  recycle_to_clink_pathway,
+                #  landfill_pathway) = self.learning_by_doing(component, timestep)
+
+                recycle_to_rawmat_pathway = self.learning_by_doing_costs["recycle_to_rawmat_pathway"]
+                recycle_to_clink_pathway = self.learning_by_doing_costs["recycle_to_clink_pathway"]
+                landfill_pathway = self.learning_by_doing_costs["landfilling"]
 
                 if min(landfill_pathway, recycle_to_clink_pathway,
                        recycle_to_rawmat_pathway) == landfill_pathway:
@@ -1163,7 +1185,7 @@ class Context:
             elif component.kind == 'blade' and self.timesteps_to_years(timestep) <= 2020:
                 # this just saves the cost history for the results; everything
                 # still gets landfilled
-                self.learning_by_doing(component, timestep)
+                #self.learning_by_doing(component, timestep)
 
                 _out = "landfilling"
             else:
@@ -1175,6 +1197,54 @@ class Context:
         else:
             raise ValueError("Components must always be in the state use.")
 
+    def average_blade_mass_tonnes(self, timestep):
+        """
+        Compute the average blade mass in tonnes for every blade in this
+        context.
+
+        Parameters
+        ----------
+        timestep: int
+            The timestep at which this calculation is happening
+
+        Returns
+        -------
+        float
+            The average mass of the blade in tonnes.
+        """
+        total_blade_mass_eol = 0.0
+        total_blade_count_eol = 0
+
+        # Calculate the total mass at EOL
+        total_blade_mass_eol += self.recycle_to_raw_material_inventory.transactions[timestep]["blade"]
+        total_blade_mass_eol += self.recycle_to_clinker_material_inventory.transactions[timestep]["blade"]
+        total_blade_mass_eol += self.landfill_material_inventory.transactions[timestep]["blade"]
+
+        # Calculate the total count at EOL
+        total_blade_count_eol += self.recycle_to_raw_component_inventory.transactions[timestep]["blade"]
+        total_blade_count_eol += self.recycle_to_clinker_component_inventory.transactions[timestep]["blade"]
+        total_blade_count_eol += self.landfill_component_inventory.transactions[timestep]["blade"]
+
+        # Return the average mass for all the blades.
+        if total_blade_count_eol > 0:
+            return total_blade_mass_eol / total_blade_count_eol
+        else:
+            return 1
+
+    def learning_by_doing_process(self, env):
+        """
+        This method contains a SimPy process that runs the learning-by-doing
+        model on a periodic basis.
+        """
+        while True:
+            yield env.timeout(self.learning_by_doing_timesteps)
+            avg_blade_mass = self.average_blade_mass_tonnes(env.now)
+
+            # This is a workaround. Make the learning by doing pathway costs
+            # tolerant of a 0 mass for blades retired.
+            if avg_blade_mass > 0:
+                self.learning_by_doing(env.now, avg_blade_mass)
+
     def run(self) -> Dict[str, pd.DataFrame]:
         """
         This method starts the discrete event simulation running.
@@ -1184,6 +1254,10 @@ class Context:
         Dict[str, pd.DataFrame]
             A dictionary of inventories mapped to their cumulative histories.
         """
+        # Schedule learning by doing timesteps (this will happen after all
+        # other events have been scheduled)
+        #self.env.process(self.learning_by_doing_process(self.env))
+
         self.env.run(until=int(self.max_timesteps))
         inventories = {
             "landfill_component_inventory": self.landfill_component_inventory.cumulative_history,
