@@ -1,13 +1,23 @@
 import networkx as nx
 
 # @note a facility ID for all nodes, s.t. nodes within the same sub-graph
-# (location) are marked as being co-located at the same facility.
-# Then at the Supply Chain graph level, edges between nodes with the same
-# facility ID incur no transportation costs or distances.
-# This could help automate edge creation.
+#  (location) are marked as being co-located at the same facility.
+#  Then at the Supply Chain graph level, edges between nodes with the same
+#  facility ID incur no transportation costs or distances.
+#  This could help automate edge creation.
 
 # Transportation distances can be pre-calculated and stored as a table, by
-# facility location.
+# facility ID
+
+# @todo automate creation of sub-graphs
+
+# @todo identify input data structure
+
+# @todo connect to regionalizations: every sub-graph needs a location and a
+#  distance to every connected (every other?) sub-graph
+
+# @todo dynamically update node costs based on cost-over-time and learning-by-
+#  doing models
 
 # Create lists of processes/steps within each facility location
 # Each facility needs a list of nodes (one node = one step) and a corresponding
@@ -71,6 +81,9 @@ supply_chain.add_edges_from(landfill.edges)
 # onsite coarse grinding to facility fine grinding
 supply_chain.add_edges_from([('coarse grinding', 'facility fine grinding')], cost=0.08, distance=54.0)
 
+# onsite segmenting to facility coarse grinding
+supply_chain.add_edges_from([('segmenting', 'facility coarse grinding')], cost=12.0, distance=54.0)
+
 # onsite coarse grinding to landfill
 supply_chain.add_edges_from([('coarse grinding', 'landfill')], cost=0.08, distance=42.0)
 
@@ -83,5 +96,26 @@ supply_chain.add_edges_from([('facility fine grinding', 'landfill')], cost=0.08,
 # The edges between sub-graphs will have different transportation costs depending
 # on WHAT's being moved: blade segments or ground/shredded blade material.
 # @note Is there a way to also track component-material "status" or general
-# characteristics as it traverses the graph? Maybe connecting this graph to
-# the state machine
+#  characteristics as it traverses the graph? Maybe connecting this graph to
+#  the state machine
+
+# Calculate total pathway costs (sum of all node and edge costs) over all
+# possible pathways
+
+# @note simple paths have no repeated nodes; this might not work for a cyclic
+#  graph
+# The target parameter can be replaced by a list
+
+# @note the generator from all_simple_paths can only be used once per definition
+edge_list = list([])
+
+# Get list of nodes and edges by pathway
+for path in map(nx.utils.pairwise, nx.all_simple_paths(supply_chain, source='in use', target='landfill')):
+    edge_list.append(list(path))
+
+node_list = list(nx.all_simple_paths(supply_chain, source='in use', target='landfill'))
+
+# dictionary defining all possible pathways by nodes and edges
+# nodes = calculate total processing costs
+# edges = calculate total transportation costs and distances
+paths_dict = {'nodes': node_list, 'edges': edge_list}
