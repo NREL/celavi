@@ -553,7 +553,7 @@ class Context:
                              'segment transpo cost': [],
                              'landfill tipping fee': []}
 
-        # initialize dictionary to hold transportation requirements in each step
+        # initialize dictionary to hold transportation requirements
         self.transpo_eol = {'year': [],
                             'total eol transportation': []}
 
@@ -710,7 +710,7 @@ class Context:
         # rename the cost parameter dictionary for more compact equation writing
         pars = self.cost_params
         lbdc = self.learning_by_doing_costs
-
+        print('Updating pathway costs for timestep ', timestep, '\n')
         # needed for capacity expansion
         # blade_rec_count_ts = self.recycle_to_raw_component_inventory.component_materials['blade']
 
@@ -1239,7 +1239,7 @@ class Context:
         while True:
             yield env.timeout(self.learning_by_doing_timesteps)
             avg_blade_mass = self.average_blade_mass_tonnes(env.now)
-
+            print('at timestep ', env.now, ', average blade mass is ', avg_blade_mass, ' tonnes\n')
             # This is a workaround. Make the learning by doing pathway costs
             # tolerant of a 0 mass for blades retired.
             if avg_blade_mass > 0:
@@ -1256,7 +1256,7 @@ class Context:
         """
         # Schedule learning by doing timesteps (this will happen after all
         # other events have been scheduled)
-        #self.env.process(self.learning_by_doing_process(self.env))
+        self.env.process(self.learning_by_doing_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
         inventories = {
