@@ -15,17 +15,22 @@ _subscript_dict = {}
 _namespace = {
     'TIME': 'time',
     'Time': 'time',
-    'recycle research annual cost reduction': 'recycle_research_annual_cost_reduction',
+    'recycle to raw research annual cost reduction': 'recycle_to_raw_research_annual_cost_reduction',
     'one metric ton': 'one_metric_ton',
     'one MW': 'one_mw',
     'one Year': 'one_year',
-    'tallying recycle': 'tallying_recycle',
+    'tallying recycle to raw': 'tallying_recycle_to_raw',
     'tallying remanufacture': 'tallying_remanufacture',
     'tallying reuse': 'tallying_reuse',
-    'Cumulative Recycle': 'cumulative_recycle',
+    'Cumulative Recycle to Raw': 'cumulative_recycle_to_raw',
+    'Cumulative Recycle to Clinker': 'cumulative_recycle_to_clinker',
     'Cumulative Remanufacture': 'cumulative_remanufacture',
     'Cumulative Reuse': 'cumulative_reuse',
-    'recycle process cost': 'recycle_process_cost',
+    'coarse grinding cost': 'coarse_grinding_cost',
+    'fine grinding cost': 'fine_grinding_cost',
+    'recycling to clinker revenue': 'recycling_to_clinker_revenue',
+    'recycling to raw revenue': 'recycling_to_raw_revenue',
+    'recycle to raw process cost': 'recycle_to_raw_process_cost',
     'cost of extracting': 'cost_of_extracting',
     'cost of manufacturing': 'cost_of_manufacturing',
     'remanufacture process cost': 'remanufacture_process_cost',
@@ -33,21 +38,22 @@ _namespace = {
     'miles from extraction to production facility': 'miles_from_extraction_to_production_facility',
     'extracting learning rate': 'extracting_learning_rate',
     'manufacturing learning rate': 'manufacturing_learning_rate',
-    'recycle learning rate': 'recycle_learning_rate',
+    'recycle to raw learning rate': 'recycle_to_raw_learning_rate',
     'initial cost of extracting': 'initial_cost_of_extracting',
     'initial cost of manufacturing': 'initial_cost_of_manufacturing',
     'remanufacture learning rate': 'remanufacture_learning_rate',
     'reuse learning rate': 'reuse_learning_rate',
-    'remanufactured material cost': 'remanufactured_material_cost',
-    'recycled material cost': 'recycled_material_cost',
-    'linear material cost': 'linear_material_cost',
-    'reused material cost': 'reused_material_cost',
-    'initial cost of recycling process': 'initial_cost_of_recycling_process',
+    'remanufactured pathway cost': 'remanufactured_pathway_cost',
+    'recycled to raw pathway cost': 'recycled_to_raw_pathway_cost',
+    'linear pathway cost': 'linear_pathway_cost',
+    'reused pathway cost': 'reused_pathway_cost',
+    'initial cost coarse grinding': 'initial_cost_coarse_grinding',
+    'initial cost fine grinding': 'initial_cost_fine_grinding',
     'initial cost of remanufacturing process': 'initial_cost_of_remanufacturing_process',
     'initial cost of reuse process': 'initial_cost_of_reuse_process',
     'cost of transportation': 'cost_of_transportation',
     'cost of landfilling': 'cost_of_landfilling',
-    'recycled material strategic value': 'recycled_material_strategic_value',
+    'recycled to raw material strategic value': 'recycled_to_raw_material_strategic_value',
     'remanufactured material strategic value': 'remanufactured_material_strategic_value',
     'reused material strategic value': 'reused_material_strategic_value',
     'miles from end use location to recycling facility':
@@ -83,25 +89,25 @@ _namespace = {
     'Fraction Reuse': 'fraction_reuse',
     'changing fraction reuse': 'changing_fraction_reuse',
     'check fraction sum': 'check_fraction_sum',
-    'Fraction Recycle': 'fraction_recycle',
+    'Fraction Recycle to Raw': 'fraction_recycle_to_raw',
     'Fraction Remanufacture': 'fraction_remanufacture',
     'rate of increasing reuse fraction': 'rate_of_increasing_reuse_fraction',
-    'recycle favorability': 'recycle_favorability',
+    'recycle to raw favorability': 'recycle_to_raw_favorability',
     'recycle favorability over linear': 'recycle_favorability_over_linear',
     'increase recycle': 'increase_recycle',
     'increase remanufacture': 'increase_remanufacture',
     'increase reuse': 'increase_reuse',
-    'increasing fraction recycle': 'increasing_fraction_recycle',
+    'increasing fraction recycle to raw': 'increasing_fraction_recycle_to_raw',
     'increasing fraction remanufacture': 'increasing_fraction_remanufacture',
     'lowest cost pathway': 'lowest_cost_pathway',
-    'rate of increasing recycle fraction': 'rate_of_increasing_recycle_fraction',
+    'rate of increasing recycle to raw fraction': 'rate_of_increasing_recycle_to_raw_fraction',
     'rate of increasing remanufacture fraction': 'rate_of_increasing_remanufacture_fraction',
     'reuse favorability': 'reuse_favorability',
     'reuse favorability over linear': 'reuse_favorability_over_linear',
     'remanufacture favorability over linear': 'remanufacture_favorability_over_linear',
     'remanufacture favorability': 'remanufacture_favorability',
     'fraction used product reused initial value': 'fraction_used_product_reused_initial_value',
-    'fraction used product recycled initial value': 'fraction_used_product_recycled_initial_value',
+    'fraction used product recycled to raw initial value': 'fraction_used_product_recycled_to_raw_initial_value',
     'fraction used product remanufactured initial value':
     'fraction_used_product_remanufactured_initial_value',
     'shipping': 'shipping',
@@ -120,14 +126,14 @@ _namespace = {
     'extracting': 'extracting',
     'Raw Material Extraction': 'raw_material_extraction',
     'reaching end of life': 'reaching_end_of_life',
-    'recycling': 'recycling',
+    'recycling to raw': 'recycling_to_raw',
     'fraction used product disposed': 'fraction_used_product_disposed',
     'remanufacturing': 'remanufacturing',
     'remanufacturing nonreusables': 'remanufacturing_nonreusables',
     'landfilling failed remanufactured': 'landfilling_failed_remanufactured',
     'landfilling nonrecyclables': 'landfilling_nonrecyclables',
     'Material Distribution': 'material_distribution',
-    'Material Recycle': 'material_recycle',
+    'Material Recycle to Raw': 'material_recycle_to_raw',
     'producing': 'producing',
     'Product Distribution': 'product_distribution',
     'Product Remanufacture': 'product_remanufacture',
@@ -215,20 +221,7 @@ def scenario_name():
     return strftime('%m-%d-%Y_%H%M%S')
 
 @cache('run')
-def recycle_research_annual_cost_reduction():
-    """
-    Real Name: b'recycle research annual cost reduction'
-    Original Eqn: b'0.003'
-    Units: b''
-    Limits: (None, None)
-    Type: constant
-
-    b''
-    """
-    return 0.003
-
-@cache('run')
-def recycle_research_annual_cost_reduction():
+def recycle_to_raw_research_annual_cost_reduction():
     """
     Real Name: b'recycle research annual cost reduction'
     Original Eqn: b'0.003'
@@ -284,7 +277,7 @@ def one_year():
 
 
 @cache('step')
-def tallying_recycle():
+def tallying_recycle_to_raw():
     """
     Real Name: b'tallying recycle'
     Original Eqn: b'aggregating recycled materials'
@@ -295,6 +288,12 @@ def tallying_recycle():
     b''
     """
     return aggregating_recycled_materials()
+
+@cache('step')
+def tallying_recycle_to_clinker():
+    """
+    """
+    raise NotImplementedError
 
 
 @cache('step')
@@ -326,7 +325,7 @@ def tallying_reuse():
 
 
 @cache('step')
-def cumulative_recycle():
+def cumulative_recycle_to_raw():
     """
     Real Name: b'Cumulative Recycle'
     Original Eqn: b'INTEG ( tallying recycle, 0)'
@@ -336,7 +335,14 @@ def cumulative_recycle():
 
     b'tracks total recycling in wind energy sector'
     """
-    return _integ_cumulative_recycle()
+    return _integ_cumulative_recycle_to_raw()
+
+@cache('step')
+def cumulative_recycle_to_clinker():
+    """
+
+    """
+    return _integ_cumulative_recycle_to_clinker()
 
 
 @cache('step')
@@ -368,19 +374,20 @@ def cumulative_reuse():
 
 
 @cache('step')
-def recycle_process_cost():
+def recycle_to_raw_process_cost():
     """
     Real Name: b'recycle process cost'
-    Original Eqn: b'initial cost of recycling process * (Cumulative Recycle/one metric ton + 1)^(-1*recycle learning rate\\\\ ) - recycle research annual cost reduction * (Time - 1980) * initial cost of recycling process'
+
     Units: b'USD/metric ton'
     Limits: (0.0, None)
     Type: component
 
     b''
     """
-    return initial_cost_of_recycling_process() * (cumulative_recycle() / one_metric_ton() + 1)**(
-        -1 * recycle_learning_rate()) - recycle_research_annual_cost_reduction() * (
-            time() - 1980) * initial_cost_of_recycling_process()
+    _fine_grinding = initial_cost_fine_grinding() * (cumulative_recycle_to_raw() / one_metric_ton() + 1) ** (-1 * recycle_to_raw_learning_rate())
+    _coarse_grinding = initial_cost_coarse_grinding() * ((cumulative_recycle_to_raw() + cumulative_recycle_to_clinker()) / one_metric_ton() + 1) ** (-1 * recycle_to_raw_learning_rate())
+    return  - recycle_to_raw_research_annual_cost_reduction() * (
+            time() - 1980) * initial_cost_of_recycling_to_raw_process()
 
 
 @cache('step')
@@ -476,7 +483,7 @@ def manufacturing_learning_rate():
 
   
 @cache('run')
-def recycle_learning_rate():
+def recycle_to_raw_learning_rate():
     """
     Real Name: b'recycle learning rate'
     Original Eqn: b'0.05'
@@ -540,7 +547,7 @@ def reuse_learning_rate():
 
 
 @cache('step')
-def remanufactured_material_cost():
+def remanufactured_pathway_cost():
     """
     Real Name: b'remanufactured material cost'
     Original Eqn: b'miles from end use location to remanufacturing facility * cost of transportation + remanufacture process cost + fraction reused product remanufactured * ( miles from reuse facility to remanufacturing facility\\\\ * cost of transportation + remanufacture process cost ) + miles from remanufacturing facility to product distribution facility * cost of transportation - remanufactured material strategic value'
@@ -559,21 +566,20 @@ def remanufactured_material_cost():
 
 
 @cache('step')
-def recycled_material_cost():
+def recycle_to_raw_pathway_cost():
     """
-    Total cost associated with using recycled materials in new turbines including transportation.
-    Units: USD/metric ton
+    Units: USD/metric ton material processed
     """
-    return miles_from_end_use_location_to_recycling_facility() * cost_of_transportation() +\
-           recycle_process_cost() + cost_of_manufacturing() + \
+    return miles_from_end_use_location_to_recycling_facility() * cost_of_transportation() + \
+           recycle_to_raw_process_cost() + cost_of_manufacturing() + \
            fraction_remanufactured_product_to_recycle() * (miles_from_remanufacturing_facility_to_recycling_facility() * cost_of_transportation() +
-                                                           recycle_process_cost()) + \
-           miles_from_recycling_to_distribution_facility() * cost_of_transportation() -\
-           recycled_material_strategic_value()
+                                                           recycle_to_raw_process_cost()) + \
+           miles_from_recycling_to_distribution_facility() * cost_of_transportation() - \
+           recycled_to_raw_material_strategic_value()
 
 
 @cache('step')
-def linear_material_cost():
+def linear_pathway_cost():
     """
     Real Name: b'linear material cost'
     Original Eqn: b'cost of extraction and production + miles from extraction to production facility * cost of transportation + miles from end use location to landfill * cost of transportation + miles from remanufacturing facility to landfill * cost of transportation + miles from recycling facility to landfill * cost of transportation + cost of landfilling'
@@ -591,7 +597,7 @@ def linear_material_cost():
 
 
 @cache('step')
-def reused_material_cost():
+def reused_pathway_cost():
     """
     Real Name: b'reused material cost'
     Original Eqn: b'miles from end use location to reuse facility * cost of transportation + reuse process cost + miles from reuse facility to product distribution facility * cost of transportation - reused material strategic value'
@@ -605,9 +611,42 @@ def reused_material_cost():
     ) + reuse_process_cost() + miles_from_reuse_facility_to_product_distribution_facility(
     ) * cost_of_transportation() - reused_material_strategic_value()
 
+@cache('run')
+def initial_cost_coarse_grinding():
+    """
+    default value is from business as usual scenario
+    :return:
+    """
+    return 55.13
 
 @cache('run')
-def initial_cost_of_recycling_process():
+def initial_cost_fine_grinding():
+    """
+    default value is from business as usual scenario
+    :return:
+    """
+    return 165.38
+
+@cache('run')
+def recycling_to_clinker_revenue():
+    """
+    Units: USD/metric tonne recyclate
+
+    """
+    return 10.37
+
+@cache('run')
+def recycling_to_raw_revenue():
+    """
+    Units: USD/metric tonne ground GFRP
+    DOES NOT ACCOUNT for material losses, the loss factor must be included
+    in the cost model
+
+    """
+    return 191.02
+
+@cache('run')
+def initial_cost_of_recycling_to_raw_process():
     """
     Real Name: b'initial cost of recycling process'
     Original Eqn: b'200'
@@ -617,7 +656,9 @@ def initial_cost_of_recycling_process():
 
     b''
     """
-    return 200
+    return initial_cost_coarse_grinding() + initial_cost_fine_grinding()
+
+
 
 
 @cache('run')
@@ -677,7 +718,7 @@ def cost_of_landfilling():
 
 
 @cache('run')
-def recycled_material_strategic_value():
+def recycled_to_raw_material_strategic_value():
     """
     Real Name: b'recycled material strategic value'
     Original Eqn: b'0'
@@ -916,7 +957,7 @@ def material_selection():
 
     b'select 1 for steel, 0 for fiberglass'
     """
-    return 'steel'
+    return 'fiberglass'
 
 
 @cache('step')
@@ -1073,11 +1114,11 @@ def check_fraction_sum():
 
     b'adds the material fractions sent through circularity pathways as a mass \\n    \\t\\tbalance check'
     """
-    return fraction_reuse() + fraction_remanufacture() + fraction_recycle()
+    return fraction_reuse() + fraction_remanufacture() + fraction_recycle_to_raw()
 
 
 @cache('step')
-def fraction_recycle():
+def fraction_recycle_to_raw():
     """
     Real Name: b'Fraction Recycle'
     Original Eqn: b'INTEG ( increasing fraction recycle, fraction used product recycled initial value)'
@@ -1120,7 +1161,7 @@ def rate_of_increasing_reuse_fraction():
 
 
 @cache('step')
-def recycle_favorability():
+def recycle_to_raw_favorability():
     """
     Real Name: b'recycle favorability'
     Original Eqn: b'IF THEN ELSE(lowest cost pathway = recycle favorability over linear, recycle favorability over linear, 10)'
@@ -1145,7 +1186,7 @@ def recycle_favorability_over_linear():
 
     b'Ratio of recycled to linear material cost. A lower favorability value \\n    \\t\\tindicates a lower-cost pathway'
     """
-    return recycled_material_cost() / linear_material_cost()
+    return recycle_to_raw_pathway_cost() / linear_pathway_cost()
 
 
 @cache('step')
@@ -1191,7 +1232,7 @@ def increase_reuse():
 
 
 @cache('step')
-def increasing_fraction_recycle():
+def increasing_fraction_recycle_to_raw():
     """
     Real Name: b'increasing fraction recycle'
     Original Eqn: b'IF THEN ELSE(check fraction sum < 1 - rate of increasing recycle fraction :AND: Fraction Recycle < 1 - rate of increasing recycle fraction, increase recycle * rate of increasing recycle fraction / TIME STEP, 0)'
@@ -1202,9 +1243,9 @@ def increasing_fraction_recycle():
     b'Defines the conditions under which the fraction of end-of-life material \\n    \\t\\tsent to recycling increases. The total material fraction sent through \\n    \\t\\tcircular pathways, including the prospective increase in recycling (rate \\n    \\t\\tof increasing recycle fraction), must be less than 1. The recycle \\n    \\t\\tfraction, including the prospective increase, must also be less than 1. \\n    \\t\\tUnder those conditions, the prospective increase in recycling is \\n    \\t\\timplemented.'
     """
     return functions.if_then_else(
-        check_fraction_sum() < 1 - rate_of_increasing_recycle_fraction()
-        and fraction_recycle() < 1 - rate_of_increasing_recycle_fraction(),
-        increase_recycle() * rate_of_increasing_recycle_fraction() / time_step(), 0)
+        check_fraction_sum() < 1 - rate_of_increasing_recycle_to_raw_fraction()
+        and fraction_recycle_to_raw() < 1 - rate_of_increasing_recycle_to_raw_fraction(),
+        increase_recycle() * rate_of_increasing_recycle_to_raw_fraction() / time_step(), 0)
 
 
 @cache('step')
@@ -1242,7 +1283,7 @@ def lowest_cost_pathway():
 
 
 @cache('step')
-def rate_of_increasing_recycle_fraction():
+def rate_of_increasing_recycle_to_raw_fraction():
     """
     Real Name: b'rate of increasing recycle fraction'
     Original Eqn: b'WITH LOOKUP ( recycle favorability, ([(0,0)-(10,0.01)],(0,0.01),(0.275229,0.00964912),(0.422018,0.00995614),(1,0.0090825\\\\ ),(1.40673,0.00929825),(2,0),(10,0 ) ))'
@@ -1252,7 +1293,7 @@ def rate_of_increasing_recycle_fraction():
 
     b'\\n    !recycle favorability\\t\\tGraphical function translating degree of favorability that recycle has \\n    \\t\\tover the other circular pathways into an increase in the fraction of \\n    \\t\\tend-of-life materials sent to recycling'
     """
-    return functions.lookup(recycle_favorability(), [0, 0.275229, 0.422018, 1, 1.40673, 2, 10],
+    return functions.lookup(recycle_to_raw_favorability(), [0, 0.275229, 0.422018, 1, 1.40673, 2, 10],
                             [0.01, 0.00964912, 0.00995614, 0.0090825, 0.00929825, 0, 0])
 
 
@@ -1298,7 +1339,7 @@ def reuse_favorability_over_linear():
 
     b'Ratio of reused to linear material cost. A lower favorability value, less \\n    \\t\\tthan 1, indicates a lower-cost pathway'
     """
-    return reused_material_cost() / linear_material_cost()
+    return reused_pathway_cost() / linear_pathway_cost()
 
 
 @cache('step')
@@ -1312,7 +1353,7 @@ def remanufacture_favorability_over_linear():
 
     b'Ratio of remanufactured to linear material cost. A lower favorability \\n    \\t\\tvalue, less than 1, indicates a lower-cost pathway'
     """
-    return remanufactured_material_cost() / linear_material_cost()
+    return remanufactured_pathway_cost() / linear_pathway_cost()
 
 
 @cache('step')
@@ -1346,7 +1387,7 @@ def fraction_used_product_reused_initial_value():
 
 
 @cache('run')
-def fraction_used_product_recycled_initial_value():
+def fraction_used_product_recycled_to_raw_initial_value():
     """
     Real Name: b'fraction used product recycled initial value'
     Original Eqn: b'0.3'
@@ -1441,7 +1482,7 @@ def landfilling():
 
     b''
     """
-    return reaching_end_of_life() - reusing() - remanufacturing() - recycling(
+    return reaching_end_of_life() - reusing() - remanufacturing() - recycling_to_raw(
     ) - reusing_in_other_sectors()
 
 
@@ -1486,7 +1527,7 @@ def aggregating_recycled_materials():
     b'Total recycled materials available in each time step, accounting for \\n    \\t\\tleakage'
     """
     return np.minimum(
-        recycling() + recycling_failed_remanufactured() - landfilling_nonrecyclables(),
+        recycling_to_raw() + recycling_failed_remanufactured() - landfilling_nonrecyclables(),
         0.99 * annual_demand())
 
 
@@ -1607,7 +1648,7 @@ def reaching_end_of_life():
 
 
 @cache('step')
-def recycling():
+def recycling_to_raw():
     """
     Real Name: b'recycling'
     Original Eqn: b'INTEGER(reaching end of life * Fraction Recycle)'
@@ -1617,7 +1658,7 @@ def recycling():
 
     b'Materials in end-of-life products being sent for recycling - will be \\n    \\t\\tbroken down into component materials and re-made into a functionally new \\n    \\t\\tproduct'
     """
-    return int(reaching_end_of_life() * fraction_recycle())
+    return int(reaching_end_of_life() * fraction_recycle_to_raw())
 
 
 @cache('step')
@@ -1632,7 +1673,7 @@ def fraction_used_product_disposed():
     b'Fraction of end-of-life materials not sent to a circular pathway or \\n    \\t\\tanother sector, calculated by difference. Logic checks on the circularity \\n    \\t\\tfractions ensure the disposed fraction does not drop below 0.'
     """
     return 1 - fraction_reuse() - fraction_used_product_reused_in_other_sectors(
-    ) - fraction_remanufacture() - fraction_recycle()
+    ) - fraction_remanufacture() - fraction_recycle_to_raw()
 
 
 @cache('step')
@@ -1689,7 +1730,7 @@ def landfilling_nonrecyclables():
 
     b'System loss representing materials that were too contaminated or \\n    \\t\\tothwerwise could not be recycled'
     """
-    return (recycling() + recycling_failed_remanufactured()) * fraction_of_recycling_to_landfill()
+    return (recycling_to_raw() + recycling_failed_remanufactured()) * fraction_of_recycling_to_landfill()
 
 
 @cache('step')
@@ -1707,7 +1748,7 @@ def material_distribution():
 
 
 @cache('step')
-def material_recycle():
+def material_recycle_to_raw():
     """
     Real Name: b'Material Recycle'
     Original Eqn: b'INTEG ( recycling + recycling failed remanufactured - aggregating recycled materials - landfilling nonrecyclables, 0)'
@@ -1717,7 +1758,7 @@ def material_recycle():
 
     b'Flow aggregator and splitter. Value should remain very close to zero \\n    \\t\\tthroughout model run.'
     """
-    return _integ_material_recycle()
+    return _integ_material_recycle_to_raw()
 
 
 @cache('step')
@@ -2102,9 +2143,9 @@ def recycling_transportation_inputs():
 
     _inputs = transportation_lci().copy()
 
-    _scaling_quantity = recycling() * miles_from_end_use_location_to_recycling_facility() + \
+    _scaling_quantity = recycling_to_raw() * miles_from_end_use_location_to_recycling_facility() + \
                         recycling_failed_remanufactured() * miles_from_remanufacturing_facility_to_recycling_facility() + \
-                        landfilling_nonrecyclables() * miles_from_recycling_facility_to_landfill() +\
+                        landfilling_nonrecyclables() * miles_from_recycling_facility_to_landfill() + \
                         aggregating_recycled_materials() * miles_from_recycling_to_distribution_facility()
 
     _inputs.loc[:,'quantity'] = _inputs.loc[:,'quantity'] * _scaling_quantity
@@ -2375,7 +2416,9 @@ def time_step():
     return 0.25
 
 
-_integ_cumulative_recycle = functions.Integ(lambda: tallying_recycle(), lambda: 0)
+_integ_cumulative_recycle_to_raw = functions.Integ(lambda: tallying_recycle_to_raw(), lambda: 0)
+
+_integ_cumulative_recycle_to_clinker = functions.Integ(lambda: tallying_recycle_to_clinker(), lambda: 0)
 
 _integ_cumulative_remanufacture = functions.Integ(lambda: tallying_remanufacture(), lambda: 0)
 
@@ -2386,8 +2429,8 @@ _integ_cumulative_capacity = functions.Integ(lambda: adding_capacity() / time_st
 _integ_fraction_reuse = functions.Integ(lambda: changing_fraction_reuse(),
                                         lambda: fraction_used_product_reused_initial_value())
 
-_integ_fraction_recycle = functions.Integ(lambda: increasing_fraction_recycle(),
-                                          lambda: fraction_used_product_recycled_initial_value())
+_integ_fraction_recycle = functions.Integ(lambda: increasing_fraction_recycle_to_raw(),
+                                          lambda: fraction_used_product_recycled_to_raw_initial_value())
 
 _integ_fraction_remanufacture = functions.Integ(
     lambda: increasing_fraction_remanufacture(),
@@ -2405,8 +2448,8 @@ _integ_products_sent_to_other_sectors = functions.Integ(lambda: reusing_in_other
                                                         lambda: 0)
 
 _integ_products_at_end_of_life = functions.Integ(
-    lambda: reaching_end_of_life() - landfilling() - recycling() - remanufacturing() - reusing() -
-    reusing_in_other_sectors(), lambda: 0)
+    lambda: reaching_end_of_life() - landfilling() - recycling_to_raw() - remanufacturing() - reusing() -
+            reusing_in_other_sectors(), lambda: 0)
 
 _integ_product_reuse = functions.Integ(
     lambda: reusing() - aggregating_reused_products() - remanufacturing_nonreusables(), lambda: 0)
@@ -2420,9 +2463,9 @@ _delay_shipping_component_lifetime_0_1 = functions.Delay(lambda: shipping(),
 _integ_material_distribution = functions.Integ(
     lambda: aggregating_recycled_materials() + extracting() - distributing(), lambda: 0)
 
-_integ_material_recycle = functions.Integ(
-    lambda: recycling() + recycling_failed_remanufactured() - aggregating_recycled_materials() -
-    landfilling_nonrecyclables(), lambda: 0)
+_integ_material_recycle_to_raw = functions.Integ(
+    lambda: recycling_to_raw() + recycling_failed_remanufactured() - aggregating_recycled_materials() -
+            landfilling_nonrecyclables(), lambda: 0)
 
 _integ_product_distribution = functions.Integ(
     lambda: aggregating_reused_products() + producing() - shipping(), lambda: 0)
