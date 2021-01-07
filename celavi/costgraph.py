@@ -93,6 +93,14 @@ supply_chain.add_edges_from([('segmenting', 'landfill')], cost=12.0, distance=42
 # fine grinding to landfill - MANDATORY if this node is used
 supply_chain.add_edges_from([('facility fine grinding', 'landfill')], cost=0.08, distance=2.0)
 
+# These are here to force consistency of edge data, otherwise they do not have edge
+# data
+
+supply_chain.add_edges_from([('in use', 'rotor teardown')], cost=0.0, distance=0.0)
+supply_chain.add_edges_from([('rotor teardown', 'segmenting')], cost=0.0, distance=0.0)
+supply_chain.add_edges_from([('rotor teardown', 'coarse grinding')], cost=0.0, distance=0.0)
+supply_chain.add_edges_from([('facility coarse grinding', 'facility fine grinding')], cost=0.0, distance=0.0)
+
 # The edges between sub-graphs will have different transportation costs depending
 # on WHAT's being moved: blade segments or ground/shredded blade material.
 # @note Is there a way to also track component-material "status" or general
@@ -119,3 +127,13 @@ node_list = list(nx.all_simple_paths(supply_chain, source='in use', target='land
 # nodes = calculate total processing costs
 # edges = calculate total transportation costs and distances
 paths_dict = {'nodes': node_list, 'edges': edge_list}
+
+for edges in paths_dict['edges']:
+    for u, v in edges:
+        print(u, v, supply_chain.get_edge_data(u, v))
+
+for nodes, edges in zip(node_list, edge_list):
+    costs = [supply_chain.get_edge_data(u, v)['cost'] for u, v in edges]
+    distances = [supply_chain.get_edge_data(u, v)['distance'] for u, v in edges]
+    graph_path = ",".join(nodes)
+    print(f"Path: {graph_path}. Total cost={sum(costs)}, total distance={sum(distances)}")
