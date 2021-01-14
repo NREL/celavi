@@ -1,6 +1,7 @@
 import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
+from networkx.algorithms import shortest_path
 
 edges_df = pd.read_csv("graph_specification/edges.csv")
 nodes_df = pd.read_csv("graph_specification/nodes.csv")
@@ -20,13 +21,22 @@ for _, row in edges_df.iterrows():
     weight = row["weight"]
     u_id = row["u_id"]
     v_id = row["v_id"]
-    edges.append((u_id, v_id, {"edge_id": edges_df, "weight": weight}))
+    edges.append((u_id, v_id, {"edge_id": edge_id, "weight": weight}))
 
 graph = nx.DiGraph()
 graph.add_nodes_from(nodes)
 graph.add_edges_from(edges)
 
-print(graph.number_of_nodes())
+path = shortest_path(graph, 1, 3)
+print("Path:", list(path))
+weight_sum = 0
+for i in range(0, len(path) - 1):
+    u = path[i]
+    v = path[i + 1]
+    edge_data = graph.get_edge_data(u, v)
+    weight_sum += edge_data["weight"]
+print("Total weight: ", weight_sum)
+
 plt.subplot(111)
 nx.draw_kamada_kawai(graph, with_labels=True, font_weight="bold")
 plt.show()
