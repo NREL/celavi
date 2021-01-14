@@ -28,5 +28,5 @@ graph.add_edges_from(edges)
 
 print(graph.number_of_nodes())
 plt.subplot(111)
-nx.draw(graph, with_labels=True, font_weight="bold")
+nx.draw_kamada_kawai(graph, with_labels=True, font_weight="bold")
 plt.show()
