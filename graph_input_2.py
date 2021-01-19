@@ -13,13 +13,16 @@ facility_configurations = {
             "turbines": {},
             "segmenting": {},
             "coarse_grinding": {},
+            "concrete": {}
         },
         "internal_edges": [
             ["turbines", "segmenting", 0],
-            ["segmenting", "coarse_grinding", 0]
+            ["segmenting", "coarse_grinding", 0],
+            ["concrete", "turbines", 0],
+            ["coarse_grinding", "concrete", 0]
         ],
         "outbound_edges": [
-            ["segmenting", "landfill_0", 99]
+            ["turbines", "landfill_0", 99]
         ]
     },
 
