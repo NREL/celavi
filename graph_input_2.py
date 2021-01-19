@@ -13,13 +13,10 @@ facility_configurations = {
             "turbines": {},
             "segmenting": {},
             "coarse_grinding": {},
-            "concrete_production": {}
         },
         "internal_edges": [
             ["turbines", "segmenting", 0],
-            ["segmenting", "coarse_grinding", 0],
-            ["coarse_grinding", "concrete_production", 0],
-            ["concrete_production", "turbines", 0]
+            ["segmenting", "coarse_grinding", 0]
         ],
         "outbound_edges": [
             ["segmenting", "landfill_0", 99]
@@ -81,5 +78,5 @@ for subgraph in subgraphs:
 
 plt.subplot(111)
 # nx.draw_kamada_kawai(total_graph, with_labels=True, font_weight="bold")
-nx.draw(total_graph, with_labels=True)
+nx.draw_circular(total_graph, with_labels=True)
 plt.show()
