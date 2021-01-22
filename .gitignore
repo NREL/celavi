@@ -136,3 +136,11 @@ ENV/
 
 # Sphinx documentation build
 doc/_build
+celavi/Eberle - NREL LDRD CELAVI - Overview_jan2021.pptx
+routing/spatialresolutionTexas/Spatial Analysis CELAVI.docx
+routing/spatialresolutionTexas/TexasMap.pdf
+routing/spatialresolutionTexas/texasshp/State.prj
+routing/spatialresolutionTexas/texasshp/State.shx
+routing/spatialresolutionTexas/texasshp/State.cpg
+routing/spatialresolutionTexas/texasshp/State.dbf
+routing/spatialresolutionTexas/texasshp/State.shp
