@@ -1,6 +1,5 @@
 import pandas as pd
-
-from .IO import load
+from IO import load
 
 
 class Data(pd.DataFrame):
@@ -130,4 +129,33 @@ class TransportationNodeLocations(Data):
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         super(TransportationNodeLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                          backfill=backfill)
+
+
+class StartLocations(Data):
+
+    COLUMNS = ({'name': 'start_id', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'type_id', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'start_facility_type', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'start_x', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'start_y', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'end_facility_type', 'type': str, 'index': False, 'backfill': None})
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(StartLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                          backfill=backfill)
+
+
+class EndLocations(Data):
+    COLUMNS = ({'name': 'end_id', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'end_facility_type', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'end_x', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'end_y', 'type': float, 'index': False, 'backfill': None})
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(EndLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)

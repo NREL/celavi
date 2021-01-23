@@ -5,7 +5,7 @@ from pkg_resources import resource_filename
 
 import pandas as pd
 
-from . import utils
+import utils
 
 CONFIG_FOLDER = 'configs'
 DATA_FOLDER = 'data'
