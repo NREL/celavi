@@ -19,6 +19,10 @@ G.add_edge("coarse grinding 2", "fine grinding", label=0.08)
 G.add_edge("fine grinding", "other sectors", label=0)
 
 G.add_edge("fine grinding", "landfill 3", label=0.08)
+G.add_edge("coarse grinding 1", "landfill 1", label=0.08)
+G.add_edge("coarse grinding 2", "landfill 2", label=0.08)
+G.add_edge("segmenting 1", "landfill 1", label=11)
+G.add_edge("segmenting 2", "landfill 2", label=11)
 
 G.write("toy.dot")
 # Render with "dot -Tpng file.dot -o out.png"
