@@ -35,7 +35,7 @@ class Router(object):
         """
 
         self.node_map = node_map
-        self._btree = ckdtree.cKDTree(np.array(list(zip(self.node_map.x, self.node_map.y))))
+        self._btree = ckdtree.cKDTree(np.array(list(zip(self.node_map.long, self.node_map.lat))))
 
         self.edges = edges
 
@@ -126,24 +126,36 @@ router = Router(edges=_transportation_graph,
 # get routing information between each unique region_production and
 # region_destination pair
 
-plant_locations = 'data/inputs/plant_locations_all_texas.csv'
-destination_locations = 'data/inputs/destination_locations.csv'
+generic_locations = 'data/inputs/locations short.csv'
+locations = Data.Locations(fpath=generic_locations, backfill=backfill)
 
-_plant_loc = Data.StartLocations(fpath=plant_locations, backfill=backfill)
-_dest_loc = Data.EndLocations(fpath=destination_locations, backfill=backfill)
+# separate source and destination locations from generic "locations" list
+_source_loc = locations[locations['facility_type'] == 'wind_plant']
+_dest_loc = locations[locations['facility_type'] != 'wind_plant']
+_source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
+_dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
+_source_loc.insert(0, 'merge', 'True')
+_dest_loc.insert(0, 'merge', 'True')
+route_list = _source_loc.merge(_dest_loc, on='merge')
 
-route_list = _plant_loc.merge(_dest_loc, on='end_facility_type')
-route_list = route_list.rename(columns={"start_x": "source_lon",
-                                        "start_y": "source_lat",
-                                        "end_x": "destination_lon",
-                                        "end_y": "destination_lat"})
+
+# OR load source and destination locations directly
+#source_locations = 'data/inputs/plant_locations.csv'
+#destination_locations = 'data/inputs/destination_locations.csv'
+#_source_loc = Data.StartLocations(fpath=source_locations, backfill=backfill)
+#_dest_loc = Data.EndLocations(fpath=destination_locations, backfill=backfill)
+# route_list = _source_loc.merge(_dest_loc, on='end_facility_type')
+# route_list = route_list.rename(columns={"start_long": "source_long",
+#                                         "start_lat": "source_lat",
+#                                         "end_long": "destination_long",
+#                                         "end_lat": "destination_lat"})
 
 route_list.to_csv('data/outputs/route_list.csv')
 
 
-_routes = route_list[['source_lon',
+_routes = route_list[['source_long',
                       'source_lat',
-                      'destination_lon',
+                      'destination_long',
                       'destination_lat']]  # .drop_duplicates()
 
 _routes.to_csv('data/outputs/_routes.csv')
@@ -163,15 +175,15 @@ if router is not None:
         if i % 20 == 0:
             print(i)
 
-        _vmt_by_county = router.get_route(start=(_routes.source_lon.iloc[i],
+        _vmt_by_county = router.get_route(start=(_routes.source_long.iloc[i],
                                                  _routes.source_lat.iloc[i]),
-                                          end=(_routes.destination_lon.iloc[i],
+                                          end=(_routes.destination_long.iloc[i],
                                                _routes.destination_lat.iloc[i]))
 
         # add identifier columns for later merging with route_list
-        _vmt_by_county['source_lon'] = _routes.source_lon.iloc[i]
+        _vmt_by_county['source_long'] = _routes.source_long.iloc[i]
         _vmt_by_county['source_lat'] = _routes.source_lat.iloc[i]
-        _vmt_by_county['destination_lon'] = _routes.destination_lon.iloc[i]
+        _vmt_by_county['destination_long'] = _routes.destination_long.iloc[i]
         _vmt_by_county['destination_lat'] = _routes.destination_lat.iloc[i]
 
         # either create the data frame to store all routes,
@@ -189,9 +201,15 @@ if router is not None:
     # frame containing all routes with route_list
     route_list = route_list.merge(_vmt_by_county_all_routes,
                                   how='left',
-                                  on=['source_lon',
+                                  on=['source_long',
                                       'source_lat',
-                                      'destination_lon',
+                                      'destination_long',
                                       'destination_lat'])
+
+
+route_list = route_list.drop(['merge'], axis=1)
+route_list['total_vmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
+                                                 'source_long', 'destination_facility_id', 'destination_facility_type',
+                                                 'destination_lat', 'destination_long'])['vmt'].transform('sum')
 
 route_list.to_csv('data/outputs/route_list_output.csv')

@@ -122,8 +122,8 @@ class TransportationGraph(Data):
 class TransportationNodeLocations(Data):
 
     COLUMNS = ({'name': 'node_id', 'type': int, 'index': True, 'backfill': None},
-               {'name': 'x', 'type': float, 'index': False, 'backfill': None},
-               {'name': 'y', 'type': float, 'index': False, 'backfill': None})
+               {'name': 'long', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'lat', 'type': float, 'index': False, 'backfill': None})
 
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
@@ -132,30 +132,19 @@ class TransportationNodeLocations(Data):
                                                           backfill=backfill)
 
 
-class StartLocations(Data):
-
-    COLUMNS = ({'name': 'start_id', 'type': int, 'index': True, 'backfill': None},
-               {'name': 'type_id', 'type': str, 'index': False, 'backfill': None},
-               {'name': 'start_facility_type', 'type': str, 'index': False, 'backfill': None},
-               {'name': 'start_x', 'type': float, 'index': False, 'backfill': None},
-               {'name': 'start_y', 'type': float, 'index': False, 'backfill': None},
-               {'name': 'end_facility_type', 'type': str, 'index': False, 'backfill': None})
-
-    def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
-                 backfill=True):
-        super(StartLocations, self).__init__(df=df, fpath=fpath, columns=columns,
-                                                          backfill=backfill)
-
-
-class EndLocations(Data):
-    COLUMNS = ({'name': 'end_id', 'type': int, 'index': True, 'backfill': None},
-               {'name': 'end_facility_type', 'type': str, 'index': False, 'backfill': None},
-               {'name': 'end_x', 'type': float, 'index': False, 'backfill': None},
-               {'name': 'end_y', 'type': float, 'index': False, 'backfill': None})
+class Locations(Data):
+    COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'long', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'region_id_1', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'region_id_2', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'region_id_3', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'region_id_4', 'type': str, 'index': False, 'backfill': None}
+               )
 
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
-        super(EndLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+        super(Locations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
