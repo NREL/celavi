@@ -8,20 +8,16 @@ import numpy as np
 # manipulating the entire dataset within the Python environment shouldn't
 # slow execution down noticeably
 mockdata = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/input-data-mockup.xlsx"
-steps_df = pd.read_excel(mockdata, sheet_name='steps')
+steps_df = pd.read_excel(mockdata, sheet_name='edges')
 costs_df = pd.read_excel(mockdata, sheet_name='costs')
 interconnect_df = pd.read_excel(mockdata, sheet_name='interconnections')
-loc_df = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/loc-mock.csv"
-
-# @todo investigate csv module DictReader object for defining node attributes
-
-
+loc_df = pd.read_excel(mockdata, sheet_name='locations')
 
 # @todo move cost methods here
 
 # @note cost, next state, relocation destination for the component
 
-class CostGraph():
+class CostGraph:
     """
 
     """
@@ -32,7 +28,7 @@ class CostGraph():
         Parameters
         ----------
         input_name
-
+            File name or other identifier where input datasets are stored
         """
         # @todo get input_name to read in the small datasets
         self.steps_df=None
@@ -63,48 +59,6 @@ class CostGraph():
         # @todo remove or replace with input datatype-appropriate method
         return pd.read_excel(filename, sheet_name=sheetname)
 
-    def get_edge_list(self,
-                      facilityType : str,
-                      u_edge='steps',
-                      v_edge='intra_edges'):
-        """
-        # @todo reformat and update docstring
-        converts two columns of node names (u and v) into a list of string tuples
-        for edge definition with networkx
-
-        :param df: DataFrame
-            data frame of edges by facility type
-        :param facilityType: string
-            facility type for which edges are being extracted
-        :param u_edge: string
-            column in df with edge origin node names
-        :param v_edge: string
-            column in df with edge destination node names
-        :return: list of string tuples
-        """
-        _out = self.steps_df[[u_edge, v_edge]].loc[self.steps_df.facility_type == facilityType].dropna().to_records(index=False).tolist()
-        return _out
-
-
-    def get_step_list(self,
-                      facilityType : str,
-                      u='steps'):
-        """
-        # @todo reformat and update docstring
-        converts a DataFrame column containing processing steps into a list of
-        strings for DiGraph creation
-
-        :param df: DataFrame
-            data frame with processing steps by facility type
-        :param facilityType: str
-            facility type
-        :param u: str
-            name of data frame column with processing steps
-        :return: list of strings
-            used to add nodes to a networkx DiGraph
-        """
-        return self.steps_df[u].loc[self.steps_df.facility_type == facilityType].unique().tolist()
-
     @staticmethod
     def get_node_names(facilityID : [int, str],
                        subgraph_steps: list):
@@ -126,27 +80,82 @@ class CostGraph():
         """
         return ["{}{}".format(i, str(facilityID)) for i in subgraph_steps]
 
-    # @todo THOUGHT: method to assemble dict of node attributes including
-    #  processing step, method for cost calculations, unique facility ID,
-    #  region identifiers, ...
+    def get_edges(self,
+                  facilityType : str,
+                  u_edge='steps',
+                  v_edge='intra_edges'):
+        """
+        # @todo reformat and update docstring
+        converts two columns of node names (u and v) into a list of string tuples
+        for edge definition with networkx
 
-    def get_cost_methods(self,
-                         facilityID : [int, str],
-                         steps_col='steps',
-                         cost_method_col='cost_method'):
+        :param facilityType: string
+            facility type for which edges are being extracted
+        :param u_edge: string
+            column in df with edge origin node names
+        :param v_edge: string
+            column in df with edge destination node names
+        :return: list of string tuples
+        """
+        _out = self.steps_df[[u_edge, v_edge]].loc[self.steps_df.facility_type == facilityType].dropna().to_records(index=False).tolist()
+        return _out
+
+
+    def get_nodes(self,
+                  facilityID: [int, str],
+                  step_col='steps',
+                  cost_method_col='cost_method',
+                  facility_id_col='facility_id',
+                  region_id1_col='region_id_1',
+                  region_id2_col='region_id_2',
+                  region_id3_col='region_id_3',
+                  region_id4_col='region_id_4'):
         """
         # @todo update docstring
+
         Parameters
         ----------
         facilityID
-        steps_col
+        step_col
         cost_method_col
+        facility_id_col
+        region_id1_col
+        region_id2_col
+        region_id3_col
+        region_id4_col
 
         Returns
         -------
+            List of (str, dict) tuples used to define a networkx DiGraph
+            Attributes are: processing step, cost method, facility ID, and
+            region identifiers
 
         """
-        return self.costs_df[[steps_col, cost_method_col]].loc[self.costs_df.facility_id == facilityID]
+        # list of nodes (processing steps) within a facility
+        _node_names = self.costs_df[step_col].loc[self.costs_df.facility_id == facilityID].tolist()
+
+        # data frame matching facility processing steps with methods for cost
+        # calculation over time
+        _step_cost = self.costs_df[[step_col,
+                                    cost_method_col,
+                                    facility_id_col]].loc[self.costs_df.facility_id == facilityID]
+
+        # data frame of region identifiers that apply to all processing steps
+        # within this facility
+        _region_ids = self.loc_df[[facility_id_col,
+                                   region_id1_col,
+                                   region_id2_col,
+                                   region_id3_col,
+                                   region_id4_col]].loc[self.loc_df.facility_id == facilityID]
+
+        # create dictionary from data frame with processing steps, cost
+        # calculation method, and facility-specific region identifiers
+        _attr_data = _step_cost.merge(_region_ids, how='outer',on=facility_id_col).to_dict(orient='records')
+
+        # reformat data into a list of tuples as (str, dict)
+        _nodes = tuple(zip(_node_names, _attr_data))
+
+        return _nodes
 
 
     def build_facility_graph(self,
@@ -157,14 +166,6 @@ class CostGraph():
         Constructs a networkx directed graph object representation of one facility
         or supply chain location
 
-        :param edge_list: list of strings
-            List of connections between processing steps
-        :param step_list: list of strings
-            List of processing steps within this facility
-        :param steps_costs: dictionary
-            Dictionary where the keys (strings) are the processing steps at this
-            facility and the values (floats) are the processing costs (USD/metric
-            ton) of each step
         :param facilityID: [int, str]
             Unique facility identifier
         :param facilityType: str
@@ -175,41 +176,25 @@ class CostGraph():
         # Create empty directed graph object
         _facility = nx.DiGraph()
 
-        # Get the list of processing steps for this facility
-        _steps = self.get_step_list(facilityType)
-
-        # Get the edges within this facility
-        _edges = self.get_edge_list(facilityType)
-
-        # Get the corresponding cost methods
-        _cost_methods = self.get_cost_methods(facilityID)
-
-        # Populate the directed graph with node names and facilityIDs (same for
-        # all nodes in this graph)
-        # @todo vectorize to remove loop
-        for i in np.arange(0, len(_steps)):
-            _facility.add_node(
-                _steps[i], #node name, to be uniquified
-                step=_steps[i], #processing step at this node
-                cost=None, # @todo add in cost method information
-                facilityID=facilityID # unique facility ID
-            )
+        # Populate the directed graph with node names and facilityIDs
+        _facility.add_nodes_from(self.get_nodes(facilityID))
 
         # Populate the directed graph with edges
         # Edges within facilities don't have transportation costs or distances
         # associated with them.
-        _facility.add_edges_from(_edges,
-                                cost=0,
-                                distance=0)
+        _facility.add_edges_from(self.get_edges(facilityType),
+                                 cost=0,
+                                 dist=0)
 
         # Use the facility ID and list of processing steps in this facility to
         # create a list of unique node names
         # Unique meaning over the entire supply chain (graph of subgraphs)
-        _node_list = self.get_node_names(facilityID, _steps)
+        _node_names = list(_facility.nodes)
+        _node_names_unique = self.get_node_names(facilityID, _node_names)
 
         _labels = {}
-        for i in np.arange(0, len(_node_list)):
-            _labels.update({_steps[i]: _node_list[i]})
+        for i in np.arange(0, len(_node_names_unique)):
+            _labels.update({_node_names[i]: _node_names_unique[i]})
 
         # Relabel nodes to unique names (step + facility ID)
         nx.relabel_nodes(_facility, _labels, copy=False)
@@ -232,9 +217,6 @@ class CostGraph():
 
                 # Get facility type
                 _factype = _line[1]
-
-                # Get region identifiers
-                # @todo implement region identifiers in node attributes
 
                 # Build the subgraph representation and add it to the list of facility
                 # subgraphs
