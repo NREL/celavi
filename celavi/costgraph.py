@@ -276,15 +276,10 @@ class CostGraph:
         edges. Edges within facilities have no cost or distance. Edges
         between facilities have costs defined in the interconnections
         dataset and distances defined in the routes dataset.
-
-        # @todo connect to regionalizations: every sub-graph needs a location
-        and a distance to every connected sub-graph
-
+        
         Returns
         -------
-        @todo after debugging, remove the return value
-        self.supply_chain
-            networkx DiGraph
+        None
         """
 
         # add all facilities and intra-facility edges to supply chain
