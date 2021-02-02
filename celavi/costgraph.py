@@ -396,8 +396,18 @@ class CostGraph:
         #  characteristics as it traverses the graph? Maybe connecting this graph to
         #  the state machine
 
+    def rank_paths(self):
+        """
+
+        Returns
+        -------
+
+        """
+        pass
+
     def landfill_fee_year(self, timestep):
         """
+        @todo get timestep or year from discrete event simulation
         UNITS: USD/tonne
         """
         _year = self.timesteps_to_years(timestep)
@@ -407,6 +417,7 @@ class CostGraph:
 
     def blade_removal_year(self, timestep):
         """
+        @todo get timestep or year from discrete event simulation
         UNITS: USD/blade
         returns the cost of removing ONE blade from a standing wind turbine, prior
         to on-site size reduction or coarse grinding
@@ -421,6 +432,7 @@ class CostGraph:
 
     def segment_transpo_cost(self, timestep):
         """
+        @todo get timestep or year from discrete event simulation
         UNITS: USD/blade-km
         :return:  cost of transporting large blade segments following
          onsite size reduction
@@ -445,6 +457,8 @@ class CostGraph:
 
     def learning_by_doing(self, timestep, mass_tonnes):
         """
+        @todo get timestep or year and cumulative blade mass processed (recycled)
+         from discrete event simulation
         This function so far only gets called if component.kind=='blade'
         returns the total pathway cost for a single blade
         :key
