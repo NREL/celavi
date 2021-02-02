@@ -1,5 +1,4 @@
 import networkx as nx
-from csv import DictReader
 import pandas as pd
 import numpy as np
 
@@ -12,6 +11,7 @@ steps_df = pd.read_excel(mockdata, sheet_name='edges')
 costs_df = pd.read_excel(mockdata, sheet_name='costs')
 interconnect_df = pd.read_excel(mockdata, sheet_name='interconnections')
 loc_df = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/loc-mock.csv"
+dist_file = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/routes-mock.csv"
 
 # @todo move cost methods here
 
@@ -80,8 +80,10 @@ class CostGraph:
 
     @staticmethod
     def node_filter(graph : nx.DiGraph,
-                    attr_key : str,
-                    get_val):
+                    attr_key_1 : str,
+                    get_val_1,
+                    attr_key_2 : str = None,
+                    get_val_2 = None):
         """
         Finds node names in graph that have 'attr_key': get_val in
              their attribute dictionary
@@ -91,26 +93,38 @@ class CostGraph:
         graph
             a networkx DiGraph containing at least one node with a node
             attribute dictionary
-        attr_key
+        attr_key_1
             key in the attribute dictionary on which to filter nodes in graph
-        get_val
+        get_val_1
             value of attribute key on which to filter nodes in graph
+        attr_key_2
+
+        get_val_2
 
         Returns
         -------
             list of names of nodes (str) in graph
         """
-        _out = [x for x, y in graph.nodes(data=True) if y[attr_key] == get_val]
+        if attr_key_2 is not None:
+            _out = [x for x, y in graph.nodes(data=True)
+                    if (y[attr_key_1] == get_val_1) and
+                    (y[attr_key_2] == get_val_2)]
+        else:
+            _out = [x for x, y in graph.nodes(data=True)
+                    if y[attr_key_1] == get_val_1]
 
         return _out
 
     @staticmethod
     def list_of_tuples(list1 : list,
-                       list2: list):
+                       list2 : list,
+                       list3 : list = None):
         """
         Converts two lists into a list of tuples where each tuple contains
-        one element list1 and one element from list2:
-        [(list1[0], list2[0]), (list1[1], list2[1]), ...]
+        one element from each list:
+        [(list1[0], list2[0], list3[0]), (list1[1], list2[1], list3[0]), ...]
+        At least two lists must be specified. A maximum of three lists can be
+        specified.
 
         Parameters
         ----------
@@ -118,12 +132,18 @@ class CostGraph:
             list of any data type
         list2
             list of any data type
+        list3
+            list of any data type
 
         Returns
         -------
-            list of tuples
+            list of 2- or 3-tuples
         """
-        return list(map(lambda x, y: (x, y), list1, list2))
+        if list3 is not None:
+            return list(map(lambda x, y, z: (x, y, z), list1, list2, list3))
+        else:
+            return list(map(lambda x, y: (x, y), list1, list2))
+
 
     def get_edges(self,
                   facility_df : pd.DataFrame,
@@ -131,7 +151,7 @@ class CostGraph:
                   v_edge='next_step'):
         """
         Converts two columns of node names into a list of string tuples
-        for edge definition with networkx
+        for intra-facility edge definition with networkx
 
         Parameters
         ----------
@@ -166,7 +186,7 @@ class CostGraph:
             DataFrame containing unique facility IDs, processing steps, and
             the name of the method (if any) used to calculate processing costs
             Column names in facility_df must be:
-                ['facility_id', 'step', 'cost_method']
+                ['facility_id', 'step', 'connects', 'cost_method']
 
         Returns
         -------
@@ -183,7 +203,7 @@ class CostGraph:
 
         # data frame matching facility processing steps with methods for cost
         # calculation over time
-        _step_cost = self.costs_df[['step','cost_method','facility_id']].loc[self.costs_df.facility_id == _id]
+        _step_cost = self.costs_df[['step','cost_method','facility_id','connects']].loc[self.costs_df.facility_id == _id]
 
         # create list of dictionaries from data frame with processing steps,
         # cost calculation method, and facility-specific region identifiers
@@ -292,12 +312,17 @@ class CostGraph:
             # get two lists of nodes to connect based on df row
             _u_nodes = self.node_filter(self.supply_chain, 'step', _u)
             _v_nodes = self.node_filter(self.supply_chain, 'step', _v)
+            _dict = {'cost':_edge_cost,
+                     'dist': 0,
+                     'u_id': None,
+                     'v_id': None}
 
             _edge_list = self.list_of_tuples(_u_nodes, _v_nodes)
-
+            # @todo use the dist=NaN as a condition to exclude paths with this
+            # edge from pathways being considered
             self.supply_chain.add_edges_from(_edge_list,
                                              cost=_edge_cost,
-                                             dist=None)
+                                             dist=np.nan)
 
         # read in and process routes line by line
         with open(self.routes_df, 'r') as _route_file:
@@ -306,22 +331,20 @@ class CostGraph:
 
             for _line in _reader:
                 # get all nodes that this route connects
+
+                # find the source nodes for this route
                 _u = self.node_filter(self.supply_chain,
-                                      'facility_id',
-                                      _line['source_facility_id'])
-                _v = self.node_filter(self.supply_chain,
-                                      'facility_id',
-                                      _line['destination_facility_id'])
+                                      'facility_id',_line['source_facility_id'].values[0],
+                                      'connects','out')
 
-                # look for edges in supply_chain that connect _u and _v
-
-
-                # for every tuple in the edge list, look for a row in routes
-                # where source_facility_id matches the facility ID of u and
-                # destination_facility_id matches the facility ID of V, and pull
-                # the total_vmt from that row
-
-        return self.supply_chain
+                # loop thru all edges that connect to the source nodes
+                for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
+                    # if the destination node facility ID matches the
+                    # destination facility ID in the routing dataset row,
+                    # apply the distance from the routing dataset to this edge
+                    if self.supply_chain.nodes[v_node]['facility_id'] == \
+                            _line['destination_facility_id'].values[0]:
+                        data['dist'] = _line['total_vmt'].values[0]
 
 
     def enumerate_paths(self):
@@ -376,8 +399,6 @@ class CostGraph:
         #  characteristics as it traverses the graph? Maybe connecting this graph to
         #  the state machine
 
-test = CostGraph(input_name=mockdata, locations_file=loc_df)
 
-sc_graph = test.build_supplychain_graph()
 
 
