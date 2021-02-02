@@ -1,6 +1,7 @@
 import networkx as nx
 import pandas as pd
 import numpy as np
+import warnings
 
 # the locations dataset will be the largest; try to read that one in line by
 # line. All other datasets will be relatively small, so storing and
@@ -12,8 +13,6 @@ costs_df = pd.read_excel(mockdata, sheet_name='costs')
 interconnect_df = pd.read_excel(mockdata, sheet_name='interconnections')
 loc_df = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/loc-mock.csv"
 dist_file = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/routes-mock.csv"
-
-# @todo move cost methods here
 
 # @note cost, next state, relocation destination for the component
 
@@ -27,7 +26,8 @@ class CostGraph:
     def __init__(self,
                  input_name : str,
                  locations_file : str,
-                 routes_file : str):
+                 routes_file : str,
+                 timestep : int = 0,):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -40,17 +40,19 @@ class CostGraph:
             path to dataset of facility locations
         routes_file
             path to dataset of routes between facilities
+        timestep
+            DES model timestep at which cost graph is instantiated
         """
         # @todo update file IO method to match actual input data format
         self.steps_df=pd.read_excel(input_name, sheet_name='edges')
         self.costs_df=pd.read_excel(input_name, sheet_name='costs')
         self.interconnect_df=pd.read_excel(input_name, sheet_name='interconnections')
 
-        # the location dataset is read in and processed line by line
+        # these data sets are processed line by line
         self.loc_df=locations_file
-
-        # @todo read in the routes dataset line by line?
         self.routes_df=routes_file
+
+        self.timestep = timestep
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
