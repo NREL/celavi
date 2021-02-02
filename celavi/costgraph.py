@@ -1,7 +1,9 @@
 import networkx as nx
-from csv import reader
+from csv import DictReader
 import pandas as pd
 import numpy as np
+
+import pdb
 
 # the locations dataset will be the largest; try to read that one in line by
 # line. All other datasets will be relatively small, so storing and
@@ -11,7 +13,7 @@ mockdata = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/input-data-mocku
 steps_df = pd.read_excel(mockdata, sheet_name='edges')
 costs_df = pd.read_excel(mockdata, sheet_name='costs')
 interconnect_df = pd.read_excel(mockdata, sheet_name='interconnections')
-loc_df = pd.read_excel(mockdata, sheet_name='locations')
+loc_df = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/loc-mock.csv"
 
 # @todo move cost methods here
 
@@ -22,7 +24,7 @@ class CostGraph:
 
     """
 
-    def __init__(self, input_name):
+    def __init__(self, input_name : str, locations_file : str):
         """
 
         Parameters
@@ -31,13 +33,13 @@ class CostGraph:
             File name or other identifier where input datasets are stored
         """
         # @todo get input_name to read in the small datasets
-        self.steps_df=None
-        self.costs_df=None
-        self.interconnect_df=None
+        self.steps_df=pd.read_excel(input_name, sheet_name='edges')
+        self.costs_df=pd.read_excel(input_name, sheet_name='costs')
+        self.interconnect_df=pd.read_excel(input_name, sheet_name='interconnections')
 
         # for the dataset containing all facilities, save the filename to
         # self and process it line by line in a method
-        self.loc_df=None
+        self.loc_df=locations_file
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -81,48 +83,44 @@ class CostGraph:
         return ["{}{}".format(i, str(facilityID)) for i in subgraph_steps]
 
     def get_edges(self,
-                  facilityType : str,
+                  facility_df : pd.DataFrame,
                   u_edge='steps',
                   v_edge='intra_edges'):
         """
         # @todo reformat and update docstring
+
         converts two columns of node names (u and v) into a list of string tuples
         for edge definition with networkx
 
-        :param facilityType: string
-            facility type for which edges are being extracted
+        :param facility_df : dict
+
         :param u_edge: string
             column in df with edge origin node names
         :param v_edge: string
             column in df with edge destination node names
         :return: list of string tuples
         """
-        _out = self.steps_df[[u_edge, v_edge]].loc[self.steps_df.facility_type == facilityType].dropna().to_records(index=False).tolist()
+        _type = facility_df['facility_type'].values[0]
+
+        _out = self.steps_df[[u_edge, v_edge]].loc[self.steps_df.facility_type == _type].dropna().to_records(index=False).tolist()
+
         return _out
 
 
     def get_nodes(self,
-                  facilityID: [int, str],
-                  step_col='steps',
+                  facility_df : pd.DataFrame,
+                  step_col='step',
                   cost_method_col='cost_method',
-                  facility_id_col='facility_id',
-                  region_id1_col='region_id_1',
-                  region_id2_col='region_id_2',
-                  region_id3_col='region_id_3',
-                  region_id4_col='region_id_4'):
+                  facility_id_col='facility_id'):
         """
         # @todo update docstring
 
         Parameters
         ----------
-        facilityID
+        facility_df
         step_col
         cost_method_col
         facility_id_col
-        region_id1_col
-        region_id2_col
-        region_id3_col
-        region_id4_col
 
         Returns
         -------
@@ -131,26 +129,19 @@ class CostGraph:
             region identifiers
 
         """
+
+        _id = facility_df['facility_id'].values[0]
+
         # list of nodes (processing steps) within a facility
-        _node_names = self.costs_df[step_col].loc[self.costs_df.facility_id == facilityID].tolist()
+        _node_names = self.costs_df[step_col].loc[self.costs_df.facility_id == _id].tolist()
 
         # data frame matching facility processing steps with methods for cost
         # calculation over time
-        _step_cost = self.costs_df[[step_col,
-                                    cost_method_col,
-                                    facility_id_col]].loc[self.costs_df.facility_id == facilityID]
-
-        # data frame of region identifiers that apply to all processing steps
-        # within this facility
-        _region_ids = self.loc_df[[facility_id_col,
-                                   region_id1_col,
-                                   region_id2_col,
-                                   region_id3_col,
-                                   region_id4_col]].loc[self.loc_df.facility_id == facilityID]
+        _step_cost = self.costs_df[[step_col,cost_method_col,facility_id_col]].loc[self.costs_df.facility_id == _id]
 
         # create dictionary from data frame with processing steps, cost
         # calculation method, and facility-specific region identifiers
-        _attr_data = _step_cost.merge(_region_ids, how='outer',on=facility_id_col).to_dict(orient='records')
+        _attr_data = _step_cost.merge(facility_df, how='outer',on=facility_id_col).to_dict(orient='records')
 
         # reformat data into a list of tuples as (str, dict)
         _nodes = tuple(zip(_node_names, _attr_data))
@@ -159,30 +150,27 @@ class CostGraph:
 
 
     def build_facility_graph(self,
-                             facilityID: [int, str],
-                             facilityType: str):
+                             facility_df : pd.DataFrame):
         """
-        # @todo update docstring format and content
-        Constructs a networkx directed graph object representation of one facility
-        or supply chain location
+        # @todo update docstring
+        Parameters
+        ----------
+        facility_df
 
-        :param facilityID: [int, str]
-            Unique facility identifier
-        :param facilityType: str
-        :return: DiGraph object
-            Directed graph populated with unique node names, processing steps,
-             processing costs, and unique facility ID attributes
+        Returns
+        -------
+
         """
         # Create empty directed graph object
         _facility = nx.DiGraph()
 
         # Populate the directed graph with node names and facilityIDs
-        _facility.add_nodes_from(self.get_nodes(facilityID))
+        _facility.add_nodes_from(self.get_nodes(facility_df))
 
         # Populate the directed graph with edges
         # Edges within facilities don't have transportation costs or distances
         # associated with them.
-        _facility.add_edges_from(self.get_edges(facilityType),
+        _facility.add_edges_from(self.get_edges(facility_df),
                                  cost=0,
                                  dist=0)
 
@@ -190,7 +178,8 @@ class CostGraph:
         # create a list of unique node names
         # Unique meaning over the entire supply chain (graph of subgraphs)
         _node_names = list(_facility.nodes)
-        _node_names_unique = self.get_node_names(facilityID, _node_names)
+        _id = facility_df['facility_id'].values[0]
+        _node_names_unique = self.get_node_names(_id,_node_names)
 
         _labels = {}
         for i in np.arange(0, len(_node_names_unique)):
@@ -208,29 +197,23 @@ class CostGraph:
         """
 
         with open(self.loc_df, 'r') as _loc_file:
-            _loc_csv = reader(_loc_file)
 
-            for _line in _loc_csv:
+            _reader = pd.read_csv(_loc_file, chunksize=1)
 
-                # Get unique facility ID
-                _facID = _line[0]
-
-                # Get facility type
-                _factype = _line[1]
+            for _line in _reader:
 
                 # Build the subgraph representation and add it to the list of facility
                 # subgraphs
-                _fac_graph = self.build_facility_graph(
-                    facilityID = _facID,
-                    facilityType = _factype,
-                )
+                _fac_graph = self.build_facility_graph(facility_df = _line)
 
                 # add onto the supply supply chain graph
                 self.supply_chain.add_nodes_from(_fac_graph)
                 self.supply_chain.add_edges_from(_fac_graph.edges)
 
-            # @todo connect to regionalizations: every sub-graph needs a location and a
-            #  distance to every connected (every other?) sub-graph
+
+
+        # @todo connect to regionalizations: every sub-graph needs a location and a
+        #  distance to every connected (every other?) sub-graph
 
 
     def enumerate_paths(self):
@@ -280,3 +263,7 @@ class CostGraph:
         # @note Is there a way to also track component-material "status" or general
         #  characteristics as it traverses the graph? Maybe connecting this graph to
         #  the state machine
+
+testing = CostGraph(input_name=mockdata, locations_file=loc_df)
+
+testing.build_supplychain_graph()
