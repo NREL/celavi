@@ -99,14 +99,19 @@ class Router(object):
         return _summary[['region_transportation', 'fclass', 'vmt']]
 
 
-transportation_graph = 'data/inputs/transportation_graph.csv'
-
-# graph node locations
-node_locations = 'data/inputs/node_locations.csv'
+# file paths
+wind_turbine_locations = 'data/inputs/wind_turbines_tx.csv'  # wind turbine locations using USWTDB format
+other_facility_locations = 'data/inputs/other_facility_locations.csv'  # other facility locations (e.g., landfills)
+transportation_graph = 'data/inputs/transportation_graph.csv'  # transport graph (pre computed; don't change)
+node_locations = 'data/inputs/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
 
 # data backfill flag
 backfill = True
 
+# flag for limited set of source data
+toy = False
+
+# setup transport graph (initialize data and router)
 _transportation_graph = Data.TransportationGraph(fpath=transportation_graph, backfill=backfill)
 _node_locations = Data.TransportationNodeLocations(fpath=node_locations, backfill=backfill)
 _temp_dir = tempfile.mkdtemp()
@@ -115,6 +120,7 @@ router = Router(edges=_transportation_graph,
                 node_map=_node_locations,
                 memory=Memory(location=_temp_dir))
 
+# plot graph (too computationally expensive for entire transport graph; can use for smaller subsets of graph)
 # nx.write_weighted_edgelist(router.Graph, 'data/outputs/transport_graph.csv')
 
 # G = nx.petersen_graph()
@@ -123,25 +129,70 @@ router = Router(edges=_transportation_graph,
 # plt.subplot(122)
 # nx.draw_shell(G, nlist=[range(5, 10), range(5)], with_labels=True, font_weight='bold')
 
+
 # get routing information between each unique region_production and
 # region_destination pair
 
-generic_locations = 'data/inputs/locations short.csv'
-locations = Data.Locations(fpath=generic_locations, backfill=backfill)
+
+# load turbine data
+turbine_locations = Data.TurbineLocations(fpath=wind_turbine_locations, backfill=backfill)
+
+# select only those turbines with eia_ids (exclude turbines without)
+turbine_locations_with_eia = turbine_locations[turbine_locations['eia_id'] != '-1']
+
+# determine average lat and long for all turbines by eia_id (this is the plant location for each eia_id)
+plant_locations = turbine_locations_with_eia[['eia_id', 'xlong', 'ylat']].groupby(by=['eia_id']).mean().reset_index()
+plant_locations = plant_locations.astype({'eia_id': 'int'})  # recast type for eia_id
+
+# select turbine data for county with most capacity (some plants have turbines in multiple counties and/or
+# multiple phases with different amounts of capacity)
+plant_turbine_capacity = turbine_locations_with_eia[['eia_id', 't_state', 't_county', 'p_cap', 't_cap']]
+plant_county_phase = plant_turbine_capacity.groupby(by=['eia_id', 't_state', 't_county', 'p_cap']).sum().reset_index()
+wind_plant_list = plant_county_phase.groupby(by=['eia_id', 't_state']).max().reset_index()[['eia_id', 't_state', 't_county']]
+
+# merge plant list with location data and reformat data for use
+wind_plant_locations = wind_plant_list.merge(plant_locations, on='eia_id')
+wind_plant_locations = wind_plant_locations.rename(columns={"t_state": "region_id_2",
+                                                            "t_county": "region_id_3",
+                                                            "xlong": "long",
+                                                            "ylat": "lat",
+                                                            "eia_id": "facility_id"})
+wind_plant_locations["facility_type"] = 'wind_plant'
+wind_plant_locations["region_id_1"] = 'USA'
+wind_plant_locations["region_id_4"] = ''
+wind_plant_locations = wind_plant_locations.astype({'facility_id': 'int'})
+
+# load other facility data
+facility_locations = Data.OtherFacilityLocations(fpath=other_facility_locations, backfill=backfill)
+
+locations = facility_locations.append(wind_plant_locations)
+
+locations.to_csv('data/outputs/computed_input_locations.csv')
+
+# OR read in location data directly (above code computes from raw data files
+# generic_locations = 'data/inputs/locations short.csv'
+# locations = Data.Locations(fpath=generic_locations, backfill=backfill)
 
 # separate source and destination locations from generic "locations" list
-_source_loc = locations[locations['facility_type'] == 'wind_plant']
+_source_loc = locations[locations['facility_type'].isin(['wind_plant'])]
 _dest_loc = locations[locations['facility_type'] != 'wind_plant']
+
+
+# select limited data set if desired
+if toy:
+    _source_loc_selected = _source_loc.loc[_source_loc['region_id_3'].isin(['Nolan County'])]
+    _source_loc = _source_loc_selected
+    _dest_loc = _dest_loc.loc[_dest_loc['facility_id'].isin([1, 21, 22, 23])]
+
 _source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
 _dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
 _source_loc.insert(0, 'merge', 'True')
 _dest_loc.insert(0, 'merge', 'True')
 route_list = _source_loc.merge(_dest_loc, on='merge')
 
-
 # OR load source and destination locations directly
-#source_locations = 'data/inputs/plant_locations.csv'
-#destination_locations = 'data/inputs/destination_locations.csv'
+# source_locations = 'data/inputs/plant_locations.csv'
+# destination_locations = 'data/inputs/destination_locations.csv'
 #_source_loc = Data.StartLocations(fpath=source_locations, backfill=backfill)
 #_dest_loc = Data.EndLocations(fpath=destination_locations, backfill=backfill)
 # route_list = _source_loc.merge(_dest_loc, on='end_facility_type')
@@ -151,7 +202,6 @@ route_list = _source_loc.merge(_dest_loc, on='merge')
 #                                         "end_lat": "destination_lat"})
 
 route_list.to_csv('data/outputs/route_list.csv')
-
 
 _routes = route_list[['source_long',
                       'source_lat',

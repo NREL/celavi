@@ -148,3 +148,38 @@ class Locations(Data):
                  backfill=True):
         super(Locations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
+
+
+class TurbineLocations(Data):
+    COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
+               {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
+               {'name': 't_county', 'type': str, 'index': False, 'backfill': None},
+               {'name': 't_fips', 'type': int, 'index': False, 'backfill': None},
+               {'name': 'xlong', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'ylat', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'p_cap', 'type': float, 'index': False, 'backfill': None},
+               {'name': 't_cap', 'type': float, 'index': False, 'backfill': None}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(TurbineLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                          backfill=backfill)
+
+class OtherFacilityLocations(Data):
+    COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'long', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'region_id_1', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'region_id_2', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'region_id_3', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'region_id_4', 'type': str, 'index': False, 'backfill': None}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(OtherFacilityLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                               backfill=backfill)
