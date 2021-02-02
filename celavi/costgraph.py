@@ -142,7 +142,7 @@ class CostGraph:
         _attr_data = _step_cost.merge(facility_df, how='outer',on=facility_id_col).to_dict(orient='records')
 
         # reformat data into a list of tuples as (str, dict)
-        _nodes = tuple(zip(_node_names, _attr_data))
+        _nodes = list(map(lambda x,y: (x,y), _node_names, _attr_data))
 
         return _nodes
 
@@ -162,8 +162,10 @@ class CostGraph:
         # Create empty directed graph object
         _facility = nx.DiGraph()
 
+        _facility_nodes = self.get_nodes(facility_df)
+
         # Populate the directed graph with node names and facilityIDs
-        _facility.add_nodes_from(self.get_nodes(facility_df))
+        _facility.add_nodes_from(_facility_nodes)
 
         # Populate the directed graph with edges
         # Edges within facilities don't have transportation costs or distances
@@ -194,6 +196,7 @@ class CostGraph:
         # @todo update docstring
         """
 
+        # add all facilities and intra-facility edges
         with open(self.loc_df, 'r') as _loc_file:
 
             _reader = pd.read_csv(_loc_file, chunksize=1)
@@ -205,8 +208,13 @@ class CostGraph:
                 _fac_graph = self.build_facility_graph(facility_df = _line)
 
                 # add onto the supply supply chain graph
-                self.supply_chain.add_nodes_from(_fac_graph)
-                self.supply_chain.add_edges_from(_fac_graph.edges)
+                self.supply_chain.add_nodes_from(_fac_graph.nodes(data=True))
+
+                self.supply_chain.add_edges_from(_fac_graph.edges(data=True))
+
+        return self.supply_chain
+        # add all inter-facility edges
+
 
 
 
