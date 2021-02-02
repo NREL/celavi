@@ -3,8 +3,6 @@ from csv import DictReader
 import pandas as pd
 import numpy as np
 
-import pdb
-
 # the locations dataset will be the largest; try to read that one in line by
 # line. All other datasets will be relatively small, so storing and
 # manipulating the entire dataset within the Python environment shouldn't
@@ -263,7 +261,3 @@ class CostGraph:
         # @note Is there a way to also track component-material "status" or general
         #  characteristics as it traverses the graph? Maybe connecting this graph to
         #  the state machine
-
-testing = CostGraph(input_name=mockdata, locations_file=loc_df)
-
-testing.build_supplychain_graph()
