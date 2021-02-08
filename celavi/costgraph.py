@@ -8,11 +8,8 @@ import warnings
 # manipulating the entire dataset within the Python environment shouldn't
 # slow execution down noticeably
 mockdata = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/input-data-mockup.xlsx"
-steps_df = pd.read_excel(mockdata, sheet_name='edges')
-costs_df = pd.read_excel(mockdata, sheet_name='costs')
-interconnect_df = pd.read_excel(mockdata, sheet_name='interconnections')
-loc_df = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/loc-mock.csv"
-dist_file = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/routes-mock.csv"
+loc_df = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/locations.csv"
+dist_file = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/routes.csv"
 
 # @note cost, next state, relocation destination for the component
 
@@ -44,9 +41,9 @@ class CostGraph:
             DES model timestep at which cost graph is instantiated
         """
         # @todo update file IO method to match actual input data format
-        self.steps_df=pd.read_excel(input_name, sheet_name='edges')
-        self.costs_df=pd.read_excel(input_name, sheet_name='costs')
-        self.interconnect_df=pd.read_excel(input_name, sheet_name='interconnections')
+        self.step_costs=pd.read_excel(input_name, sheet_name='step_costs')
+        self.fac_edges=pd.read_excel(input_name, sheet_name='fac_edges')
+        self.transpo_edges=pd.read_excel(input_name, sheet_name='transpo_edges')
 
         # these data sets are processed line by line
         self.loc_df=locations_file
@@ -171,7 +168,8 @@ class CostGraph:
         """
         _type = facility_df['facility_type'].values[0]
 
-        _out = self.steps_df[[u_edge, v_edge]].loc[self.steps_df.facility_type == _type].dropna().to_records(index=False).tolist()
+        _out = self.fac_edges[[u_edge,
+                               v_edge]].loc[self.fac_edges.facility_type == _type].dropna().to_records(index=False).tolist()
 
         return _out
 
@@ -188,7 +186,7 @@ class CostGraph:
             DataFrame containing unique facility IDs, processing steps, and
             the name of the method (if any) used to calculate processing costs
             Column names in facility_df must be:
-                ['facility_id', 'step', 'connects', 'cost_method']
+                ['facility_id', 'step', 'connects', 'step_cost_method']
 
         Returns
         -------
@@ -201,15 +199,20 @@ class CostGraph:
         _id = facility_df['facility_id'].values[0]
 
         # list of nodes (processing steps) within a facility
-        _node_names = self.costs_df['step'].loc[self.costs_df.facility_id == _id].tolist()
+        _node_names = self.step_costs['step'].loc[self.step_costs.facility_id == _id].tolist()
 
         # data frame matching facility processing steps with methods for cost
         # calculation over time
-        _step_cost = self.costs_df[['step','cost_method','facility_id','connects']].loc[self.costs_df.facility_id == _id]
+        _step_cost = self.step_costs[['step',
+                                      'step_cost_method',
+                                      'facility_id',
+                                      'connects']].loc[self.step_costs.facility_id == _id]
 
         # create list of dictionaries from data frame with processing steps,
         # cost calculation method, and facility-specific region identifiers
-        _attr_data = _step_cost.merge(facility_df,how='outer',on='facility_id').to_dict(orient='records')
+        _attr_data = _step_cost.merge(facility_df,
+                                      how='outer',
+                                      on='facility_id').to_dict(orient='records')
 
         # reformat data into a list of tuples as (str, dict)
         _nodes = self.list_of_tuples(_node_names, _attr_data)
@@ -301,10 +304,10 @@ class CostGraph:
 
         # add all inter-facility edges, with costs but without distances
         # this is a relatively short loop
-        for index, row in interconnect_df.iterrows():
+        for index, row in self.transpo_edges.iterrows():
             _u = row['u_step']
             _v = row['v_step']
-            _edge_cost = row['cost_method']
+            _edge_cost = row['transpo_cost_method']
 
             # get two lists of nodes to connect based on df row
             _u_nodes = self.node_filter(self.supply_chain, 'step', _u)
@@ -342,6 +345,8 @@ class CostGraph:
                     if self.supply_chain.nodes[v_node]['facility_id'] == \
                             _line['destination_facility_id'].values[0]:
                         data['dist'] = _line['total_vmt'].values[0]
+
+        return self.supply_chain
 
 
     def enumerate_paths(self):
