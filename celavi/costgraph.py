@@ -3,14 +3,6 @@ import pandas as pd
 import numpy as np
 import warnings
 
-# the locations dataset will be the largest; try to read that one in line by
-# line. All other datasets will be relatively small, so storing and
-# manipulating the entire dataset within the Python environment shouldn't
-# slow execution down noticeably
-mockdata = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/input-data-mockup.xlsx"
-loc_df = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/locations.csv"
-dist_file = "C:/Users/rhanes/Box Sync/Circular Economy LDRD/data/routes.csv"
-
 # @note cost, next state, relocation destination for the component
 
 class CostGraph:
@@ -21,18 +13,26 @@ class CostGraph:
     """
 
     def __init__(self,
-                 input_name : str,
-                 locations_file : str,
-                 routes_file : str,
-                 timestep : int = 0,):
+                 step_costs_file : str = 'step_costs.csv',
+                 fac_edges_file : str = 'fac_edges.csv',
+                 transpo_edges_file : str = 'transpo_edges.csv',
+                 locations_file : str = 'locations.csv',
+                 routes_file : str = 'routes.csv',
+                 timestep : int = 0):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
 
         Parameters
         ----------
-        input_name
-            File name or other identifier where input datasets are stored
+        step_costs_file
+            file listing processing steps and cost calculation methods by
+            facility type
+        fac_edges_file
+            file listing intra-facility edges by facility type
+        transpo_edges_file
+            file listing inter-facility edges and transpo cost calculation
+            methods
         locations_file
             path to dataset of facility locations
         routes_file
@@ -41,9 +41,9 @@ class CostGraph:
             DES model timestep at which cost graph is instantiated
         """
         # @todo update file IO method to match actual input data format
-        self.step_costs=pd.read_excel(input_name, sheet_name='step_costs')
-        self.fac_edges=pd.read_excel(input_name, sheet_name='fac_edges')
-        self.transpo_edges=pd.read_excel(input_name, sheet_name='transpo_edges')
+        self.step_costs=pd.read_csv(step_costs_file)
+        self.fac_edges=pd.read_csv(fac_edges_file)
+        self.transpo_edges = pd.read_csv(transpo_edges_file)
 
         # these data sets are processed line by line
         self.loc_df=locations_file
