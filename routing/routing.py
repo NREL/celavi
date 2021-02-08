@@ -27,15 +27,11 @@ class Router(object):
 
     def __init__(self, edges, node_map, memory=None, algorithm=bidirectional_dijkstra):
         """
-        Parameters
-        ----------
-        edges: pd.DataFrame
-
-        node_map: pd.DataFrame
-
-        memory: joblib.Memory
-
-        algorithm: Callable
+        :param edges: [DataFrame]
+        :param node_map: [DataFrame]
+        :param memory [joblib.Memory]
+        :param algorithm: [function]
+        :return:
         """
 
         self.node_map = node_map
@@ -59,17 +55,10 @@ class Router(object):
     def get_route(self, start, end):
 
         """
-        Find route from <from_fips> to <to_fips>, if exists
-
-        Parameters
-        ----------
-        start: List
-
-        end: List
-
-        Returns
-        -------
-        pd.DataFrame
+        Find route from <from_fips> to <to_fips>, if exists.
+        :param start: [list] [x, y]
+        :param end: [list] [x, y]
+        :return: [DataFrame]
         """
 
         _start_point = np.array(start)
