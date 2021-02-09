@@ -160,10 +160,14 @@ landfill_locations_all["region_id_1"] = 'USA'
 landfill_locations = landfill_locations_all[landfill_locations_all['current_landfill_status'] == 'Open']
 landfill_locations = landfill_locations[['facility_id', 'facility_type', 'long', 'lat', 'region_id_1', 'region_id_2', 'region_id_3', 'region_id_4']]
 
+# drop landfills that have null values for lat and long
+# (data cleanup from LMOP data; 7 cases where landfills exist but no locations are defined; e.g., facility_id = 2173)
+landfill_locations_no_nulls = landfill_locations.dropna(subset=['long', 'lat'])
+
 facility_locations = Data.OtherFacilityLocations(fpath=other_facility_locations, backfill=backfill)
 
 locations = facility_locations.append(wind_plant_locations)
-locations = locations.append(landfill_locations)
+locations = locations.append(landfill_locations_no_nulls)
 
 # exclude Hawaii, Guam, Puerto Rico, and Alaska
 locations = locations[locations.region_id_2 != 'GU']
@@ -210,12 +214,7 @@ if toy:
     _source_loc = _source_loc_selected
     _dest_loc = _dest_loc_complete.loc[_dest_loc_complete['facility_id'].isin([1, 21, 22, 23])]
 
-# state_list = locations.region_id_2.unique()  # whole list
-state_list = ['IA', 'ID', 'IL', 'IN', 'KS',
-              'KY', 'MD', 'ME', 'MI', 'MO', 'MT', 'NC', 'NE', 'NJ', 'NM', 'NV',
-              'NY', 'OH', 'OK', 'OR', 'PA', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA',
-              'WA', 'CO', 'WY', 'MN', 'VT', 'MA', 'WI', 'WV', 'ND', 'NH', 'DE',
-              'RI', 'CT', 'LA', 'MS', 'VI']
+state_list = locations.region_id_2.unique()
 for state in state_list:
     file_output = 'data/outputs/route_list_output_{}.csv'.format(state)
     print(file_output)
