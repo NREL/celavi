@@ -100,8 +100,9 @@ class Router(object):
 
 
 # file paths
-wind_turbine_locations = 'data/inputs/wind_turbines_tx.csv'  # wind turbine locations using USWTDB format
-other_facility_locations = 'data/inputs/other_facility_locations.csv'  # other facility locations (e.g., landfills)
+wind_turbine_locations = 'data/inputs/uswtdb_v3_3_20210114.csv'  # wind turbine locations using USWTDB format
+landfill_locations = 'data/inputs/landfilllmopdata.csv' # LMOP data for landfill locations
+other_facility_locations = 'data/inputs/other_facility_locations_all_us.csv'  # other facility locations (e.g., cement)
 transportation_graph = 'data/inputs/transportation_graph.csv'  # transport graph (pre computed; don't change)
 node_locations = 'data/inputs/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
 
@@ -111,30 +112,6 @@ backfill = True
 # flag for limited set of source data
 toy = False
 
-# setup transport graph (initialize data and router)
-_transportation_graph = Data.TransportationGraph(fpath=transportation_graph, backfill=backfill)
-_node_locations = Data.TransportationNodeLocations(fpath=node_locations, backfill=backfill)
-_temp_dir = tempfile.mkdtemp()
-
-router = Router(edges=_transportation_graph,
-                node_map=_node_locations,
-                memory=Memory(location=_temp_dir))
-
-# plot graph (too computationally expensive for entire transport graph; can use for smaller subsets of graph)
-# nx.write_weighted_edgelist(router.Graph, 'data/outputs/transport_graph.csv')
-
-# G = nx.petersen_graph()
-# plt.subplot(121)
-# nx.draw(router.Graph, with_labels=True, font_weight='bold')
-# plt.subplot(122)
-# nx.draw_shell(G, nlist=[range(5, 10), range(5)], with_labels=True, font_weight='bold')
-
-
-# get routing information between each unique region_production and
-# region_destination pair
-
-
-# load turbine data
 turbine_locations = Data.TurbineLocations(fpath=wind_turbine_locations, backfill=backfill)
 
 # select only those turbines with eia_ids (exclude turbines without)
@@ -163,9 +140,36 @@ wind_plant_locations["region_id_4"] = ''
 wind_plant_locations = wind_plant_locations.astype({'facility_id': 'int'})
 
 # load other facility data
+landfill_locations_all = Data.LandfillLocations(fpath=landfill_locations, backfill=backfill)
+
+# reformat landfill data
+landfill_locations_all = landfill_locations_all.rename(columns={"State": "region_id_2",
+                                                        "County": "region_id_3",
+                                                        "City": "region_id_4",
+                                                        "Longitude": "long",
+                                                        "Latitude": "lat",
+                                                        "Landfill ID": "facility_id",
+                                                        "Landfill Closure Year": "landfill_closure_year",
+                                                        "Current Landfill Status": "current_landfill_status"
+                                                        })
+landfill_locations_all = landfill_locations_all.astype({'landfill_closure_year': 'int'})
+landfill_locations_all["facility_type"] = 'landfill'
+landfill_locations_all["region_id_1"] = 'USA'
+
+# select only open landfills
+landfill_locations = landfill_locations_all[landfill_locations_all['current_landfill_status'] == 'Open']
+landfill_locations = landfill_locations[['facility_id', 'facility_type', 'long', 'lat', 'region_id_1', 'region_id_2', 'region_id_3', 'region_id_4']]
+
 facility_locations = Data.OtherFacilityLocations(fpath=other_facility_locations, backfill=backfill)
 
 locations = facility_locations.append(wind_plant_locations)
+locations = locations.append(landfill_locations)
+
+# exclude Hawaii, Guam, Puerto Rico, and Alaska
+locations = locations[locations.region_id_2 != 'GU']
+locations = locations[locations.region_id_2 != 'HI']
+locations = locations[locations.region_id_2 != 'PR']
+locations = locations[locations.region_id_2 != 'AK']
 
 locations.to_csv('data/outputs/computed_input_locations.csv')
 
@@ -174,92 +178,131 @@ locations.to_csv('data/outputs/computed_input_locations.csv')
 # locations = Data.Locations(fpath=generic_locations, backfill=backfill)
 
 # separate source and destination locations from generic "locations" list
-_source_loc = locations[locations['facility_type'].isin(['wind_plant'])]
-_dest_loc = locations[locations['facility_type'] != 'wind_plant']
+_source_loc_complete = locations[locations['facility_type'].isin(['wind_plant'])]
+_dest_loc_complete = locations[locations['facility_type'] != 'wind_plant']
+
+# setup transport graph (initialize data and router)
+_transportation_graph = Data.TransportationGraph(fpath=transportation_graph, backfill=backfill)
+_node_locations = Data.TransportationNodeLocations(fpath=node_locations, backfill=backfill)
+_temp_dir = tempfile.mkdtemp()
+
+router = Router(edges=_transportation_graph,
+                node_map=_node_locations,
+                memory=Memory(location=_temp_dir))
+
+# plot graph (too computationally expensive for entire transport graph; can use for smaller subsets of graph)
+# nx.write_weighted_edgelist(router.Graph, 'data/outputs/transport_graph.csv')
+
+# G = nx.petersen_graph()
+# plt.subplot(121)
+# nx.draw(router.Graph, with_labels=True, font_weight='bold')
+# plt.subplot(122)
+# nx.draw_shell(G, nlist=[range(5, 10), range(5)], with_labels=True, font_weight='bold')
+
+
+# get routing information between each unique region_production and
+# region_destination pair
 
 
 # select limited data set if desired
 if toy:
-    _source_loc_selected = _source_loc.loc[_source_loc['region_id_3'].isin(['Nolan County'])]
+    _source_loc_selected = _source_loc_complete.loc[_source_loc_complete['region_id_3'].isin(['Nolan County'])]
     _source_loc = _source_loc_selected
-    _dest_loc = _dest_loc.loc[_dest_loc['facility_id'].isin([1, 21, 22, 23])]
+    _dest_loc = _dest_loc_complete.loc[_dest_loc_complete['facility_id'].isin([1, 21, 22, 23])]
 
-_source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
-_dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
-_source_loc.insert(0, 'merge', 'True')
-_dest_loc.insert(0, 'merge', 'True')
-route_list = _source_loc.merge(_dest_loc, on='merge')
+# state_list = locations.region_id_2.unique()  # whole list
+state_list = ['IA', 'ID', 'IL', 'IN', 'KS',
+              'KY', 'MD', 'ME', 'MI', 'MO', 'MT', 'NC', 'NE', 'NJ', 'NM', 'NV',
+              'NY', 'OH', 'OK', 'OR', 'PA', 'SC', 'SD', 'TN', 'TX', 'UT', 'VA',
+              'WA', 'CO', 'WY', 'MN', 'VT', 'MA', 'WI', 'WV', 'ND', 'NH', 'DE',
+              'RI', 'CT', 'LA', 'MS', 'VI']
+for state in state_list:
+    file_output = 'data/outputs/route_list_output_{}.csv'.format(state)
+    print(file_output)
 
-# OR load source and destination locations directly
-# source_locations = 'data/inputs/plant_locations.csv'
-# destination_locations = 'data/inputs/destination_locations.csv'
-#_source_loc = Data.StartLocations(fpath=source_locations, backfill=backfill)
-#_dest_loc = Data.EndLocations(fpath=destination_locations, backfill=backfill)
-# route_list = _source_loc.merge(_dest_loc, on='end_facility_type')
-# route_list = route_list.rename(columns={"start_long": "source_long",
-#                                         "start_lat": "source_lat",
-#                                         "end_long": "destination_long",
-#                                         "end_lat": "destination_lat"})
+    _source_loc = _source_loc_complete[_source_loc_complete.region_id_2 == state]
+    _dest_loc = _dest_loc_complete[_dest_loc_complete.region_id_2 == state]
+    _source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
+    _dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
+    _source_loc.insert(0, 'merge', 'True')
+    _dest_loc.insert(0, 'merge', 'True')
+    route_list = _source_loc.merge(_dest_loc, on='merge')
 
-route_list.to_csv('data/outputs/route_list.csv')
+    if route_list.empty:
+        print('list is empty')
+    else:
+        # load turbine data
+        # OR load source and destination locations directly
+        # source_locations = 'data/inputs/plant_locations.csv'
+        # destination_locations = 'data/inputs/destination_locations.csv'
+        #_source_loc = Data.StartLocations(fpath=source_locations, backfill=backfill)
+        #_dest_loc = Data.EndLocations(fpath=destination_locations, backfill=backfill)
+        # route_list = _source_loc.merge(_dest_loc, on='end_facility_type')
+        # route_list = route_list.rename(columns={"start_long": "source_long",
+        #                                         "start_lat": "source_lat",
+        #                                         "end_long": "destination_long",
+        #                                         "end_lat": "destination_lat"})
 
-_routes = route_list[['source_long',
-                      'source_lat',
-                      'destination_long',
-                      'destination_lat']]  # .drop_duplicates()
+        route_list.to_csv('data/outputs/route_list.csv')
 
-_routes.to_csv('data/outputs/_routes.csv')
+        _routes = route_list[['source_long',
+                              'source_lat',
+                              'destination_long',
+                              'destination_lat']]  # .drop_duplicates()
 
-# if routing engine is specified, use it to get the route (fips and
-# vmt) for each unique region_production and region_destination pair
-if router is not None:
+        _routes.to_csv('data/outputs/_routes.csv')
 
-    # initialize holder for all routes
-    _vmt_by_county_all_routes = pd.DataFrame()
+        # if routing engine is specified, use it to get the route (fips and
+        # vmt) for each unique region_production and region_destination pair
+        if router is not None:
 
-    # loop through all routes
-    print('finding routes')
-    for i in np.arange(_routes.shape[0]):
+            # initialize holder for all routes
+            _vmt_by_county_all_routes = pd.DataFrame()
 
-        # print every 20 routes
-        if i % 20 == 0:
-            print(i)
+            # loop through all routes
+            print('finding routes')
+            for i in np.arange(_routes.shape[0]):
 
-        _vmt_by_county = router.get_route(start=(_routes.source_long.iloc[i],
-                                                 _routes.source_lat.iloc[i]),
-                                          end=(_routes.destination_long.iloc[i],
-                                               _routes.destination_lat.iloc[i]))
+                # print every 20 routes
+                if i % 20 == 0:
+                    print(i)
 
-        # add identifier columns for later merging with route_list
-        _vmt_by_county['source_long'] = _routes.source_long.iloc[i]
-        _vmt_by_county['source_lat'] = _routes.source_lat.iloc[i]
-        _vmt_by_county['destination_long'] = _routes.destination_long.iloc[i]
-        _vmt_by_county['destination_lat'] = _routes.destination_lat.iloc[i]
+                _vmt_by_county = router.get_route(start=(_routes.source_long.iloc[i],
+                                                         _routes.source_lat.iloc[i]),
+                                                  end=(_routes.destination_long.iloc[i],
+                                                       _routes.destination_lat.iloc[i]))
 
-        # either create the data frame to store all routes,
-        # or append the current route
-        if _vmt_by_county_all_routes.empty:
-            _vmt_by_county_all_routes = _vmt_by_county
+                # add identifier columns for later merging with route_list
+                _vmt_by_county['source_long'] = _routes.source_long.iloc[i]
+                _vmt_by_county['source_lat'] = _routes.source_lat.iloc[i]
+                _vmt_by_county['destination_long'] = _routes.destination_long.iloc[i]
+                _vmt_by_county['destination_lat'] = _routes.destination_lat.iloc[i]
 
-        else:
-            _vmt_by_county_all_routes = \
-                _vmt_by_county_all_routes.append(_vmt_by_county,
-                                                 ignore_index=True,
-                                                 sort=True)
+                # either create the data frame to store all routes,
+                # or append the current route
+                if _vmt_by_county_all_routes.empty:
+                    _vmt_by_county_all_routes = _vmt_by_county
 
-    # after the loop through all routes is complete, merge the data
-    # frame containing all routes with route_list
-    route_list = route_list.merge(_vmt_by_county_all_routes,
-                                  how='left',
-                                  on=['source_long',
-                                      'source_lat',
-                                      'destination_long',
-                                      'destination_lat'])
+                else:
+                    _vmt_by_county_all_routes = \
+                        _vmt_by_county_all_routes.append(_vmt_by_county,
+                                                         ignore_index=True,
+                                                         sort=True)
+
+            # after the loop through all routes is complete, merge the data
+            # frame containing all routes with route_list
+            route_list = route_list.merge(_vmt_by_county_all_routes,
+                                          how='left',
+                                          on=['source_long',
+                                              'source_lat',
+                                              'destination_long',
+                                              'destination_lat'])
 
 
-route_list = route_list.drop(['merge'], axis=1)
-route_list['total_vmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
-                                                 'source_long', 'destination_facility_id', 'destination_facility_type',
-                                                 'destination_lat', 'destination_long'])['vmt'].transform('sum')
+        route_list = route_list.drop(['merge'], axis=1)
+        route_list['total_vmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
+                                                         'source_long', 'destination_facility_id', 'destination_facility_type',
+                                                         'destination_lat', 'destination_long'])['vmt'].transform('sum')
 
-route_list.to_csv('data/outputs/route_list_output.csv')
+
+        route_list.to_csv(file_output)

@@ -183,3 +183,20 @@ class OtherFacilityLocations(Data):
                  backfill=True):
         super(OtherFacilityLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
+
+class LandfillLocations(Data):
+    COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'State', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'Latitude', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'Longitude', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'City', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'County', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'Current Landfill Status', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'Landfill Closure Year', 'type': str, 'index': False, 'backfill': '-1'},
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                               backfill=backfill)
