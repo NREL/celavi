@@ -401,6 +401,7 @@ class CostGraph:
         #  characteristics as it traverses the graph? Maybe connecting this graph to
         #  the state machine
 
+
     def rank_paths(self):
         """
 
@@ -409,6 +410,23 @@ class CostGraph:
 
         """
         pass
+
+
+    def choose_next_step(self, current_step=None):
+        """
+
+        Parameters
+        ----------
+        current_step
+
+        Returns
+        -------
+
+        """
+
+        # @todo: based on current_step where component is currently, pull the
+        # next step from the preferred pathway
+
 
     def landfill_fee_year(self, timestep):
         """
