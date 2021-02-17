@@ -143,6 +143,18 @@ class CostGraph:
         else:
             return list(map(lambda x, y: (x, y), list1, list2))
 
+    @staticmethod
+    def zero_method(self):
+        """
+
+        Returns
+        -------
+        float
+            Use this method for any processing step or transportation edge with
+            no associated cost
+        """
+        return 0.0
+
 
     def get_edges(self,
                   facility_df : pd.DataFrame,
@@ -425,48 +437,172 @@ class CostGraph:
         # next step from the preferred pathway
 
 
-    def landfill_fee(self, timestep):
+    def landfilling(self, year):
         """
-        @todo get timestep or year from discrete event simulation
-        UNITS: USD/tonne
+        Tipping fee model based on tipping fees in the South-Central region
+        of the U.S. which includes TX.
+
+        Parameters
+        ----------
+        year
+            Model year obtained from DES model (timestep converted to year)
+        Returns
+        -------
+        _fee
+            Landfill tipping fee in USD/tonne
         """
-        _year = self.timesteps_to_years(timestep)
-        _fee = 3.0E-29 * np.exp(0.0344 * _year)
+
+        _fee = 3.0E-29 * np.exp(0.0344 * year)
         return _fee
 
+    @staticmethod
+    def rotor_teardown(year):
+        """
+        Cost of removing one blade from the turbine, calculated as one-third
+        the rotor teardown cost.
 
-    def rotor_teardown(self, timestep):
+        Parameters
+        ----------
+        year
+            Model year obtained from DES model (timestep converted to year)
+        Returns
+        -------
+        _cost
+            Cost in USD per blade (note units!) of removing a blade from an
+            in-use turbine. Equivalent to 1/3 the rotor teardown cost.
         """
-        @todo get timestep or year from discrete event simulation
-        UNITS: USD/blade
-        returns the cost of removing ONE blade from a standing wind turbine, prior
-        to on-site size reduction or coarse grinding
-        :param timestep:
-        :return: blade removal cost
-        """
-        _year = self.timesteps_to_years(timestep)
-        _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
+
+        _cost = 42.6066109 * year ** 2 - 170135.7518957 * year +\
                 169851728.663209
         return _cost
 
 
-    def segment_transpo_cost(self, timestep):
+    @staticmethod
+    def segmenting():
         """
-        @todo get timestep or year from discrete event simulation
-        UNITS: USD/blade-km
-        :return:  cost of transporting large blade segments following
-         onsite size reduction
+
+        Returns
+        -------
+            Cost of cutting a turbine blade into 30-m segments.
         """
-        _year = self.timesteps_to_years(timestep)
-        if _year < 2001.0 or 2002.0 <= _year < 2003.0:
+        return 27.56
+
+    @staticmethod
+    def coarse_grinding_onsite():
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            Cost of coarse grinding one metric ton of blade material onsite at
+            the wind power plant.
+        """
+        raise NotImplementedError
+
+        coarse_grinding_onsite_initial = 90.0
+
+        cumulative_coarsegrind_mass = Context.recycle_to_clinker_material_inventory.component_materials['blade']
+
+        coarse_grind_learning = (cumulative_coarsegrind_mass + cumulative_finegrind_mass + 1.0) ** -0.05
+
+        coarse_grind_process = coarse_grinding_onsite_initial * coarse_grind_learning
+
+        return coarse_grind_process
+
+    @staticmethod
+    def coarse_grinding():
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            Cost of coarse grinding one metric ton of segmented blade material
+            in a mechanical recycling facility.
+        """
+        raise NotImplementedError
+
+        coarse_grinding_initial = 80.0
+
+        # divide out the loss factors that are applied to the inventory
+        # entire blades are processed through raw material recycling, but only 70% is kept in the supply chain
+        # similar for coarse grinding
+        # cost models should be based on mass *processed*, not mass output
+        cumulative_coarsegrind_mass = self.recycle_to_clinker_material_inventory.component_materials['blade']
+
+        # calculate cost reduction factors from learning-by-doing model
+        # these factors are unitless
+        # add 1.0 to avoid mathematical errors when the cumulative numbers are both zero
+        coarse_grind_learning = (cumulative_coarsegrind_mass + cumulative_finegrind_mass + 1.0) ** -0.05
+
+        coarse_grind_process = coarse_grinding_initial * coarse_grind_learning
+
+        return coarse_grind_process
+
+    @staticmethod
+    def fine_grinding():
+        """
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+            Cost of grinding one metric ton of coarse-ground blade material at
+            a mechanical recycling facility.
+        """
+        raise NotImplementedError
+
+        fine_grinding_initial = 100.0
+
+        cumulative_finegrind_mass = Context.recycle_to_raw_material_inventory.component_materials['blade'] / 0.7
+
+        fine_grind_learning = (cumulative_finegrind_mass + 1.0) ** -0.05
+
+        fine_grind_process = fine_grinding_initial * fine_grind_learning
+
+        return fine_grind_process
+
+
+    @staticmethod
+    def coprocessing():
+        """
+
+        Returns
+        -------
+            Revenue from selling 1 metric ton of ground blade to cement
+            co-processing plant
+        """
+        return -10.37
+
+
+    @staticmethod
+    def segment_transpo(year):
+        """
+
+        Parameters
+        ----------
+        year
+            Model year from the DES model.
+
+        Returns
+        -------
+            Cost of transporting one segmented blade one kilometer. Units:
+            USD/blade-km
+        """
+
+        if year < 2001.0 or 2002.0 <= year < 2003.0:
             _cost = 4.35
-        elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
+        elif 2001.0 <= year < 2002.0 or 2003.0 <= year < 2019.0:
             _cost = 8.70
-        elif 2019.0 <= _year < 2031.0:
+        elif 2019.0 <= year < 2031.0:
             _cost = 13.05
-        elif 2031.0 <= _year < 2044.0:
+        elif 2031.0 <= year < 2044.0:
             _cost = 17.40
-        elif 2044.0 <= _year <= 2050.0:
+        elif 2044.0 <= year <= 2050.0:
             _cost = 21.75
         else:
             warnings.warn('Year out of range for segment transport; setting cost = 17.40')
@@ -475,430 +611,13 @@ class CostGraph:
         return _cost
 
 
-    def learning_by_doing(self, timestep, mass_tonnes):
-        """
-        @todo get timestep or year and cumulative blade mass processed (recycled)
-         from discrete event simulation
-        This function so far only gets called if component.kind=='blade'
-        returns the total pathway cost for a single blade
-        :key
-        """
-
-        # rename the cost parameter dictionary for more compact equation writing
-        pars = self.cost_params
-        lbdc = self.learning_by_doing_costs
-        print('Updating pathway costs for timestep ', timestep, '\n')
-        # needed for capacity expansion
-        # blade_rec_count_ts = self.recycle_to_raw_component_inventory.component_materials['blade']
-
-        # Calculate the pathway cost per tonne of stuff sent through the
-        # pathway and that is how we will make our decision.
-
-        # calculate tipping fee
-        # UNITS: USD/metric tonne
-        landfill_tipping_fee = self.landfill_fee(timestep)
-
-        # blade removal cost is the same regardless of pathway
-        # UNITS: USD/blade / tonnes/blade [=] USD/tonnes
-        blade_removal_cost = self.rotor_teardown(timestep) / mass_tonnes
-
-        # segment transportation cost is also the same regardless of pathway
-        # UNITS: USD/blade / tonnes/blade [=] USD/tonnes
-        segment_transpo_cost = self.segment_transpo_cost(timestep) / mass_tonnes
-
-        # divide out the loss factors that are applied to the inventory
-        # entire blades are processed through raw material recycling, but only 70% is kept in the supply chain
-        # similar for coarse grinding
-        # cost models should be based on mass *processed*, not mass output
-        cumulative_finegrind_mass = self.recycle_to_raw_material_inventory.component_materials['blade'] / pars['fine_grind_yield']
-        cumulative_coarsegrind_mass = self.recycle_to_clinker_material_inventory.component_materials['blade'] / pars['coarse_grind_yield']
-
-        # calculate cost reduction factors from learning-by-doing model
-        # these factors are unitless
-        # add 1.0 to avoid mathematical errors when the cumulative numbers are both zero
-        # @note the 1.0 could be replaced with cumulative production at the start of the model,
-        # if the EOL technologies have been previously commercialized
-        coarse_grind_learning = (cumulative_coarsegrind_mass + cumulative_finegrind_mass + 1.0) ** -pars['recycling_learning_rate']
-        fine_grind_learning = (cumulative_finegrind_mass + 1.0) ** -pars['recycling_learning_rate']
-
-        # calculate grinding costs (USD/tonne) accounting for learning
-        fine_grind_process = pars['fine_grinding'] * fine_grind_learning
-        coarse_grind_process = pars['coarse_grinding_facility'] * coarse_grind_learning
-
-        if pars['coarse_grinding_loc'] == 'onsite':
-            # pathway cost in USD/tonne
-            recycle_to_rawmat_pathway = np.sum([blade_removal_cost, # blade removal
-                                                # coarse grinding onsite
-                                                coarse_grind_process,
-                                                # lost shred from turbine to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['turbine']['landfill'],
-                                                # lost shred (from coarse grinding) landfill tipping fee
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    landfill_tipping_fee,
-                                                # shred transpo from turbine to recycling facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['turbine']['recycling facility'],
-                                                # fine grinding
-                                                pars['coarse_grind_yield'] *
-                                                    fine_grind_process,
-                                                # lost shred from recycling facility to landfill
-                                                pars['coarse_grind_yield'] *
-                                                    (1 - pars['fine_grind_yield']) *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # lost shred (from fine grinding) landfill tipping fee
-                                                pars['coarse_grind_yield'] *
-                                                    (1 - pars['fine_grind_yield']) *
-                                                    landfill_tipping_fee,
-                                                # raw material from recycling facility to next use facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['next use facility'],
-                                                # revenue from raw material
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['rec_rawmat_revenue']])
-
-            # total transportation in tonnes-km
-            recycle_to_rawmat_transpo = mass_tonnes * \
-                                        np.sum([ # lost shred from turbine to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['distances']['turbine']['landfill'],
-                                                # shred transpo from turbine to recycling facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['distances']['turbine']['recycling facility'],
-                                                # lost shred from recycling facility to landfill
-                                                pars['coarse_grind_yield'] *
-                                                    (1 - pars['fine_grind_yield']) *
-                                                    pars['distances']['turbine']['recycling facility'],
-                                                # (raw mat) shred from recycling facility to next use facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['next use facility']])
-
-            # pathway cost in USD/tonne
-            recycle_to_clink_pathway = np.sum([ # blade removal
-                                                blade_removal_cost,
-                                                # coarse grinding onsite
-                                                coarse_grind_process,
-                                                # lost shred from turbine to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['turbine']['landfill'],
-                                                # lost shred landfill tipping fee
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    landfill_tipping_fee,
-                                                # shred transpo from turbine to cement plant
-                                                pars['coarse_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['turbine']['cement plant'],
-                                                # revenue from sale of clinker replacement
-                                                pars['coarse_grind_yield'] *
-                                                    pars['rec_clink_revenue'],
-                                                # clinker (50% of shred) transpo from cement plant to turbine
-                                                0.5 *
-                                                    pars['coarse_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['cement plant']['cement plant']])
-
-            # total transportation in tonnes-km
-            recycle_to_clink_transpo = mass_tonnes * \
-                                        np.sum([ # lost shred from turbine to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['distances']['turbine']['landfill'],
-                                                # shred transpo from turbine to cement plant
-                                                pars['coarse_grind_yield'] *
-                                                    pars['distances']['turbine']['cement plant'],
-                                                # clinker (50% of shred) transpo from cement plant to turbine
-                                                0.5 *
-                                                    pars['coarse_grind_yield'] *
-                                                    pars['distances']['cement plant']['turbine']])
-
-            # pathway cost in USD/tonne
-            landfill_pathway = np.sum([ # blade removal
-                                        blade_removal_cost,
-                                        # coarse grinding onsite
-                                        coarse_grind_process,
-                                        # shred transpo from turbine to landfill
-                                        pars['shred_transpo_cost'] *
-                                            pars['distances']['turbine']['landfill'],
-                                        # landfill tipping fee
-                                        landfill_tipping_fee])
-
-            # total transportation in tonnes-km
-            landfill_transpo = mass_tonnes * \
-                               pars['distances']['turbine']['landfill']
-
-        elif pars['coarse_grinding_loc'] == 'facility':
-            # total pathway cost, USD/tonne
-            recycle_to_rawmat_pathway = np.sum([# blade removal
-                                                blade_removal_cost,
-                                                # segmenting
-                                                pars['onsite_segmenting_cost'],
-                                                # segment transpo from turbine to recycling facility
-                                                segment_transpo_cost,
-                                                # coarse grinding
-                                                coarse_grind_process,
-                                                # fine grinding with loss factor
-                                                pars['coarse_grind_yield'] *
-                                                    fine_grind_process,
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield']) *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # waste shred tipping fee
-                                                (1 - pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield']) *
-                                                    landfill_tipping_fee,
-                                                # raw mat from recycling facility to next use facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['next use facility'],
-                                                # revenue from raw mat sales
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['rec_rawmat_revenue']])
-
-            # total pathway transpo, tonne-km
-            recycle_to_rawmat_transpo = mass_tonnes *\
-                                        np.sum([# segments from turbine to recycling facility
-                                                pars['distances']['turbine']['recycling facility'],
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield']) *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # raw mat shred from recycling facility to next use facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['distances']['recycling facility']['next use facility']])
-
-            # total pathway cost, USD/tonne
-            recycle_to_clink_pathway = np.sum([ # blade removal
-                                                blade_removal_cost,
-                                                # segmenting
-                                                pars['onsite_segmenting_cost'],
-                                                # segment transpo from turbine to recycling facility
-                                                segment_transpo_cost *
-                                                    pars['distances']['turbine']['recycling facility'],
-                                                # coarse grinding
-                                                coarse_grind_process,
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # waste shred landfill tipping fee
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    landfill_tipping_fee,
-                                                # shred from recycling facility to cement plant
-                                                pars['coarse_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['cement plant'],
-                                                # revenue from sale of clinker substitute
-                                                pars['coarse_grind_yield'] *
-                                                    pars['rec_clink_revenue'],
-                                                # clinker (50% of shred) from cement plant to turbines
-                                                0.5 *
-                                                    pars['coarse_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['cement plant']['turbine']])
-
-            # total pathway transpo, tonne-km
-            recycle_to_clink_transpo = mass_tonnes *\
-                                       np.sum([ # segments from turbine to recycling facility
-                                                pars['distances']['turbine']['recycling facility'],
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # shred from recycling facility to cement plant
-                                                pars['coarse_grind_yield'] *
-                                                    pars['distances']['recycling facility']['cement plant'],
-                                                # clinker (50% of shred) from cement plant to turbines
-                                                0.5 *
-                                                    pars['coarse_grind_yield'] *
-                                                    pars['distances']['cement plant']['turbine']])
-
-            # total pathway cost, USD/tonne
-            landfill_pathway = np.sum([ # blade removal
-                                        blade_removal_cost,
-                                        # segmenting
-                                        pars['onsite_segmenting_cost'],
-                                        # segment transpo from turbine to landfill
-                                        segment_transpo_cost * pars['distances']['turbine']['landfill']])
-
-            # total pathway transportation, tonnes-km
-            landfill_transpo = mass_tonnes * \
-                               pars['distances']['turbine']['landfill']
-        else:
-            warnings.warn('Assuming coarse grinding happens at facility')
-            # total pathway cost, USD/tonne
-            recycle_to_rawmat_pathway = np.sum([# blade removal
-                                                blade_removal_cost,
-                                                # segmenting
-                                                pars['onsite_segmenting_cost'],
-                                                # segment transpo from turbine to recycling facility
-                                                segment_transpo_cost,
-                                                # coarse grinding
-                                                coarse_grind_process,
-                                                # fine grinding with loss factor
-                                                pars['coarse_grind_yield'] *
-                                                    fine_grind_process,
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield']) *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # waste shred tipping fee
-                                                (1 - pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield']) *
-                                                    landfill_tipping_fee,
-                                                # raw mat from recycling facility to next use facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['next use facility'],
-                                                # revenue from raw mat sales
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['rec_rawmat_revenue']])
-
-            # total pathway transpo, tonne-km
-            recycle_to_rawmat_transpo = mass_tonnes *\
-                                        np.sum([# segments from turbine to recycling facility
-                                                pars['distances']['turbine']['recycling facility'],
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield']) *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # raw mat shred from recycling facility to next use facility
-                                                pars['coarse_grind_yield'] *
-                                                    pars['fine_grind_yield'] *
-                                                    pars['distances']['recycling facility']['next use facility']])
-
-            # total pathway cost, USD/tonne
-            recycle_to_clink_pathway = np.sum([ # blade removal
-                                                blade_removal_cost,
-                                                # segmenting
-                                                pars['onsite_segmenting_cost'],
-                                                # segment transpo from turbine to recycling facility
-                                                segment_transpo_cost *
-                                                    pars['distances']['turbine']['recycling facility'],
-                                                # coarse grinding
-                                                coarse_grind_process,
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # waste shred landfill tipping fee
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    landfill_tipping_fee,
-                                                # shred from recycling facility to cement plant
-                                                pars['coarse_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['recycling facility']['cement plant'],
-                                                # revenue from sale of clinker substitute
-                                                pars['coarse_grind_yield'] *
-                                                    pars['rec_clink_revenue'],
-                                                # clinker (50% of shred) from cement plant to turbines
-                                                0.5 *
-                                                    pars['coarse_grind_yield'] *
-                                                    pars['shred_transpo_cost'] *
-                                                    pars['distances']['cement plant']['turbine']])
-
-            # total pathway transpo, tonne-km
-            recycle_to_clink_transpo = mass_tonnes *\
-                                       np.sum([ # segments from turbine to recycling facility
-                                                pars['distances']['turbine']['recycling facility'],
-                                                # waste shred from recycling facility to landfill
-                                                (1 - pars['coarse_grind_yield']) *
-                                                    pars['distances']['recycling facility']['landfill'],
-                                                # shred from recycling facility to cement plant
-                                                pars['coarse_grind_yield'] *
-                                                    pars['distances']['recycling facility']['cement plant'],
-                                                # clinker (50% of shred) from cement plant to turbines
-                                                0.5 *
-                                                    pars['coarse_grind_yield'] *
-                                                    pars['distances']['cement plant']['turbine']])
-
-            # total pathway cost, USD/tonne
-            landfill_pathway = np.sum([ # blade removal
-                                        blade_removal_cost,
-                                        # segmenting
-                                        pars['onsite_segmenting_cost'],
-                                        # segment transpo from turbine to landfill
-                                        segment_transpo_cost * pars['distances']['turbine']['landfill'],
-                                        # landfill tipping fee
-                                        landfill_tipping_fee])
-
-            # total pathway transportation, tonnes-km
-            landfill_transpo = mass_tonnes * \
-                               pars['distances']['turbine']['landfill']
-
-        # append the three pathway costs to the end of the cost-history dict,
-        # but only if at least one of the values has changed
-        if len(self.cost_history['year'])==0:
-
-            self.cost_history['year'].append(self.timesteps_to_years(timestep))
-            self.cost_history['landfilling cost'].append(landfill_pathway)
-            self.cost_history['recycling to clinker cost'].append(recycle_to_clink_pathway)
-            self.cost_history['recycling to raw material cost'].append(recycle_to_rawmat_pathway)
-            self.cost_history['blade removal cost, per tonne'].append(blade_removal_cost)
-            self.cost_history['blade removal cost, per blade'].append(mass_tonnes * blade_removal_cost)
-            self.cost_history['blade mass, tonne'].append(mass_tonnes)
-            self.cost_history['coarse grinding cost'].append(coarse_grind_process)
-            self.cost_history['fine grinding cost'].append(fine_grind_process)
-            self.cost_history['segment transpo cost'].append(segment_transpo_cost)
-            self.cost_history['landfill tipping fee'].append(landfill_tipping_fee)
-
-        elif (self.cost_history['landfilling cost'][-1] != landfill_pathway) or\
-                (self.cost_history['recycling to clinker cost'][-1] != recycle_to_clink_pathway) or\
-                (self.cost_history['recycling to raw material cost'][-1] != recycle_to_clink_pathway):
-
-            self.cost_history['year'].append(self.timesteps_to_years(timestep))
-            self.cost_history['landfilling cost'].append(landfill_pathway)
-            self.cost_history['recycling to clinker cost'].append(recycle_to_clink_pathway)
-            self.cost_history['recycling to raw material cost'].append(recycle_to_rawmat_pathway)
-            self.cost_history['blade removal cost, per tonne'].append(blade_removal_cost)
-            self.cost_history['blade removal cost, per blade'].append(mass_tonnes * blade_removal_cost)
-            self.cost_history['blade mass, tonne'].append(mass_tonnes)
-            self.cost_history['coarse grinding cost'].append(coarse_grind_process)
-            self.cost_history['fine grinding cost'].append(fine_grind_process)
-            self.cost_history['segment transpo cost'].append(segment_transpo_cost)
-            self.cost_history['landfill tipping fee'].append(landfill_tipping_fee)
-
-        # append the three transportation requirements to the end of the transpo-eol
-        # dict
-        self.transpo_eol['year'].append(self.timesteps_to_years(timestep))
-
-        # save the transportation value for the lowest-cost pathway
-        if min(recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway)==recycle_to_rawmat_pathway:
-            self.transpo_eol['total eol transportation'].append(recycle_to_rawmat_transpo)
-        elif min(recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway)==recycle_to_clink_pathway:
-            self.transpo_eol['total eol transportation'].append(recycle_to_clink_transpo)
-        else:
-            self.transpo_eol['total eol transportation'].append(landfill_transpo)
-
-        # Update learning by doing costs
-        lbdc["recycle_to_rawmat_pathway"] = recycle_to_rawmat_pathway
-        lbdc["recycle_to_clink_pathway"] = recycle_to_clink_pathway
-        lbdc["landfilling"] = landfill_pathway
-
-        return recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway
-
-
-    def zero_method(self):
+    @staticmethod
+    def shred_transpo():
         """
 
         Returns
         -------
-        float
-            Use this method for any processing step or transportation edge with
-            no associated cost
+            Cost of transporting 1 metric ton of shredded blade material by
+            one kilometer. Units: USD/tonne-km.
         """
-        return 0.0
+        return 0.08
