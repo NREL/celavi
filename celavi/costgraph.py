@@ -312,12 +312,9 @@ class CostGraph:
             # get two lists of nodes to connect based on df row
             _u_nodes = self.node_filter(self.supply_chain, 'step', _u)
             _v_nodes = self.node_filter(self.supply_chain, 'step', _v)
-            _dict = {'cost':_edge_cost,
-                     'dist': 0,
-                     'u_id': None,
-                     'v_id': None}
-
+            # convert the two lists to a list of tuples
             _edge_list = self.list_of_tuples(_u_nodes, _v_nodes)
+
             # @todo use the dist=NaN as a condition to exclude paths with this
             # edge from pathways being considered
             self.supply_chain.add_edges_from(_edge_list,
@@ -330,8 +327,6 @@ class CostGraph:
             _reader = pd.read_csv(_route_file, chunksize=1)
 
             for _line in _reader:
-                # get all nodes that this route connects
-
                 # find the source nodes for this route
                 _u = self.node_filter(self.supply_chain,
                                       'facility_id',_line['source_facility_id'].values[0],
@@ -366,6 +361,7 @@ class CostGraph:
         path_edge_list = list([])
 
         # Get list of nodes and edges by pathway
+        # @todo source and target nodes should be pulled from input dataset
         for path in map(nx.utils.pairwise,
                         nx.all_simple_paths(self.supply_chain, source='in use',
                                             target='landfill')):
@@ -389,6 +385,7 @@ class CostGraph:
             graph_path = ",".join(nodes)
             print(
                 f"Path: {graph_path}. Total cost={sum(costs)}, total distance={sum(distances)}")
+
 
     def update_paths(self):
         pass
@@ -428,7 +425,7 @@ class CostGraph:
         # next step from the preferred pathway
 
 
-    def landfill_fee_year(self, timestep):
+    def landfill_fee(self, timestep):
         """
         @todo get timestep or year from discrete event simulation
         UNITS: USD/tonne
@@ -438,7 +435,7 @@ class CostGraph:
         return _fee
 
 
-    def blade_removal_year(self, timestep):
+    def rotor_teardown(self, timestep):
         """
         @todo get timestep or year from discrete event simulation
         UNITS: USD/blade
@@ -499,11 +496,11 @@ class CostGraph:
 
         # calculate tipping fee
         # UNITS: USD/metric tonne
-        landfill_tipping_fee = self.landfill_fee_year(timestep)
+        landfill_tipping_fee = self.landfill_fee(timestep)
 
         # blade removal cost is the same regardless of pathway
         # UNITS: USD/blade / tonnes/blade [=] USD/tonnes
-        blade_removal_cost = self.blade_removal_year(timestep) / mass_tonnes
+        blade_removal_cost = self.rotor_teardown(timestep) / mass_tonnes
 
         # segment transportation cost is also the same regardless of pathway
         # UNITS: USD/blade / tonnes/blade [=] USD/tonnes
@@ -893,3 +890,15 @@ class CostGraph:
         lbdc["landfilling"] = landfill_pathway
 
         return recycle_to_rawmat_pathway, recycle_to_clink_pathway, landfill_pathway
+
+
+    def zero_method(self):
+        """
+
+        Returns
+        -------
+        float
+            Use this method for any processing step or transportation edge with
+            no associated cost
+        """
+        return 0.0
