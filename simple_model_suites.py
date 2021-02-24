@@ -4,7 +4,7 @@ import os
 
 from scipy.stats import weibull_min
 
-from celavi.simple_model import Context
+from celavi.des import Context
 
 np.random.seed(123)
 
