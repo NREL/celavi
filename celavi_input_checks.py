@@ -130,11 +130,29 @@ class FileChecks:
         if self.routes['source_facility_id'].isnull().values.any():
             raise Exception(f'source_facility_id in routes has an empty value.')
 
-        if self.routes['source_facility_id'].isnull().values.any():
-            raise Exception(f'source_facility_id in routes has an empty value.')
-
         if self.routes['destination_facility_id'].isnull().values.any():
             raise Exception(f'destination_facility_id in routes has an empty value.')
+
+    def check_facility_type_nulls(self):
+        """
+        This tests for any null values in facility_type columns
+
+        Raises
+        ------
+        Exception
+            Raises an exception if any values are null
+        """
+        if self.locations['facility_type'].isnull().values.any():
+            raise Exception(f'facility_type in locations has an empty value.')
+
+        if self.fac_edges['facility_type'].isnull().values.any():
+            raise Exception(f'facility_type in fac_edges has an empty value.')
+
+        if self.routes['source_facility_type'].isnull().values.any():
+            raise Exception(f'source_facility_type in routes has an empty value.')
+
+        if self.routes['destination_facility_type'].isnull().values.any():
+            raise Exception(f'destination_facility_type in routes has an empty value.')
 
 
 def main():
@@ -157,6 +175,7 @@ def main():
     file_checks.check_files_exist()
     file_checks.open_files()
     file_checks.check_facility_id_nulls()
+    file_checks.check_facility_type_nulls()
     print('File check OK.')
 
 
