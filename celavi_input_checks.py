@@ -112,6 +112,30 @@ class FileChecks:
         except (pd.EmptyDataError, FileNotFoundError):
             raise Exception(f'{self.transpo_edges_filename} failed to read as a .csv')
 
+    def check_facility_id_nulls(self):
+        """
+        This method checks the facility_id columns across the tables
+
+        Raises
+        ------
+        Exception
+            Raises an exception if any null values are found.
+        """
+        if self.locations['facility_id'].isnull().values.any():
+            raise Exception(f'facility_id in locations has an empty value.')
+
+        if self.step_costs['facility_id'].isnull().values.any():
+            raise Exception(f'destination_facility_id in step costs has an empty value.')
+
+        if self.routes['source_facility_id'].isnull().values.any():
+            raise Exception(f'source_facility_id in routes has an empty value.')
+
+        if self.routes['source_facility_id'].isnull().values.any():
+            raise Exception(f'source_facility_id in routes has an empty value.')
+
+        if self.routes['destination_facility_id'].isnull().values.any():
+            raise Exception(f'destination_facility_id in routes has an empty value.')
+
 
 def main():
     # Filenames
@@ -132,6 +156,7 @@ def main():
     )
     file_checks.check_files_exist()
     file_checks.open_files()
+    file_checks.check_facility_id_nulls()
     print('File check OK.')
 
 
