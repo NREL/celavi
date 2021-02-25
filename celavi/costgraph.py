@@ -2,8 +2,8 @@ import networkx as nx
 import pandas as pd
 import numpy as np
 import warnings
+import pdb
 
-# @note cost, next state, relocation destination for the component
 
 class CostGraph:
     """
@@ -18,7 +18,9 @@ class CostGraph:
                  transpo_edges_file : str = 'transpo_edges.csv',
                  locations_file : str = 'locations.csv',
                  routes_file : str = 'routes.csv',
-                 timestep : int = 0):
+                 target_step : str = 'landfilling',
+                 timestep : int = 0,
+                 max_dist : float = 300.0):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -37,8 +39,14 @@ class CostGraph:
             path to dataset of facility locations
         routes_file
             path to dataset of routes between facilities
+        target_step
+            processing step(s) where supply chain paths terminate. String or
+            list of strings.
         timestep
             DES model timestep at which cost graph is instantiated
+        max_dist
+            Maximum allowable transportation distance for a single supply chain
+            pathway.
         """
         # @todo update file IO method to match actual input data format
         self.step_costs=pd.read_csv(step_costs_file)
@@ -49,7 +57,16 @@ class CostGraph:
         self.loc_df=locations_file
         self.routes_df=routes_file
 
+        self.target=target_step
+
         self.timestep = timestep
+
+        self.max_dist = max_dist
+
+        # ideally we could use this to execute all the cost methods and store
+        # the output here. Then update the values in this structure only as
+        # needed.
+        self.step_cost_dict
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -144,7 +161,7 @@ class CostGraph:
             return list(map(lambda x, y: (x, y), list1, list2))
 
     @staticmethod
-    def zero_method(self):
+    def zero_method():
         """
 
         Returns
@@ -180,8 +197,7 @@ class CostGraph:
         """
         _type = facility_df['facility_type'].values[0]
 
-        _out = self.fac_edges[[u_edge,
-                               v_edge]].loc[self.fac_edges.facility_type == _type].dropna().to_records(index=False).tolist()
+        _out = self.fac_edges[[u_edge,v_edge]].loc[self.fac_edges.facility_type == _type].dropna().to_records(index=False).tolist()
 
         return _out
 
@@ -306,8 +322,8 @@ class CostGraph:
 
             for _line in _reader:
 
-                # Build the subgraph representation and add it to the list of facility
-                # subgraphs
+                # Build the subgraph representation and add it to the list of
+                # facility subgraphs
                 _fac_graph = self.build_facility_graph(facility_df = _line)
 
                 # add onto the supply supply chain graph
@@ -341,11 +357,13 @@ class CostGraph:
             for _line in _reader:
                 # find the source nodes for this route
                 _u = self.node_filter(self.supply_chain,
-                                      'facility_id',_line['source_facility_id'].values[0],
+                                      'facility_id',
+                                      _line['source_facility_id'].values[0],
                                       'connects','out')
 
                 # loop thru all edges that connect to the source nodes
-                for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
+                for u_node, v_node, data in self.supply_chain.edges(_u,
+                                                                    data=True):
                     # if the destination node facility ID matches the
                     # destination facility ID in the routing dataset row,
                     # apply the distance from the routing dataset to this edge
@@ -356,59 +374,104 @@ class CostGraph:
         return self.supply_chain
 
 
-    def enumerate_paths(self):
+    def enumerate_paths(self, source_node):
         """
+        Calculate total pathway costs (sum of all node and edge costs) over
+        all possible pathways.
+        @note simple paths have no repeated nodes; this might not work for a
+         cyclic graph
+        @note The target parameter can be replaced by a list
         # @todo update docstring
+
+        Parameters
+        ----------
+        source_node
+            Source node name in the format 'facilitytypefacilityID'
+
         Returns
         -------
 
         """
-        # Calculate total pathway costs (sum of all node and edge costs) over all
-        # possible pathways
 
-        # @note simple paths have no repeated nodes; this might not work for a cyclic
-        #  graph
-        # The target parameter can be replaced by a list
+        # create empty list of dicts to store pathways and characteristics
+        _paths = list()
 
-        path_edge_list = list([])
+        _targets = self.node_filter(self.supply_chain,
+                                    attr_key_1='step',
+                                    get_val_1=self.target)
 
-        # Get list of nodes and edges by pathway
-        # @todo source and target nodes should be pulled from input dataset
+        # Enumerate and store pathways by source node
         for path in map(nx.utils.pairwise,
-                        nx.all_simple_paths(self.supply_chain, source='in use',
-                                            target='landfill')):
-            path_edge_list.append(list(path))
+                        nx.all_simple_paths(self.supply_chain,
+                                            source=source_node,
+                                            target=_targets)):
 
-        path_node_list = list(nx.all_simple_paths(self.supply_chain, source='in use', target='landfill'))
+            # get list of edges in this path
+            _edges = list(path)
 
-        # dictionary defining all possible pathways by nodes and edges
-        # nodes = calculate total processing costs
-        # edges = calculate total transportation costs and distances
-        paths_dict = {'nodes': path_node_list, 'edges': path_edge_list}
+            # get list of nodes in this path by looking at the v node in
+            # every edge
+            _nodes = list(list(zip(*_edges))[1])
+            # add source node to the list
+            _nodes.insert(0, source_node)
+            pdb.set_trace()
+            # generate unique path id based on source and target nodes
+            # @todo this isn't actually unique, how to uniqueify?
+            _path_id = _nodes[0] + '_' + _nodes[-1]
 
-        for edges in paths_dict['edges']:
-            for u, v in edges:
-                print(u, v, self.supply_chain.get_edge_data(u, v))
+            # sum transpo costs along edges to get pathway transpo cost
+            _path_transpo_cost = 0.0
 
-        for nodes, edges in zip(path_node_list, path_edge_list):
-            costs = [self.supply_chain.get_edge_data(u, v)['cost'] for u, v in edges]
-            distances = [self.supply_chain.get_edge_data(u, v)['distance'] for u, v in
-                         edges]
-            graph_path = ",".join(nodes)
-            print(
-                f"Path: {graph_path}. Total cost={sum(costs)}, total distance={sum(distances)}")
+            # sum processing cost for all nodes in path to get pathway
+            # processing cost
+            # get dict of node name: cost method
+            # we don't need to call every cost method every time - can we
+            # instead evaluate all cost methods up-front and store those
+            # values in self for accessibility? Then update as needed?
+            _cost_dict = nx.get_node_attributes(nx.subgraph(self.supply_chain,
+                                                            _nodes),
+                                                'step_cost_method')
+            # evaluate each cost method and calculate sum
+            _path_processing_cost = 0.0
+
+            # sum edge distances along edges to get total transportation dist
+            _path_dist = 0.0
+
+
+            # add this path and its characteristics to the list of path dicts
+            _paths.append({'source' : source_node,
+                           'path_id': _path_id,
+                           'edges': _edges,
+                           'nodes': _nodes,
+                           'path_cost': _path_transpo_cost + _path_processing_cost,
+                           'path_dist': _path_dist,
+                           'path_gwp': 0.0})
+
+            pdb.set_trace()
+
+        path_node_list = list(nx.all_simple_paths(self.supply_chain,
+                                                  source=source_node,
+                                                  target=_targets))
+
+        # for nodes, edges in zip(path_node_list, path_edge_list):
+        #     costs = [self.supply_chain.get_edge_data(u, v)['cost']
+        #              for u, v in edges]
+        #     distances = [self.supply_chain.get_edge_data(u, v)['distance']
+        #                  for u, v in edges]
+        #     graph_path = ",".join(nodes)
+        #     print(
+        #         f"Path: {graph_path}. Total cost={sum(costs)},"
+        #         f" total distance={sum(distances)}")
 
 
     def update_paths(self):
         pass
-        # @todo dynamically update node costs based on cost-over-time and learning-by-
-        #  doing models
+        # @todo dynamically update node costs based on cost-over-time and
+        # learning-by-doing models
 
-        # The edges between sub-graphs will have different transportation costs depending
-        # on WHAT's being moved: blade segments or ground/shredded blade material.
-        # @note Is there a way to also track component-material "status" or general
-        #  characteristics as it traverses the graph? Maybe connecting this graph to
-        #  the state machine
+        # @note Is there a way to also track component-material "status" or
+        # general characteristics as it traverses the graph? Maybe connecting
+        # this graph to the state machine
 
 
     def rank_paths(self):
@@ -432,12 +495,12 @@ class CostGraph:
         -------
 
         """
-
+        # @note cost, next state, relocation destination for the component
         # @todo: based on current_step where component is currently, pull the
         # next step from the preferred pathway
 
-
-    def landfilling(self, year):
+    @staticmethod
+    def landfilling(year):
         """
         Tipping fee model based on tipping fees in the South-Central region
         of the U.S. which includes TX.
@@ -621,3 +684,8 @@ class CostGraph:
             one kilometer. Units: USD/tonne-km.
         """
         return 0.08
+
+## Debug code
+netw = CostGraph()
+netw.build_supplychain_graph()
+netw.enumerate_paths('in use0')
