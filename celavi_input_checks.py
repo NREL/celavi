@@ -186,13 +186,13 @@ class FileChecks:
         if self.transpo_edges['v_step'].isnull().values.any():
             raise Exception('v_step in transpo_edges has a null value.')
 
-        if self.step_costs['step_cost_method'].values.any():
+        if self.step_costs['step_cost_method'].isnull().values.any():
             raise Exception('step_cost_method in step_costs has a null value')
 
-        if self.transpo_edges['transpo_cost_method'].values.any():
+        if self.transpo_edges['transpo_cost_method'].isnull().values.any():
             raise Exception('transpo_cost_method in transpo_edges has a null value')
 
-        if self.fac_edges['step'].values.any():
+        if self.fac_edges['step'].isnull().values.any():
             raise Exception('step in fac_edges has a null value')
 
 
