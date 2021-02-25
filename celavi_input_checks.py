@@ -143,16 +143,43 @@ class FileChecks:
             Raises an exception if any values are null
         """
         if self.locations['facility_type'].isnull().values.any():
-            raise Exception(f'facility_type in locations has an empty value.')
+            raise Exception('facility_type in locations has an empty value.')
 
         if self.fac_edges['facility_type'].isnull().values.any():
-            raise Exception(f'facility_type in fac_edges has an empty value.')
+            raise Exception('facility_type in fac_edges has an empty value.')
 
         if self.routes['source_facility_type'].isnull().values.any():
-            raise Exception(f'source_facility_type in routes has an empty value.')
+            raise Exception('source_facility_type in routes has an empty value.')
 
         if self.routes['destination_facility_type'].isnull().values.any():
-            raise Exception(f'destination_facility_type in routes has an empty value.')
+            raise Exception('destination_facility_type in routes has an empty value.')
+
+    def check_lat_long_nulls(self):
+        """
+        The tests for any null latitude values
+
+        Raises
+        ------
+        Exception
+            Raises an exception if any values are found to be missing
+        """
+        if self.locations['lat'].isnull().values.any():
+            raise Exception('lat in locations has an empty value.')
+
+        if self.locations['long'].isnull().values.any():
+            raise Exception('long in locations has an empty value.')
+
+        if self.routes['source_lat'].isnull().values.any():
+            raise Exception('source_lat in routes has an empty value.')
+
+        if self.routes['source_long'].isnull().values.any():
+            raise Exception('source_long in routes has an empty value.')
+
+        if self.routes['destination_lat'].isnull().values.any():
+            raise Exception('destination_lat in routes has an empty value.')
+
+        if self.routes['destination_long'].isnull().values.any():
+            raise Exception('destination_long in routes has an empty value.')
 
 
 def main():
