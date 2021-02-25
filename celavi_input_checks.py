@@ -169,17 +169,31 @@ class FileChecks:
         if self.locations['long'].isnull().values.any():
             raise Exception('long in locations has an empty value.')
 
-        if self.routes['source_lat'].isnull().values.any():
-            raise Exception('source_lat in routes has an empty value.')
+    def check_step_nulls(self):
+        """
+        Checks to see if there are any nulls in the u_step or v_step
+        columns. Also check transpo_cost_method
 
-        if self.routes['source_long'].isnull().values.any():
-            raise Exception('source_long in routes has an empty value.')
+        Raises
+        ------
+        Exception
+            Raises an exception if the u_step, v_step, step, or
+            step_cost_method are empty.
+        """
+        if self.transpo_edges['u_step'].isnull().values.any():
+            raise Exception('u_step in transpo_edges has a null value.')
 
-        if self.routes['destination_lat'].isnull().values.any():
-            raise Exception('destination_lat in routes has an empty value.')
+        if self.transpo_edges['v_step'].isnull().values.any():
+            raise Exception('v_step in transpo_edges has a null value.')
 
-        if self.routes['destination_long'].isnull().values.any():
-            raise Exception('destination_long in routes has an empty value.')
+        if self.step_costs['step_cost_method'].values.any():
+            raise Exception('step_cost_method in step_costs has a null value')
+
+        if self.transpo_edges['transpo_cost_method'].values.any():
+            raise Exception('transpo_cost_method in transpo_edges has a null value')
+
+        if self.fac_edges['step'].values.any():
+            raise Exception('step in fac_edges has a null value')
 
 
 def main():
@@ -203,6 +217,7 @@ def main():
     file_checks.open_files()
     file_checks.check_facility_id_nulls()
     file_checks.check_facility_type_nulls()
+    file_checks.check_step_nulls()
     print('File check OK.')
 
 
