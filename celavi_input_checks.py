@@ -38,6 +38,12 @@ class FileChecks:
         self.routes_filename = routes
         self.transpo_edges_filename = transpo_edges
 
+        self.locations: pd.DataFrame = None
+        self.step_costs: pd.DataFrame = None
+        self.fac_edges: pd.DataFrame = None
+        self.routes: pd.DataFrame = None
+        self.transpo: pd.DataFrame = None
+
     def check_files_exist(self) -> bool:
         """
         This method checks to see if files exist before trying
@@ -70,6 +76,42 @@ class FileChecks:
 
         return True
 
+    def open_files(self) -> None:
+        """
+        This method attempts to open each file as a .csv and load it
+        into pandas.
+
+        Raises
+        ------
+        Exception
+            Raises an exception if any of the files fail to open as .csv
+            files.
+        """
+        try:
+            self.locations = pd.read_csv(self.locations_filename)
+        except (pd.EmptyDataError, FileNotFoundError):
+            raise Exception(f'{self.locations_filename} failed to read as a .csv')
+
+        try:
+            self.step_costs = pd.read_csv(self.step_costs_filename)
+        except (pd.EmptyDataError, FileNotFoundError):
+            raise Exception(f'{self.step_costs_filename} failed to read as a .csv')
+
+        try:
+            self.fac_edges = pd.read_csv(self.fac_edges_filename)
+        except (pd.EmptyDataError, FileNotFoundError):
+            raise Exception(f'{self.fac_edges_filename} failed to read as a .csv')
+
+        try:
+            self.routes = pd.read_csv(self.routes_filename)
+        except (pd.EmptyDataError, FileNotFoundError):
+            raise Exception(f'{self.routes_filename} failed to read as a .csv')
+
+        try:
+            self.transpo_edges = pd.read_csv(self.transpo_edges_filename)
+        except (pd.EmptyDataError, FileNotFoundError):
+            raise Exception(f'{self.transpo_edges_filename} failed to read as a .csv')
+
 
 def main():
     # Filenames
@@ -89,6 +131,7 @@ def main():
         transpo_edges=args.transpo_edges
     )
     file_checks.check_files_exist()
+    file_checks.open_files()
     print('File check OK.')
 
 
