@@ -13,12 +13,12 @@ class CostGraph:
     """
 
     def __init__(self,
-                 step_costs_file : str = 'step_costs.csv',
-                 fac_edges_file : str = 'fac_edges.csv',
-                 transpo_edges_file : str = 'transpo_edges.csv',
-                 locations_file : str = 'locations.csv',
-                 routes_file : str = 'routes.csv',
-                 target_step : str = 'landfilling',
+                 step_costs_file : str = '../celavi-data/inputs/step_costs.csv',
+                 fac_edges_file : str = '../celavi-data/inputs/fac_edges.csv',
+                 transpo_edges_file : str = '../celavi-data/inputs/transpo_edges.csv',
+                 locations_file : str = '../celavi-data/inputs/locations.csv',
+                 routes_file : str = '../celavi-data/preprocessing/routes.csv',
+                 target_step : str = '../celavi-data/inputs/landfilling',
                  timestep : int = 0,
                  max_dist : float = 300.0):
         """
@@ -66,7 +66,7 @@ class CostGraph:
         # ideally we could use this to execute all the cost methods and store
         # the output here. Then update the values in this structure only as
         # needed.
-        self.step_cost_dict
+        self.step_cost_dict = {}
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
