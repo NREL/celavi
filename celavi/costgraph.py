@@ -195,7 +195,7 @@ class CostGraph:
 
 
     @staticmethod
-    def zero_method(*args):
+    def zero_method(**kwargs):
         """
 
         Returns
@@ -477,9 +477,11 @@ class CostGraph:
                 if _addl_method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
                     self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_addl_method)
 
-            self.supply_chain.edges[edge]['cost'] = sum([f(self,
-                                                           self.supply_chain.edges[edge]['dist'],
-                                                           self.blade_mass) for f in self.supply_chain.edges[edge]['cost_method']])
+            self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
+                                                           year=self.year,
+                                                           blade_mass=self.blade_mass,
+                                                           cumul_finegrind=1000.0,
+                                                           cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
 
 
     def enumerate_paths(self):
@@ -521,13 +523,11 @@ class CostGraph:
         return _paths
 
 
-    def update_costs(self, context_year, blade_mass, *args):
+    def update_costs(self, **kwargs):
         """
 
         Parameters
         ----------
-        context_year
-        blade_mass
 
         Returns
         -------
@@ -535,18 +535,16 @@ class CostGraph:
         """
         # @todo dynamically update node costs based on cost-over-time and
         # learning-by-doing models
-        self.year = context_year
-        self.blade_mass = blade_mass
 
         for edge in self.supply_chain.edges():
-            self.supply_chain.edges[edge]['cost'] = sum([f(self,
-                                                           self.supply_chain.edges[edge]['dist'],
-                                                           self.blade_mass)
-                                                         for f in self.supply_chain.edges[
-                                                             edge]['cost_method']])
+            self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
+                                                           year=kwargs['year'],
+                                                           blade_mass=kwargs['blade_mass'],
+                                                           cumul_finegrind=kwargs['cumul_finegrind'],
+                                                           cumul_coarsegrind=kwargs['cumul_coarsegrind']) for f in self.supply_chain.edges[edge]['cost_method']])
 
-
-    def landfilling(self, *args):
+    @staticmethod
+    def landfilling(**kwargs):
         """
         Tipping fee model based on tipping fees in the South-Central region
         of the U.S. which includes TX.
@@ -560,12 +558,13 @@ class CostGraph:
         _fee
             Landfill tipping fee in USD/metric ton
         """
-
-        _fee = 3.0E-29 * np.exp(0.0344 * self.year)
+        _year = kwargs['year']
+        _fee = 3.0E-29 * np.exp(0.0344 * _year)
         return _fee
 
 
-    def rotor_teardown(self, *args):
+    @staticmethod
+    def rotor_teardown(**kwargs):
         """
         Cost of removing one blade from the turbine, calculated as one-third
         the rotor teardown cost.
@@ -580,14 +579,14 @@ class CostGraph:
             Cost in USD per blade (note units!) of removing a blade from an
             in-use turbine. Equivalent to 1/3 the rotor teardown cost.
         """
-
-        _cost = 42.6066109 * self.year ** 2 - 170135.7518957 * self.year +\
+        _year = kwargs['year']
+        _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
                 169851728.663209
         return _cost
 
 
     @staticmethod
-    def segmenting(*args):
+    def segmenting(**kwargs):
         """
 
         Returns
@@ -598,7 +597,7 @@ class CostGraph:
 
 
     @staticmethod
-    def coarse_grinding_onsite(*args):
+    def coarse_grinding_onsite(**kwargs):
         """
         # @todo update with relevant FacilityInventories from DES
 
@@ -610,22 +609,20 @@ class CostGraph:
             Cost of coarse grinding one metric ton of blade material onsite at
             the wind power plant.
         """
-        cumulative_coarsegrind_mass = args[2]
-        cumulative_finegrind_mass = args[3]
+        cumulative_coarsegrind_mass = kwargs['cumul_coarsegrind']
 
         if cumulative_coarsegrind_mass is None:
             cumulative_coarsegrind_mass = 1000
-            cumulative_finegrind_mass = 1000
 
         coarse_grinding_onsite_initial = 90.0
 
-        coarse_grind_learning = (cumulative_coarsegrind_mass + cumulative_finegrind_mass + 1.0) ** -0.05
+        coarse_grind_learning = (cumulative_coarsegrind_mass + 1.0) ** -0.05
 
         return coarse_grinding_onsite_initial * coarse_grind_learning
 
 
     @staticmethod
-    def coarse_grinding(*args):
+    def coarse_grinding(**kwargs):
         """
         # @todo update with correct FacilityInventory values from Context
 
@@ -637,7 +634,7 @@ class CostGraph:
             Cost of coarse grinding one metric ton of segmented blade material
             in a mechanical recycling facility.
         """
-        cumulative_coarsegrind_mass = args[2]
+        cumulative_coarsegrind_mass = kwargs['cumul_coarsegrind']
 
         if cumulative_coarsegrind_mass is None:
             cumulative_coarsegrind_mass = 1000
@@ -653,7 +650,7 @@ class CostGraph:
 
 
     @staticmethod
-    def fine_grinding(*args):
+    def fine_grinding(**kwargs):
         """
         # @todo update with relevant FacilityInventory values from Context
 
@@ -665,7 +662,7 @@ class CostGraph:
             Cost of grinding one metric ton of coarse-ground blade material at
             a mechanical recycling facility.
         """
-        cumulative_finegrind_mass = args[3]
+        cumulative_finegrind_mass = kwargs['cumul_finegrind']
 
         if cumulative_finegrind_mass is None:
             cumulative_finegrind_mass = 1000
@@ -678,7 +675,7 @@ class CostGraph:
 
 
     @staticmethod
-    def coprocessing(*args):
+    def coprocessing(**kwargs):
         """
 
         Returns
@@ -689,7 +686,8 @@ class CostGraph:
         return -10.37
 
 
-    def segment_transpo(self, *args):
+    @staticmethod
+    def segment_transpo(**kwargs):
         """
         Calculate segment transportation cost in USD/metric ton
 
@@ -698,21 +696,22 @@ class CostGraph:
             Cost of transporting one segmented blade one kilometer. Units:
             USD/blade
         """
-        _vkmt = args[0]
-        _mass = args[1]
+        _vkmt = kwargs['vkmt']
+        _mass = kwargs['blade_mass']
+        _year = kwargs['year']
 
         if np.isnan(_vkmt) or np.isnan(_mass):
             return 0.0
         else:
-            if self.year < 2001.0 or 2002.0 <= self.year < 2003.0:
+            if _year < 2001.0 or 2002.0 <= _year < 2003.0:
                 _cost = 4.35
-            elif 2001.0 <= self.year < 2002.0 or 2003.0 <= self.year < 2019.0:
+            elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
                 _cost = 8.70
-            elif 2019.0 <= self.year < 2031.0:
+            elif 2019.0 <= _year < 2031.0:
                 _cost = 13.05
-            elif 2031.0 <= self.year < 2044.0:
+            elif 2031.0 <= _year < 2044.0:
                 _cost = 17.40
-            elif 2044.0 <= self.year <= 2050.0:
+            elif 2044.0 <= _year <= 2050.0:
                 _cost = 21.75
             else:
                 warnings.warn(
@@ -723,7 +722,7 @@ class CostGraph:
 
 
     @staticmethod
-    def shred_transpo(*args):
+    def shred_transpo(**kwargs):
         """
         Parameters
         -------
@@ -735,7 +734,7 @@ class CostGraph:
             Cost of transporting 1 metric ton of shredded blade material by
             one kilometer. Units: USD/metric ton.
         """
-        _vkmt = args[1]
+        _vkmt = kwargs['vkmt']
         if np.isnan(_vkmt):
             return 0.0
         else:
