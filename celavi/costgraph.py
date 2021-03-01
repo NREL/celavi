@@ -102,7 +102,7 @@ class CostGraph:
         list of strings
             List of unique node IDs created from processing step and facility ID
         """
-        return ["{}{}".format(i, str(facilityID)) for i in subgraph_steps]
+        return ["{}_{}".format(i, str(facilityID)) for i in subgraph_steps]
 
 
     @staticmethod
