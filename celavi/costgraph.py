@@ -484,7 +484,7 @@ class CostGraph:
                                                            cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
 
 
-    def enumerate_paths(self):
+    def choose_paths(self):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
         all possible pathways.
@@ -518,7 +518,8 @@ class CostGraph:
             _chosen_path = self.find_nearest(source=_node, crit='cost')
             _paths.append({'source': _node,
                            'target': _chosen_path[0],
-                           'path': _chosen_path[2]})
+                           'path': _chosen_path[2],
+                           'cost': _chosen_path[1]})
 
         return _paths
 
