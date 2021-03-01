@@ -8,6 +8,14 @@ class FileChecks:
     FileChecks has a bunch of methods to check the integrity of files
     used as input to CELAVI. See the docstrings for each individual
     method for explanations.
+
+    The basic idea is that each of the methods are called and each method
+    performs input checks.  If all the input cheks pass, these methods
+    run to completion and returns nothing. However, if there are errors
+    found, each respective method will raise and exception describing the
+    error. These exceptions shouldn't be caught; rather, they should term-
+    inate the program so that the exception is shown. The exceptions are
+    created with descriptive messages before they are raised.
     """
 
     def __init__(self, locations, step_costs, fac_edges, routes, transpo_edges):
@@ -195,6 +203,52 @@ class FileChecks:
         if self.fac_edges['step'].isnull().values.any():
             raise Exception('step in fac_edges has a null value')
 
+    def check_joins_on_facility_id(self):
+        """
+        Checks the joins on the locations table.
+
+        Raises
+        ------
+        Exception
+            Raises an exception if the joins do not work.
+        """
+
+        # Check both sides of the join
+        join1 = self.locations.merge(self.step_costs, on='facility_id', how='outer')
+        if join1['facility_type'].isna().values.any():
+            step_cost_facility_id = join1[join1['facility_type'].isna()]['facility_id'].values
+            raise Exception(f'There is a step_costs facility_id of {step_cost_facility_id} that does not exist in locations.facility_id')
+        if join1['step'].isna().values.any():
+            location_facility_id = join1[join1['step'].isna()]['facility_id'].values
+            raise Exception(f'There is a locations.facility_id of {location_facility_id} that does not exit in step_costs.facility_id')
+
+        # Check left side of join only (routes doesn't use all locations)
+        join2 = self.locations.merge(self.routes, left_on='facility_id', right_on='source_facility_id', how='outer')
+        if join2['facility_id'].isna().values.any():
+            location_facility_id = join2[join2['facility_id'].isna().values]['source_facility_id'].values
+            raise Exception(f'There is a routes.source_facility_id of {location_facility_id} that does not exist in locations.facility_id')
+
+        # Check left side of join only (routes doesn't use all locations)
+        join3 = self.locations.merge(self.routes, left_on='facility_id', right_on='destination_facility_id', how='outer')
+        if join3['facility_id'].isna().values.any():
+            destination_facility_id = join3[join3['facility_id'].isna().values]['destination_facility_id'].values
+            raise Exception(
+                f'There is a routes.destination_facility_id of {destination_facility_id} that does not exist in locations.facility_id')
+
+        # Check left side of join only (routes doesn't use all step_cost locations)
+        join4 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='source_facility_id', how='outer')
+        if join4['facility_id'].isna().values.any():
+            source_facility_id = join4[join4['facility_id'].isna().values]['source_facility_id']
+            raise Exception(f'There is a routes.source_facility_id {source_facility_id} that is not in step_costs.facility_id')
+
+        # Check left side of join only (routes doesn't use all step_cost locations)
+        join5 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='destination_facility_id',
+                                      how='outer')
+        if join5['facility_id'].isna().values.any():
+            destination_facility_id = join5[join5['facility_id'].isna().values]['source_facility_id']
+            raise Exception(
+                f'There is a routes.destination_facility_id {destination_facility_id} that is not in step_costs.facility_id')
+
 
 def main():
     # Filenames
@@ -218,6 +272,7 @@ def main():
     file_checks.check_facility_id_nulls()
     file_checks.check_facility_type_nulls()
     file_checks.check_step_nulls()
+    file_checks.check_joins_on_facility_id()
     print('File check OK.')
 
 
