@@ -2,7 +2,7 @@ import networkx as nx
 import pandas as pd
 import numpy as np
 import warnings
-import pdb
+from itertools import product
 
 
 class CostGraph:
@@ -18,8 +18,9 @@ class CostGraph:
                  transpo_edges_file : str = '../celavi-data/inputs/transpo_edges.csv',
                  locations_file : str = '../celavi-data/inputs/locations.csv',
                  routes_file : str = '../celavi-data/preprocessing/routes.csv',
-                 target_step : str = '../celavi-data/inputs/landfilling',
-                 timestep : int = 0,
+                 sc_begin : str = 'in use',
+                 sc_end : str = 'landfilling',
+                 year : float = 2000.0,
                  max_dist : float = 300.0):
         """
         Reads in small datasets to DataFrames and stores the path to the large
@@ -39,11 +40,14 @@ class CostGraph:
             path to dataset of facility locations
         routes_file
             path to dataset of routes between facilities
-        target_step
+        sc_begin
+            processing step(s) where supply chain paths begin. String or list
+            of strings.
+        sc_end
             processing step(s) where supply chain paths terminate. String or
             list of strings.
-        timestep
-            DES model timestep at which cost graph is instantiated
+        year
+            DES model year at which cost graph is instantiated.
         max_dist
             Maximum allowable transportation distance for a single supply chain
             pathway.
@@ -57,9 +61,13 @@ class CostGraph:
         self.loc_df=locations_file
         self.routes_df=routes_file
 
-        self.target=target_step
+        self.sc_end=sc_end
+        self.sc_begin=sc_begin
 
-        self.timestep = timestep
+        self.year=year
+
+        # @todo get current blade mass from DES model
+        self.blade_mass=1000.0
 
         self.max_dist = max_dist
 
@@ -70,6 +78,8 @@ class CostGraph:
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
+
+        self.build_supplychain_graph()
 
 
     @staticmethod
@@ -93,6 +103,7 @@ class CostGraph:
             List of unique node IDs created from processing step and facility ID
         """
         return ["{}{}".format(i, str(facilityID)) for i in subgraph_steps]
+
 
     @staticmethod
     def node_filter(graph : nx.DiGraph,
@@ -132,15 +143,13 @@ class CostGraph:
         return _out
 
     @staticmethod
-    def list_of_tuples(list1 : list,
-                       list2 : list,
-                       list3 : list = None):
+    def all_element_combos(list1 : list,
+                           list2 : list):
         """
         Converts two lists into a list of tuples where each tuple contains
         one element from each list:
-        [(list1[0], list2[0], list3[0]), (list1[1], list2[1], list3[0]), ...]
-        At least two lists must be specified. A maximum of three lists can be
-        specified.
+        [(list1[0], list2[0]), (list1[0], list2[1]), ...]
+        Exactly two lists of any length must be specified.
 
         Parameters
         ----------
@@ -148,20 +157,45 @@ class CostGraph:
             list of any data type
         list2
             list of any data type
-        list3
+
+        Returns
+        -------
+            list of 2-tuples
+        """
+        _out = []
+        _out = list(list(zip(list1, element)) for element in product(list2, repeat=len(list1)))
+
+        return [item for sublist in _out for item in sublist]
+
+
+    @staticmethod
+    def list_of_tuples(list1 : list,
+                       list2 : list):
+        """
+        Converts two lists into a list of tuples where each tuple contains
+        one element from each list:
+        [(list1[0], list2[0]), (list1[1], list2[1]), ...]
+        Exactly two lists of any length must be specified.
+
+        Parameters
+        ----------
+        list1
+            list of any data type
+        list2
             list of any data type
 
         Returns
         -------
-            list of 2- or 3-tuples
+            list of 2-tuples
         """
-        if list3 is not None:
-            return list(map(lambda x, y, z: (x, y, z), list1, list2, list3))
+        if len(list1) != len(list2):
+            raise NotImplementedError
         else:
             return list(map(lambda x, y: (x, y), list1, list2))
 
+
     @staticmethod
-    def zero_method():
+    def zero_method(*args):
         """
 
         Returns
@@ -171,6 +205,55 @@ class CostGraph:
             no associated cost
         """
         return 0.0
+
+
+
+    def find_nearest(self,
+                     source : str,
+                     crit : str):
+        """
+        # original code source:
+        # https://stackoverflow.com/questions/50723854/networkx-finding-the-shortest-path-to-one-of-multiple-nodes-in-graph
+
+        Parameters
+        ----------
+        source
+            Name of node where this path begins.
+        crit
+            Criteria to calcualte path "length". May be cost or dict.
+
+        Returns
+        -------
+        name of node "closest" to source
+        "length" of path between source and the closest node
+        list of nodes defining the path between source and the closest node
+        """
+
+        # Calculate the length of paths from fromnode to all other nodes
+        lengths = nx.single_source_dijkstra_path_length(self.supply_chain,
+                                                        source,
+                                                        weight=crit)
+
+        paths = nx.single_source_dijkstra_path(self.supply_chain,
+                                               source)
+
+        # We are only interested in a particular type(s) of node
+        targets = self.node_filter(self.supply_chain,
+                                   'step',
+                                   self.sc_end)
+
+        subdict = {k: v for k, v in lengths.items() if k in targets}
+
+        # return the smallest of all lengths to get to typeofnode
+        if subdict:
+            # dict of shortest paths to all targets
+            nearest = min(subdict,
+                          key=subdict.get)
+            # shortest "distance" to any of the targets
+            return nearest, subdict[nearest], paths[nearest]
+        else:
+            # not found, no path from source to typeofnode
+            return None, None, None
 
 
     def get_edges(self,
@@ -280,8 +363,9 @@ class CostGraph:
         # Edges within facilities don't have transportation costs or distances
         # associated with them.
         _facility.add_edges_from(self.get_edges(facility_df),
-                                 cost=0,
-                                 dist=0)
+                                 cost_method=[],
+                                 cost=0.0,
+                                 dist=0.0)
 
         # Use the facility ID and list of processing steps in this facility to
         # create a list of unique node names
@@ -309,7 +393,7 @@ class CostGraph:
         edges. Edges within facilities have no cost or distance. Edges
         between facilities have costs defined in the interconnections
         dataset and distances defined in the routes dataset.
-        
+
         Returns
         -------
         None
@@ -340,14 +424,18 @@ class CostGraph:
             # get two lists of nodes to connect based on df row
             _u_nodes = self.node_filter(self.supply_chain, 'step', _u)
             _v_nodes = self.node_filter(self.supply_chain, 'step', _v)
-            # convert the two lists to a list of tuples
-            _edge_list = self.list_of_tuples(_u_nodes, _v_nodes)
 
-            # @todo use the dist=NaN as a condition to exclude paths with this
-            # edge from pathways being considered
+            # convert the two node lists to a list of tuples with all possible
+            # combinations of _u_nodes and _v_nodes
+            _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
+
+            # add these edges to the supply chain
             self.supply_chain.add_edges_from(_edge_list,
-                                             cost=_edge_cost,
+                                             cost_method=[getattr(CostGraph,
+                                                                  _edge_cost)],
+                                             cost=0.0,
                                              dist=np.nan)
+
 
         # read in and process routes line by line
         with open(self.routes_df, 'r') as _route_file:
@@ -362,8 +450,7 @@ class CostGraph:
                                       'connects','out')
 
                 # loop thru all edges that connect to the source nodes
-                for u_node, v_node, data in self.supply_chain.edges(_u,
-                                                                    data=True):
+                for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
                     # if the destination node facility ID matches the
                     # destination facility ID in the routing dataset row,
                     # apply the distance from the routing dataset to this edge
@@ -371,10 +458,29 @@ class CostGraph:
                             _line['destination_facility_id'].values[0]:
                         data['dist'] = _line['total_vmt'].values[0]
 
-        return self.supply_chain
+        # @todo edges starting from 'in use' nodes have rotor teardown costs
+        # assigned to them in addition to the zero method
+        for edge in self.supply_chain.edges():
+
+            _method = getattr(CostGraph, self.supply_chain.nodes[edge[0]]['step_cost_method'])
+
+            if _method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
+                self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_method)
+
+            # if the node terminates at a landfill,
+            if self.supply_chain.nodes[edge[1]]['facility_type'] == 'landfill':
+                _landfill_method = getattr(CostGraph,
+                                           self.supply_chain.nodes[edge[1]]['step_cost_method'])
+                # also add in the landfill cost method
+                if _landfill_method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
+                    self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_landfill_method)
+
+            self.supply_chain.edges[edge]['cost'] = sum([f(self,
+                                                           self.supply_chain.edges[edge]['dist'],
+                                                           self.blade_mass) for f in self.supply_chain.edges[edge]['cost_method']])
 
 
-    def enumerate_paths(self, source_node):
+    def enumerate_paths(self):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
         all possible pathways.
@@ -383,89 +489,38 @@ class CostGraph:
         @note The target parameter can be replaced by a list
         # @todo update docstring
 
+        # @note cost, next state, relocation destination for the component
+        # @todo: based on current_step where component is currently, pull the
+        # next step from the preferred pathway
+
         Parameters
         ----------
-        source_node
-            Source node name in the format 'facilitytypefacilityID'
 
         Returns
         -------
 
         """
+        # Since all edges now contain both processing costs (for the u node)
+        # as well as transport costs (including distances), all we need to do
+        # is get the shortest path using the 'cost' attribute as the edge weight
 
-        # create empty list of dicts to store pathways and characteristics
-        _paths = list()
-
-        _targets = self.node_filter(self.supply_chain,
+        _sources = self.node_filter(self.supply_chain,
                                     attr_key_1='step',
-                                    get_val_1=self.target)
+                                    get_val_1=self.sc_begin)
 
-        # Enumerate and store pathways by source node
-        for path in map(nx.utils.pairwise,
-                        nx.all_simple_paths(self.supply_chain,
-                                            source=source_node,
-                                            target=_targets)):
+        _paths = []
+        # Find the lowest-cost path from EACH source node to ANY target node
+        for _node in _sources:
+            _chosen_path = self.find_nearest(source=_node, crit='cost')
+            _paths.append({'source': _node,
+                           'target': _chosen_path[0],
+                           'path': _chosen_path[2]})
 
-            # get list of edges in this path
-            _edges = list(path)
-
-            # get list of nodes in this path by looking at the v node in
-            # every edge
-            _nodes = list(list(zip(*_edges))[1])
-            # add source node to the list
-            _nodes.insert(0, source_node)
-            pdb.set_trace()
-            # generate unique path id based on source and target nodes
-            # @todo this isn't actually unique, how to uniqueify?
-            _path_id = _nodes[0] + '_' + _nodes[-1]
-
-            # sum transpo costs along edges to get pathway transpo cost
-            _path_transpo_cost = 0.0
-
-            # sum processing cost for all nodes in path to get pathway
-            # processing cost
-            # get dict of node name: cost method
-            # we don't need to call every cost method every time - can we
-            # instead evaluate all cost methods up-front and store those
-            # values in self for accessibility? Then update as needed?
-            _cost_dict = nx.get_node_attributes(nx.subgraph(self.supply_chain,
-                                                            _nodes),
-                                                'step_cost_method')
-            # evaluate each cost method and calculate sum
-            _path_processing_cost = 0.0
-
-            # sum edge distances along edges to get total transportation dist
-            _path_dist = 0.0
+        return _paths
 
 
-            # add this path and its characteristics to the list of path dicts
-            _paths.append({'source' : source_node,
-                           'path_id': _path_id,
-                           'edges': _edges,
-                           'nodes': _nodes,
-                           'path_cost': _path_transpo_cost + _path_processing_cost,
-                           'path_dist': _path_dist,
-                           'path_gwp': 0.0})
-
-            pdb.set_trace()
-
-        path_node_list = list(nx.all_simple_paths(self.supply_chain,
-                                                  source=source_node,
-                                                  target=_targets))
-
-        # for nodes, edges in zip(path_node_list, path_edge_list):
-        #     costs = [self.supply_chain.get_edge_data(u, v)['cost']
-        #              for u, v in edges]
-        #     distances = [self.supply_chain.get_edge_data(u, v)['distance']
-        #                  for u, v in edges]
-        #     graph_path = ",".join(nodes)
-        #     print(
-        #         f"Path: {graph_path}. Total cost={sum(costs)},"
-        #         f" total distance={sum(distances)}")
-
-
-    def update_paths(self):
-        pass
+    def update_costs(self, context_year):
+        self.year = context_year
         # @todo dynamically update node costs based on cost-over-time and
         # learning-by-doing models
 
@@ -474,33 +529,7 @@ class CostGraph:
         # this graph to the state machine
 
 
-    def rank_paths(self):
-        """
-
-        Returns
-        -------
-
-        """
-        pass
-
-
-    def choose_next_step(self, current_step=None):
-        """
-
-        Parameters
-        ----------
-        current_step
-
-        Returns
-        -------
-
-        """
-        # @note cost, next state, relocation destination for the component
-        # @todo: based on current_step where component is currently, pull the
-        # next step from the preferred pathway
-
-    @staticmethod
-    def landfilling(year):
+    def landfilling(self, *args):
         """
         Tipping fee model based on tipping fees in the South-Central region
         of the U.S. which includes TX.
@@ -512,14 +541,14 @@ class CostGraph:
         Returns
         -------
         _fee
-            Landfill tipping fee in USD/tonne
+            Landfill tipping fee in USD/metric ton
         """
 
-        _fee = 3.0E-29 * np.exp(0.0344 * year)
+        _fee = 3.0E-29 * np.exp(0.0344 * self.year)
         return _fee
 
-    @staticmethod
-    def rotor_teardown(year):
+
+    def rotor_teardown(self, *args):
         """
         Cost of removing one blade from the turbine, calculated as one-third
         the rotor teardown cost.
@@ -535,23 +564,24 @@ class CostGraph:
             in-use turbine. Equivalent to 1/3 the rotor teardown cost.
         """
 
-        _cost = 42.6066109 * year ** 2 - 170135.7518957 * year +\
+        _cost = 42.6066109 * self.year ** 2 - 170135.7518957 * self.year +\
                 169851728.663209
         return _cost
 
 
     @staticmethod
-    def segmenting():
+    def segmenting(*args):
         """
 
         Returns
         -------
-            Cost of cutting a turbine blade into 30-m segments.
+            Cost (USD/metric ton) of cutting a turbine blade into 30-m segments.
         """
         return 27.56
 
+
     @staticmethod
-    def coarse_grinding_onsite():
+    def coarse_grinding_onsite(*args):
         """
 
         Parameters
@@ -562,11 +592,12 @@ class CostGraph:
             Cost of coarse grinding one metric ton of blade material onsite at
             the wind power plant.
         """
-        raise NotImplementedError
 
         coarse_grinding_onsite_initial = 90.0
 
-        cumulative_coarsegrind_mass = Context.recycle_to_clinker_material_inventory.component_materials['blade']
+        # @todo update with relevant FacilityInventories from Context
+        cumulative_coarsegrind_mass = 1000
+        cumulative_finegrind_mass = 1000
 
         coarse_grind_learning = (cumulative_coarsegrind_mass + cumulative_finegrind_mass + 1.0) ** -0.05
 
@@ -574,8 +605,9 @@ class CostGraph:
 
         return coarse_grind_process
 
+
     @staticmethod
-    def coarse_grinding():
+    def coarse_grinding(*args):
         """
 
         Parameters
@@ -586,7 +618,6 @@ class CostGraph:
             Cost of coarse grinding one metric ton of segmented blade material
             in a mechanical recycling facility.
         """
-        raise NotImplementedError
 
         coarse_grinding_initial = 80.0
 
@@ -594,19 +625,21 @@ class CostGraph:
         # entire blades are processed through raw material recycling, but only 70% is kept in the supply chain
         # similar for coarse grinding
         # cost models should be based on mass *processed*, not mass output
-        cumulative_coarsegrind_mass = self.recycle_to_clinker_material_inventory.component_materials['blade']
+        # @todo update with correct FacilityInventory values from Context
+        cumulative_coarsegrind_mass = 1000
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         # add 1.0 to avoid mathematical errors when the cumulative numbers are both zero
-        coarse_grind_learning = (cumulative_coarsegrind_mass + cumulative_finegrind_mass + 1.0) ** -0.05
+        coarse_grind_learning = (cumulative_coarsegrind_mass + 1.0) ** -0.05
 
         coarse_grind_process = coarse_grinding_initial * coarse_grind_learning
 
         return coarse_grind_process
 
+
     @staticmethod
-    def fine_grinding():
+    def fine_grinding(*args):
         """
 
         Parameters
@@ -617,11 +650,10 @@ class CostGraph:
             Cost of grinding one metric ton of coarse-ground blade material at
             a mechanical recycling facility.
         """
-        raise NotImplementedError
-
         fine_grinding_initial = 100.0
 
-        cumulative_finegrind_mass = Context.recycle_to_raw_material_inventory.component_materials['blade'] / 0.7
+        # @todo update with relevant FacilityInventory values from Context
+        cumulative_finegrind_mass = 1000
 
         fine_grind_learning = (cumulative_finegrind_mass + 1.0) ** -0.05
 
@@ -631,61 +663,66 @@ class CostGraph:
 
 
     @staticmethod
-    def coprocessing():
+    def coprocessing(*args):
         """
 
         Returns
         -------
-            Revenue from selling 1 metric ton of ground blade to cement
-            co-processing plant
+            Revenue (USD/metric ton) from selling 1 metric ton of ground blade
+             to cement co-processing plant
         """
         return -10.37
 
 
-    @staticmethod
-    def segment_transpo(year):
+    def segment_transpo(self, *args):
         """
-
-        Parameters
-        ----------
-        year
-            Model year from the DES model.
+        Calculate segment transportation cost in USD/metric ton
 
         Returns
         -------
             Cost of transporting one segmented blade one kilometer. Units:
-            USD/blade-km
+            USD/blade
         """
+        _vkmt = args[0]
+        _mass = args[1]
 
-        if year < 2001.0 or 2002.0 <= year < 2003.0:
-            _cost = 4.35
-        elif 2001.0 <= year < 2002.0 or 2003.0 <= year < 2019.0:
-            _cost = 8.70
-        elif 2019.0 <= year < 2031.0:
-            _cost = 13.05
-        elif 2031.0 <= year < 2044.0:
-            _cost = 17.40
-        elif 2044.0 <= year <= 2050.0:
-            _cost = 21.75
+        if np.isnan(_vkmt) or np.isnan(_mass):
+            return 0.0
         else:
-            warnings.warn('Year out of range for segment transport; setting cost = 17.40')
-            _cost = 17.40
+            if self.year < 2001.0 or 2002.0 <= self.year < 2003.0:
+                _cost = 4.35
+            elif 2001.0 <= self.year < 2002.0 or 2003.0 <= self.year < 2019.0:
+                _cost = 8.70
+            elif 2019.0 <= self.year < 2031.0:
+                _cost = 13.05
+            elif 2031.0 <= self.year < 2044.0:
+                _cost = 17.40
+            elif 2044.0 <= self.year <= 2050.0:
+                _cost = 21.75
+            else:
+                warnings.warn(
+                    'Year out of range for segment transport; setting cost = 17.40')
+                _cost = 17.40
 
-        return _cost
+            return _cost * _vkmt / _mass
 
 
     @staticmethod
-    def shred_transpo():
+    def shred_transpo(*args):
         """
+        Parameters
+        -------
+        vkmt
+            Distance traveled in kilometers
 
         Returns
         -------
             Cost of transporting 1 metric ton of shredded blade material by
-            one kilometer. Units: USD/tonne-km.
+            one kilometer. Units: USD/metric ton.
         """
-        return 0.08
+        _vkmt = args[1]
+        if np.isnan(_vkmt):
+            return 0.0
+        else:
+            return 0.08 * _vkmt
 
-## Debug code
-netw = CostGraph()
-netw.build_supplychain_graph()
-netw.enumerate_paths('in use0')
