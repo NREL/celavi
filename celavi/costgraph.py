@@ -52,7 +52,7 @@ class CostGraph:
             Maximum allowable transportation distance for a single supply chain
             pathway.
         """
-        # @todo update file IO method to match actual input data format
+
         self.step_costs=pd.read_csv(step_costs_file)
         self.fac_edges=pd.read_csv(fac_edges_file)
         self.transpo_edges = pd.read_csv(transpo_edges_file)
@@ -521,14 +521,29 @@ class CostGraph:
         return _paths
 
 
-    def update_costs(self, context_year):
-        self.year = context_year
+    def update_costs(self, context_year, blade_mass, *args):
+        """
+
+        Parameters
+        ----------
+        context_year
+        blade_mass
+
+        Returns
+        -------
+        None
+        """
         # @todo dynamically update node costs based on cost-over-time and
         # learning-by-doing models
+        self.year = context_year
+        self.blade_mass = blade_mass
 
-        # @note Is there a way to also track component-material "status" or
-        # general characteristics as it traverses the graph? Maybe connecting
-        # this graph to the state machine
+        for edge in self.supply_chain.edges():
+            self.supply_chain.edges[edge]['cost'] = sum([f(self,
+                                                           self.supply_chain.edges[edge]['dist'],
+                                                           self.blade_mass)
+                                                         for f in self.supply_chain.edges[
+                                                             edge]['cost_method']])
 
 
     def landfilling(self, *args):
@@ -585,6 +600,7 @@ class CostGraph:
     @staticmethod
     def coarse_grinding_onsite(*args):
         """
+        # @todo update with relevant FacilityInventories from DES
 
         Parameters
         ----------
@@ -594,23 +610,24 @@ class CostGraph:
             Cost of coarse grinding one metric ton of blade material onsite at
             the wind power plant.
         """
+        cumulative_coarsegrind_mass = args[2]
+        cumulative_finegrind_mass = args[3]
+
+        if cumulative_coarsegrind_mass is None:
+            cumulative_coarsegrind_mass = 1000
+            cumulative_finegrind_mass = 1000
 
         coarse_grinding_onsite_initial = 90.0
 
-        # @todo update with relevant FacilityInventories from Context
-        cumulative_coarsegrind_mass = 1000
-        cumulative_finegrind_mass = 1000
-
         coarse_grind_learning = (cumulative_coarsegrind_mass + cumulative_finegrind_mass + 1.0) ** -0.05
 
-        coarse_grind_process = coarse_grinding_onsite_initial * coarse_grind_learning
-
-        return coarse_grind_process
+        return coarse_grinding_onsite_initial * coarse_grind_learning
 
 
     @staticmethod
     def coarse_grinding(*args):
         """
+        # @todo update with correct FacilityInventory values from Context
 
         Parameters
         ----------
@@ -620,29 +637,25 @@ class CostGraph:
             Cost of coarse grinding one metric ton of segmented blade material
             in a mechanical recycling facility.
         """
+        cumulative_coarsegrind_mass = args[2]
+
+        if cumulative_coarsegrind_mass is None:
+            cumulative_coarsegrind_mass = 1000
 
         coarse_grinding_initial = 80.0
-
-        # divide out the loss factors that are applied to the inventory
-        # entire blades are processed through raw material recycling, but only 70% is kept in the supply chain
-        # similar for coarse grinding
-        # cost models should be based on mass *processed*, not mass output
-        # @todo update with correct FacilityInventory values from Context
-        cumulative_coarsegrind_mass = 1000
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         # add 1.0 to avoid mathematical errors when the cumulative numbers are both zero
         coarse_grind_learning = (cumulative_coarsegrind_mass + 1.0) ** -0.05
 
-        coarse_grind_process = coarse_grinding_initial * coarse_grind_learning
-
-        return coarse_grind_process
+        return coarse_grinding_initial * coarse_grind_learning
 
 
     @staticmethod
     def fine_grinding(*args):
         """
+        # @todo update with relevant FacilityInventory values from Context
 
         Parameters
         ----------
@@ -652,16 +665,16 @@ class CostGraph:
             Cost of grinding one metric ton of coarse-ground blade material at
             a mechanical recycling facility.
         """
-        fine_grinding_initial = 100.0
+        cumulative_finegrind_mass = args[3]
 
-        # @todo update with relevant FacilityInventory values from Context
-        cumulative_finegrind_mass = 1000
+        if cumulative_finegrind_mass is None:
+            cumulative_finegrind_mass = 1000
+
+        fine_grinding_initial = 100.0
 
         fine_grind_learning = (cumulative_finegrind_mass + 1.0) ** -0.05
 
-        fine_grind_process = fine_grinding_initial * fine_grind_learning
-
-        return fine_grind_process
+        return fine_grinding_initial * fine_grind_learning
 
 
     @staticmethod
