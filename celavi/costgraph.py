@@ -19,7 +19,7 @@ class CostGraph:
                  locations_file : str = '../celavi-data/inputs/locations.csv',
                  routes_file : str = '../celavi-data/preprocessing/routes.csv',
                  sc_begin : str = 'in use',
-                 sc_end : str = 'landfilling',
+                 sc_end = ['landfilling', 'cement co-processing'],
                  year : float = 2000.0,
                  max_dist : float = 300.0):
         """
@@ -132,13 +132,13 @@ class CostGraph:
         -------
             list of names of nodes (str) in graph
         """
+
         if attr_key_2 is not None:
             _out = [x for x, y in graph.nodes(data=True)
-                    if (y[attr_key_1] == get_val_1) and
-                    (y[attr_key_2] == get_val_2)]
+                    if (y[attr_key_1] in get_val_1) and
+                    (y[attr_key_2] in get_val_2)]
         else:
-            _out = [x for x, y in graph.nodes(data=True)
-                    if y[attr_key_1] == get_val_1]
+            _out = [x for x, y in graph.nodes(data=True) if y[attr_key_1] in get_val_1]
 
         return _out
 
@@ -234,8 +234,8 @@ class CostGraph:
                                                         source,
                                                         weight=crit)
 
-        paths = nx.single_source_dijkstra_path(self.supply_chain,
-                                               source)
+        short_paths = nx.single_source_dijkstra_path(self.supply_chain,
+                                                     source)
 
         # We are only interested in a particular type(s) of node
         targets = self.node_filter(self.supply_chain,
@@ -250,7 +250,7 @@ class CostGraph:
             nearest = min(subdict,
                           key=subdict.get)
             # shortest "distance" to any of the targets
-            return nearest, subdict[nearest], paths[nearest]
+            return nearest, subdict[nearest], short_paths[nearest]
         else:
             # not found, no path from source to typeofnode
             return None, None, None
@@ -443,11 +443,13 @@ class CostGraph:
             _reader = pd.read_csv(_route_file, chunksize=1)
 
             for _line in _reader:
+
                 # find the source nodes for this route
                 _u = self.node_filter(self.supply_chain,
                                       'facility_id',
-                                      _line['source_facility_id'].values[0],
-                                      'connects','out')
+                                      [_line['source_facility_id'].values[0]],
+                                      'connects',
+                                      ['out'])
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
@@ -468,12 +470,12 @@ class CostGraph:
                 self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_method)
 
             # if the node terminates at a landfill,
-            if self.supply_chain.nodes[edge[1]]['facility_type'] == 'landfill':
-                _landfill_method = getattr(CostGraph,
+            if self.supply_chain.nodes[edge[1]]['step'] in self.sc_end:
+                _addl_method = getattr(CostGraph,
                                            self.supply_chain.nodes[edge[1]]['step_cost_method'])
                 # also add in the landfill cost method
-                if _landfill_method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
-                    self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_landfill_method)
+                if _addl_method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
+                    self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_addl_method)
 
             self.supply_chain.edges[edge]['cost'] = sum([f(self,
                                                            self.supply_chain.edges[edge]['dist'],
@@ -725,4 +727,3 @@ class CostGraph:
             return 0.0
         else:
             return 0.08 * _vkmt
-
