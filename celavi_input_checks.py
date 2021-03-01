@@ -205,7 +205,7 @@ class FileChecks:
 
     def check_joins_on_facility_id(self):
         """
-        Checks the joins on the locations table.
+        Checks the joins on facility_id among the tables.
 
         Raises
         ------
@@ -249,6 +249,52 @@ class FileChecks:
             raise Exception(
                 f'There is a routes.destination_facility_id {destination_facility_id} that is not in step_costs.facility_id')
 
+    def check_joins_on_facility_type(self):
+        """
+        Check the joins on the facility_type among the tables
+
+        Raises
+        ------
+        Exception
+            Raises an exception if there are any problems with the
+            facility_types.
+        """
+
+        # Check both sides of join
+        join1 = self.locations.merge(self.fac_edges, on='facility_type', how='outer')
+        if join1['facility_id'].isna().values.any():
+            facility_type = join1[join1['facility_id'].isna().values]['facility_type'].values
+            raise Exception(
+                f'There is a fac_edges.facility_type {facility_type} that does not exist in locations.facility_type')
+        if join1['step'].isna().values.any():
+            facility_type = join1[join1['step'].isna().values]['facility_type'].values
+            raise Exception(
+                f'There is a locations.facility_type {facility_type} that does not exist in fac_edges.facility_type')
+
+        # Check left side of join only (not all facility types are used in routes)
+        join2 = self.locations.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
+        if join2['facility_type'].isna().values.any():
+            source_facility_type = join2[join2['facility_type'].isna().values]['source_facility_type'].values
+            raise Exception(
+                f'There is a routes.source_facility_type {source_facility_type} that does not exist in locations.facility_type.'
+            )
+
+        # Check left side of join only (not all facility types are used in routes)
+        join3 = self.fac_edges.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
+        if join3['facility_type'].isna().values.any():
+            source_facility_type = join3[join3['facility_type'].isna().values]['source_facility_type'].values
+            raise Exception(
+                f'There is a routes.source_facility_type {source_facility_type} that does not exist in fac_edges.facility_type'
+            )
+
+        # Check left side of join only (not all facility types are used in routes)
+        join4 = self.locations.merge(self.routes, left_on='facility_type', right_on='destination_facility_type', how='outer')
+        if join4['facility_type'].isna().values.any():
+            destination_facility_type = join4[join4['facility_type'].isna().values]['destination_facility_type'].values
+            raise Exception(
+                f'There is a routes.destination_facility_type {destination_facility_type} that does not exist in locations.facility_type.'
+            )
+
 
 def main():
     # Filenames
@@ -273,6 +319,7 @@ def main():
     file_checks.check_facility_type_nulls()
     file_checks.check_step_nulls()
     file_checks.check_joins_on_facility_id()
+    file_checks.check_joins_on_facility_type()
     print('File check OK.')
 
 
