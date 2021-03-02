@@ -144,3 +144,23 @@ routing/spatialresolutionTexas/texasshp/State.shx
 routing/spatialresolutionTexas/texasshp/State.cpg
 routing/spatialresolutionTexas/texasshp/State.dbf
 routing/spatialresolutionTexas/texasshp/State.shp
+routing/data/inputs/old data strc/plant_locations_all_texas.xlsx
+routing/data/inputs/old data strc/wind_turbines_roscoe.xlsx
+routing/data/inputs/old data strc/wind_turbines_tx.xlsx
+routing/data/old format/outputs plants in Nolan county/.~visualize_results_all_TX__12081.twbr
+routing/data/outputs all texas/.~visualize_results_locations_all_tx_1feb__22407.twbr
+routing/data/outputs all texas/.~visualize_results_locations_toy_1feb__22160.twbr
+routing/data/outputs toy/.~visualize_results_locations_toy_1feb__82386.twbr
+routing/data/USdata/landfilllmopdata.xlsx
+routing/data/USdata/other_facility_locations_all_us.xlsx
+routing/data/USdata/States_shapefile-shp.zip
+routing/data/USdata/States_shapefile-shp/States_shapefile.cpg
+routing/data/USdata/States_shapefile-shp/States_shapefile.dbf
+routing/data/USdata/States_shapefile-shp/States_shapefile.prj
+routing/data/USdata/States_shapefile-shp/States_shapefile.shp
+routing/data/USdata/States_shapefile-shp/States_shapefile.shx
+routing/data/USdata/uswtdbCSV (2)/CHANGELOG.txt
+routing/spatialresolutionTexas/cement_facilities.xlsx
+routing/spatialresolutionTexas/grindingfacility.xlsx
+routing/spatialresolutionTexas/landfilldata.xlsx
+routing/spatialresolutionTexas/wind_turbines_tx.xlsx
