@@ -295,6 +295,44 @@ class FileChecks:
                 f'There is a routes.destination_facility_type {destination_facility_type} that does not exist in locations.facility_type.'
             )
 
+    def check_step_joins(self):
+        """
+        Checks all joins that involve steps.
+
+        Raises
+        ------
+        Exception
+            Raises an exception if there are any problems with the step ids.
+        """
+
+        # Check both sides of join
+        join1 = self.step_costs.merge(self.fac_edges, on='step', how='outer')
+        if join1['facility_type'].isna().values.any():
+            step = join1[join1['facility_type'].isna().values]['step'].values
+            raise Exception(f'There is a step_costs.step of {step} that does not exist in fac_edges.step.')
+        if join1['step_cost_method'].isna().values.any():
+            step = join1[join1['step_cost_method'].isna().values]['step'].values
+            raise Exception(f'There is a fac_edges.step {step} that does not exist in step_cost_method.step.')
+
+        # Check left side of join only
+        join2 = self.step_costs.merge(self.transpo_edges, left_on='step', right_on='u_step', how='outer')
+        if join2['step'].isna().values.any():
+            u_step = join2[join2['step'].isna().values]['u_step'].values
+            raise Exception(f'There is a transpo_edges.u_step {u_step} that does not exist in step_costs.step.')
+
+        # Check left side of join only
+        join3 = self.step_costs.merge(self.transpo_edges, left_on='step', right_on='v_step', how='outer')
+        if join3['step'].isna().values.any():
+            v_step = join3[join3['step'].isna().values]['v_step'].values
+            raise Exception(f'There is a transpo_edges.v_step {v_step} that does not exist in step_costs.step.')
+
+        # Check left side of join only
+        join4 = self.step_costs.merge(self.fac_edges, left_on='step', right_on='next_step', how='outer')
+        if join4['step_x'].isna().values.any():
+            next_step = join4[join4['step_x'].isna().values]['next_step'].values
+            if not next_step.all():   # next_step is optional, so nan should not throw an error
+                raise Exception(f'There is a fac_edges.next_step {next_step} that does not exist in step_costs.step.')
+
 
 def main():
     # Filenames
@@ -320,6 +358,7 @@ def main():
     file_checks.check_step_nulls()
     file_checks.check_joins_on_facility_id()
     file_checks.check_joins_on_facility_type()
+    file_checks.check_step_joins()
     print('File check OK.')
 
 
