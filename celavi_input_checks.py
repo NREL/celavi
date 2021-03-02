@@ -6,22 +6,20 @@ import argparse
 
 class FileChecks:
     """
-    FileChecks has a bunch of methods to check the integrity of files
-    used as input to CELAVI. See the docstrings for each individual
-    method for explanations.
+    FileChecks checks the integrity of files used as input to CELAVI. 
+    See the docstrings for each individual method for explanations.
 
-    The basic idea is that each of the methods are called and each method
-    performs input checks.  If all the input cheks pass, these methods
-    run to completion and returns nothing. However, if there are errors
-    found, each respective method will raise and exception describing the
-    error. These exceptions shouldn't be caught; rather, they should term-
-    inate the program so that the exception is shown. The exceptions are
+    If all the input checks pass, these methods run to completion and 
+    nothing is returned. However, if there are errors found, each 
+    respective method will raise an exception describing the error. 
+    These exceptions shouldn't be caught; rather, they should term-
+    inate the program and show the exception. The exceptions are
     created with descriptive messages before they are raised.
     """
 
     def __init__(self, locations, step_costs, fac_edges, routes, transpo_edges):
         """
-        Initializes the file integrity checks by coopying the filenames
+        Initializes the file integrity checks by copying the filenames
         to instance variables.
 
         Parameters
@@ -69,19 +67,19 @@ class FileChecks:
             Raises an exception if one of the files does not exist
         """
         if not os.path.isfile(self.locations_filename):
-            raise Exception(f'Locations file {self.locations_filename} is not a file.')
+            raise Exception(f'Locations file {self.locations_filename} does not exist.')
 
         if not os.path.isfile(self.step_costs_filename):
-            raise Exception(f'Step costs file {self.step_costs_filename} is not a file.')
+            raise Exception(f'Step costs file {self.step_costs_filename} does not exist.')
 
         if not os.path.isfile(self.fac_edges_filename):
-            raise Exception(f'Facility edges file {self.fac_edges_filename} is not a file.')
+            raise Exception(f'Facility edges file {self.fac_edges_filename} does not exist.')
 
         if not os.path.isfile(self.routes_filename):
-            raise Exception(f'Routes file {self.routes_filename} is not a file.')
+            raise Exception(f'Routes file {self.routes_filename} does not exist.')
 
         if not os.path.isfile(self.transpo_edges_filename):
-            raise Exception(f'Transportation edges file {self.transpo_edges_filename} is not a file.')
+            raise Exception(f'Transportation edges file {self.transpo_edges_filename} does not exist.')
 
         return True
 
