@@ -175,6 +175,12 @@ locations = locations[locations.region_id_2 != 'HI']
 locations = locations[locations.region_id_2 != 'PR']
 locations = locations[locations.region_id_2 != 'AK']
 
+# exclude Nantucket since transport routing doesn't currently include ferry
+locations = locations[locations.region_id_3 != 'Nantucket']
+
+# exclude Block Island since no transport from offshore turbine to shore
+locations = locations[locations.facility_id != 58035]
+
 locations.to_csv('data/outputs/computed_input_locations.csv')
 
 # OR read in location data directly (above code computes from raw data files
@@ -229,6 +235,12 @@ for state in state_list:
 
     if route_list.empty:
         print('list is empty')
+        route_list['vmt'] = ''
+        route_list = route_list.drop(['merge'], axis=1)
+        route_list['total_vmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
+                                                         'source_long', 'destination_facility_id', 'destination_facility_type',
+                                                         'destination_lat', 'destination_long'])['vmt'].transform('sum')
+        route_list.to_csv(file_output)
     else:
         # load turbine data
         # OR load source and destination locations directly
