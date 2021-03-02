@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import os.path
 import argparse
 
@@ -330,7 +331,8 @@ class FileChecks:
         join4 = self.step_costs.merge(self.fac_edges, left_on='step', right_on='next_step', how='outer')
         if join4['step_x'].isna().values.any():
             next_step = join4[join4['step_x'].isna().values]['next_step'].values
-            if not next_step.all():   # next_step is optional, so nan should not throw an error
+            next_step_not_all_na = join4[join4['step_x'].isna().values]['next_step'].isna().values.all()
+            if not next_step_not_all_na:   # next_step is optional, so nan should not throw an error
                 raise Exception(f'There is a fac_edges.next_step {next_step} that does not exist in step_costs.step.')
 
 
