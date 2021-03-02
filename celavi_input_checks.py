@@ -214,7 +214,11 @@ class FileChecks:
             Raises an exception if the joins do not work.
         """
 
-        # Check both sides of the join
+        # An outer join is used here to include all rows on both sides of the join
+        # Check for null values on the left/right side of the join, and use ids on the
+        # opposite right/left side of the join to generate error messages about
+        # unmatched rows on the other side of the join.
+
         join1 = self.locations.merge(self.step_costs, on='facility_id', how='outer')
         if join1['facility_type'].isna().values.any():
             step_cost_facility_id = join1[join1['facility_type'].isna()]['facility_id'].values
@@ -223,30 +227,50 @@ class FileChecks:
             location_facility_id = join1[join1['step'].isna()]['facility_id'].values
             raise Exception(f'There is a locations.facility_id of {location_facility_id} that does not exit in step_costs.facility_id')
 
-        # Check left side of join only (routes doesn't use all locations)
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for facility ids referenced by routes that
+        # do not exist in locations.
+        # Use the right side of the join to create error messages about route facility ids
+        # that do not exist in location.
+
         join2 = self.locations.merge(self.routes, left_on='facility_id', right_on='source_facility_id', how='outer')
         if join2['facility_id'].isna().values.any():
-            location_facility_id = join2[join2['facility_id'].isna().values]['source_facility_id'].values
-            raise Exception(f'There is a routes.source_facility_id of {location_facility_id} that does not exist in locations.facility_id')
+            source_facility_id = join2[join2['facility_id'].isna().values]['source_facility_id'].values
+            raise Exception(f'There is a routes.source_facility_id of {source_facility_id} that does not exist in locations.facility_id')
 
-        # Check left side of join only (routes doesn't use all locations)
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for facility ids referenced by routes that
+        # do not exist in locations.
+        # Use the right side of the join to create error messages about route destination
+        # facility ids that do not exist in location.
+
         join3 = self.locations.merge(self.routes, left_on='facility_id', right_on='destination_facility_id', how='outer')
         if join3['facility_id'].isna().values.any():
             destination_facility_id = join3[join3['facility_id'].isna().values]['destination_facility_id'].values
             raise Exception(
                 f'There is a routes.destination_facility_id of {destination_facility_id} that does not exist in locations.facility_id')
 
-        # Check left side of join only (routes doesn't use all step_cost locations)
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for facility ids referenced by routes that
+        # do not exist in step_costs.
+        # Use the right side of the join to create error messages about route source
+        # facility ids that do not exist step_costs.
+
         join4 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='source_facility_id', how='outer')
         if join4['facility_id'].isna().values.any():
             source_facility_id = join4[join4['facility_id'].isna().values]['source_facility_id']
             raise Exception(f'There is a routes.source_facility_id {source_facility_id} that is not in step_costs.facility_id')
 
-        # Check left side of join only (routes doesn't use all step_cost locations)
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for facility ids referenced by routes that
+        # do not exist in step_costs.
+        # Use the right side of the join to create error messages about route destination
+        # facility ids that do not exist step_costs.
+
         join5 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='destination_facility_id',
                                       how='outer')
         if join5['facility_id'].isna().values.any():
-            destination_facility_id = join5[join5['facility_id'].isna().values]['source_facility_id']
+            destination_facility_id = join5[join5['facility_id'].isna().values]['destination_facility_id']
             raise Exception(
                 f'There is a routes.destination_facility_id {destination_facility_id} that is not in step_costs.facility_id')
 
@@ -261,7 +285,11 @@ class FileChecks:
             facility_types.
         """
 
-        # Check both sides of join
+        # An outer join is used here to include all rows on both sides of the join
+        # Check for null values on the left/right side of the join, and use ids on the
+        # opposite right/left side of the join to generate error messages about
+        # unmatched rows on the other side of the join.
+
         join1 = self.locations.merge(self.fac_edges, on='facility_type', how='outer')
         if join1['facility_id'].isna().values.any():
             facility_type = join1[join1['facility_id'].isna().values]['facility_type'].values
@@ -272,7 +300,12 @@ class FileChecks:
             raise Exception(
                 f'There is a locations.facility_type {facility_type} that does not exist in fac_edges.facility_type')
 
-        # Check left side of join only (not all facility types are used in routes)
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for facility types referenced by routes that
+        # do not exist in locations.
+        # Use the right side of the join to create error messages about route source
+        # facility types that do not exist locations.
+
         join2 = self.locations.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
         if join2['facility_type'].isna().values.any():
             source_facility_type = join2[join2['facility_type'].isna().values]['source_facility_type'].values
@@ -280,20 +313,32 @@ class FileChecks:
                 f'There is a routes.source_facility_type {source_facility_type} that does not exist in locations.facility_type.'
             )
 
-        # Check left side of join only (not all facility types are used in routes)
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for facility types referenced by routes that
+        # do not exist in locations.
+        # Use the right side of the join to create error messages about route destination
+        # facility types that do not exist fac_edges.
+
+        join4 = self.locations.merge(self.routes, left_on='facility_type', right_on='destination_facility_type',
+                                     how='outer')
+        if join4['facility_type'].isna().values.any():
+            destination_facility_type = join4[join4['facility_type'].isna().values][
+                'destination_facility_type'].values
+            raise Exception(
+                f'There is a routes.destination_facility_type {destination_facility_type} that does not exist in locations.facility_type.'
+            )
+
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for facility types referenced by routes that
+        # do not exist in face_edges.
+        # Use the right side of the join to create error messages about route source
+        # facility types that do not exist fac_edges.
+
         join3 = self.fac_edges.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
         if join3['facility_type'].isna().values.any():
             source_facility_type = join3[join3['facility_type'].isna().values]['source_facility_type'].values
             raise Exception(
                 f'There is a routes.source_facility_type {source_facility_type} that does not exist in fac_edges.facility_type'
-            )
-
-        # Check left side of join only (not all facility types are used in routes)
-        join4 = self.locations.merge(self.routes, left_on='facility_type', right_on='destination_facility_type', how='outer')
-        if join4['facility_type'].isna().values.any():
-            destination_facility_type = join4[join4['facility_type'].isna().values]['destination_facility_type'].values
-            raise Exception(
-                f'There is a routes.destination_facility_type {destination_facility_type} that does not exist in locations.facility_type.'
             )
 
     def check_step_joins(self):
@@ -306,7 +351,11 @@ class FileChecks:
             Raises an exception if there are any problems with the step ids.
         """
 
-        # Check both sides of join
+        # An outer join is used here to include all rows on both sides of the join
+        # Check for null values on the left/right side of the join, and use ids on the
+        # opposite right/left side of the join to generate error messages about
+        # unmatched rows on the other side of the join.
+
         join1 = self.step_costs.merge(self.fac_edges, on='step', how='outer')
         if join1['facility_type'].isna().values.any():
             step = join1[join1['facility_type'].isna().values]['step'].values
@@ -315,19 +364,36 @@ class FileChecks:
             step = join1[join1['step_cost_method'].isna().values]['step'].values
             raise Exception(f'There is a fac_edges.step {step} that does not exist in step_cost_method.step.')
 
-        # Check left side of join only
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for u_steps referenced by transpo_edges
+        # that do not exist step_costs.
+        # Use the right side of the join to create error messages about transpo_edges
+        # u_steps that do not exist step_costs.
+
         join2 = self.step_costs.merge(self.transpo_edges, left_on='step', right_on='u_step', how='outer')
         if join2['step'].isna().values.any():
             u_step = join2[join2['step'].isna().values]['u_step'].values
             raise Exception(f'There is a transpo_edges.u_step {u_step} that does not exist in step_costs.step.')
 
-        # Check left side of join only
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for v_steps referenced by transpo_edges
+        # that do not exist step_costs.
+        # Use the right side of the join to create error messages about transpo_edges
+        # v_steps that do not exist step_costs.
+
         join3 = self.step_costs.merge(self.transpo_edges, left_on='step', right_on='v_step', how='outer')
         if join3['step'].isna().values.any():
             v_step = join3[join3['step'].isna().values]['v_step'].values
             raise Exception(f'There is a transpo_edges.v_step {v_step} that does not exist in step_costs.step.')
 
-        # Check left side of join only
+        # An outer join is used here to include all rows on both sides of the join.
+        # Use the left side of the join to check for next_steps referenced by fac_edges
+        # that do not exist step_costs.
+        # Use the right side of the join to create error messages about next_steps
+        # that do not exist step_costs.
+        # Note that since next_step is optional, do not generate an error messages
+        # for next_steps that are null.
+
         join4 = self.step_costs.merge(self.fac_edges, left_on='step', right_on='next_step', how='outer')
         if join4['step_x'].isna().values.any():
             next_step = join4[join4['step_x'].isna().values]['next_step'].values
