@@ -24,8 +24,8 @@ class Context:
         sd_model_filename: str = None,
         cost_params: Dict = None,
         min_year: int = 2000,
-        max_timesteps: int = 200,
-        years_per_timestep: float = 0.25,
+        max_timesteps: int = 600,
+        years_per_timestep: float = 0.0833,
         learning_by_doing_timesteps: int = 1
     ):
         """
