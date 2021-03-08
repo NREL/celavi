@@ -71,11 +71,6 @@ class CostGraph:
 
         self.max_dist = max_dist
 
-        # ideally we could use this to execute all the cost methods and store
-        # the output here. Then update the values in this structure only as
-        # needed.
-        self.step_cost_dict = {}
-
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
 
@@ -102,7 +97,7 @@ class CostGraph:
         list of strings
             List of unique node IDs created from processing step and facility ID
         """
-        return ["{}{}".format(i, str(facilityID)) for i in subgraph_steps]
+        return ["{}_{}".format(i, str(facilityID)) for i in subgraph_steps]
 
 
     @staticmethod
@@ -224,9 +219,9 @@ class CostGraph:
 
         Returns
         -------
-        name of node "closest" to source
-        "length" of path between source and the closest node
-        list of nodes defining the path between source and the closest node
+        [0] name of node "closest" to source
+        [1] "length" of path between source and the closest node
+        [2] list of nodes defining the path between source and the closest node
         """
 
         # Calculate the length of paths from fromnode to all other nodes
@@ -247,10 +242,15 @@ class CostGraph:
         # return the smallest of all lengths to get to typeofnode
         if subdict:
             # dict of shortest paths to all targets
-            nearest = min(subdict,
-                          key=subdict.get)
+            nearest = min(subdict, key=subdict.get)
             # shortest "distance" to any of the targets
-            return nearest, subdict[nearest], short_paths[nearest]
+            a_dictionary = {1: "a", 2: "b", 3: "c"}
+            timeout = nx.get_node_attributes(self.supply_chain, 'timeout')
+            timeout_list = [value for key, value in timeout.items() if key in short_paths[nearest]]
+
+            _out = self.list_of_tuples(short_paths[nearest], timeout_list)
+
+            return nearest, subdict[nearest], _out
         else:
             # not found, no path from source to typeofnode
             return None, None, None
@@ -318,6 +318,9 @@ class CostGraph:
                                       'step_cost_method',
                                       'facility_id',
                                       'connects']].loc[self.step_costs.facility_id == _id]
+
+        # @todo update dummy value for timeout with info from DES
+        _step_cost['timeout'] = 1
 
         # create list of dictionaries from data frame with processing steps,
         # cost calculation method, and facility-specific region identifiers
