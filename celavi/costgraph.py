@@ -21,7 +21,8 @@ class CostGraph:
                  sc_begin : str = 'in use',
                  sc_end = ['landfilling', 'cement co-processing'],
                  year : float = 2000.0,
-                 max_dist : float = 300.0):
+                 max_dist : float = 300.0,
+                 verbose : int = 0):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -51,6 +52,12 @@ class CostGraph:
         max_dist
             Maximum allowable transportation distance for a single supply chain
             pathway.
+        verbose
+            Integer specifying how much info CostGraph should provide as it
+            works.
+            0 = No information other than return values
+            1 = Info on
+            2 =
         """
 
         self.step_costs=pd.read_csv(step_costs_file)
@@ -70,6 +77,8 @@ class CostGraph:
         self.blade_mass=1000.0
 
         self.max_dist = max_dist
+
+        self.verbose = verbose
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -223,6 +232,8 @@ class CostGraph:
         [1] "length" of path between source and the closest node
         [2] list of nodes defining the path between source and the closest node
         """
+        if self.verbose > 1:
+            print('Finding shortest paths from', source)
 
         # Calculate the length of paths from fromnode to all other nodes
         lengths = nx.single_source_dijkstra_path_length(self.supply_chain,
@@ -278,6 +289,10 @@ class CostGraph:
         -------
             list of string tuples that define edges within a facility type
         """
+        if self.verbose > 1:
+            print('Getting edges for ',
+                  facility_df['facility_type'].values[0])
+
         _type = facility_df['facility_type'].values[0]
 
         _out = self.fac_edges[[u_edge,v_edge]].loc[self.fac_edges.facility_type == _type].dropna().to_records(index=False).tolist()
@@ -306,6 +321,9 @@ class CostGraph:
             region identifiers
 
         """
+        if self.verbose > 1:
+            print('Getting nodes for facility ',
+                  str(facility_df['facility_id'].values[0]))
 
         _id = facility_df['facility_id'].values[0]
 
@@ -352,6 +370,10 @@ class CostGraph:
         -------
             networkx DiGraph
         """
+        if self.verbose > 1:
+            print('Building facility graph for ',
+                  str(facility_df['facility_id'].values[0]))
+
         # Create empty directed graph object
         _facility = nx.DiGraph()
 
@@ -401,6 +423,8 @@ class CostGraph:
         -------
         None
         """
+        if self.verbose > 0:
+            print('-------Building supply chain graph-------')
 
         # add all facilities and intra-facility edges to supply chain
         with open(self.loc_df, 'r') as _loc_file:
@@ -442,6 +466,8 @@ class CostGraph:
 
         # read in and process routes line by line
         with open(self.routes_df, 'r') as _route_file:
+            if self.verbose > 0:
+                print('Adding distances to supply chain graph')
 
             _reader = pd.read_csv(_route_file, chunksize=1)
 
@@ -456,12 +482,19 @@ class CostGraph:
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
+                    if self.verbose > 1:
+                        print('Adding distances between ',
+                              u_node, ' and ', v_node)
+
                     # if the destination node facility ID matches the
                     # destination facility ID in the routing dataset row,
                     # apply the distance from the routing dataset to this edge
                     if self.supply_chain.nodes[v_node]['facility_id'] == \
                             _line['destination_facility_id'].values[0]:
                         data['dist'] = _line['total_vmt'].values[0]
+
+        if self.verbose > 1:
+            print('Adding cost methods to supply chain graph')
 
         # @todo edges starting from 'in use' nodes have rotor teardown costs
         # assigned to them in addition to the zero method
@@ -485,6 +518,9 @@ class CostGraph:
                                                            blade_mass=self.blade_mass,
                                                            cumul_finegrind=1000.0,
                                                            cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
+
+        if self.verbose > 0:
+            print('-------Supply chain graph is built-------')
 
 
     def choose_paths(self):
@@ -510,6 +546,8 @@ class CostGraph:
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
         # is get the shortest path using the 'cost' attribute as the edge weight
+        if self.verbose > 1:
+            print('Choosing shortest paths')
 
         _sources = self.node_filter(self.supply_chain,
                                     attr_key_1='step',
