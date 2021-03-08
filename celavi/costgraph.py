@@ -71,11 +71,6 @@ class CostGraph:
 
         self.max_dist = max_dist
 
-        # ideally we could use this to execute all the cost methods and store
-        # the output here. Then update the values in this structure only as
-        # needed.
-        self.step_cost_dict = {}
-
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
 
