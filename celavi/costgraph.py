@@ -56,8 +56,8 @@ class CostGraph:
             Integer specifying how much info CostGraph should provide as it
             works.
             0 = No information other than return values
-            1 = Info on
-            2 =
+            1 = Info on when key methods start and stop
+            >1 = Detailed info on facilities, nodes, and edges
         """
 
         self.step_costs=pd.read_csv(step_costs_file)
