@@ -19,6 +19,10 @@ class Inventory:
 
         Parameters
         ----------
+        name: str
+            The name of the Inentory, which describes the type of materials in
+            the inventory.
+
         quantity_unit: str
             The unit in which the quantity is recorded.
 
