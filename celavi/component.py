@@ -252,6 +252,7 @@ class Component:
             item_name=component.kind, quantity=component.mass_tonnes, timestep=timestep,
         )
 
+        # This will need to be conditional on manufacturing
         context.virgin_component_inventory.increment_quantity(
             item_name=component.kind, quantity=-1, timestep=timestep
         )
