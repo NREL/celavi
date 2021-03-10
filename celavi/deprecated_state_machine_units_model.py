@@ -6,7 +6,7 @@ import pysd  # type: ignore
 import simpy  # type: ignore
 from csv import DictWriter
 
-from .inventory import Inventory
+from .inventory import FacilityInventory
 from .unique_identifier import UniqueIdentifier
 from .states import NextState, StateTransition
 
@@ -80,49 +80,49 @@ class Context:
 
         # Setup all the inventories
 
-        self.virgin_material_inventory = Inventory(
+        self.virgin_material_inventory = FacilityInventory(
             name="virgin materials",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,
         )
-        self.landfill_material_inventory = Inventory(
+        self.landfill_material_inventory = FacilityInventory(
             name="landfill",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
-        self.remanufacture_material_inventory = Inventory(
+        self.remanufacture_material_inventory = FacilityInventory(
             name="remanufacture",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
-        self.use_material_inventory = Inventory(
+        self.use_material_inventory = FacilityInventory(
             name="use",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
-        self.remanufacture_material_inventory = Inventory(
+        self.remanufacture_material_inventory = FacilityInventory(
             name="remanufacture",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
-        self.reuse_material_inventory = Inventory(
+        self.reuse_material_inventory = FacilityInventory(
             name="reuse",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
-        self.recycle_material_inventory = Inventory(
+        self.recycle_material_inventory = FacilityInventory(
             name="recycle",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=False,
         )
-        self.manufacture_material_inventory = Inventory(
+        self.manufacture_material_inventory = FacilityInventory(
             name="manufacture",
             possible_items=possible_component_materials,
             timesteps=timesteps,
