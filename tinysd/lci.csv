@@ -1,9 +1,0 @@
-input unit,input name,material,extraction and production,change with production(?),transportation,reusing,remanufacturing,recycling,landfilling
-gallon,diesel,carbon fiber,10,-0.001,1.5,0,0,0,0
-kWh,electricity,carbon fiber,8.1,,0,3,7,9,2.4
-MJ,natural gas,carbon fiber,5,,0,2.2,1,0.5,0
-kg,explosives,carbon fiber,2,,0,0,0,0,0
-gallon,water,carbon fiber,20,,0,10,15.1,20,12
-unit,vehicles,carbon fiber,0,,1.00E-06,0,0,0,0
-,,fiberglass,,,,,,,
-,,steel,,,,,,,
