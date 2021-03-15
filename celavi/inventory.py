@@ -3,12 +3,14 @@ import numpy as np
 import pandas as pd
 
 
-class Inventory:
+class FacilityInventory:
     def __init__(
         self,
-        name: str,
+        facility_id: int,
+        facility_type: str,
         possible_items: List[str],
         timesteps: int,
+        processing_steps: List[str],
         quantity_unit: str = "tonne",
         can_be_negative: bool = False,
     ):
@@ -19,9 +21,11 @@ class Inventory:
 
         Parameters
         ----------
-        name: str
-            The name of the Inentory, which describes the type of materials in
-            the inventory.
+        facility_id: int
+            The id of the facility in the locations table
+
+        facility_type: str
+            The type of the facility from the locations table.
 
         quantity_unit: str
             The unit in which the quantity is recorded.
@@ -33,6 +37,9 @@ class Inventory:
         timesteps: int
             The number of discrete timesteps in the simulation that this
             inventory will hold.
+
+        processing_steps: List[str]
+            A list of processing steps in this FacilityInventory.
 
         can_be_negative: bool
             True if the quantity in this inventory can be negative. If False,
@@ -48,7 +55,9 @@ class Inventory:
             The HISTORY of the deposits and withdrawals from this
             inventory. These are instantaneous, not cumulative, values.
         """
-        self.name = name
+        self.facility_id = facility_id
+        self.facility_type = facility_type
+        self.processing_steps = processing_steps
         self.can_be_negative = can_be_negative
         self.quantity_unit = quantity_unit
         self.component_materials: Dict[str, float] = {}

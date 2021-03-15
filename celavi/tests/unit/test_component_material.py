@@ -2,50 +2,50 @@ import pytest
 from celavi.deprecated_state_machine_units_model import Component
 from celavi.deprecated_state_machine_units_model import ComponentMaterial
 from celavi.deprecated_state_machine_units_model import Turbine
-from celavi.deprecated_state_machine_units_model import Inventory
+from celavi.deprecated_state_machine_units_model import FacilityInventory
 
 
 class DummyContext:
     def __init__(self):
         timesteps = 10
         possible_component_materials = ["Tower Steel", "Nacelle Aluminum"]
-        self.landfill_material_inventory = Inventory(
+        self.landfill_material_inventory = FacilityInventory(
             name="landfill",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
-        self.virgin_material_inventory = Inventory(
+        self.virgin_material_inventory = FacilityInventory(
             name="virgin material",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
-        self.remanufacture_material_inventory = Inventory(
+        self.remanufacture_material_inventory = FacilityInventory(
             name="remanufacture",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
-        self.use_material_inventory = Inventory(
+        self.use_material_inventory = FacilityInventory(
             name="use",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
-        self.reuse_material_inventory = Inventory(
+        self.reuse_material_inventory = FacilityInventory(
             name="reuse",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
-        self.recycle_material_inventory = Inventory(
+        self.recycle_material_inventory = FacilityInventory(
             name="recycle",
             possible_items=possible_component_materials,
             timesteps=timesteps,
             can_be_negative=True,  # for testing, the inventory can go negative
         )
-        self.manufacture_material_inventory = Inventory(
+        self.manufacture_material_inventory = FacilityInventory(
             name="recycle",
             possible_items=possible_component_materials,
             timesteps=timesteps,

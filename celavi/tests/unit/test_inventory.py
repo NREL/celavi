@@ -1,14 +1,14 @@
 import numpy as np
 import pandas as pd
 import pytest
-from celavi.inventory import Inventory
+from celavi.inventory import FacilityInventory
 
 
 @pytest.fixture()
 def an_inventory():
     timesteps = 10
     possible_component_materials = ["Tower Steel", "Nacelle Aluminum"]
-    inventory = Inventory(
+    inventory = FacilityInventory(
             name="test",
             possible_items=possible_component_materials,
             timesteps=timesteps,
