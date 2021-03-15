@@ -21,16 +21,11 @@ pip install -e .
 
 ## Running the package
 
-First, change directory to the `tinysd` folder. In that folder there is the `celavi_sample_10_turbines.csv` file which contains anonymized data for ten turbines with a location at the NREL NWTC (they really aren't at the NWTC).
-
-From the root of the repo:
+From the root of the repo, type a command similar to the following. This will execute the costgraph. Note that the paths to the files will need to be changed for your particular folder structure.
 
 ```
-cd tinysd
-python -m celavi
+python -m celavi --locations /Users/akey/Projects/celavi-data/celavi-data/inputs/locations.csv --step_costs /Users/akey/Projects/celavi-data/celavi-data/inputs/step_costs.csv --fac_edges /Users/akey/Projects/celavi-data/celavi-data/inputs/fac_edges.csv --routes /Users/akey/Projects/celavi-data/celavi-data/preprocessing/routes.csv --transpo_edges /Users/akey/Projects/celavi-data/celavi-data/inputs/transpo_edges.csv
 ```
-
-An output file called `material_component_log.csv` which is the output log.
 
 ## Guide for development
 
