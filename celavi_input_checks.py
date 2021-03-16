@@ -211,6 +211,7 @@ class FileChecks:
         Exception
             Raises an exception if the joins do not work.
         """
+        print('check_joins_on_facility_id...')
 
         # An outer join is used here to include all rows on both sides of the join
         # Check for null values on the left/right side of the join, and use ids on the
@@ -248,29 +249,31 @@ class FileChecks:
             raise Exception(
                 f'There is a routes.destination_facility_id of {destination_facility_id} that does not exist in locations.facility_id')
 
-        # An outer join is used here to include all rows on both sides of the join.
-        # Use the left side of the join to check for facility ids referenced by routes that
-        # do not exist in step_costs.
-        # Use the right side of the join to create error messages about route source
-        # facility ids that do not exist step_costs.
+        # Because self.routes is so large, it is infeasiable to join it to
+        # step_costs to ensure that joins will work. Instead of testing by
+        # joining, set operations are used on the keys that would facilitate
+        # the join.
 
-        join4 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='source_facility_id', how='outer')
-        if join4['facility_id'].isna().values.any():
-            source_facility_id = join4[join4['facility_id'].isna().values]['source_facility_id']
-            raise Exception(f'There is a routes.source_facility_id {source_facility_id} that is not in step_costs.facility_id')
+        locations_facility_ids = set(self.step_costs['facility_id'].unique())
+        step_costs_facility_ids = set(self.step_costs['facility_id'].unique())
+        routes_source_facility_ids = set(self.routes['source_facility_id'].unique())
+        routes_destination_facility_ids = set(self.routes['destination_facility_id'].unique())
 
-        # An outer join is used here to include all rows on both sides of the join.
-        # Use the left side of the join to check for facility ids referenced by routes that
-        # do not exist in step_costs.
-        # Use the right side of the join to create error messages about route destination
-        # facility ids that do not exist step_costs.
+        if len(routes_source_facility_ids - locations_facility_ids) > 0:
+            missing = routes_source_facility_ids - locations_facility_ids
+            raise Exception(f'There is a source_facility_id in routes {missing} that does not exist in locations.')
 
-        join5 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='destination_facility_id',
-                                      how='outer')
-        if join5['facility_id'].isna().values.any():
-            destination_facility_id = join5[join5['facility_id'].isna().values]['destination_facility_id']
-            raise Exception(
-                f'There is a routes.destination_facility_id {destination_facility_id} that is not in step_costs.facility_id')
+        if len(routes_destination_facility_ids - locations_facility_ids) > 0:
+            missing = routes_destination_facility_ids - locations_facility_ids
+            raise Exception(f'There is a destination_facility_id in routes {missing} that does not exist in locations.')
+
+        if len(routes_source_facility_ids - step_costs_facility_ids) > 0:
+            missing = routes_source_facility_ids - step_costs_facility_ids
+            raise Exception(f'There is a source_facility_id in routes {missing} that does not exist in step_costs.')
+
+        if len(routes_destination_facility_ids - step_costs_facility_ids) > 0:
+            missing = routes_destination_facility_ids - step_costs_facility_ids
+            raise Exception(f'There is a destination_facility_id in routes {missing} that does not exist in step_costs.')
 
     def check_joins_on_facility_type(self):
         """
@@ -282,6 +285,7 @@ class FileChecks:
             Raises an exception if there are any problems with the
             facility_types.
         """
+        print('check_joins_on_facility_type...')
 
         # An outer join is used here to include all rows on both sides of the join
         # Check for null values on the left/right side of the join, and use ids on the
@@ -298,46 +302,26 @@ class FileChecks:
             raise Exception(
                 f'There is a locations.facility_type {facility_type} that does not exist in fac_edges.facility_type')
 
-        # An outer join is used here to include all rows on both sides of the join.
-        # Use the left side of the join to check for facility types referenced by routes that
-        # do not exist in locations.
-        # Use the right side of the join to create error messages about route source
-        # facility types that do not exist locations.
+        fac_edges_facility_types = set(self.fac_edges['facility_type'].unique())
+        locations_facility_types = set(self.fac_edges['facility_type'].unique())
+        routes_source_facility_types = set(self.routes['source_facility_type'].unique())
+        routes_destination_facility_types = set(self.routes['destination_facility_type'].unique())
 
-        join2 = self.locations.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
-        if join2['facility_type'].isna().values.any():
-            source_facility_type = join2[join2['facility_type'].isna().values]['source_facility_type'].values
-            raise Exception(
-                f'There is a routes.source_facility_type {source_facility_type} that does not exist in locations.facility_type.'
-            )
+        if len(routes_source_facility_types - locations_facility_types) > 0:
+            missing = routes_source_facility_types - locations_facility_types
+            raise Exception(f'There is a source_facility_type in routes {missing} that does not exist in locations.')
 
-        # An outer join is used here to include all rows on both sides of the join.
-        # Use the left side of the join to check for facility types referenced by routes that
-        # do not exist in locations.
-        # Use the right side of the join to create error messages about route destination
-        # facility types that do not exist fac_edges.
+        if len(routes_destination_facility_types - locations_facility_types) > 0:
+            missing = routes_destination_facility_types - locations_facility_types
+            raise Exception(f'There is a destination_facility_type in routes {missing} that does not exist in locations.')
 
-        join4 = self.locations.merge(self.routes, left_on='facility_type', right_on='destination_facility_type',
-                                     how='outer')
-        if join4['facility_type'].isna().values.any():
-            destination_facility_type = join4[join4['facility_type'].isna().values][
-                'destination_facility_type'].values
-            raise Exception(
-                f'There is a routes.destination_facility_type {destination_facility_type} that does not exist in locations.facility_type.'
-            )
+        if len(routes_source_facility_types - fac_edges_facility_types) > 0:
+            missing = routes_source_facility_types - fac_edges_facility_types
+            raise Exception(f'There is a source_facility_type in routes {missing} that does not exist in fac_edges.')
 
-        # An outer join is used here to include all rows on both sides of the join.
-        # Use the left side of the join to check for facility types referenced by routes that
-        # do not exist in face_edges.
-        # Use the right side of the join to create error messages about route source
-        # facility types that do not exist fac_edges.
-
-        join3 = self.fac_edges.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
-        if join3['facility_type'].isna().values.any():
-            source_facility_type = join3[join3['facility_type'].isna().values]['source_facility_type'].values
-            raise Exception(
-                f'There is a routes.source_facility_type {source_facility_type} that does not exist in fac_edges.facility_type'
-            )
+        if len(routes_destination_facility_types - fac_edges_facility_types) > 0:
+            missing = routes_destination_facility_types - fac_edges_facility_types
+            raise Exception(f'There is a destination_facility_type in routes {missing} that does not exist in fac_edges.')
 
     def check_step_joins(self):
         """
@@ -348,6 +332,7 @@ class FileChecks:
         Exception
             Raises an exception if there are any problems with the step ids.
         """
+        print('check_joins_on_facility_type...')
 
         # An outer join is used here to include all rows on both sides of the join
         # Check for null values on the left/right side of the join, and use ids on the
