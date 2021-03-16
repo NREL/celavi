@@ -217,7 +217,6 @@ class FileChecks:
         # opposite right/left side of the join to generate error messages about
         # unmatched rows on the other side of the join.
 
-        print('check_joins_on_facility_id join1...')
         join1 = self.locations.merge(self.step_costs, on='facility_id', how='outer')
         if join1['facility_type'].isna().values.any():
             step_cost_facility_id = join1[join1['facility_type'].isna()]['facility_id'].values
@@ -232,7 +231,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about route facility ids
         # that do not exist in location.
 
-        print('check_joins_on_facility_id join2...')
         join2 = self.locations.merge(self.routes, left_on='facility_id', right_on='source_facility_id', how='outer')
         if join2['facility_id'].isna().values.any():
             source_facility_id = join2[join2['facility_id'].isna().values]['source_facility_id'].values
@@ -244,7 +242,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about route destination
         # facility ids that do not exist in location.
 
-        print('check_joins_on_facility_id join3...')
         join3 = self.locations.merge(self.routes, left_on='facility_id', right_on='destination_facility_id', how='outer')
         if join3['facility_id'].isna().values.any():
             destination_facility_id = join3[join3['facility_id'].isna().values]['destination_facility_id'].values
@@ -257,7 +254,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about route source
         # facility ids that do not exist step_costs.
 
-        print('check_joins_on_facility_id join4...')
         join4 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='source_facility_id', how='outer')
         if join4['facility_id'].isna().values.any():
             source_facility_id = join4[join4['facility_id'].isna().values]['source_facility_id']
@@ -269,7 +265,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about route destination
         # facility ids that do not exist step_costs.
 
-        print('check_joins_on_facility_id join5...')
         join5 = self.step_costs.merge(self.routes, left_on='facility_id', right_on='destination_facility_id',
                                       how='outer')
         if join5['facility_id'].isna().values.any():
@@ -293,7 +288,6 @@ class FileChecks:
         # opposite right/left side of the join to generate error messages about
         # unmatched rows on the other side of the join.
 
-        print('check_joins_on_facility_type join1...')
         join1 = self.locations.merge(self.fac_edges, on='facility_type', how='outer')
         if join1['facility_id'].isna().values.any():
             facility_type = join1[join1['facility_id'].isna().values]['facility_type'].values
@@ -310,7 +304,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about route source
         # facility types that do not exist locations.
 
-        print('check_joins_on_facility_type join2...')
         join2 = self.locations.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
         if join2['facility_type'].isna().values.any():
             source_facility_type = join2[join2['facility_type'].isna().values]['source_facility_type'].values
@@ -324,7 +317,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about route destination
         # facility types that do not exist fac_edges.
 
-        print('check_joins_on_facility_type join4...')
         join4 = self.locations.merge(self.routes, left_on='facility_type', right_on='destination_facility_type',
                                      how='outer')
         if join4['facility_type'].isna().values.any():
@@ -340,7 +332,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about route source
         # facility types that do not exist fac_edges.
 
-        print('check_joins_on_facility_type join3...')
         join3 = self.fac_edges.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
         if join3['facility_type'].isna().values.any():
             source_facility_type = join3[join3['facility_type'].isna().values]['source_facility_type'].values
@@ -363,7 +354,6 @@ class FileChecks:
         # opposite right/left side of the join to generate error messages about
         # unmatched rows on the other side of the join.
 
-        print('check_step_joins join1...')
         join1 = self.step_costs.merge(self.fac_edges, on='step', how='outer')
         if join1['facility_type'].isna().values.any():
             step = join1[join1['facility_type'].isna().values]['step'].values
@@ -378,7 +368,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about transpo_edges
         # u_steps that do not exist step_costs.
 
-        print('check_step_joins join2...')
         join2 = self.step_costs.merge(self.transpo_edges, left_on='step', right_on='u_step', how='outer')
         if join2['step'].isna().values.any():
             u_step = join2[join2['step'].isna().values]['u_step'].values
@@ -390,7 +379,6 @@ class FileChecks:
         # Use the right side of the join to create error messages about transpo_edges
         # v_steps that do not exist step_costs.
 
-        print('check_step_joins join3...')
         join3 = self.step_costs.merge(self.transpo_edges, left_on='step', right_on='v_step', how='outer')
         if join3['step'].isna().values.any():
             v_step = join3[join3['step'].isna().values]['v_step'].values
@@ -404,7 +392,6 @@ class FileChecks:
         # Note that since next_step is optional, do not generate an error messages
         # for next_steps that are null.
 
-        print('check_step_joins join4...')
         join4 = self.step_costs.merge(self.fac_edges, left_on='step', right_on='next_step', how='outer')
         if join4['step_x'].isna().values.any():
             next_step = join4[join4['step_x'].isna().values]['next_step'].values
