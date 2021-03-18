@@ -19,7 +19,7 @@ class CostGraph:
                  locations_file : str = '../celavi-data/inputs/locations.csv',
                  routes_file : str = '../celavi-data/preprocessing/routes.csv',
                  sc_begin : str = 'in use',
-                 sc_end = ['landfilling', 'cement co-processing'],
+                 sc_end = ('landfilling', 'cement co-processing'),
                  year : float = 2000.0,
                  max_dist : float = 300.0):
         """
