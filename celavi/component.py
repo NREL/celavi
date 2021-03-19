@@ -1,4 +1,5 @@
-from typing import List, Dict
+from typing import List, Dict, Deque, Tuple
+from collections import deque
 
 from .unique_identifier import UniqueIdentifier
 from .states import StateTransition, NextState
@@ -75,6 +76,7 @@ class Component:
         self.lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.transitions_table = self.make_transitions_table()
         self.transition_list: List[str] = []
+        self.pathway: Deque[Tuple[str, int]] = None
 
     def make_transitions_table(self) -> Dict[StateTransition, NextState]:
         """
@@ -261,8 +263,6 @@ class Component:
             timestep=timestep,
         )
 
-
-
     @staticmethod
     def leave_use(context, component, timestep:int):
         """
@@ -307,17 +307,17 @@ class Component:
         env: simpy.Environment
             The SimPy environment running the DES timesteps.
         """
-        begin_timestep = (
-            self.year - self.context.min_year
-        ) / self.context.years_per_timestep
+        begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        # print(
-        #     f"yr: {self.year}, ts: {begin_timestep}. {self.kind} {self.id} beginning life."
-        # )
-        self.state = "use"
-        self.transition_list.append("using")
-        self.use(self.context, self, env.now)
-        env.process(self.eol_process(env))
+        path_choice = self.context.cost_graph.choose_paths()
+        self.pathway = deque()
+        for phase in path_choice[0]['path']:
+            self.pathway.append(phase)
+        print(self.pathway.popleft())
+        # self.state = "use"
+        # self.transition_list.append("using")
+        # self.use(self.context, self, env.now)
+        # env.process(self.eol_process(env))
 
     def transition(self, transition: str, timestep: int) -> None:
         """

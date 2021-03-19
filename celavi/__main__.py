@@ -1,5 +1,5 @@
 import argparse
-from .costgraph import CostGraph
+from costgraph import CostGraph
 
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
 parser.add_argument('--locations', help='Path to locations file')

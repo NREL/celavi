@@ -6,6 +6,7 @@ import pysd  # type: ignore
 
 from .inventory import FacilityInventory
 from .component import Component
+from .costgraph import CostGraph
 
 
 class Context:
@@ -15,7 +16,7 @@ class Context:
     - Provides the discrete time sequence for the model
     - Holds all the components in the model
     - Holds parameters for pathway cost models (dictionary)
-    - Links the SD model to the DES model
+    - Links the CostGraph to the DES model
     - Provides translation of years to timesteps and back again
     """
 
@@ -24,6 +25,7 @@ class Context:
         locations_filename: str,
         step_costs_filename: str,
         possible_items: List[str],
+        cost_graph: CostGraph,
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
@@ -41,11 +43,8 @@ class Context:
             The pathname to the step_costs file that will determine the steps in
             each facility.
 
-        sd_model_filename: str
-            Optional. If specified, it loads the PySD model in the given
-            filename and writes it to a .csv in the current working
-            directory. Also, it overrides min_year, max_timesteps,
-            and years_per_timestep if specified.
+        cost_graph: CostGraph:
+            The instance of the cost graph to use with this DES model.
 
         cost_params: Dict
             Dictionary of parameters for the learning-by-doing models and all
@@ -53,7 +52,7 @@ class Context:
 
         min_year: int
             The starting year of the model. Optional. If left unspecified
-            defualts to 2000.
+            defaults to 2000.
 
         max_timesteps: int
             The maximum number of discrete timesteps in the model. Defaults to
@@ -145,6 +144,8 @@ class Context:
 
         self.learning_by_doing_timesteps = learning_by_doing_timesteps
 
+        self.cost_graph = cost_graph
+
     def years_to_timesteps(self, year: float) -> int:
         """
         Converts years into the corresponding timestep number of the discrete
@@ -234,7 +235,6 @@ class Context:
             )
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
-
 
     def choose_transition(self, component, timestep: int) -> str:
         """
@@ -358,19 +358,19 @@ class Context:
         else:
             return 1
 
-    def learning_by_doing_process(self, env):
-        """
-        This method contains a SimPy process that runs the learning-by-doing
-        model on a periodic basis.
-        """
-        while True:
-            yield env.timeout(self.learning_by_doing_timesteps)
-            avg_blade_mass = self.average_blade_mass_tonnes(env.now)
-            print('at timestep ', env.now, ', average blade mass is ', avg_blade_mass, ' tonnes\n')
-            # This is a workaround. Make the learning by doing pathway costs
-            # tolerant of a 0 mass for blades retired.
-            if avg_blade_mass > 0:
-                self.learning_by_doing(env.now, avg_blade_mass)
+    # def learning_by_doing_process(self, env):
+    #     """
+    #     This method contains a SimPy process that runs the learning-by-doing
+    #     model on a periodic basis.
+    #     """
+    #     while True:
+    #         yield env.timeout(self.learning_by_doing_timesteps)
+    #         avg_blade_mass = self.average_blade_mass_tonnes(env.now)
+    #         print('at timestep ', env.now, ', average blade mass is ', avg_blade_mass, ' tonnes\n')
+    #         # This is a workaround. Make the learning by doing pathway costs
+    #         # tolerant of a 0 mass for blades retired.
+    #         if avg_blade_mass > 0:
+    #             self.learning_by_doing(env.now, avg_blade_mass)
 
     def run(self) -> Dict[str, pd.DataFrame]:
         """
@@ -383,19 +383,20 @@ class Context:
         """
         # Schedule learning by doing timesteps (this will happen after all
         # other events have been scheduled)
-        self.env.process(self.learning_by_doing_process(self.env))
+        # self.env.process(self.learning_by_doing_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
-        inventories = {
-            "landfill_component_inventory": self.landfill_component_inventory.cumulative_history,
-            "landfill_material_inventory": self.landfill_material_inventory.cumulative_history,
-            "virgin_component_inventory": self.virgin_component_inventory.cumulative_history,
-            "virgin_material_inventory": self.virgin_material_inventory.cumulative_history,
-            "recycle_to_raw_component_inventory": self.recycle_to_raw_component_inventory.cumulative_history,
-            "recycle_to_raw_material_inventory": self.recycle_to_raw_material_inventory.cumulative_history,
-            "recycle_to_clinker_component_inventory": self.recycle_to_clinker_component_inventory.cumulative_history,
-            "recycle_to_clinker_material_inventory": self.recycle_to_clinker_material_inventory.cumulative_history,
-            "cost_history": self.cost_history,
-            "transpo_eol": self.transpo_eol
-        }
-        return inventories
+
+        # inventories = {
+        #     "landfill_component_inventory": self.landfill_component_inventory.cumulative_history,
+        #     "landfill_material_inventory": self.landfill_material_inventory.cumulative_history,
+        #     "virgin_component_inventory": self.virgin_component_inventory.cumulative_history,
+        #     "virgin_material_inventory": self.virgin_material_inventory.cumulative_history,
+        #     "recycle_to_raw_component_inventory": self.recycle_to_raw_component_inventory.cumulative_history,
+        #     "recycle_to_raw_material_inventory": self.recycle_to_raw_material_inventory.cumulative_history,
+        #     "recycle_to_clinker_component_inventory": self.recycle_to_clinker_component_inventory.cumulative_history,
+        #     "recycle_to_clinker_material_inventory": self.recycle_to_clinker_material_inventory.cumulative_history,
+        #     "cost_history": self.cost_history,
+        #     "transpo_eol": self.transpo_eol
+        # }
+        # return inventories
