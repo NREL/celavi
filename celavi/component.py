@@ -365,9 +365,11 @@ class Component:
             if len(self.pathway) > 0:
                 location, lifespan = self.pathway.popleft()
                 count_inventory = self.context.count_facility_inventories[location]
+                mass_inventory = self.context.mass_facility_inventories[location]
                 count_inventory.increment_quantity(self.kind, 1, env.now)
-                print(f"Placed a {self.kind} into a {location} inventory")
+                mass_inventory.increment_quantity(self.kind, self.mass_tonnes, env.now)
                 yield env.timeout(lifespan)
                 count_inventory.increment_quantity(self.kind, -1, env.now)
+                mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
             else:
                 break
