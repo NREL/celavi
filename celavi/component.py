@@ -65,7 +65,7 @@ class Component:
             The total mass of the component, in tonnes.
         """
 
-        self.state = ""  # There is no state until beginning of life
+        self.phase = ""  # There is no location
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.kind = kind
@@ -75,7 +75,6 @@ class Component:
         self.mass_tonnes = mass_tonnes
         self.lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.transitions_table = self.make_transitions_table()
-        self.transition_list: List[str] = []
         self.pathway: Deque[Tuple[str, int]] = None
 
     def make_transitions_table(self) -> Dict[StateTransition, NextState]:
@@ -313,11 +312,7 @@ class Component:
         self.pathway = deque()
         for phase in path_choice[0]['path']:
             self.pathway.append(phase)
-        print(self.pathway.popleft())
-        # self.state = "use"
-        # self.transition_list.append("using")
-        # self.use(self.context, self, env.now)
-        # env.process(self.eol_process(env))
+        env.process(self.eol_process(env))
 
     def transition(self, transition: str, timestep: int) -> None:
         """
@@ -350,7 +345,7 @@ class Component:
         next_state = self.transitions_table[lookup]
         self.state = next_state.state
         self.lifespan_timesteps = next_state.lifespan
-        self.transition_list.append(transition)
+        # self.transition_list.append(transition)
         if next_state.state_entry_function is not None:
             next_state.state_entry_function(self.context, self, timestep)
         if next_state.state_exit_function is not None:
@@ -367,6 +362,12 @@ class Component:
             The environment in which this process is running.
         """
         while True:
-            yield env.timeout(self.lifespan_timesteps)
-            next_transition = self.context.choose_transition(self, env.now)
-            self.transition(next_transition, env.now)
+            if len(self.pathway) > 0:
+                location, lifespan = self.pathway.popleft()
+                count_inventory = self.context.count_facility_inventories[location]
+                count_inventory.increment_quantity(self.kind, 1, env.now)
+                print(f"Placed a {self.kind} into a {location} inventory")
+                yield env.timeout(lifespan)
+                count_inventory.increment_quantity(self.kind, -1, env.now)
+            else:
+                break

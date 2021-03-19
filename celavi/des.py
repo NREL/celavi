@@ -35,10 +35,6 @@ class Context:
         """
         Parameters
         ----------
-        locations_filename: str
-            The pathname to the locations file that will determine the facility
-            inventories created.
-
         step_costs_filename: str
             The pathname to the step_costs file that will determine the steps in
             each facility.
@@ -73,43 +69,6 @@ class Context:
         self.min_year = min_year
         self.years_per_timestep = years_per_timestep
 
-        locations = pd.read_csv(locations_filename)
-        step_costs = pd.read_csv(step_costs_filename)
-
-        # FacilityInventories for mass amounts
-        self.mass_facility_inventories = {}
-        for _, location in locations.iterrows():
-            facility_id = location["facility_id"]
-            facility_type = location["facility_type"]
-            facility_key = f'{facility_type}_{facility_id}'
-            processing_steps = list(step_costs.query('facility_id == @facility_id')['step'])
-            facility_inventory = FacilityInventory(
-                facility_id=facility_id,
-                facility_type=facility_type,
-                possible_items=possible_items,
-                timesteps=max_timesteps,
-                processing_steps=processing_steps,
-                quantity_unit="tonne"
-            )
-            self.mass_facility_inventories[facility_key] = facility_inventory
-
-        # FacilityInventories for counts
-        self.count_facility_inventories = {}
-        for _, location in locations.iterrows():
-            facility_id = location["facility_id"]
-            facility_type = location["facility_type"]
-            facility_key = f'{facility_type}_{facility_id}'
-            processing_steps = list(step_costs.query('facility_id == @facility_id')['step'])
-            facility_inventory = FacilityInventory(
-                facility_id=facility_id,
-                facility_type=facility_type,
-                possible_items=possible_items,
-                timesteps=max_timesteps,
-                processing_steps=processing_steps,
-                quantity_unit="count"
-            )
-            self.count_facility_inventories[facility_key] = facility_inventory
-
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
@@ -117,6 +76,38 @@ class Context:
         # their lifecycle. The "component" inventories hold the counts
         # of whole components. The "material" inventories hold the mass
         # of those components.
+
+        locations = pd.read_csv(locations_filename)
+        step_costs = pd.read_csv(step_costs_filename)
+        locations_step_costs = locations.merge(step_costs, on='facility_id')
+
+        self.mass_facility_inventories = {}
+        self.count_facility_inventories = {}
+        for _, row in locations_step_costs.iterrows():
+            facility_type = row['facility_type']
+            facility_id = row['facility_id']
+            step = row['step']
+            step_facility_id = f"{step}_{facility_id}"
+            self.mass_facility_inventories[step_facility_id] = FacilityInventory(
+                facility_id=facility_id,
+                facility_type=facility_type,
+                step=step,
+                possible_items=possible_items,
+                timesteps=max_timesteps,
+                processing_steps=[],  # TODO: Put real data here
+                quantity_unit="tonne",
+                can_be_negative=False
+            )
+            self.count_facility_inventories[step_facility_id] = FacilityInventory(
+                facility_id=facility_id,
+                facility_type=facility_type,
+                step=step,
+                possible_items=possible_items,
+                timesteps=max_timesteps,
+                processing_steps=[],  # TODO: Put real data here
+                quantity_unit="count",
+                can_be_negative=False
+            )
 
         # initialize dictionary to hold pathway costs over time
         self.cost_history = {'year': [],
@@ -387,16 +378,9 @@ class Context:
 
         self.env.run(until=int(self.max_timesteps))
 
-        # inventories = {
-        #     "landfill_component_inventory": self.landfill_component_inventory.cumulative_history,
-        #     "landfill_material_inventory": self.landfill_material_inventory.cumulative_history,
-        #     "virgin_component_inventory": self.virgin_component_inventory.cumulative_history,
-        #     "virgin_material_inventory": self.virgin_material_inventory.cumulative_history,
-        #     "recycle_to_raw_component_inventory": self.recycle_to_raw_component_inventory.cumulative_history,
-        #     "recycle_to_raw_material_inventory": self.recycle_to_raw_material_inventory.cumulative_history,
-        #     "recycle_to_clinker_component_inventory": self.recycle_to_clinker_component_inventory.cumulative_history,
-        #     "recycle_to_clinker_material_inventory": self.recycle_to_clinker_material_inventory.cumulative_history,
-        #     "cost_history": self.cost_history,
-        #     "transpo_eol": self.transpo_eol
-        # }
-        # return inventories
+        result = {
+            "count_facility_inventories": self.count_facility_inventories,
+            "mass_facility_inventories": self.mass_facility_inventories
+        }
+
+        return result

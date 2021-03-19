@@ -20,7 +20,6 @@ netw = CostGraph(
     transpo_edges_file=args.transpo_edges,
     locations_file=args.locations,
     routes_file=args.routes,
-    sc_begin= 'in use',
     sc_end=['landfilling', 'cement co-processing'],
     year=2000.0,
     max_dist=300.0
@@ -52,13 +51,13 @@ for _, row in turbine_data.iterrows():
                 'kind': 'blade',
                 'mass_tonnes': blade_mass_tonnes
             })
-        components.append({
-            'xlong': xlong,
-            'ylat': ylat,
-            'year': year,
-            'kind': 'foundation',
-            'mass_tonnes': foundation_mass_tonnes
-        })
+        # components.append({
+        #     'xlong': xlong,
+        #     'ylat': ylat,
+        #     'year': year,
+        #     'kind': 'foundation',
+        #     'mass_tonnes': foundation_mass_tonnes
+        # })
 
 components = pd.DataFrame(components)
 
@@ -71,4 +70,5 @@ lifespan_fns = {
 }
 
 context.populate(components, lifespan_fns)
-context.run()
+result = context.run()
+print(result)

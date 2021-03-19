@@ -8,6 +8,7 @@ class FacilityInventory:
         self,
         facility_id: int,
         facility_type: str,
+        step: str,
         possible_items: List[str],
         timesteps: int,
         processing_steps: List[str],
@@ -26,6 +27,9 @@ class FacilityInventory:
 
         facility_type: str
             The type of the facility from the locations table.
+
+        step: str
+            The step that is held by this inventory.
 
         quantity_unit: str
             The unit in which the quantity is recorded.
@@ -55,6 +59,7 @@ class FacilityInventory:
             The HISTORY of the deposits and withdrawals from this
             inventory. These are instantaneous, not cumulative, values.
         """
+        self.step = step
         self.facility_id = facility_id
         self.facility_type = facility_type
         self.processing_steps = processing_steps
