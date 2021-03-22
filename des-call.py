@@ -1,6 +1,7 @@
 import argparse
 
 import pandas as pd
+import matplotlib.pyplot as plt
 
 from celavi.des import Context
 from celavi.costgraph import CostGraph
@@ -71,4 +72,11 @@ lifespan_fns = {
 
 context.populate(components, lifespan_fns)
 result = context.run()
-print(result)
+
+plot_rows = len(result["count_facility_inventories"].keys())
+fig, axs = plt.subplots(nrows=plot_rows, ncols=1, figsize=(12, 12))
+for i, (facility_name, facility) in enumerate(result["count_facility_inventories"].items()):
+    cum_hist = facility.cumulative_history["blade"]
+    axs[i].set_title(facility_name)
+    axs[i].plot(range(len(cum_hist)), cum_hist)
+plt.show()
