@@ -363,7 +363,7 @@ class Context:
     #         if avg_blade_mass > 0:
     #             self.learning_by_doing(env.now, avg_blade_mass)
 
-    def run(self) -> Dict[str, pd.DataFrame]:
+    def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
         This method starts the discrete event simulation running.
 
