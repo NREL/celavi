@@ -441,9 +441,18 @@ class CostGraph:
                 self.supply_chain.add_nodes_from(_fac_graph.nodes(data=True))
                 self.supply_chain.add_edges_from(_fac_graph.edges(data=True))
 
+        if self.verbose > 0:
+            print('Adding cost methods to supply chain graph')
+
         # add all inter-facility edges, with costs but without distances
         # this is a relatively short loop
         for index, row in self.transpo_edges.iterrows():
+            if self.verbose > 1:
+                print('Adding cost methods to edges between ',
+                      row['u_step'],
+                      ' and ',
+                      row['v_step'])
+
             _u = row['u_step']
             _v = row['v_step']
             _edge_cost = row['transpo_cost_method']
@@ -494,7 +503,7 @@ class CostGraph:
                         data['dist'] = _line['total_vmt'].values[0]
 
         if self.verbose > 1:
-            print('Adding cost methods to supply chain graph')
+            print('Calculating node and edge costs')
 
         # @todo edges starting from 'in use' nodes have rotor teardown costs
         # assigned to them in addition to the zero method
