@@ -1,5 +1,5 @@
 import argparse
-from .costgraph import CostGraph
+from costgraph import CostGraph
 
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
 parser.add_argument('--locations', help='Path to locations file')
@@ -18,7 +18,8 @@ netw = CostGraph(
     sc_begin= 'in use',
     sc_end=['landfilling', 'cement co-processing'],
     year=2000.0,
-    max_dist=300.0
+    max_dist=300.0,
+    verbose=2
 )
 
 print(netw.choose_paths(),'\n')
