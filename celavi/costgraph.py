@@ -146,8 +146,9 @@ class CostGraph:
 
         return _out
 
-    @staticmethod
-    def all_element_combos(list1 : list,
+
+    def all_element_combos(self,
+                           list1 : list,
                            list2 : list):
         """
         Converts two lists into a list of tuples where each tuple contains
@@ -166,14 +167,18 @@ class CostGraph:
         -------
             list of 2-tuples
         """
+        if self.verbose > 1:
+            print('Getting node combinations')
+
         _out = []
         _out = list(list(zip(list1, element)) for element in product(list2, repeat=len(list1)))
 
         return [item for sublist in _out for item in sublist]
 
 
-    @staticmethod
-    def list_of_tuples(list1 : list,
+
+    def list_of_tuples(self,
+                       list1 : list,
                        list2 : list):
         """
         Converts two lists into a list of tuples where each tuple contains
@@ -192,6 +197,9 @@ class CostGraph:
         -------
             list of 2-tuples
         """
+        if self.verbose > 1:
+            print('Getting list of tuples')
+
         if len(list1) != len(list2):
             raise NotImplementedError
         else:
