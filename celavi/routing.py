@@ -126,10 +126,7 @@ class Router(object):
         file_output_list = []
         for state in state_list:
             file_output = '../celavi-data/routing/outputs/' + 'route_list_output_{}.csv'.format(state)
-            print(file_output)
-            print(file_output_list)
             file_output_list.append(file_output)
-            print(file_output)
 
             _source_loc = locations[locations.region_id_2 == state]
             _dest_loc = locations[locations.region_id_2 == state]
@@ -213,7 +210,6 @@ class Router(object):
                 route_list.to_csv(file_output)
 
         data_complete = pd.DataFrame()
-        print(file_output_list)
         for file in file_output_list:
             data = pd.read_csv(file)
             data_complete = data_complete.append(data)
