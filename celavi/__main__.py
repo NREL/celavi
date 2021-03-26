@@ -1,4 +1,5 @@
 import argparse
+from .routing import Router
 from .costgraph import CostGraph
 
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
@@ -8,6 +9,11 @@ parser.add_argument('--fac_edges', help='Facility edges file')
 parser.add_argument('--routes', help='Routes file')
 parser.add_argument('--transpo_edges', help='Transportation edges file')
 args = parser.parse_args()
+
+run_routes = False
+if run_routes:
+    routes_computed = Router.get_all_routes(locations_file=args.locations)
+    args.routes = '/Users/aeberle/Documents/GitHub/celavi-data/preprocessing/routes_computed.csv'
 
 netw = CostGraph(
     step_costs_file=args.step_costs,
