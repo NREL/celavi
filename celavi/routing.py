@@ -125,6 +125,7 @@ class Router(object):
         state_list = locations.region_id_2.unique()
         file_output_list = []
         for state in state_list:
+            print(state)
             file_output = '../celavi-data/routing/outputs/' + 'route_list_output_{}.csv'.format(state)
             file_output_list.append(file_output)
 
