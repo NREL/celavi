@@ -4,6 +4,7 @@ import numpy as np
 import warnings
 from itertools import product
 
+import pdb
 
 class CostGraph:
     """
@@ -344,7 +345,6 @@ class CostGraph:
                                       'step_cost_method',
                                       'facility_id',
                                       'connects']].loc[self.step_costs.facility_id == _id]
-
         # @todo update dummy value for timeout with info from DES
         _step_cost['timeout'] = 1
 
@@ -499,15 +499,18 @@ class CostGraph:
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
-                    if self.verbose > 1:
-                        print('Adding distances between ',
-                              u_node, ' and ', v_node)
-
                     # if the destination node facility ID matches the
                     # destination facility ID in the routing dataset row,
                     # apply the distance from the routing dataset to this edge
                     if self.supply_chain.nodes[v_node]['facility_id'] == \
                             _line['destination_facility_id'].values[0]:
+                        if self.verbose > 1:
+                            print('Adding ',
+                                  str(_line['total_vmt'].values[0]),
+                                  ' km between ',
+                                  u_node,
+                                  ' and ',
+                                  v_node)
                         data['dist'] = _line['total_vmt'].values[0]
 
         if self.verbose > 1:
