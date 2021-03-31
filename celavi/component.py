@@ -95,14 +95,15 @@ class Component:
         path_choice = self.context.cost_graph.choose_paths()
         self.pathway = deque()
 
-        # for phase in path_choice[0]['path']:
-        #     self.pathway.append(phase)
-
+        # TODO: Do not hardcode the pathway choice.
         for facility, lifespan in path_choice[0]['path']:
+            # Override the initial timespan when component goes into use.
             if facility.startswith("in use"):
                 self.pathway.append((facility, self.initial_lifespan_timesteps))
+            # Set landfill timespan long enough to be permanent
             elif facility.startswith("landfill"):
                 self.pathway.append((facility, self.context.max_timesteps * 2))
+            # Otherwise, use the timespan the model gives us.
             else:
                 self.pathway.append((facility, lifespan))
 

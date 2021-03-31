@@ -1,5 +1,7 @@
 import argparse
+from math import ceil
 
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -73,10 +75,17 @@ lifespan_fns = {
 context.populate(components, lifespan_fns)
 result = context.run()
 
-plot_rows = len(result["count_facility_inventories"].keys())
-fig, axs = plt.subplots(nrows=plot_rows, ncols=1, figsize=(12, 12))
-for i, (facility_name, facility) in enumerate(result["count_facility_inventories"].items()):
-    cum_hist = facility.cumulative_history["blade"]
-    axs[i].set_title(facility_name)
-    axs[i].plot(range(len(cum_hist)), cum_hist)
+count_facility_inventory_items = list(result["count_facility_inventories"].items())
+nrows = 5
+ncols = ceil(len(count_facility_inventory_items) / nrows)
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
+plt.tight_layout()
+for i in range(len(count_facility_inventory_items)):
+    subplot_col = i // nrows
+    subplot_row = i % nrows
+    ax = axs[subplot_row][subplot_col]
+    facility_name, facility = count_facility_inventory_items[i]
+    cum_hist_blade = facility.cumulative_history["blade"]
+    ax.set_title(facility_name)
+    ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
 plt.show()
