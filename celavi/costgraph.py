@@ -253,9 +253,8 @@ class CostGraph:
                                                      source)
 
         # We are only interested in a particular type(s) of node
-        targets = self.node_filter(self.supply_chain,
-                                   'step',
-                                   self.sc_end)
+        targets = list(search_nodes(self.supply_chain,
+                                    {"in": [("step",), self.sc_end]}))
 
         subdict = {k: v for k, v in lengths.items() if k in targets}
 
