@@ -134,10 +134,9 @@ class CostGraph:
             print('Getting node combinations')
 
         _out = []
-        _out = list(list(zip(list1, element)) for element in product(list2, repeat=len(list1)))
+        _out = product(list1, list2)
 
-        return [item for sublist in _out for item in sublist]
-
+        return list(_out)
 
 
     def list_of_tuples(self,
