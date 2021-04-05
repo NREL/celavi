@@ -110,44 +110,6 @@ class CostGraph:
         return ["{}_{}".format(i, str(facilityID)) for i in subgraph_steps]
 
 
-    @staticmethod
-    def node_filter(graph : nx.DiGraph,
-                    attr_key_1 : str,
-                    get_val_1,
-                    attr_key_2 : str = None,
-                    get_val_2 = None):
-        """
-        Finds node names in graph that have 'attr_key': get_val in
-             their attribute dictionary
-
-        Parameters
-        ----------
-        graph
-            a networkx DiGraph containing at least one node with a node
-            attribute dictionary
-        attr_key_1
-            key in the attribute dictionary on which to filter nodes in graph
-        get_val_1
-            value of attribute key on which to filter nodes in graph
-        attr_key_2
-
-        get_val_2
-
-        Returns
-        -------
-            list of names of nodes (str) in graph
-        """
-
-        if attr_key_2 is not None:
-            _out = [x for x, y in graph.nodes(data=True)
-                    if (y[attr_key_1] in get_val_1) and
-                    (y[attr_key_2] in get_val_2)]
-        else:
-            _out = [x for x, y in graph.nodes(data=True) if y[attr_key_1] in get_val_1]
-
-        return _out
-
-
     def all_element_combos(self,
                            list1 : list,
                            list2 : list):
