@@ -4,7 +4,7 @@ import numpy as np
 import warnings
 from itertools import product
 
-import pdb
+from networkx_query import search_nodes
 
 class CostGraph:
     """
@@ -466,8 +466,10 @@ class CostGraph:
             _edge_cost = row['transpo_cost_method']
 
             # get two lists of nodes to connect based on df row
-            _u_nodes = self.node_filter(self.supply_chain, 'step', _u)
-            _v_nodes = self.node_filter(self.supply_chain, 'step', _v)
+            _u_nodes = list(search_nodes(self.supply_chain,
+                                         {"==": [("step",), _u]}))
+            _v_nodes = list(search_nodes(self.supply_chain,
+                                         {"==": [("step",), _v]}))
 
             # convert the two node lists to a list of tuples with all possible
             # combinations of _u_nodes and _v_nodes
