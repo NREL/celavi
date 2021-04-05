@@ -492,11 +492,9 @@ class CostGraph:
             for _line in _reader:
 
                 # find the source nodes for this route
-                _u = self.node_filter(self.supply_chain,
-                                      'facility_id',
-                                      [_line['source_facility_id'].values[0]],
-                                      'connects',
-                                      ['out'])
+                _u = list(search_nodes(self.supply_chain,
+                                       {'and': [{"==": [("facility_id",), _line['source_facility_id'].values[0]]},
+                                                {"==": [("connects",), "out"]}]}))
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
@@ -570,9 +568,8 @@ class CostGraph:
         if self.verbose > 1:
             print('Choosing shortest paths')
 
-        _sources = self.node_filter(self.supply_chain,
-                                    attr_key_1='step',
-                                    get_val_1=self.sc_begin)
+        _sources = list(search_nodes(self.supply_chain,
+                                     {"in": [("step",), self.sc_begin]}))
 
         _paths = []
         # Find the lowest-cost path from EACH source node to ANY target node
