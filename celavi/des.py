@@ -238,16 +238,6 @@ class Context:
         total_blade_mass_eol = 0.0
         total_blade_count_eol = 0
 
-        # # Calculate the total mass at EOL
-        # total_blade_mass_eol += self.recycle_to_raw_material_inventory.transactions[timestep]["blade"]
-        # total_blade_mass_eol += self.recycle_to_clinker_material_inventory.transactions[timestep]["blade"]
-        # total_blade_mass_eol += self.landfill_material_inventory.transactions[timestep]["blade"]
-        #
-        # # Calculate the total count at EOL
-        # total_blade_count_eol += self.recycle_to_raw_component_inventory.transactions[timestep]["blade"]
-        # total_blade_count_eol += self.recycle_to_clinker_component_inventory.transactions[timestep]["blade"]
-        # total_blade_count_eol += self.landfill_component_inventory.transactions[timestep]["blade"]
-
         for mass_inventory in self.mass_facility_inventories.values():
             total_blade_mass_eol += mass_inventory.transactions[timestep]["blade"]
 
@@ -259,20 +249,6 @@ class Context:
             return total_blade_mass_eol / total_blade_count_eol
         else:
             return 1
-
-    # def learning_by_doing_process(self, env):
-    #     """
-    #     This method contains a SimPy process that runs the learning-by-doing
-    #     model on a periodic basis.
-    #     """
-    #     while True:
-    #         yield env.timeout(self.learning_by_doing_timesteps)
-    #         avg_blade_mass = self.average_blade_mass_tonnes(env.now)
-    #         print('at timestep ', env.now, ', average blade mass is ', avg_blade_mass, ' tonnes\n')
-    #         # This is a workaround. Make the learning by doing pathway costs
-    #         # tolerant of a 0 mass for blades retired.
-    #         if avg_blade_mass > 0:
-    #             self.learning_by_doing(env.now, avg_blade_mass)
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
