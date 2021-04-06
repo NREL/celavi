@@ -106,43 +106,6 @@ class Component:
 
         env.process(self.eol_process(env))
 
-    def transition(self, transition: str, timestep: int) -> None:
-        """
-        Transition the component's state machine from the current state based on a
-        transition.
-
-        Parameters
-        ----------
-        transition: str
-            The next state to transition into.
-
-        timestep: int
-            The discrete timestep.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        KeyError
-            Raises a KeyError if the transition is not accessible from the
-            current state.
-        """
-        lookup = StateTransition(state=self.state, transition=transition)
-        if lookup not in self.transitions_table:
-            raise KeyError(
-                f"transition: {transition} not allowed from current state {self.state}"
-            )
-        next_state = self.transitions_table[lookup]
-        self.state = next_state.state
-        self.initial_lifespan_timesteps = next_state.lifespan
-        # self.transition_list.append(transition)
-        if next_state.state_entry_function is not None:
-            next_state.state_entry_function(self.context, self, timestep)
-        if next_state.state_exit_function is not None:
-            next_state.state_exit_function(self.context, self, timestep)
-
     def eol_process(self, env):
         """
         This process controls the state transitions for the component at
