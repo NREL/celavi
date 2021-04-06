@@ -1,22 +1,25 @@
 import argparse
+import os
 from math import ceil
 
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
 from celavi.des import Context
 from celavi.costgraph import CostGraph
 
+# Setup the command line parsing
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
 parser.add_argument('--locations', help='Path to locations file')
 parser.add_argument('--step_costs', help='Path to step_costs file')
 parser.add_argument('--fac_edges', help='Facility edges file')
 parser.add_argument('--routes', help='Routes file')
 parser.add_argument('--transpo_edges', help='Transportation edges file')
-parser.add_argument('--turbine_data', help='Data with turbine configurations and locations.')
+parser.add_argument('--turbine_data', help='Data with turbine configurations and locations')
+parser.add_argument('--outputs', help='Folder/directory where output .csv files should be written')
 args = parser.parse_args()
 
+# Create the cost graph
 netw = CostGraph(
     step_costs_file=args.step_costs,
     fac_edges_file=args.fac_edges,
@@ -28,12 +31,17 @@ netw = CostGraph(
     max_dist=300.0
 )
 
+# Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=args.locations,
     step_costs_filename=args.step_costs,
     possible_items=["nacelle", "blade", "tower", "foundation"],
     cost_graph=netw
 )
+
+# Create the turbine dataframe that will be used to populate
+# the context with components. Repeat the creation of blades
+# 3 times for each turbine.
 
 turbine_data = pd.read_csv(args.turbine_data)
 components = []
@@ -52,16 +60,10 @@ for _, row in turbine_data.iterrows():
                 'mass_tonnes': blade_mass_tonnes,
                 'facility_id': facility_id
             })
-        # components.append({
-        #     'xlong': xlong,
-        #     'ylat': ylat,
-        #     'year': year,
-        #     'kind': 'foundation',
-        #     'mass_tonnes': foundation_mass_tonnes
-        # })
 
 components = pd.DataFrame(components)
 
+# Create the lifespan functions for the components.
 timesteps_per_year = 12
 lifespan_fns = {
     "nacelle": lambda: 30 * timesteps_per_year,
@@ -70,10 +72,14 @@ lifespan_fns = {
     "tower": lambda: 50 * timesteps_per_year,
 }
 
+# Populate the context with components.
 context.populate(components, lifespan_fns)
+
+# Run the context
 result = context.run()
 
-count_facility_inventory_items = list(result["count_facility_inventories"].items())
+# Plot the cumulative count levels of the inventories
+count_facility_inventory_items = list(result["mass_facility_inventories"].items())
 nrows = 5
 ncols = ceil(len(count_facility_inventory_items) / nrows)
 fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
@@ -86,4 +92,13 @@ for i in range(len(count_facility_inventory_items)):
     cum_hist_blade = facility.cumulative_history["blade"]
     ax.set_title(facility_name)
     ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
+    ax.set_ylabel("tonnes")
 plt.show()
+
+# Output .csv files of the mass flows of each mass inventory.
+mass_facility_inventories = result["mass_facility_inventories"]
+outputs = args.outputs
+for facility_name, facility in mass_facility_inventories.items():
+    output_filename = os.path.join(outputs, f'{facility_name}.csv')
+    output_filename = output_filename.replace(' ', '_')
+    facility.transaction_history.to_csv(output_filename, index_label='timestep')
