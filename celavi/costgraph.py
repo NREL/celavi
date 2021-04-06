@@ -416,7 +416,7 @@ class CostGraph:
         # this is a relatively short loop
         for index, row in self.transpo_edges.iterrows():
             if self.verbose > 1:
-                print('Adding cost methods to edges between ',
+                print('Adding transportation cost methods to edges between ',
                       row['u_step'],
                       ' and ',
                       row['v_step'])
@@ -481,6 +481,7 @@ class CostGraph:
         for edge in self.supply_chain.edges():
 
             _method = getattr(CostGraph, self.supply_chain.nodes[edge[0]]['step_cost_method'])
+            _addl_method = None
 
             if _method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
                 self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_method)
@@ -498,6 +499,8 @@ class CostGraph:
                                                            blade_mass=self.blade_mass,
                                                            cumul_finegrind=1000.0,
                                                            cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
+
+            del _method, _addl_method
 
         if self.verbose > 0:
             print('-------Supply chain graph is built-------')
@@ -556,7 +559,6 @@ class CostGraph:
         """
         # @todo dynamically update node costs based on cost-over-time and
         # learning-by-doing models
-
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=kwargs['year'],
