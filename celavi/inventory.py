@@ -149,7 +149,7 @@ class FacilityInventory:
     @property
     def transaction_history(self) -> pd.DataFrame:
         """
-        Because this method instantiates a DataFrame, it should be celled
+        Because this method instantiates a DataFrame, it should be called
         sparingly, as this is a resource consuming procedure.
 
         Returns
