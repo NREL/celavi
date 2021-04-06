@@ -182,12 +182,6 @@ class Context:
             The type of component as a string. It isn't called "type" because
             "type" is a keyword in Python.
 
-        xlong: float
-            The longitude of the component.
-
-        xlat: float
-            The latitude of the component.
-
         year: float
             The year the component goes into use.
 
@@ -217,10 +211,9 @@ class Context:
         for _, row in df.iterrows():
             component = Component(
                 kind=row["kind"],
-                xlong=row["xlong"],
-                ylat=row["ylat"],
                 year=row["year"],
                 mass_tonnes=row["mass_tonnes"],
+                initial_facility_id=row["facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
             )

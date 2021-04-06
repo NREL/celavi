@@ -20,11 +20,10 @@ class Component:
         self,
         context,
         kind: str,
-        xlong: float,
-        ylat: float,
         year: int,
         lifespan_timesteps: float,
         mass_tonnes: float,
+        initial_facility_id: int
     ):
         """
         This takes parameters named the same as the instance variables. See
@@ -44,12 +43,6 @@ class Component:
             The type of this component. The word "type", however, is also a Python
             keyword, so this attribute is named kind.
 
-        xlong: float
-            The longitude of the component.
-
-        ylat: float
-            The latitude of the component.
-
         year: int
             The year in which this component enters the use state for the first
             time.
@@ -64,16 +57,19 @@ class Component:
 
         mass_tonnes: float
             The total mass of the component, in tonnes.
+
+        initial_facility_id: int
+            The initial facility id (where the component begins life) used in
+            initial pathway selection from CostGraph.
         """
 
         self.phase = ""  # There is no location initially
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.kind = kind
-        self.xlong = xlong
-        self.ylat = ylat
         self.year = year
         self.mass_tonnes = mass_tonnes
+        self.initial_facility_id = initial_facility_id
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
 
@@ -92,11 +88,12 @@ class Component:
         """
         begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        path_choice = self.context.cost_graph.choose_paths()
+        path_choices = self.context.cost_graph.choose_paths()
+        path_choice = path_choices[self.initial_facility_id]
         self.pathway = deque()
 
         # TODO: Do not hardcode the pathway choice.
-        for facility, lifespan in path_choice[0]['path']:
+        for facility, lifespan in path_choice['path']:
             # Override the initial timespan when component goes into use.
             if facility.startswith("in use"):
                 self.pathway.append((facility, self.initial_lifespan_timesteps))

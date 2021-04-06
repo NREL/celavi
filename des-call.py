@@ -38,21 +38,19 @@ context = Context(
 turbine_data = pd.read_csv(args.turbine_data)
 components = []
 for _, row in turbine_data.iterrows():
-    xlong = row['xlong']
-    ylat = row['ylat']
     year = row['year']
     blade_mass_tonnes = row['blade_mass_tonnes']
     foundation_mass_tonnes = row['foundation_mass_tonnes']
+    facility_id = int(row['facility_id'])
     n_turbine = int(row['n_turbine'])
 
     for _ in range(n_turbine):
         for _ in range(3):
             components.append({
-                'xlong': xlong,
-                'ylat': ylat,
                 'year': year,
                 'kind': 'blade',
-                'mass_tonnes': blade_mass_tonnes
+                'mass_tonnes': blade_mass_tonnes,
+                'facility_id': facility_id
             })
         # components.append({
         #     'xlong': xlong,
