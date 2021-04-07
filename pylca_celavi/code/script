@@ -1,0 +1,49 @@
+#!/bin/bash
+#SBATCH --account=celavi
+#SBATCH --error=e.%j.txt
+#SBATCH --mem=82000      # RAM in MB
+#SBATCH --tmp=10000     # local scratch disk in MB
+#SBATCH --time=01:00:00
+#SBATCH --job-name=lci
+#SBATCH --partition=debug
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=10
+#SBATCH --cpus-per-task=1
+#SBATCH --output=o.%j.txt  # %j will be replaced with the job
+#SBATCH --qos=high
+
+
+SECONDS=0
+
+
+DIR="/home/tghosh/eaglerun3/"
+JOBDIR="/scratch/tghosh/eaglerun3/jobdir$1"
+DIR1="/home/tghosh/eaglerun3/results$1/"
+
+mkdir $JOBDIR
+cd $DIR
+
+rm -r $DIR1
+#export TMPDIR=$LOCAL_SCRATCH
+cp -p * $JOBDIR
+
+cd $JOBDIR
+date >> time.txt
+echo TJISRUNNINGCODE >> time.txt
+
+#module purge
+#module load conda
+#source activate celavi
+#python pylca_opt_foreground_multi.py
+python pylca_opt_celavi_integrated_uslci_multi.py
+date >> time.txt
+
+#rm -r $DIR1
+duration=$SECONDS
+echo "$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed." >> time.txt
+mkdir $DIR1
+cp -p *.csv time.txt $DIR1
+
+cd .. 
+rm -r $JOBDIR
+
