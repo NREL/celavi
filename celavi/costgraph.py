@@ -141,7 +141,8 @@ class CostGraph:
 
     def list_of_tuples(self,
                        list1 : list,
-                       list2 : list):
+                       list2 : list,
+                       list3 : list = None):
         """
         Converts two lists into a list of tuples where each tuple contains
         one element from each list:
@@ -154,6 +155,8 @@ class CostGraph:
             list of any data type
         list2
             list of any data type
+        list3
+            list of any data type (optional)
 
         Returns
         -------
@@ -162,10 +165,17 @@ class CostGraph:
         if self.verbose > 1:
             print('Getting list of tuples')
 
-        if len(list1) != len(list2):
-            raise NotImplementedError
+        if list3 is not None:
+            _len = len(list1)
+            if any(len(lst) != _len for lst in [list1, list2, list3]):
+                raise NotImplementedError
+            else:
+                return list(map(lambda x, y, z: (x, y, z), list1, list2, list3))
         else:
-            return list(map(lambda x, y: (x, y), list1, list2))
+            if len(list1) != len(list2):
+                raise NotImplementedError
+            else:
+                return list(map(lambda x, y: (x, y), list1, list2))
 
 
     @staticmethod
@@ -315,7 +325,8 @@ class CostGraph:
                                       on='facility_id').to_dict(orient='records')
 
         # reformat data into a list of tuples as (str, dict)
-        _nodes = self.list_of_tuples(_node_names, _attr_data)
+        _nodes = self.list_of_tuples(self.get_node_names(_id, _node_names),
+                                     _attr_data)
 
         return _nodes
 
@@ -345,6 +356,8 @@ class CostGraph:
         # Create empty directed graph object
         _facility = nx.DiGraph()
 
+        _id = str(facility_df['facility_id'].values[0])
+
         # Generates list of (str, dict) tuples for node definition
         _facility_nodes = self.get_nodes(facility_df)
 
@@ -355,25 +368,18 @@ class CostGraph:
         # Populate the directed graph with edges
         # Edges within facilities don't have transportation costs or distances
         # associated with them.
-        _facility.add_edges_from(self.get_edges(facility_df),
-                                 cost_method=[],
-                                 cost=0.0,
-                                 dist=0.0)
+        _edges = self.get_edges(facility_df)
+        _unique_edges = [tuple(map(lambda w: w+'_'+_id, x)) for x in _edges]
 
-        # Use the facility ID and list of processing steps in this facility to
-        # create a list of unique node names
-        # Unique meaning over the entire supply chain (graph of subgraphs)
-        _node_names = list(_facility.nodes)
-        _id = facility_df['facility_id'].values[0]
-        _node_names_unique = self.get_node_names(_id,_node_names)
+        _methods = [{'cost_method': getattr(CostGraph,
+                                            _facility.nodes[edge[0]]['step_cost_method']),
+                     'cost': 0.0,
+                     'dist': 0.0}
+                    for edge in _unique_edges]
 
-        # Construct a dict of {'old node name': 'new node name'}
-        _labels = {}
-        for i in np.arange(0, len(_node_names_unique)):
-            _labels.update({_node_names[i]: _node_names_unique[i]})
-
-        # Relabel nodes to unique names (step + facility ID)
-        nx.relabel_nodes(_facility, _labels, copy=False)
+        _facility.add_edges_from(self.list_of_tuples([node[0] for node in _unique_edges],
+                                                     [node[1] for node in _unique_edges],
+                                                     _methods))
 
         return _facility
 
