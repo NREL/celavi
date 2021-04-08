@@ -416,7 +416,7 @@ class CostGraph:
                 self.supply_chain.add_edges_from(_fac_graph.edges(data=True))
 
         if self.verbose > 0:
-            print('Adding cost methods to supply chain graph')
+            print('Adding inter-facility cost methods to supply chain graph')
 
         # add all inter-facility edges, with costs but without distances
         # this is a relatively short loop
@@ -429,7 +429,7 @@ class CostGraph:
 
             _u = row['u_step']
             _v = row['v_step']
-            _edge_cost = row['transpo_cost_method']
+            _transpo_cost = row['transpo_cost_method']
 
             # get two lists of nodes to connect based on df row
             _u_nodes = list(search_nodes(self.supply_chain,
@@ -441,13 +441,29 @@ class CostGraph:
             # combinations of _u_nodes and _v_nodes
             _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
 
-            # add these edges to the supply chain
-            self.supply_chain.add_edges_from(_edge_list,
-                                             cost_method=[getattr(CostGraph,
-                                                                  _edge_cost)],
-                                             cost=0.0,
-                                             dist=np.nan)
+            if not any([self.supply_chain.nodes[_v]['step'] in self.sc_end for _v in _v_nodes]):
+                _methods = [{'cost_method': [getattr(CostGraph,
+                                                    self.supply_chain.nodes[edge[0]]['step_cost_method']),
+                                             getattr(CostGraph,
+                                                     _transpo_cost)],
+                             'cost': 0.0,
+                             'dist': np.nan}
+                            for edge in _edge_list]
+            else:
+                _methods = [{'cost_method': [getattr(CostGraph,
+                                                    self.supply_chain.nodes[edge[0]]['step_cost_method']),
+                                             getattr(CostGraph,
+                                                     _transpo_cost),
+                                             getattr(CostGraph,
+                                                     self.supply_chain.nodes[edge[1]]['step_cost_method'])],
+                             'cost': 0.0,
+                             'dist': np.nan}
+                            for edge in _edge_list]
 
+            # add these edges to the supply chain
+            self.supply_chain.add_edges_from(self.list_of_tuples([edge[0] for edge in _edge_list],
+                                                                 [edge[1] for edge in _edge_list],
+                                                                 _methods))
 
         # read in and process routes line by line
         with open(self.routes_df, 'r') as _route_file:
@@ -482,31 +498,12 @@ class CostGraph:
         if self.verbose > 1:
             print('Calculating node and edge costs')
 
-        # @todo edges starting from 'in use' nodes have rotor teardown costs
-        # assigned to them in addition to the zero method
         for edge in self.supply_chain.edges():
-
-            _method = getattr(CostGraph, self.supply_chain.nodes[edge[0]]['step_cost_method'])
-            _addl_method = None
-
-            if _method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
-                self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_method)
-
-            # if the node terminates at a landfill,
-            if self.supply_chain.nodes[edge[1]]['step'] in self.sc_end:
-                _addl_method = getattr(CostGraph,
-                                           self.supply_chain.nodes[edge[1]]['step_cost_method'])
-                # also add in the landfill cost method
-                if _addl_method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
-                    self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_addl_method)
-
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=self.year,
                                                            blade_mass=self.blade_mass,
                                                            cumul_finegrind=1000.0,
                                                            cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
-
-            del _method, _addl_method
 
         if self.verbose > 0:
             print('-------Supply chain graph is built-------')
