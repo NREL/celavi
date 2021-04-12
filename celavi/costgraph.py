@@ -5,7 +5,7 @@ import warnings
 from itertools import product
 
 from networkx_query import search_nodes
-
+import pdb
 class CostGraph:
     """
         Contains methods for reading in graph data, creating network of
@@ -371,8 +371,7 @@ class CostGraph:
         _edges = self.get_edges(facility_df)
         _unique_edges = [tuple(map(lambda w: w+'_'+_id, x)) for x in _edges]
 
-        _methods = [{'cost_method': getattr(CostGraph,
-                                            _facility.nodes[edge[0]]['step_cost_method']),
+        _methods = [{'cost_method': [getattr(CostGraph, _facility.nodes[edge[0]]['step_cost_method'])],
                      'cost': 0.0,
                      'dist': 0.0}
                     for edge in _unique_edges]
@@ -508,9 +507,12 @@ class CostGraph:
                         data['dist'] = _line['total_vmt'].values[0]
 
         if self.verbose > 1:
-            print('Calculating node and edge costs')
+            print('Calculating edge costs')
 
         for edge in self.supply_chain.edges():
+            if self.verbose > 1:
+                print('Calculating edge costs for ', edge)
+
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=self.year,
                                                            blade_mass=self.blade_mass,
