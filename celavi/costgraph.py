@@ -470,9 +470,21 @@ class CostGraph:
             if self.verbose > 0:
                 print('Adding distances to supply chain graph')
 
-            _reader = pd.read_csv(_route_file, chunksize=1)
+            # Only read in columns relevant to CostGraph building
+            _reader = pd.read_csv(_route_file,
+                                  usecols=['source_facility_id',
+                                           'source_facility_type',
+                                           'destination_facility_id',
+                                           'destination_facility_type',
+                                           'total_vmt'],
+                                  chunksize=1)
+            _prev_line = None
 
             for _line in _reader:
+                if np.array_equal(_line, _prev_line):
+                    continue
+
+                _prev_line = _line
 
                 # find the source nodes for this route
                 _u = list(search_nodes(self.supply_chain,
