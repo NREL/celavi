@@ -3,10 +3,12 @@
 """
 Created on Fri Jan 22 08:03:13 2021
 
-Uses code from Feedstock Production Emissions to Air Model (FPEAM) Copyright (c) 2018
+routing.py uses Dijkstra’s algorithm to compute distances between vertices on a network
+
+Developed using code from Feedstock Production Emissions to Air Model (FPEAM) Copyright (c) 2018
 Alliance for Sustainable Energy, LLC; Noah Fisher.
-Builds on functionality in the FPEAM's FPEAM.py, Router.py, Data.py, and IO.py.
-Unmodified code is available at https://github.com/NREL/fpeam.
+Builds on functionality in the FPEAM's Router.py and Data.py.
+Unmodified FPEAM code is available at https://github.com/NREL/fpeam.
 
 @author: aeberle
 """
@@ -18,8 +20,8 @@ from networkx.algorithms.shortest_paths.weighted import bidirectional_dijkstra
 from scipy.spatial import ckdtree
 from joblib import Memory
 import tempfile
-import Data
-import os
+import data_manager as Data
+
 
 class Router(object):
     """Discover routing between nodes"""
@@ -58,9 +60,9 @@ class Router(object):
     def get_route(self, start, end):
 
         """
-        Find route from <from_fips> to <to_fips>, if exists.
-        :param start: [list] [x, y]
-        :param end: [list] [x, y]
+        Find route from <start> to <end>, if exists.
+        :param start: [list] [long, lat]
+        :param end: [list] [long, lat]
         :return: [DataFrame]
         """
 
@@ -104,31 +106,47 @@ class Router(object):
 
     def get_all_routes(locations_file : str = '../celavi-data/inputs/locations.csv'):
         """
-        Calculates distances that would be traveled by road between all locations in the locations_file.
+        Calculates distances traveled between all locations in the locations_file.
         Includes distance traveled through each transportation region (e.g., county FIPS) and road class.
 
         :return:
         """
-        # data backfill flag
-        backfill = True
+        backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
+
+        # set input file paths for precomputed US road network data
         transportation_graph = '../celavi-data/routing/inputs/transportation_graph.csv'  # transport graph (pre computed; don't change)
         node_locations = '../celavi-data/routing/inputs/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
+
+        # set output folders for intermediate routing data
+        routing_output_folder = '../celavi-data/routing/outputs/'
+        preprocessing_output_folder = '../celavi-data/preprocessing/'  # data in this folder will be inputs to CELAVI
+
+        # import transportation graph and node locations
         _transportation_graph = Data.TransportationGraph(fpath=transportation_graph, backfill=backfill)
         _node_locations = Data.TransportationNodeLocations(fpath=node_locations, backfill=backfill)
+
+        # create temporary file directory
         _temp_dir = tempfile.mkdtemp()
 
+        # initiate router
         router = Router(edges=_transportation_graph,
                         node_map=_node_locations,
                         memory=Memory(location=_temp_dir))
 
+        # import locations data
         locations = pd.read_csv(locations_file)
+
+        # identify states in locations data and loop through states (useful for debugging; loop could be removed)
+        # compute routes for all locations in each state and save results
         state_list = locations.region_id_2.unique()
         file_output_list = []
         for state in state_list:
             print(state)
-            file_output = '../celavi-data/routing/outputs/' + 'route_list_output_{}.csv'.format(state)
+            file_output = routing_output_folder + 'route_list_output_{}.csv'.format(state)
             file_output_list.append(file_output)
 
+            # select all source and destination locations (right now source locations = destination locations)
+            # this setup allows us to find routs between all locations in the input locations file
             _source_loc = locations[locations.region_id_2 == state]
             _dest_loc = locations[locations.region_id_2 == state]
             _source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
@@ -137,6 +155,8 @@ class Router(object):
             _dest_loc.insert(0, 'merge', 'True')
             route_list = _source_loc.merge(_dest_loc, on='merge')
 
+            # if route_list is empty, generate empty data frame for export (e.g., create column for total_vmt)
+            # otherwise, loop through all locations in route_list and compute routing distances
             if route_list.empty:
                 print('list is empty')
                 route_list['vmt'] = ''
@@ -147,23 +167,23 @@ class Router(object):
                 route_list.to_csv(file_output)
             else:
 
-                route_list.to_csv('../celavi-data/routing/outputs/route_list.csv')
+                route_list.to_csv(routing_output_folder + 'route_list.csv')
 
                 _routes = route_list[['source_long',
                                       'source_lat',
                                       'destination_long',
                                       'destination_lat']]  # .drop_duplicates()
 
-                _routes.to_csv('../celavi-data/routing/outputs/_routes.csv')
+                _routes.to_csv(routing_output_folder + 'routes.csv')
 
                 # if routing engine is specified, use it to get the route (fips and
-                # vmt) for each unique region_production and region_destination pair
+                # vmt) for each pair of input locations
                 if router is not None:
 
                     # initialize holder for all routes
                     _vmt_by_county_all_routes = pd.DataFrame()
 
-                    # loop through all routes
+                    # loop through all locations to compute routes
                     print('finding routes')
                     for i in np.arange(_routes.shape[0]):
 
@@ -204,17 +224,19 @@ class Router(object):
 
 
                 route_list = route_list.drop(['merge'], axis=1)
+                # compute total_vmt
                 route_list['total_vmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
                                                                  'source_long', 'destination_facility_id', 'destination_facility_type',
                                                                  'destination_lat', 'destination_long'])['vmt'].transform('sum')
 
                 route_list.to_csv(file_output)
 
+        # append all data from independent state loops into one master routing data frame
         data_complete = pd.DataFrame()
         for file in file_output_list:
             data = pd.read_csv(file)
             data_complete = data_complete.append(data)
 
-        data_complete.to_csv('../celavi-data/preprocessing/routes_computed.csv')
+        data_complete.to_csv(preprocessing_output_folder + 'routes_computed.csv')
 
         return data_complete
