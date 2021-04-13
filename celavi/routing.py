@@ -114,11 +114,11 @@ class Router(object):
         backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
 
         # set input file paths for precomputed US road network data
-        transportation_graph = '../celavi-data/routing/inputs/transportation_graph.csv'  # transport graph (pre computed; don't change)
-        node_locations = '../celavi-data/routing/inputs/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
+        transportation_graph = '../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
+        node_locations = '../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
 
         # set output folders for intermediate routing data
-        routing_output_folder = '../celavi-data/routing/outputs/'
+        routing_output_folder = '../celavi-data/preprocessing/routing_intermediate_files/'
         preprocessing_output_folder = '../celavi-data/preprocessing/'  # data in this folder will be inputs to CELAVI
 
         # import transportation graph and node locations

@@ -8,8 +8,8 @@ class ComputeLocations:
         self.wind_turbine_locations = '../celavi-data/inputs/raw_location_data/uswtdb_v3_3_20210114.csv'  # wind turbine locations using USWTDB format
         self.landfill_locations = '../celavi-data/inputs/raw_location_data/landfilllmopdata.csv' # LMOP data for landfill locations
         self.other_facility_locations = '../celavi-data/inputs/raw_location_data/other_facility_locations_all_us.csv'  # other facility locations (e.g., cement)
-        self.transportation_graph = '../celavi-data/inputs/raw_location_data/transportation_graph.csv'  # transport graph (pre computed; don't change)
-        self.node_locations = '../celavi-data/inputs/raw_location_data/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
+        self.transportation_graph = '../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
+        self.node_locations = '../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
 
         # data backfill flag
         self.backfill = True
