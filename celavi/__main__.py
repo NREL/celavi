@@ -10,9 +10,11 @@ parser.add_argument('--routes', help='Routes file')
 parser.add_argument('--transpo_edges', help='Transportation edges file')
 args = parser.parse_args()
 
+# if run_routes is enabled (True), compute routing distances between all input locations
 run_routes = False
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=args.locations)
+    # reset argument for routes file to use computed routes rather than user input
     args.routes = '/Users/aeberle/Documents/GitHub/celavi-data/preprocessing/routes_computed.csv'
 
 netw = CostGraph(
