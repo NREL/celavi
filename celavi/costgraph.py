@@ -5,7 +5,7 @@ import warnings
 from itertools import product
 
 from networkx_query import search_nodes
-import pdb
+
 class CostGraph:
     """
         Contains methods for reading in graph data, creating network of
@@ -74,7 +74,6 @@ class CostGraph:
 
         self.year=year
 
-        # @todo get current blade mass from DES model
         self.blade_mass=1000.0
 
         self.max_dist = max_dist
@@ -144,6 +143,7 @@ class CostGraph:
                        list2 : list,
                        list3 : list = None):
         """
+        @todo update docstring
         Converts two lists into a list of tuples where each tuple contains
         one element from each list:
         [(list1[0], list2[0]), (list1[1], list2[1]), ...]
@@ -181,7 +181,7 @@ class CostGraph:
     @staticmethod
     def zero_method(**kwargs):
         """
-
+        @ update docstring
         Returns
         -------
         float
@@ -196,6 +196,7 @@ class CostGraph:
                      source : str,
                      crit : str):
         """
+        @todo update docstring
         # original code source:
         # https://stackoverflow.com/questions/50723854/networkx-finding-the-shortest-path-to-one-of-multiple-nodes-in-graph
 
@@ -315,7 +316,7 @@ class CostGraph:
                                       'step_cost_method',
                                       'facility_id',
                                       'connects']].loc[self.step_costs.facility_id == _id]
-        # @todo update dummy value for timeout with info from DES
+
         _step_cost['timeout'] = 1
 
         # create list of dictionaries from data frame with processing steps,
@@ -527,14 +528,10 @@ class CostGraph:
         """
         Calculate total pathway costs (sum of all node and edge costs) over
         all possible pathways.
-        @note simple paths have no repeated nodes; this might not work for a
-         cyclic graph
-        @note The target parameter can be replaced by a list
-        # @todo update docstring
 
-        # @note cost, next state, relocation destination for the component
-        # @todo: based on current_step where component is currently, pull the
-        # next step from the preferred pathway
+        @todo verify that this method works for a cyclic graph
+
+        @todo update docstring
 
         Parameters
         ----------
@@ -566,7 +563,7 @@ class CostGraph:
 
     def update_costs(self, **kwargs):
         """
-
+        @todo update docstring
         Parameters
         ----------
 
@@ -574,8 +571,7 @@ class CostGraph:
         -------
         None
         """
-        # @todo dynamically update node costs based on cost-over-time and
-        # learning-by-doing models
+
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=kwargs['year'],
@@ -628,7 +624,7 @@ class CostGraph:
     @staticmethod
     def segmenting(**kwargs):
         """
-
+        @todo update docstring
         Returns
         -------
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments.
@@ -639,7 +635,7 @@ class CostGraph:
     @staticmethod
     def coarse_grinding_onsite(**kwargs):
         """
-        # @todo update with relevant FacilityInventories from DES
+        @todo update docstring
 
         Parameters
         ----------
@@ -664,7 +660,7 @@ class CostGraph:
     @staticmethod
     def coarse_grinding(**kwargs):
         """
-        # @todo update with correct FacilityInventory values from Context
+        @todo update docstring
 
         Parameters
         ----------
@@ -692,7 +688,7 @@ class CostGraph:
     @staticmethod
     def fine_grinding(**kwargs):
         """
-        # @todo update with relevant FacilityInventory values from Context
+        @todo update docstring
 
         Parameters
         ----------
@@ -717,7 +713,7 @@ class CostGraph:
     @staticmethod
     def coprocessing(**kwargs):
         """
-
+        @todo update docstring
         Returns
         -------
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
@@ -764,6 +760,7 @@ class CostGraph:
     @staticmethod
     def shred_transpo(**kwargs):
         """
+        @todo update docstring
         Parameters
         -------
         vkmt
