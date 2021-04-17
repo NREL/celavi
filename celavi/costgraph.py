@@ -143,11 +143,13 @@ class CostGraph:
                        list2 : list,
                        list3 : list = None):
         """
-        @todo update docstring
-        Converts two lists into a list of tuples where each tuple contains
-        one element from each list:
-        [(list1[0], list2[0]), (list1[1], list2[1]), ...]
-        Exactly two lists of any length must be specified.
+        Converts two or three lists into a list of two- or three-tuples where
+        each tuple contains the corresponding elements from each list:
+        [(list1[0], list2[0]), (list1[1], list2[1]), ...] or
+        [(list1[0], list2[0], list3[0]), (list1[1], list2[1], list3[1]), ...]
+
+        Two or three lists may be specified. All three lists must be the same
+        length.
 
         Parameters
         ----------
@@ -181,7 +183,8 @@ class CostGraph:
     @staticmethod
     def zero_method(**kwargs):
         """
-        @ update docstring
+        Cost method that returns a cost of zero under all circumstances.
+
         Returns
         -------
         float
@@ -196,16 +199,18 @@ class CostGraph:
                      source : str,
                      crit : str):
         """
-        @todo update docstring
-        # original code source:
-        # https://stackoverflow.com/questions/50723854/networkx-finding-the-shortest-path-to-one-of-multiple-nodes-in-graph
+        Method that finds the nearest nodes to source and returns that node name,
+        the path length to the nearest node, and the path to the nearest node.
+
+        Original code source:
+        https://stackoverflow.com/questions/50723854/networkx-finding-the-shortest-path-to-one-of-multiple-nodes-in-graph
 
         Parameters
         ----------
         source
             Name of node where this path begins.
         crit
-            Criteria to calcualte path "length". May be cost or dict.
+            Criteria to calculate path "length". May be cost or dict.
 
         Returns
         -------
@@ -527,18 +532,20 @@ class CostGraph:
     def choose_paths(self):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
-        all possible pathways.
+        all possible pathways between source and target nodes. Other "costs"
+        such as distance or environmental impacts may be used as well with
+        modifications to the crit argument of the find_nearest call.
 
         @todo verify that this method works for a cyclic graph
 
-        @todo update docstring
-
         Parameters
         ----------
+        None
 
         Returns
         -------
-
+        Dictionary containing the source, node, target node, path between
+        source and target, and the pathway "cost".
         """
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
@@ -563,9 +570,21 @@ class CostGraph:
 
     def update_costs(self, **kwargs):
         """
-        @todo update docstring
+        Re-calculates all edge costs based on arguments passed to cost methods.
+
         Parameters
         ----------
+        **kwargs may include:
+            year : float
+                Model year provided by DES.
+            blade_mass : float
+                Average turbine blade mass provided by DES.
+            cumul_finegrind : float
+                Cumulative mass of blades that have been finely ground,
+                provided by DES.
+            cumul_coarsegrind : float
+                Cumulative mass of blades that have been coarsely ground,
+                provided by DES.
 
         Returns
         -------
@@ -624,7 +643,9 @@ class CostGraph:
     @staticmethod
     def segmenting(**kwargs):
         """
-        @todo update docstring
+        Cost method for blade segmenting into 30m sections performed on-site at
+        the wind power plant.
+
         Returns
         -------
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments.
@@ -635,10 +656,9 @@ class CostGraph:
     @staticmethod
     def coarse_grinding_onsite(**kwargs):
         """
-        @todo update docstring
-
-        Parameters
-        ----------
+        Cost method for coarsely grinding turbine blades on-site at the wind
+        power plant. This calculation uses industrial learning-by-doing to
+        gradually reduce costs over time.
 
         Returns
         -------
@@ -660,10 +680,9 @@ class CostGraph:
     @staticmethod
     def coarse_grinding(**kwargs):
         """
-        @todo update docstring
-
-        Parameters
-        ----------
+        Cost method for coarsely grinding turbine blades at a mechanical
+        recycling facility. This calculation uses industrial learning-by-doing
+        to gradually reduce costs over time.
 
         Returns
         -------
@@ -688,10 +707,9 @@ class CostGraph:
     @staticmethod
     def fine_grinding(**kwargs):
         """
-        @todo update docstring
-
-        Parameters
-        ----------
+        Cost method for finely grinding turbine blades at a mechanical
+        recycling facility. This calculation uses industrial learning-by-doing
+        to gradually reduce costs over time.
 
         Returns
         -------
@@ -713,7 +731,9 @@ class CostGraph:
     @staticmethod
     def coprocessing(**kwargs):
         """
-        @todo update docstring
+        Cost method that calculates revenue from sale of coarsely-ground blade
+        material to cement co-processing plant.
+
         Returns
         -------
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
@@ -760,11 +780,14 @@ class CostGraph:
     @staticmethod
     def shred_transpo(**kwargs):
         """
-        @todo update docstring
+        Cost method for calculating shredded blade transportation costs (truck)
+        in USD/metric ton.
+
         Parameters
         -------
-        vkmt
-            Distance traveled in kilometers
+        **kwargs must include:
+            vkmt
+                Distance traveled in kilometers
 
         Returns
         -------
