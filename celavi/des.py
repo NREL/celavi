@@ -26,6 +26,7 @@ class Context:
         step_costs_filename: str,
         possible_items: List[str],
         cost_graph: CostGraph,
+        cost_graph_update_interval_timesteps: int,
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
@@ -41,6 +42,9 @@ class Context:
 
         cost_graph: CostGraph:
             The instance of the cost graph to use with this DES model.
+
+        cost_graph_update_interval_timesteps: int
+            Update the cost graph every n timesteps.
 
         cost_params: Dict
             Dictionary of parameters for the learning-by-doing models and all
@@ -136,6 +140,7 @@ class Context:
         self.learning_by_doing_timesteps = learning_by_doing_timesteps
 
         self.cost_graph = cost_graph
+        self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -220,35 +225,14 @@ class Context:
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
 
-    def average_blade_mass_tonnes(self, timestep):
+    def update_cost_graph_process(self, env):
         """
-        Compute the average blade mass in tonnes for every blade in this
-        context.
-
-        Parameters
-        ----------
-        timestep: int
-            The timestep at which this calculation is happening
-
-        Returns
-        -------
-        float
-            The average mass of the blade in tonnes.
+        This is the SimPy process that updates the cost graph periodically.
         """
-        total_blade_mass_eol = 0.0
-        total_blade_count_eol = 0
-
-        for mass_inventory in self.mass_facility_inventories.values():
-            total_blade_mass_eol += mass_inventory.transactions[timestep]["blade"]
-
-        for count_inventory in self.count_facility_inventories.values():
-            total_blade_count_eol += count_inventory.transactions[timestep]["blade"]
-
-        # Return the average mass for all the blades.
-        if total_blade_count_eol > 0:
-            return total_blade_mass_eol / total_blade_count_eol
-        else:
-            return 1
+        while True:
+            yield env.timeout(self.cost_graph_update_interval_timesteps)
+            year = self.timesteps_to_years(env.now)
+            print(f"Update cost graph {year}")
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
@@ -262,6 +246,8 @@ class Context:
         # Schedule learning by doing timesteps (this will happen after all
         # other events have been scheduled)
         # self.env.process(self.learning_by_doing_process(self.env))
+
+        self.env.process(self.update_cost_graph_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
 
