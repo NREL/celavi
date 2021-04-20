@@ -3,7 +3,9 @@ import os
 from math import ceil
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import weibull_min
 
 from celavi.des import Context
 from celavi.costgraph import CostGraph
@@ -36,7 +38,8 @@ context = Context(
     locations_filename=args.locations,
     step_costs_filename=args.step_costs,
     possible_items=["nacelle", "blade", "tower", "foundation"],
-    cost_graph=netw
+    cost_graph=netw,
+    cost_graph_update_interval_timesteps=12
 )
 
 # Create the turbine dataframe that will be used to populate
@@ -64,10 +67,15 @@ for _, row in turbine_data.iterrows():
 components = pd.DataFrame(components)
 
 # Create the lifespan functions for the components.
+np.random.seed(13)
 timesteps_per_year = 12
+min_lifespan = 120
+L = 240
+K = 2.2
 lifespan_fns = {
     "nacelle": lambda: 30 * timesteps_per_year,
-    "blade": lambda: 20 * timesteps_per_year,
+    # "blade": lambda: 20 * timesteps_per_year,
+    "blade": lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
     "foundation": lambda: 50 * timesteps_per_year,
     "tower": lambda: 50 * timesteps_per_year,
 }
@@ -96,9 +104,16 @@ for i in range(len(count_facility_inventory_items)):
 plt.show()
 
 # Output .csv files of the mass flows of each mass inventory.
-mass_facility_inventories = result["mass_facility_inventories"]
+# mass_facility_inventories = result["mass_facility_inventories"]
+# outputs = args.outputs
+# for facility_name, facility in mass_facility_inventories.items():
+#     output_filename = os.path.join(outputs, f'{facility_name}.csv')
+#     output_filename = output_filename.replace(' ', '_')
+#     facility.transaction_history.to_csv(output_filename, index_label='timestep')
+
+count_facility_inventories = result["count_facility_inventories"]
 outputs = args.outputs
-for facility_name, facility in mass_facility_inventories.items():
+for facility_name, facility in count_facility_inventories.items():
     output_filename = os.path.join(outputs, f'{facility_name}.csv')
     output_filename = output_filename.replace(' ', '_')
     facility.transaction_history.to_csv(output_filename, index_label='timestep')
