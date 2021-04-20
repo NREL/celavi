@@ -92,7 +92,6 @@ class Component:
         path_choice = path_choices[self.initial_facility_id]
         self.pathway = deque()
 
-        # TODO: Do not hardcode the pathway choice.
         for facility, lifespan in path_choice['path']:
             # Override the initial timespan when component goes into use.
             if facility.startswith("in use"):
