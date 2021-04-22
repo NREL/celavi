@@ -56,7 +56,7 @@ class FacilityInventory:
             lifetime of the simulation.
 
         self.component_materials_deposits: List[Dict[str, float]]
-            The HISTORY of the deposits and withdrawals from this
+            The history of the deposits and withdrawals from this
             inventory. These are instantaneous, not cumulative, values.
         """
         self.step = step
