@@ -225,6 +225,45 @@ class Context:
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
 
+    def cumulative_mass_for_component_in_process_at_timestep(self,
+                          component_kind: str,
+                          process_name: str,
+                          timestep: int):
+        """
+        Calculate the cumulative mass at a certain time of a given component
+        passed through processes that contain the given name.
+
+        For example, if you want to find cumulative masses of blades passed
+        through coarse grinding facilities at time step 100, this is your
+        method!
+
+        Parameters
+        ----------
+        component_kind: str
+            The kind of component (such as "blade" passing through an inventory)
+
+        process_name: str
+            The process name (such as "fine griding") to look for in the facility
+            inventory names.
+
+        timestep: int
+            The time, in timestep, to calculate the cumulative inventory for.
+
+        Returns
+        -------
+        float
+            Total cumulative mass of the component in the process at the
+            timestep.
+        """
+        cumulative_masses = [
+            inventory.cumulative_history['blade'][timestep]
+            for name, inventory in self.mass_facility_inventories.items()
+            if process_name in name
+        ]
+        total_mass = sum(cumulative_masses)
+        print(f'process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
+        return total_mass
+
     def update_cost_graph_process(self, env):
         """
         This is the SimPy process that updates the cost graph periodically.
@@ -232,7 +271,20 @@ class Context:
         while True:
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             year = self.timesteps_to_years(env.now)
-            print(f"Update cost graph {year}")
+
+            cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
+                component_kind='blade',
+                process_name='coarse grinding',
+                timestep=env.now
+            )
+
+            cum_mass_fine_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
+                component_kind='blade',
+                process_name='fine grinding',
+                timestep=env.now
+            )
+
+            print(f"Update cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}")
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
