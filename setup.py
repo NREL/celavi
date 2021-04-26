@@ -27,5 +27,6 @@ setuptools.setup(
         "networkx",
         "graphviz",
         "simpy",
+	"networkx-query"
     ]
 )
