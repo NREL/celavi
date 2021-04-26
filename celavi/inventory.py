@@ -129,8 +129,8 @@ class FacilityInventory:
     @property
     def cumulative_history(self) -> pd.DataFrame:
         """
-        Because this method instantiates a DataFrame, it should be celled
-        sparingly, as this is a resource consuming procedure.
+        Calculate the cumulative level of a facility inventory over all its
+        transactions.
 
         Returns
         -------
