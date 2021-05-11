@@ -1,10 +1,22 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Jan 22 08:05:13 2021
+
+Uses code from Feedstock Production Emissions to Air Model (FPEAM) Copyright (c) 2018
+Alliance for Sustainable Energy, LLC; Noah Fisher.
+Builds on functionality in the FPEAM's Data.py.
+Unmodified FPEAM code is available at https://github.com/NREL/fpeam.
+
+@author: aeberle
+"""
+
 import pandas as pd
-from IO import load
 
 
 class Data(pd.DataFrame):
     """
-    FPEAM data representation.
+    Data representation.
     """
 
     COLUMNS = []
@@ -13,8 +25,8 @@ class Data(pd.DataFrame):
 
     def __init__(self, df=None, fpath=None, columns=None, backfill=True):
 
-        _df = pd.DataFrame({}) if df is None and fpath is None else load(fpath=fpath,
-                                                                         columns=columns)
+        _df = pd.DataFrame({}) if df is None and fpath is None else self.load(fpath=fpath,
+                                                                              columns=columns)
 
         super(Data, self).__init__(data=_df)
 
@@ -34,6 +46,35 @@ class Data(pd.DataFrame):
             for _column in self.COLUMNS:
                 if _column['backfill'] is not None:
                     self.backfill(column=_column['name'], value=_column['backfill'])
+
+    def load(self, fpath, columns, memory_map=True, header=0, **kwargs):
+        """
+        Load data from a text file at <fpath>. Check and set column names.
+
+        See pandas.read_table() help for additional arguments.
+
+        :param fpath: [string] file path to budget file or SQLite database file
+        :param columns: [dict] {name: type, ...}
+        :param memory_map: [bool] load directly to memory for improved performance
+        :param header: [int] 0-based row index containing column names
+        :return: [DataFrame]
+        """
+
+        try:
+            _df = pd.read_csv(filepath_or_buffer=fpath, sep=',', dtype=columns,
+                              usecols=columns.keys(), memory_map=memory_map, header=header, **kwargs)
+        except ValueError as e:
+            if e.__str__() == 'Usecols do not match names.':
+                from collections import Counter
+                _df = pd.read_table(filepath_or_buffer=fpath, sep=',', dtype=columns,
+                                    memory_map=memory_map, header=header, **kwargs)
+                _df_columns = Counter(_df.columns)
+                _cols = list(set(columns.keys()) - set(_df_columns))
+                raise ValueError('%(f)s missing columns: %(cols)s' % (dict(f=fpath, cols=_cols)))
+            else:
+                raise e
+        else:
+            return _df
 
     def backfill(self, column, value=0):
         """
@@ -69,13 +110,12 @@ class Data(pd.DataFrame):
 
         return _backfilled
 
-    def summarize(self):
-        # @TODO: add summarization methods
-        raise NotImplementedError
-
     def validate(self):
+        """
+        Check that data are not empty
 
-        # @TODO: add validation methods
+        :return:
+        """
         _name = type(self).__name__
 
         _valid = True
@@ -182,4 +222,21 @@ class OtherFacilityLocations(Data):
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         super(OtherFacilityLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                               backfill=backfill)
+
+class LandfillLocations(Data):
+    COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'State', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'Latitude', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'Longitude', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'City', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'County', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'Current Landfill Status', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'Landfill Closure Year', 'type': str, 'index': False, 'backfill': '-1'},
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
