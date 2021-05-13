@@ -24,6 +24,7 @@ class Context:
         self,
         locations_filename: str,
         step_costs_filename: str,
+        avg_blade_masses_filename: str,
         possible_items: List[str],
         cost_graph: CostGraph,
         cost_graph_update_interval_timesteps: int,
@@ -34,11 +35,20 @@ class Context:
         learning_by_doing_timesteps: int = 1
     ):
         """
+        For the average_blade_masses file, the columns are "p_year" and "Glass Fiber:Blade"
+        for the year and the average amount of glass fiber in each blade, respectively.
+
         Parameters
         ----------
         step_costs_filename: str
             The pathname to the step_costs file that will determine the steps in
             each facility.
+
+        avg_blade_masses_filename: str
+            The pathname to the file that contains the average blade masses.
+
+        possible_items: List[str]
+            The list of possible items (like "blade", "turbine", "foundation")
 
         cost_graph: CostGraph:
             The instance of the cost graph to use with this DES model.
@@ -75,6 +85,14 @@ class Context:
 
         self.components: List[Component] = []
         self.env = simpy.Environment()
+
+        # Read the average blade masses as an array. Then turn it into a dictionary
+        # that maps integer years to glass fiber blade masses.
+        avg_blade_masses_df = pd.read_csv(avg_blade_masses_filename)
+        self.avg_blade_mass_tonnes_dict = {
+            int(row['year']): float(row['Glass Fiber:Blade'])
+            for _, row in avg_blade_masses_df.iterrows()
+        }
 
         # Inventories hold the simple counts of materials at stages of
         # their lifecycle. The "component" inventories hold the counts
@@ -271,6 +289,8 @@ class Context:
         while True:
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             year = self.timesteps_to_years(env.now)
+            year_int = round(year)
+            avg_blade_mass_kg = self.avg_blade_mass_tonnes_dict[year_int] * 1000
 
             cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
                 component_kind='blade',
@@ -284,7 +304,14 @@ class Context:
                 timestep=env.now
             )
 
-            print(f"Update cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}")
+            self.cost_graph.update_costs(
+                year=year,
+                blade_mass=avg_blade_mass_kg,
+                cumul_finegrind=cum_mass_fine_grinding,
+                cumul_coarsegrind=cum_mass_coarse_grinding
+            )
+
+            print(f"Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """

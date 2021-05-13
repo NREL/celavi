@@ -18,6 +18,7 @@ parser.add_argument('--fac_edges', help='Facility edges file')
 parser.add_argument('--routes', help='Routes file')
 parser.add_argument('--transpo_edges', help='Transportation edges file')
 parser.add_argument('--turbine_data', help='Data with turbine configurations and locations')
+parser.add_argument('--avg_blade_masses', help='Data of average blade masses for each year.')
 parser.add_argument('--outputs', help='Folder/directory where output .csv files should be written')
 args = parser.parse_args()
 
@@ -39,7 +40,8 @@ context = Context(
     step_costs_filename=args.step_costs,
     possible_items=["nacelle", "blade", "tower", "foundation"],
     cost_graph=netw,
-    cost_graph_update_interval_timesteps=12
+    cost_graph_update_interval_timesteps=12,
+    avg_blade_masses_filename=args.avg_blade_masses
 )
 
 # Create the turbine dataframe that will be used to populate
@@ -74,8 +76,8 @@ L = 240
 K = 2.2
 lifespan_fns = {
     "nacelle": lambda: 30 * timesteps_per_year,
-    # "blade": lambda: 20 * timesteps_per_year,
-    "blade": lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
+    "blade": lambda: 20 * timesteps_per_year,
+    # "blade": lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
     "foundation": lambda: 50 * timesteps_per_year,
     "tower": lambda: 50 * timesteps_per_year,
 }
