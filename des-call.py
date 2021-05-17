@@ -106,16 +106,13 @@ for i in range(len(count_facility_inventory_items)):
 plt.show()
 
 # Output .csv files of the mass flows of each mass inventory.
-# mass_facility_inventories = result["mass_facility_inventories"]
-# outputs = args.outputs
-# for facility_name, facility in mass_facility_inventories.items():
-#     output_filename = os.path.join(outputs, f'{facility_name}.csv')
-#     output_filename = output_filename.replace(' ', '_')
-#     facility.transaction_history.to_csv(output_filename, index_label='timestep')
-
-count_facility_inventories = result["count_facility_inventories"]
+mass_facility_inventories = result["mass_facility_inventories"]
 outputs = args.outputs
-for facility_name, facility in count_facility_inventories.items():
+for facility_name, facility in mass_facility_inventories.items():
     output_filename = os.path.join(outputs, f'{facility_name}.csv')
     output_filename = output_filename.replace(' ', '_')
     facility.transaction_history.to_csv(output_filename, index_label='timestep')
+
+data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
+data_for_lci_df = pd.DataFrame(context.data_for_lci)
+data_for_lci_df.to_csv(data_for_lci_filename, index=False)
