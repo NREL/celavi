@@ -1,4 +1,5 @@
-from typing import Dict, List, Callable
+from typing import Dict, List, Callable, Union
+from math import floor, ceil
 
 import simpy
 import pandas as pd
@@ -160,6 +161,8 @@ class Context:
         self.cost_graph = cost_graph
         self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
 
+        self.data_for_lci: List[Dict[str, Union[float, int]]] = []
+
     def years_to_timesteps(self, year: float) -> int:
         """
         Converts years into the corresponding timestep number of the discrete
@@ -282,6 +285,34 @@ class Context:
         print(f'process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
         return total_mass
 
+    def update_lci_process(self, env):
+        timesteps_per_year = 12
+        component = 'blade'
+        while True:
+            yield env.timeout(timesteps_per_year)   # Run annually
+            window_last_timestep = env.now
+            window_first_timestep = window_last_timestep - timesteps_per_year
+            process_windows: Dict[str, List[pd.DataFrame]] = {}
+            for name, facility_inventory in self.mass_facility_inventories.items():
+                process, _ = name.split('_')
+                window = facility_inventory.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
+                if process in process_windows:
+                    process_windows[process].append(window)
+                else:
+                    process_windows[process] = [window]
+            process_totals: Dict[str, float] = {}
+            for process, windows in process_windows.items():
+                process_totals[process] = 0.0
+                for window in windows:
+                    for mass_kg in window:
+                        if mass_kg > 0:
+                            process_totals[process] += mass_kg
+            process_totals['year'] = ceil(self.timesteps_to_years(env.now))
+            process_totals['window_first_timestep'] = window_first_timestep
+            process_totals['window_last_timestep'] = window_last_timestep
+            self.data_for_lci.append(process_totals)
+            # print(f'update_lci_process() year={ceil(self.timesteps_to_years(env.now))} window_first_timestep={window_first_timestep} window_last_timestep={window_last_timestep} {process_totals}')
+
     def update_cost_graph_process(self, env):
         """
         This is the SimPy process that updates the cost graph periodically.
@@ -327,6 +358,7 @@ class Context:
         # self.env.process(self.learning_by_doing_process(self.env))
 
         self.env.process(self.update_cost_graph_process(self.env))
+        self.env.process(self.update_lci_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
 
