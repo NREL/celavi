@@ -81,6 +81,9 @@ class Component:
         processes. When the component enters life, this method immediately
         sets the end-of-life (EOL) process for the use state.
 
+        Another way to think about this method is that it is a "manufacturing"
+        step.
+
         Parameters
         ----------
         env: simpy.Environment
