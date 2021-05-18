@@ -115,4 +115,4 @@ for facility_name, facility in mass_facility_inventories.items():
 
 data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
 data_for_lci_df = pd.DataFrame(context.data_for_lci)
-data_for_lci_df.to_csv(data_for_lci_filename, index=False)
+data_for_lci_df.to_csv(data_for_lci_filename)

@@ -161,7 +161,7 @@ class Context:
         self.cost_graph = cost_graph
         self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
 
-        self.data_for_lci: List[Dict[str, Union[float, int]]] = []
+        self.data_for_lci: List[Dict[str, float]] = []
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -288,6 +288,7 @@ class Context:
     def update_lci_process(self, env):
         timesteps_per_year = 12
         component = 'blade'
+        material = 'glass fiber reinforced polymer'
         while True:
             yield env.timeout(timesteps_per_year)   # Run annually
             window_last_timestep = env.now
@@ -295,23 +296,24 @@ class Context:
             process_windows: Dict[str, List[pd.DataFrame]] = {}
             for name, facility_inventory in self.mass_facility_inventories.items():
                 process, _ = name.split('_')
-                window = facility_inventory.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
+                facility = facility_inventory.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 if process in process_windows:
-                    process_windows[process].append(window)
+                    process_windows[process].append(facility)
                 else:
-                    process_windows[process] = [window]
-            process_totals: Dict[str, float] = {}
-            for process, windows in process_windows.items():
-                process_totals[process] = 0.0
-                for window in windows:
-                    for mass_kg in window:
+                    process_windows[process] = [facility]
+            for process, facilities in process_windows.items():
+                process_facilities_total = 0.0
+                for facility in facilities:
+                    for mass_kg in facility:
                         if mass_kg > 0:
-                            process_totals[process] += mass_kg
-            process_totals['year'] = ceil(self.timesteps_to_years(env.now))
-            process_totals['window_first_timestep'] = window_first_timestep
-            process_totals['window_last_timestep'] = window_last_timestep
-            self.data_for_lci.append(process_totals)
-            # print(f'update_lci_process() year={ceil(self.timesteps_to_years(env.now))} window_first_timestep={window_first_timestep} window_last_timestep={window_last_timestep} {process_totals}')
+                            process_facilities_total += mass_kg
+                row = {
+                    'mass_kg': process_facilities_total,
+                    'process': process,
+                    'year': ceil(self.timesteps_to_years(env.now)),
+                    'material': material
+                }
+                self.data_for_lci.append(row)
 
     def update_cost_graph_process(self, env):
         """
