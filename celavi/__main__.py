@@ -34,7 +34,8 @@ netw = CostGraph(
     sc_begin= 'in use',
     sc_end=['landfilling', 'cement co-processing'],
     year=2000.0,
-    max_dist=300.0
+    max_dist=300.0,
+    verbose=2
 )
 
 print(netw.choose_paths(),'\n')

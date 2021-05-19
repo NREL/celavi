@@ -4,6 +4,7 @@ import numpy as np
 import warnings
 from itertools import product
 
+from networkx_query import search_nodes
 
 class CostGraph:
     """
@@ -21,7 +22,8 @@ class CostGraph:
                  sc_begin : str = 'in use',
                  sc_end = ('landfilling', 'cement co-processing'),
                  year : float = 2000.0,
-                 max_dist : float = 300.0):
+                 max_dist : float = 300.0,
+                 verbose : int = 0):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -51,6 +53,12 @@ class CostGraph:
         max_dist
             Maximum allowable transportation distance for a single supply chain
             pathway.
+        verbose
+            Integer specifying how much info CostGraph should provide as it
+            works.
+            0 = No information other than return values
+            1 = Info on when key methods start and stop
+            >1 = Detailed info on facilities, nodes, and edges
         """
 
         self.step_costs=pd.read_csv(step_costs_file)
@@ -66,10 +74,11 @@ class CostGraph:
 
         self.year=year
 
-        # @todo get current blade mass from DES model
         self.blade_mass=1000.0
 
         self.max_dist = max_dist
+
+        self.verbose = verbose
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -100,45 +109,8 @@ class CostGraph:
         return ["{}_{}".format(i, str(facilityID)) for i in subgraph_steps]
 
 
-    @staticmethod
-    def node_filter(graph : nx.DiGraph,
-                    attr_key_1 : str,
-                    get_val_1,
-                    attr_key_2 : str = None,
-                    get_val_2 = None):
-        """
-        Finds node names in graph that have 'attr_key': get_val in
-             their attribute dictionary
-
-        Parameters
-        ----------
-        graph
-            a networkx DiGraph containing at least one node with a node
-            attribute dictionary
-        attr_key_1
-            key in the attribute dictionary on which to filter nodes in graph
-        get_val_1
-            value of attribute key on which to filter nodes in graph
-        attr_key_2
-
-        get_val_2
-
-        Returns
-        -------
-            list of names of nodes (str) in graph
-        """
-
-        if attr_key_2 is not None:
-            _out = [x for x, y in graph.nodes(data=True)
-                    if (y[attr_key_1] in get_val_1) and
-                    (y[attr_key_2] in get_val_2)]
-        else:
-            _out = [x for x, y in graph.nodes(data=True) if y[attr_key_1] in get_val_1]
-
-        return _out
-
-    @staticmethod
-    def all_element_combos(list1 : list,
+    def all_element_combos(self,
+                           list1 : list,
                            list2 : list):
         """
         Converts two lists into a list of tuples where each tuple contains
@@ -157,20 +129,27 @@ class CostGraph:
         -------
             list of 2-tuples
         """
+        if self.verbose > 1:
+            print('Getting node combinations')
+
         _out = []
-        _out = list(list(zip(list1, element)) for element in product(list2, repeat=len(list1)))
+        _out = product(list1, list2)
 
-        return [item for sublist in _out for item in sublist]
+        return list(_out)
 
 
-    @staticmethod
-    def list_of_tuples(list1 : list,
-                       list2 : list):
+    def list_of_tuples(self,
+                       list1 : list,
+                       list2 : list,
+                       list3 : list = None):
         """
-        Converts two lists into a list of tuples where each tuple contains
-        one element from each list:
-        [(list1[0], list2[0]), (list1[1], list2[1]), ...]
-        Exactly two lists of any length must be specified.
+        Converts two or three lists into a list of two- or three-tuples where
+        each tuple contains the corresponding elements from each list:
+        [(list1[0], list2[0]), (list1[1], list2[1]), ...] or
+        [(list1[0], list2[0], list3[0]), (list1[1], list2[1], list3[1]), ...]
+
+        Two or three lists may be specified. All three lists must be the same
+        length.
 
         Parameters
         ----------
@@ -178,20 +157,33 @@ class CostGraph:
             list of any data type
         list2
             list of any data type
+        list3
+            list of any data type (optional)
 
         Returns
         -------
             list of 2-tuples
         """
-        if len(list1) != len(list2):
-            raise NotImplementedError
+        if self.verbose > 1:
+            print('Getting list of tuples')
+
+        if list3 is not None:
+            _len = len(list1)
+            if any(len(lst) != _len for lst in [list1, list2, list3]):
+                raise NotImplementedError
+            else:
+                return list(map(lambda x, y, z: (x, y, z), list1, list2, list3))
         else:
-            return list(map(lambda x, y: (x, y), list1, list2))
+            if len(list1) != len(list2):
+                raise NotImplementedError
+            else:
+                return list(map(lambda x, y: (x, y), list1, list2))
 
 
     @staticmethod
     def zero_method(**kwargs):
         """
+        Cost method that returns a cost of zero under all circumstances.
 
         Returns
         -------
@@ -207,15 +199,18 @@ class CostGraph:
                      source : str,
                      crit : str):
         """
-        # original code source:
-        # https://stackoverflow.com/questions/50723854/networkx-finding-the-shortest-path-to-one-of-multiple-nodes-in-graph
+        Method that finds the nearest nodes to source and returns that node name,
+        the path length to the nearest node, and the path to the nearest node.
+
+        Original code source:
+        https://stackoverflow.com/questions/50723854/networkx-finding-the-shortest-path-to-one-of-multiple-nodes-in-graph
 
         Parameters
         ----------
         source
             Name of node where this path begins.
         crit
-            Criteria to calcualte path "length". May be cost or dict.
+            Criteria to calculate path "length". May be cost or dict.
 
         Returns
         -------
@@ -223,6 +218,8 @@ class CostGraph:
         [1] "length" of path between source and the closest node
         [2] list of nodes defining the path between source and the closest node
         """
+        if self.verbose > 1:
+            print('Finding shortest paths from', source)
 
         # Calculate the length of paths from fromnode to all other nodes
         lengths = nx.single_source_dijkstra_path_length(self.supply_chain,
@@ -233,9 +230,8 @@ class CostGraph:
                                                      source)
 
         # We are only interested in a particular type(s) of node
-        targets = self.node_filter(self.supply_chain,
-                                   'step',
-                                   self.sc_end)
+        targets = list(search_nodes(self.supply_chain,
+                                    {"in": [("step",), self.sc_end]}))
 
         subdict = {k: v for k, v in lengths.items() if k in targets}
 
@@ -278,6 +274,10 @@ class CostGraph:
         -------
             list of string tuples that define edges within a facility type
         """
+        if self.verbose > 1:
+            print('Getting edges for ',
+                  facility_df['facility_type'].values[0])
+
         _type = facility_df['facility_type'].values[0]
 
         _out = self.fac_edges[[u_edge,v_edge]].loc[self.fac_edges.facility_type == _type].dropna().to_records(index=False).tolist()
@@ -306,6 +306,9 @@ class CostGraph:
             region identifiers
 
         """
+        if self.verbose > 1:
+            print('Getting nodes for facility ',
+                  str(facility_df['facility_id'].values[0]))
 
         _id = facility_df['facility_id'].values[0]
 
@@ -319,7 +322,6 @@ class CostGraph:
                                       'facility_id',
                                       'connects']].loc[self.step_costs.facility_id == _id]
 
-        # @todo update dummy value for timeout with info from DES
         _step_cost['timeout'] = 1
 
         # create list of dictionaries from data frame with processing steps,
@@ -329,7 +331,8 @@ class CostGraph:
                                       on='facility_id').to_dict(orient='records')
 
         # reformat data into a list of tuples as (str, dict)
-        _nodes = self.list_of_tuples(_node_names, _attr_data)
+        _nodes = self.list_of_tuples(self.get_node_names(_id, _node_names),
+                                     _attr_data)
 
         return _nodes
 
@@ -352,8 +355,14 @@ class CostGraph:
         -------
             networkx DiGraph
         """
+        if self.verbose > 1:
+            print('Building facility graph for ',
+                  str(facility_df['facility_id'].values[0]))
+
         # Create empty directed graph object
         _facility = nx.DiGraph()
+
+        _id = str(facility_df['facility_id'].values[0])
 
         # Generates list of (str, dict) tuples for node definition
         _facility_nodes = self.get_nodes(facility_df)
@@ -365,25 +374,17 @@ class CostGraph:
         # Populate the directed graph with edges
         # Edges within facilities don't have transportation costs or distances
         # associated with them.
-        _facility.add_edges_from(self.get_edges(facility_df),
-                                 cost_method=[],
-                                 cost=0.0,
-                                 dist=0.0)
+        _edges = self.get_edges(facility_df)
+        _unique_edges = [tuple(map(lambda w: w+'_'+_id, x)) for x in _edges]
 
-        # Use the facility ID and list of processing steps in this facility to
-        # create a list of unique node names
-        # Unique meaning over the entire supply chain (graph of subgraphs)
-        _node_names = list(_facility.nodes)
-        _id = facility_df['facility_id'].values[0]
-        _node_names_unique = self.get_node_names(_id,_node_names)
+        _methods = [{'cost_method': [getattr(CostGraph, _facility.nodes[edge[0]]['step_cost_method'])],
+                     'cost': 0.0,
+                     'dist': 0.0}
+                    for edge in _unique_edges]
 
-        # Construct a dict of {'old node name': 'new node name'}
-        _labels = {}
-        for i in np.arange(0, len(_node_names_unique)):
-            _labels.update({_node_names[i]: _node_names_unique[i]})
-
-        # Relabel nodes to unique names (step + facility ID)
-        nx.relabel_nodes(_facility, _labels, copy=False)
+        _facility.add_edges_from(self.list_of_tuples([node[0] for node in _unique_edges],
+                                                     [node[1] for node in _unique_edges],
+                                                     _methods))
 
         return _facility
 
@@ -401,6 +402,8 @@ class CostGraph:
         -------
         None
         """
+        if self.verbose > 0:
+            print('-------Building supply chain graph-------')
 
         # add all facilities and intra-facility edges to supply chain
         with open(self.loc_df, 'r') as _loc_file:
@@ -417,42 +420,81 @@ class CostGraph:
                 self.supply_chain.add_nodes_from(_fac_graph.nodes(data=True))
                 self.supply_chain.add_edges_from(_fac_graph.edges(data=True))
 
+        if self.verbose > 0:
+            print('Adding inter-facility cost methods to supply chain graph')
+
         # add all inter-facility edges, with costs but without distances
         # this is a relatively short loop
         for index, row in self.transpo_edges.iterrows():
+            if self.verbose > 1:
+                print('Adding transportation cost methods to edges between ',
+                      row['u_step'],
+                      ' and ',
+                      row['v_step'])
+
             _u = row['u_step']
             _v = row['v_step']
-            _edge_cost = row['transpo_cost_method']
+            _transpo_cost = row['transpo_cost_method']
 
             # get two lists of nodes to connect based on df row
-            _u_nodes = self.node_filter(self.supply_chain, 'step', _u)
-            _v_nodes = self.node_filter(self.supply_chain, 'step', _v)
+            _u_nodes = list(search_nodes(self.supply_chain,
+                                         {"==": [("step",), _u]}))
+            _v_nodes = list(search_nodes(self.supply_chain,
+                                         {"==": [("step",), _v]}))
 
             # convert the two node lists to a list of tuples with all possible
             # combinations of _u_nodes and _v_nodes
             _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
 
-            # add these edges to the supply chain
-            self.supply_chain.add_edges_from(_edge_list,
-                                             cost_method=[getattr(CostGraph,
-                                                                  _edge_cost)],
-                                             cost=0.0,
-                                             dist=np.nan)
+            if not any([self.supply_chain.nodes[_v]['step'] in self.sc_end for _v in _v_nodes]):
+                _methods = [{'cost_method': [getattr(CostGraph,
+                                                    self.supply_chain.nodes[edge[0]]['step_cost_method']),
+                                             getattr(CostGraph,
+                                                     _transpo_cost)],
+                             'cost': 0.0,
+                             'dist': np.nan}
+                            for edge in _edge_list]
+            else:
+                _methods = [{'cost_method': [getattr(CostGraph,
+                                                    self.supply_chain.nodes[edge[0]]['step_cost_method']),
+                                             getattr(CostGraph,
+                                                     _transpo_cost),
+                                             getattr(CostGraph,
+                                                     self.supply_chain.nodes[edge[1]]['step_cost_method'])],
+                             'cost': 0.0,
+                             'dist': np.nan}
+                            for edge in _edge_list]
 
+            # add these edges to the supply chain
+            self.supply_chain.add_edges_from(self.list_of_tuples([edge[0] for edge in _edge_list],
+                                                                 [edge[1] for edge in _edge_list],
+                                                                 _methods))
 
         # read in and process routes line by line
         with open(self.routes_df, 'r') as _route_file:
+            if self.verbose > 0:
+                print('Adding distances to supply chain graph')
 
-            _reader = pd.read_csv(_route_file, chunksize=1)
+            # Only read in columns relevant to CostGraph building
+            _reader = pd.read_csv(_route_file,
+                                  usecols=['source_facility_id',
+                                           'source_facility_type',
+                                           'destination_facility_id',
+                                           'destination_facility_type',
+                                           'total_vmt'],
+                                  chunksize=1)
+            _prev_line = None
 
             for _line in _reader:
+                if np.array_equal(_line, _prev_line):
+                    continue
+
+                _prev_line = _line
 
                 # find the source nodes for this route
-                _u = self.node_filter(self.supply_chain,
-                                      'facility_id',
-                                      [_line['source_facility_id'].values[0]],
-                                      'connects',
-                                      ['out'])
+                _u = list(search_nodes(self.supply_chain,
+                                       {'and': [{"==": [("facility_id",), _line['source_facility_id'].values[0]]},
+                                                {"==": [("connects",), "out"]}]}))
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
@@ -461,24 +503,21 @@ class CostGraph:
                     # apply the distance from the routing dataset to this edge
                     if self.supply_chain.nodes[v_node]['facility_id'] == \
                             _line['destination_facility_id'].values[0]:
+                        if self.verbose > 1:
+                            print('Adding ',
+                                  str(_line['total_vmt'].values[0]),
+                                  ' km between ',
+                                  u_node,
+                                  ' and ',
+                                  v_node)
                         data['dist'] = _line['total_vmt'].values[0]
 
-        # @todo edges starting from 'in use' nodes have rotor teardown costs
-        # assigned to them in addition to the zero method
+        if self.verbose > 1:
+            print('Calculating edge costs')
+
         for edge in self.supply_chain.edges():
-
-            _method = getattr(CostGraph, self.supply_chain.nodes[edge[0]]['step_cost_method'])
-
-            if _method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
-                self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_method)
-
-            # if the node terminates at a landfill,
-            if self.supply_chain.nodes[edge[1]]['step'] in self.sc_end:
-                _addl_method = getattr(CostGraph,
-                                           self.supply_chain.nodes[edge[1]]['step_cost_method'])
-                # also add in the landfill cost method
-                if _addl_method not in self.supply_chain[edge[0]][edge[1]]['cost_method']:
-                    self.supply_chain[edge[0]][edge[1]]['cost_method'].append(_addl_method)
+            if self.verbose > 1:
+                print('Calculating edge costs for ', edge)
 
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=self.year,
@@ -486,34 +525,36 @@ class CostGraph:
                                                            cumul_finegrind=1000.0,
                                                            cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
 
+        if self.verbose > 0:
+            print('-------Supply chain graph is built-------')
+
 
     def choose_paths(self):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
-        all possible pathways.
-        @note simple paths have no repeated nodes; this might not work for a
-         cyclic graph
-        @note The target parameter can be replaced by a list
-        # @todo update docstring
+        all possible pathways between source and target nodes. Other "costs"
+        such as distance or environmental impacts may be used as well with
+        modifications to the crit argument of the find_nearest call.
 
-        # @note cost, next state, relocation destination for the component
-        # @todo: based on current_step where component is currently, pull the
-        # next step from the preferred pathway
+        @todo verify that this method works for a cyclic graph
 
         Parameters
         ----------
+        None
 
         Returns
         -------
-
+        Dictionary containing the source, node, target node, path between
+        source and target, and the pathway "cost".
         """
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
         # is get the shortest path using the 'cost' attribute as the edge weight
+        if self.verbose > 1:
+            print('Choosing shortest paths')
 
-        _sources = self.node_filter(self.supply_chain,
-                                    attr_key_1='step',
-                                    get_val_1=self.sc_begin)
+        _sources = list(search_nodes(self.supply_chain,
+                                     {"in": [("step",), self.sc_begin]}))
 
         _paths = []
         # Find the lowest-cost path from EACH source node to ANY target node
@@ -529,16 +570,26 @@ class CostGraph:
 
     def update_costs(self, **kwargs):
         """
+        Re-calculates all edge costs based on arguments passed to cost methods.
 
         Parameters
         ----------
+        **kwargs may include:
+            year : float
+                Model year provided by DES.
+            blade_mass : float
+                Average turbine blade mass provided by DES.
+            cumul_finegrind : float
+                Cumulative mass of blades that have been finely ground,
+                provided by DES.
+            cumul_coarsegrind : float
+                Cumulative mass of blades that have been coarsely ground,
+                provided by DES.
 
         Returns
         -------
         None
         """
-        # @todo dynamically update node costs based on cost-over-time and
-        # learning-by-doing models
 
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
@@ -592,6 +643,8 @@ class CostGraph:
     @staticmethod
     def segmenting(**kwargs):
         """
+        Cost method for blade segmenting into 30m sections performed on-site at
+        the wind power plant.
 
         Returns
         -------
@@ -603,10 +656,9 @@ class CostGraph:
     @staticmethod
     def coarse_grinding_onsite(**kwargs):
         """
-        # @todo update with relevant FacilityInventories from DES
-
-        Parameters
-        ----------
+        Cost method for coarsely grinding turbine blades on-site at the wind
+        power plant. This calculation uses industrial learning-by-doing to
+        gradually reduce costs over time.
 
         Returns
         -------
@@ -628,10 +680,9 @@ class CostGraph:
     @staticmethod
     def coarse_grinding(**kwargs):
         """
-        # @todo update with correct FacilityInventory values from Context
-
-        Parameters
-        ----------
+        Cost method for coarsely grinding turbine blades at a mechanical
+        recycling facility. This calculation uses industrial learning-by-doing
+        to gradually reduce costs over time.
 
         Returns
         -------
@@ -656,10 +707,9 @@ class CostGraph:
     @staticmethod
     def fine_grinding(**kwargs):
         """
-        # @todo update with relevant FacilityInventory values from Context
-
-        Parameters
-        ----------
+        Cost method for finely grinding turbine blades at a mechanical
+        recycling facility. This calculation uses industrial learning-by-doing
+        to gradually reduce costs over time.
 
         Returns
         -------
@@ -681,6 +731,8 @@ class CostGraph:
     @staticmethod
     def coprocessing(**kwargs):
         """
+        Cost method that calculates revenue from sale of coarsely-ground blade
+        material to cement co-processing plant.
 
         Returns
         -------
@@ -728,10 +780,14 @@ class CostGraph:
     @staticmethod
     def shred_transpo(**kwargs):
         """
+        Cost method for calculating shredded blade transportation costs (truck)
+        in USD/metric ton.
+
         Parameters
         -------
-        vkmt
-            Distance traveled in kilometers
+        **kwargs must include:
+            vkmt
+                Distance traveled in kilometers
 
         Returns
         -------
