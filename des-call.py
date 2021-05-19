@@ -52,7 +52,7 @@ turbine_data = pd.read_csv(args.turbine_data)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
-    blade_mass_tonnes = row['blade_mass_tonnes']
+    blade_mass_tonnes = row['Glass Fiber:Blade']
     foundation_mass_tonnes = row['foundation_mass_tonnes']
     facility_id = int(row['facility_id'])
     n_turbine = int(row['n_turbine'])
@@ -88,6 +88,18 @@ context.populate(components, lifespan_fns)
 # Run the context
 result = context.run()
 
+# Output .csv files of the mass flows of each mass inventory.
+mass_facility_inventories = result["mass_facility_inventories"]
+outputs = args.outputs
+for facility_name, facility in mass_facility_inventories.items():
+    output_filename = os.path.join(outputs, f'{facility_name}.csv')
+    output_filename = output_filename.replace(' ', '_')
+    facility.transaction_history.to_csv(output_filename, index_label='timestep')
+
+data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
+data_for_lci_df = pd.DataFrame(context.data_for_lci)
+data_for_lci_df.to_csv(data_for_lci_filename)
+
 # Plot the cumulative count levels of the inventories
 count_facility_inventory_items = list(result["mass_facility_inventories"].items())
 nrows = 5
@@ -103,16 +115,5 @@ for i in range(len(count_facility_inventory_items)):
     ax.set_title(facility_name)
     ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
     ax.set_ylabel("tonnes")
-plt.show()
-
-# Output .csv files of the mass flows of each mass inventory.
-mass_facility_inventories = result["mass_facility_inventories"]
-outputs = args.outputs
-for facility_name, facility in mass_facility_inventories.items():
-    output_filename = os.path.join(outputs, f'{facility_name}.csv')
-    output_filename = output_filename.replace(' ', '_')
-    facility.transaction_history.to_csv(output_filename, index_label='timestep')
-
-data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
-data_for_lci_df = pd.DataFrame(context.data_for_lci)
-data_for_lci_df.to_csv(data_for_lci_filename)
+plot_output_path = os.path.join(outputs, 'blade_counts.png')
+plt.savefig(plot_output_path)
