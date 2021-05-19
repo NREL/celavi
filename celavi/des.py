@@ -306,12 +306,13 @@ class Context:
                 for facility in facilities:
                     for mass_kg in facility:
                         if mass_kg > 0:
-                            process_facilities_total += mass_kg
+                            process_facilities_total += mass_kg * 1000  # Convert from tonnes to kg
                 row = {
                     'mass_kg': process_facilities_total,
                     'process': process,
                     'year': ceil(self.timesteps_to_years(env.now)),
-                    'material': material
+                    'material': material,
+                    'flow unit': 'kg'
                 }
                 self.data_for_lci.append(row)
 
