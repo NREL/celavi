@@ -1,9 +1,12 @@
 import data_manager as Data
+import warnings
+import pandas as pd
+
+warnings.simplefilter('error', UserWarning)
 
 
 class ComputeLocations:
     def __init__(self):
-
         # file paths for raw data used to compute locations
         self.wind_turbine_locations = '../celavi-data/inputs/raw_location_data/uswtdb_v3_3_20210114.csv'  # wind turbine locations using USWTDB format
         self.landfill_locations = '../celavi-data/inputs/raw_location_data/landfilllmopdata.csv' # LMOP data for landfill locations
@@ -17,12 +20,18 @@ class ComputeLocations:
         # flag to use limited set of source data
         self.toy = False
 
+        self.lookup_facility_type_file = '../celavi-data/lookup_tables/facility_type.csv'
+        self.facility_type_lookup = pd.read_csv(self.lookup_facility_type_file, header=None)
+
+        self.lookup_facility_id = '../celavi-data/lookup_tables/facility_id.csv'
+        self.facility_id_lookup = pd.read_csv(self.lookup_facility_id, header=None)
+
     def wind_power_plant(self):
         """Process data for wind power plants - from USWTDB"""
 
         turbine_locations = Data.TurbineLocations(fpath=self.wind_turbine_locations, backfill=self.backfill)
 
-        # select only those turbines with eia_ids (exclude turbines without)
+        # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
         turbine_locations_with_eia = turbine_locations[turbine_locations['eia_id'] != '-1']
 
         # determine average lat and long for all turbines by eia_id (this is the plant location for each eia_id)
@@ -42,7 +51,14 @@ class ComputeLocations:
                                                                     "xlong": "long",
                                                                     "ylat": "lat",
                                                                     "eia_id": "facility_id"})
-        wind_plant_locations["facility_type"] = 'wind_plant'
+
+        wind_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
+        if wind_plant_type_lookup:
+            wind_plant_facility_type_convention = wind_plant_type_lookup
+        else:
+            warnings.warn('Wind plant facility type missing from facility_type lookup table.')
+
+        wind_plant_locations["facility_type"] = wind_plant_facility_type_convention
         wind_plant_locations["region_id_1"] = 'USA'
         wind_plant_locations["region_id_4"] = ''
         wind_plant_locations = wind_plant_locations.astype({'facility_id': 'int'})
@@ -66,7 +82,14 @@ class ComputeLocations:
                                                                 "Current Landfill Status": "current_landfill_status"
                                                                 })
         landfill_locations_all = landfill_locations_all.astype({'landfill_closure_year': 'int'})
-        landfill_locations_all["facility_type"] = 'landfill'
+
+        landfill_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('landfill')].values[0][0]
+        if landfill_type_lookup:
+            landfill_facility_type_convention = landfill_type_lookup
+        else:
+            warnings.warn('Landfill facility type missing from facility_type lookup table.')
+
+        landfill_locations_all["facility_type"] = landfill_facility_type_convention
         landfill_locations_all["region_id_1"] = 'USA'
 
         # select only open landfills
@@ -84,6 +107,27 @@ class ComputeLocations:
 
         facility_locations = Data.OtherFacilityLocations(fpath=self.other_facility_locations, backfill=self.backfill)
 
+        number_other_facilities = len(facility_locations)
+        number_unique_facility_id = len(facility_locations.facility_id.unique())
+
+        list_other_facility_types = facility_locations.facility_type.unique()
+
+        for facility_type in list_other_facility_types:
+            other_facility_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains(facility_type)].values[0][0]
+
+            if other_facility_type_lookup:
+                facility_locations = facility_locations.replace({'facility_type': facility_type},
+                                                                {'facility_type': other_facility_type_lookup},
+                                                                regex=True)
+            else:
+                warnings.warn('Facility type missing from facility_type lookup table.')
+
+
+        if number_other_facilities != number_unique_facility_id:
+            warning_str = "The facility_id column in other facility locations is not unique - " \
+                          "please verify your input file is correctly generated. Number facilities is %d; " \
+                          "number unique faclity_id is %d." % (number_other_facilities, number_unique_facility_id)
+            warnings.warn(warning_str)
         return facility_locations
 
     def join_facilities(self, locations_output_file):
@@ -108,4 +152,6 @@ class ComputeLocations:
         # exclude Block Island since no transport from offshore turbine to shore
         locations = locations[locations.facility_id != 58035]
 
+        facility_list = list(self.facility_id_lookup[0])
+        locations = locations[locations.facility_id.isin(facility_list)]
         locations.to_csv(locations_output_file)
