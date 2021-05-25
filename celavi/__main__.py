@@ -13,6 +13,9 @@ args = parser.parse_args()
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
+# Until the step_cost file is updated (or programmatically generated) to include all facility ids, cost graph can't run
+# with the full computed data set; toggle selects list of facilities that can be run based on the facility_id lookup.
+use_limited_set = True
 if compute_locations:
     args.locations = '../celavi-data/inputs/locations_computed.csv'
     loc = ComputeLocations()
