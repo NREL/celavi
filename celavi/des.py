@@ -4,8 +4,9 @@ import simpy
 import pandas as pd
 import pysd  # type: ignore
 
-from .inventory import Inventory
+from .inventory import FacilityInventory
 from .component import Component
+from .costgraph import CostGraph
 
 
 class Context:
@@ -15,13 +16,16 @@ class Context:
     - Provides the discrete time sequence for the model
     - Holds all the components in the model
     - Holds parameters for pathway cost models (dictionary)
-    - Links the SD model to the DES model
+    - Links the CostGraph to the DES model
     - Provides translation of years to timesteps and back again
     """
 
     def __init__(
         self,
-        sd_model_filename: str = None,
+        locations_filename: str,
+        step_costs_filename: str,
+        possible_items: List[str],
+        cost_graph: CostGraph,
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
@@ -31,11 +35,12 @@ class Context:
         """
         Parameters
         ----------
-        sd_model_filename: str
-            Optional. If specified, it loads the PySD model in the given
-            filename and writes it to a .csv in the current working
-            directory. Also, it overrides min_year, max_timesteps,
-            and years_per_timestep if specified.
+        step_costs_filename: str
+            The pathname to the step_costs file that will determine the steps in
+            each facility.
+
+        cost_graph: CostGraph:
+            The instance of the cost graph to use with this DES model.
 
         cost_params: Dict
             Dictionary of parameters for the learning-by-doing models and all
@@ -43,7 +48,7 @@ class Context:
 
         min_year: int
             The starting year of the model. Optional. If left unspecified
-            defualts to 2000.
+            defaults to 2000.
 
         max_timesteps: int
             The maximum number of discrete timesteps in the model. Defaults to
@@ -59,20 +64,10 @@ class Context:
             doing recalculation.
         """
 
-        if sd_model_filename is not None:
-            self.sd_model_run = pysd.load(sd_model_filename).run()
-            self.sd_model_run.to_csv("celavi_sd_model.csv")
-            self.max_timesteps = len(self.sd_model_run)
-            self.min_year = min(self.sd_model_run.loc[:, "TIME"])
-            self.max_year = max(self.sd_model_run.loc[:, "TIME"])
-            self.years_per_timestep = \
-                (self.max_year - self.min_year) / len(self.sd_model_run)
-        else:
-            self.sd_model_run = None
-            self.cost_params = cost_params
-            self.max_timesteps = max_timesteps
-            self.min_year = min_year
-            self.years_per_timestep = years_per_timestep
+        self.cost_params = cost_params
+        self.max_timesteps = max_timesteps
+        self.min_year = min_year
+        self.years_per_timestep = years_per_timestep
 
         self.components: List[Component] = []
         self.env = simpy.Environment()
@@ -82,92 +77,37 @@ class Context:
         # of whole components. The "material" inventories hold the mass
         # of those components.
 
-        self.landfill_component_inventory = Inventory(
-            name="components in landfill",
-            possible_items=["nacelle", "blade", "tower", "foundation",],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=False,
-        )
+        locations = pd.read_csv(locations_filename)
+        step_costs = pd.read_csv(step_costs_filename)
+        locations_step_costs = locations.merge(step_costs, on='facility_id')
 
-        self.use_component_inventory = Inventory(
-            name="components in use",
-            possible_items=["nacelle", "blade", "tower", "foundation",],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=False,
-        )
-
-        # The virgin component inventory can go negative because it is
-        # decremented every time a new component goes into service.
-
-        self.virgin_component_inventory = Inventory(
-            name="virgin components manufactured",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=True,
-        )
-
-        self.recycle_to_raw_component_inventory = Inventory(
-            name="components that have been recycled to a raw material",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=False,
-        )
-
-        self.recycle_to_clinker_component_inventory = Inventory(
-            name="components that have been recycled to clinker",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=False,
-        )
-
-        self.landfill_material_inventory = Inventory(
-            name="mass in landfill",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="tonne",
-            can_be_negative=False,
-        )
-
-        self.use_mass_inventory = Inventory(
-            name="mass in use",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="tonne",
-            can_be_negative=False,
-        )
-
-        self.recycle_to_raw_material_inventory = Inventory(
-            name="mass that has been recycled to a raw material",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=False,
-        )
-
-        self.recycle_to_clinker_material_inventory = Inventory(
-            name="mass that has been recycled to clinker",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=False,
-        )
-
-        # The virgin component inventory can go negative because it is
-        # decremented every time newly manufactured material goes into
-        # service.
-
-        self.virgin_material_inventory = Inventory(
-            name="virgin material manufactured",
-            possible_items=["nacelle", "blade", "tower", "foundation", ],
-            timesteps=self.max_timesteps,
-            quantity_unit="unit",
-            can_be_negative=True,
-        )
+        self.mass_facility_inventories = {}
+        self.count_facility_inventories = {}
+        for _, row in locations_step_costs.iterrows():
+            facility_type = row['facility_type']
+            facility_id = row['facility_id']
+            step = row['step']
+            step_facility_id = f"{step}_{facility_id}"
+            self.mass_facility_inventories[step_facility_id] = FacilityInventory(
+                facility_id=facility_id,
+                facility_type=facility_type,
+                step=step,
+                possible_items=possible_items,
+                timesteps=max_timesteps,
+                processing_steps=[],  # TODO: Put real data here
+                quantity_unit="tonne",
+                can_be_negative=False
+            )
+            self.count_facility_inventories[step_facility_id] = FacilityInventory(
+                facility_id=facility_id,
+                facility_type=facility_type,
+                step=step,
+                possible_items=possible_items,
+                timesteps=max_timesteps,
+                processing_steps=[],  # TODO: Put real data here
+                quantity_unit="count",
+                can_be_negative=False
+            )
 
         # initialize dictionary to hold pathway costs over time
         self.cost_history = {'year': [],
@@ -194,6 +134,8 @@ class Context:
         }
 
         self.learning_by_doing_timesteps = learning_by_doing_timesteps
+
+        self.cost_graph = cost_graph
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -240,12 +182,6 @@ class Context:
             The type of component as a string. It isn't called "type" because
             "type" is a keyword in Python.
 
-        xlong: float
-            The longitude of the component.
-
-        xlat: float
-            The latitude of the component.
-
         year: float
             The year the component goes into use.
 
@@ -275,16 +211,14 @@ class Context:
         for _, row in df.iterrows():
             component = Component(
                 kind=row["kind"],
-                xlong=row["xlong"],
-                ylat=row["ylat"],
                 year=row["year"],
                 mass_tonnes=row["mass_tonnes"],
+                initial_facility_id=row["facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
             )
             self.env.process(component.begin_life(self.env))
             self.components.append(component)
-
 
     def choose_transition(self, component, timestep: int) -> str:
         """
@@ -386,15 +320,21 @@ class Context:
         total_blade_mass_eol = 0.0
         total_blade_count_eol = 0
 
-        # Calculate the total mass at EOL
-        total_blade_mass_eol += self.recycle_to_raw_material_inventory.transactions[timestep]["blade"]
-        total_blade_mass_eol += self.recycle_to_clinker_material_inventory.transactions[timestep]["blade"]
-        total_blade_mass_eol += self.landfill_material_inventory.transactions[timestep]["blade"]
+        # # Calculate the total mass at EOL
+        # total_blade_mass_eol += self.recycle_to_raw_material_inventory.transactions[timestep]["blade"]
+        # total_blade_mass_eol += self.recycle_to_clinker_material_inventory.transactions[timestep]["blade"]
+        # total_blade_mass_eol += self.landfill_material_inventory.transactions[timestep]["blade"]
+        #
+        # # Calculate the total count at EOL
+        # total_blade_count_eol += self.recycle_to_raw_component_inventory.transactions[timestep]["blade"]
+        # total_blade_count_eol += self.recycle_to_clinker_component_inventory.transactions[timestep]["blade"]
+        # total_blade_count_eol += self.landfill_component_inventory.transactions[timestep]["blade"]
 
-        # Calculate the total count at EOL
-        total_blade_count_eol += self.recycle_to_raw_component_inventory.transactions[timestep]["blade"]
-        total_blade_count_eol += self.recycle_to_clinker_component_inventory.transactions[timestep]["blade"]
-        total_blade_count_eol += self.landfill_component_inventory.transactions[timestep]["blade"]
+        for mass_inventory in self.mass_facility_inventories.values():
+            total_blade_mass_eol += mass_inventory.transactions[timestep]["blade"]
+
+        for count_inventory in self.count_facility_inventories.values():
+            total_blade_count_eol += count_inventory.transactions[timestep]["blade"]
 
         # Return the average mass for all the blades.
         if total_blade_count_eol > 0:
@@ -402,21 +342,21 @@ class Context:
         else:
             return 1
 
-    def learning_by_doing_process(self, env):
-        """
-        This method contains a SimPy process that runs the learning-by-doing
-        model on a periodic basis.
-        """
-        while True:
-            yield env.timeout(self.learning_by_doing_timesteps)
-            avg_blade_mass = self.average_blade_mass_tonnes(env.now)
-            print('at timestep ', env.now, ', average blade mass is ', avg_blade_mass, ' tonnes\n')
-            # This is a workaround. Make the learning by doing pathway costs
-            # tolerant of a 0 mass for blades retired.
-            if avg_blade_mass > 0:
-                self.learning_by_doing(env.now, avg_blade_mass)
+    # def learning_by_doing_process(self, env):
+    #     """
+    #     This method contains a SimPy process that runs the learning-by-doing
+    #     model on a periodic basis.
+    #     """
+    #     while True:
+    #         yield env.timeout(self.learning_by_doing_timesteps)
+    #         avg_blade_mass = self.average_blade_mass_tonnes(env.now)
+    #         print('at timestep ', env.now, ', average blade mass is ', avg_blade_mass, ' tonnes\n')
+    #         # This is a workaround. Make the learning by doing pathway costs
+    #         # tolerant of a 0 mass for blades retired.
+    #         if avg_blade_mass > 0:
+    #             self.learning_by_doing(env.now, avg_blade_mass)
 
-    def run(self) -> Dict[str, pd.DataFrame]:
+    def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
         This method starts the discrete event simulation running.
 
@@ -427,19 +367,13 @@ class Context:
         """
         # Schedule learning by doing timesteps (this will happen after all
         # other events have been scheduled)
-        self.env.process(self.learning_by_doing_process(self.env))
+        # self.env.process(self.learning_by_doing_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
-        inventories = {
-            "landfill_component_inventory": self.landfill_component_inventory.cumulative_history,
-            "landfill_material_inventory": self.landfill_material_inventory.cumulative_history,
-            "virgin_component_inventory": self.virgin_component_inventory.cumulative_history,
-            "virgin_material_inventory": self.virgin_material_inventory.cumulative_history,
-            "recycle_to_raw_component_inventory": self.recycle_to_raw_component_inventory.cumulative_history,
-            "recycle_to_raw_material_inventory": self.recycle_to_raw_material_inventory.cumulative_history,
-            "recycle_to_clinker_component_inventory": self.recycle_to_clinker_component_inventory.cumulative_history,
-            "recycle_to_clinker_material_inventory": self.recycle_to_clinker_material_inventory.cumulative_history,
-            "cost_history": self.cost_history,
-            "transpo_eol": self.transpo_eol
+
+        result = {
+            "count_facility_inventories": self.count_facility_inventories,
+            "mass_facility_inventories": self.mass_facility_inventories
         }
-        return inventories
+
+        return result
