@@ -293,27 +293,20 @@ class Context:
             yield env.timeout(timesteps_per_year)   # Run annually
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
-            process_windows: Dict[str, List[Tuple[pd.DataFrame, int]]] = {}
-            for name, facility_inventory in self.mass_facility_inventories.items():
-                process, id = name.split('_')
-                facility = facility_inventory.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
-                if process in process_windows:
-                    process_windows[process].append((facility, int(id)))
-                else:
-                    process_windows[process] = [(facility, int(id))]
-            for process, facilities in process_windows.items():
-                process_facilities_total = 0.0
-                for facility, id in facilities:
-                    for mass_kg in facility:
-                        if mass_kg > 0:
-                            process_facilities_total += mass_kg * 1000  # Convert from tonnes to kg
+            for facility_name, facility in self.mass_facility_inventories.items():
+                process_name, facility_id = facility_name.split("_")
+                annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
+                positive_annual_transactions = annual_transactions[annual_transactions > 0]
+                mass_tonnes = positive_annual_transactions.sum()
+                mass_kg = mass_tonnes * 1000
+                if mass_kg > 0:
                     row = {
-                        'mass_kg': process_facilities_total,
-                        'process': process,
+                        'mass_kg': mass_kg,
+                        'process': process_name,
                         'year': ceil(self.timesteps_to_years(env.now)),
                         'material': material,
                         'flow unit': 'kg',
-                        'facility_id': id
+                        'facility_id': facility_id
                     }
                     self.data_for_lci.append(row)
 
