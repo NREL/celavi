@@ -301,8 +301,8 @@ class Context:
                 mass_kg = mass_tonnes * 1000
                 if mass_kg > 0:
                     row = {
-                        'mass_kg': mass_kg,
-                        'process': process_name,
+                        'flow quantity': mass_kg,
+                        'stage': process_name,
                         'year': ceil(self.timesteps_to_years(env.now)),
                         'material': material,
                         'flow unit': 'kg',
