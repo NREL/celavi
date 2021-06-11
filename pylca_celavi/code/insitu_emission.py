@@ -10,7 +10,6 @@ import time
 import os
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-from pylca_opt_celavi_integrated_uslci_multi import model_celavi_lci_background
 try:
   os.remove('temp.csv')
 except:
@@ -23,9 +22,8 @@ df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
 #We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,df_static):
     
-    df_dynamic_year = df_dynamic[df_dynamic['year'] == year]
-    frames = [df_static,df_dynamic_year]
-    df = pd.concat(frames)
+
+    df = df_static
     
     
     
@@ -128,30 +126,28 @@ def electricity_corrector_before20(df):
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
-def runner(tech_matrix,F,yr,j,k,final_demand_scaler,process,df_with_all_other_flows):
+def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
     
             res = pd.DataFrame()
             res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
             res['value'] = res['value']*final_demand_scaler
             if res.empty == False:
                res.loc[:,'year'] =  yr
+               res.loc[:,'facility_id'] = i
                res.loc[:,'stage'] = j
                res.loc[:,'material'] = k
             
             res = electricity_corrector_before20(res)
-            res.to_csv('temp.csv',mode='a', header=False,index = False)
             return res
 
 
-def model_celavi_lci_insitu(f_d,yr,stage,material,df_emissions):
+def model_celavi_lci_insitu(f_d,yr,fac_id,stage,material,df_emissions):
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
    
     final_lci_result = pd.DataFrame()
     #Running LCA for all years as obtained from CELAVI
-
-
     #Incorporating dynamics lci database
     process_df,df_with_all_other_flows = preprocessing(int(yr),df_emissions)
     #Creating the technoology matrix for performing LCA caluclations
@@ -162,7 +158,6 @@ def model_celavi_lci_insitu(f_d,yr,stage,material,df_emissions):
     products = list(tech_matrix.index)
     process = list(tech_matrix.columns)
     product_df = pd.DataFrame(products)
-       
     final_dem = product_df.merge(f_d, left_on = 0, right_on = 'flow name', how = 'left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
@@ -172,10 +167,10 @@ def model_celavi_lci_insitu(f_d,yr,stage,material,df_emissions):
             #Dividing by scaling value to solve scaling issues
             F = F/100000
         
-            res = runner(tech_matrix,F,yr,stage,material,100000,process,df_with_all_other_flows)            
+            res = runner(tech_matrix,F,yr,fac_id,stage,material,100000,process,df_with_all_other_flows)            
             #res.columns = ['flow name','unit','flow quantity','year','stage','material']
             #res = model_celavi_lci_background(res, yr,stage,material)
-        
+            res.columns = ['flow name','unit','flow quantity','year','facility_id','stage','material']
             return res
     else:
         

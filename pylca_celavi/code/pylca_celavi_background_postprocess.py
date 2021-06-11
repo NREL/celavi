@@ -16,7 +16,7 @@ import os
 
 def postprocessing(final_res,insitu):
     #Giving names to the columns for the final result file
-    column_names = ['flow name','flow unit','flow quantity','year','stage','material']
+    column_names = ['flow name','flow unit','flow quantity','year','facility_id','stage','material']
     final_res.columns = list(column_names)
     
    
@@ -26,7 +26,7 @@ def postprocessing(final_res,insitu):
         #Adding up the insitu emission primariy for the cement manufacturing process
         final_res['flow name'] = final_res['flow name'].str.lower()
         
-        column_names = ['flow name','flow unit','year','stage','material']
+        column_names = ['flow name','flow unit','year','facility_id','stage','material']
         total_em = insitu.merge(final_res,on = column_names,how = 'outer')
         total_em = total_em.fillna(0)
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
@@ -70,7 +70,7 @@ def postprocessing(final_res,insitu):
     final_res['flow name'] =   final_res['flow name'].str.upper()                                 
     df_lcia = final_res.merge(traci_df, left_on = ['flow name'], right_on = ['Substance Name'])
     df_lcia['impact'] = df_lcia['flow quantity'] * df_lcia['value']
-    df_lcia = df_lcia.groupby(['year', 'material','stage','impacts'])['impact'].agg('sum').reset_index()
+    df_lcia = df_lcia.groupby(['year','facility_id', 'material','stage','impacts'])['impact'].agg('sum').reset_index()
     
     return df_lcia                               
     #impacts = ['Global Warming Air (kg CO2 eq / kg substance)']   

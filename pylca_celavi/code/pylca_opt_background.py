@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Aug 30 12:48:01 2020
-PYLCA based on the Optimization METHOD. 
-@author: tghosh
-"""
-
 import olca
 import pickle
 import uuid
@@ -383,7 +375,7 @@ def solver_optimization(tech_matrix,F):
 
 
 
-def runner(tech_matrix, F,i,j,k,final_demand_scaler):
+def runner(tech_matrix, F,i,l,j,k,final_demand_scaler):
                tim0 = time.time()  
                res = pd.DataFrame()
                res2 = pd.DataFrame()                        
@@ -391,6 +383,7 @@ def runner(tech_matrix, F,i,j,k,final_demand_scaler):
                res['value'] = res['value']*final_demand_scaler
                if res.empty == False:
                   res.loc[:,'year'] =  i
+                  res.loc[:,'facility_id'] =  l
                   res.loc[:,'stage'] = j
                   res.loc[:,'material'] = k
                   
@@ -400,6 +393,7 @@ def runner(tech_matrix, F,i,j,k,final_demand_scaler):
                    pass
                if res2.empty == False:
                   res2.loc[:,'year'] =  i
+                  res.loc[:,'facility_id'] =  l
                   res2.loc[:,'stage'] = j
                   res2.loc[:,'material'] = k
                 
@@ -414,7 +408,7 @@ def runner(tech_matrix, F,i,j,k,final_demand_scaler):
 #To make the optimization easier
 final_demand_scaler = 10000
 
-def model_celavi_lci_background(f_d, yr,stage,material):
+def model_celavi_lci_background(f_d, yr, fac_id, stage,material):
     #Have to edit this final demand to match the results from CELAVI
     f_d['flow name'] = f_d['flow name'] +'@' + f_d['flow name']
     f_d = f_d.drop_duplicates()
@@ -424,6 +418,6 @@ def model_celavi_lci_background(f_d, yr,stage,material):
     final_dem = final_dem.fillna(0)
     #To make the optimization easier
     F = final_dem['flow quantity']/final_demand_scaler
-    res = runner(tech_matrix,F,yr,stage,material,final_demand_scaler)
+    res = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
     return res
 

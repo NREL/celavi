@@ -135,13 +135,15 @@ def electricity_corrector_before20(df):
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
-def runner(tech_matrix,F,yr,j,k,final_demand_scaler,process,df_with_all_other_flows):
+def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
     
             res = pd.DataFrame()
             res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
             res['value'] = res['value']*final_demand_scaler
             if res.empty == False:
+               
                res.loc[:,'year'] =  yr
+               res.loc[:,'facility_id'] = i
                res.loc[:,'stage'] = j
                res.loc[:,'material'] = k
             
@@ -150,7 +152,7 @@ def runner(tech_matrix,F,yr,j,k,final_demand_scaler,process,df_with_all_other_fl
             return res
 
 
-def model_celavi_lci(f_d,yr,stage,material,df_static):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
@@ -181,8 +183,8 @@ def model_celavi_lci(f_d,yr,stage,material,df_static):
         #Dividing by scaling value to solve scaling issues
         F = F/100000
     
-        res = runner(tech_matrix,F,yr,stage,material,100000,process,df_with_all_other_flows)            
-        res.columns = ['flow name','unit','flow quantity','year','stage','material']
+        res = runner(tech_matrix,F,yr,fac_id,stage,material,100000,process,df_with_all_other_flows)            
+        res.columns = ['flow name','unit','flow quantity','year','facility_id','stage','material']
        
     
         return res

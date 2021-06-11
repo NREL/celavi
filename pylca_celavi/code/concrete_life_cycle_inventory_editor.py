@@ -1,8 +1,10 @@
 import pandas as pd
 import pickle
 
-def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage,sand_substitution_rate,coal_substitution_rate):
+def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
   
+            sand_substitution_rate = 0.15
+            coal_substitution_rate = 0.30
             
             if k == 'glass fiber reinforced polymer' and stage == 'cement co-processing':
                 fd_cur2 = fd_cur2.reset_index()
@@ -12,6 +14,7 @@ def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage,sand_substitution_r
   
             #The problem of concrete emission where emission is dependant upon the value of glass fiber availalbe in the system'
             elif k == 'concrete':
+                
                 df_static = pd.read_csv('foreground_process_inventory.csv')
                 year_of_concrete_demand = yr
                 
@@ -77,11 +80,15 @@ def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage,sand_substitution_r
                 'These numbers are all obtained from the inventory which says that the use of 0.0096291 kg coal will cause 0.000926 kg Co2 emission'
                 'This co2 emission only includes the coal combustion impact factor. Other fuels need to be added separately'
                 df_emissions = pd.read_csv('emissions_inventory.csv')
-                df_emissions.loc[((df_emissions['product'] == 'carbon dioxide') & (df_emissions['process'] == 'concrete, cement co-processing')),'value'] =   new_co2_emission_factor                                             
+
+                df_emissions.loc[((df_emissions['product'] == 'carbon dioxide') & (df_emissions['process'] == 'concrete, in use')),'value'] =   new_co2_emission_factor            
+                
+                return df_static,df_emissions                                 
+
             else:
                 
                 df_static = pd.read_csv('foreground_process_inventory.csv')
                 df_emissions = pd.read_csv('emissions_inventory.csv')
-                
-                
-            return df_static,df_emissions
+                return df_static,df_emissions
+ 
+            
