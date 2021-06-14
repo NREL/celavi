@@ -1,7 +1,7 @@
 import argparse
-from routing import Router
-from costgraph import CostGraph
-from compute_locations import ComputeLocations
+from .routing import Router
+from .costgraph import CostGraph
+from .compute_locations import ComputeLocations
 
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
 parser.add_argument('--locations', help='Path to locations file')
