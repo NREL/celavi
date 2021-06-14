@@ -8,11 +8,11 @@ warnings.simplefilter('error', UserWarning)
 class ComputeLocations:
     def __init__(self):
         # file paths for raw data used to compute locations
-        self.wind_turbine_locations = '../celavi-data/inputs/raw_location_data/uswtdb_v3_3_20210114.csv'  # wind turbine locations using USWTDB format
-        self.landfill_locations = '../celavi-data/inputs/raw_location_data/landfilllmopdata.csv' # LMOP data for landfill locations
-        self.other_facility_locations = '../celavi-data/inputs/raw_location_data/other_facility_locations_all_us.csv'  # other facility locations (e.g., cement)
-        self.transportation_graph = '../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
-        self.node_locations = '../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
+        self.wind_turbine_locations = '../../celavi-data/inputs/raw_location_data/uswtdb_v3_3_20210114.csv'  # wind turbine locations using USWTDB format
+        self.landfill_locations = '../../celavi-data/inputs/raw_location_data/landfilllmopdata.csv' # LMOP data for landfill locations
+        self.other_facility_locations = '../../celavi-data/inputs/raw_location_data/other_facility_locations_all_us.csv'  # other facility locations (e.g., cement)
+        self.transportation_graph = '../../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
+        self.node_locations = '../../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
 
         # data backfill flag
         self.backfill = True
@@ -20,10 +20,10 @@ class ComputeLocations:
         # flag to use limited set of source data
         self.toy = False
 
-        self.lookup_facility_type_file = '../celavi-data/lookup_tables/facility_type.csv'
+        self.lookup_facility_type_file = '../../celavi-data/lookup_tables/facility_type.csv'
         self.facility_type_lookup = pd.read_csv(self.lookup_facility_type_file, header=None)
 
-        self.lookup_facility_id = '../celavi-data/lookup_tables/facility_id.csv'
+        self.lookup_facility_id = '../../celavi-data/lookup_tables/facility_id.csv'
         self.facility_id_lookup = pd.read_csv(self.lookup_facility_id, header=None)
 
     def wind_power_plant(self):
@@ -37,7 +37,6 @@ class ComputeLocations:
         # determine average lat and long for all turbines by eia_id (this is the plant location for each eia_id)
         plant_locations = turbine_locations_with_eia[['eia_id', 'xlong', 'ylat']].groupby(by=['eia_id']).mean().reset_index()
         plant_locations = plant_locations.astype({'eia_id': 'int'})  # recast type for eia_id
-
         # select turbine data for county with most capacity (some plants have turbines in multiple counties and/or
         # multiple phases with different amounts of capacity)
         plant_turbine_capacity = turbine_locations_with_eia[['eia_id', 't_state', 't_county', 'p_cap', 't_cap']]
@@ -51,6 +50,11 @@ class ComputeLocations:
                                                                     "xlong": "long",
                                                                     "ylat": "lat",
                                                                     "eia_id": "facility_id"})
+
+        # if there are still duplicate facility_id values, keep only the first
+        # entry with that value and drop the rest
+        wind_plant_locations.drop_duplicates(subset='facility_id',keep='first',
+                                             inplace=True)
 
         wind_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if wind_plant_type_lookup:
@@ -139,6 +143,7 @@ class ComputeLocations:
 
         locations = facility_locations.append(wind_plant_locations)
         locations = locations.append(landfill_locations_no_nulls)
+        locations.reset_index(drop=True, inplace=True)
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         locations = locations[locations.region_id_2 != 'GU']
@@ -152,6 +157,15 @@ class ComputeLocations:
         # exclude Block Island since no transport from offshore turbine to shore
         locations = locations[locations.facility_id != 58035]
 
-        facility_list = list(self.facility_id_lookup[0])
-        locations = locations[locations.facility_id.isin(facility_list)]
-        locations.to_csv(locations_output_file)
+        # find the entries in locations that have a duplicate facility_id AND
+        # are not power plants.
+        _ids_update = locations[locations.duplicated(subset='facility_id',
+                                                     keep=False)]
+        _ids_update = _ids_update.loc[_ids_update.facility_type != 'power plant'].index
+
+        # Update the facility_id values for these entries in the locations data
+        # frame.
+        for i in _ids_update:
+            locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
+        
+        locations.to_csv(locations_output_file, index=False)
