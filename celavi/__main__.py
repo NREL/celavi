@@ -13,6 +13,7 @@ args = parser.parse_args()
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
+use_computed_locations = True
 # Note that the step_cost file must be updated (or programmatically generated)
 # to include all facility ids. Otherwise, cost graph can't run with the full
 # computed data set.
@@ -20,6 +21,9 @@ if compute_locations:
     args.locations = '../../celavi-data/inputs/locations_computed.csv'
     loc = ComputeLocations()
     loc.join_facilities(locations_output_file=args.locations)
+
+if use_computed_locations:
+    args.locations = '../../celavi-data/inputs/locations_computed.csv'
 
 # if run_routes is enabled (True), compute routing distances between all input locations
 run_routes = False
