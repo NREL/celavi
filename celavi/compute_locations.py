@@ -167,6 +167,4 @@ class ComputeLocations:
         for i in _ids_update:
             locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
         
-        #facility_list = list(self.facility_id_lookup[0])
-        #locations = locations[locations.facility_id.isin(facility_list)]
         locations.to_csv(locations_output_file, index=False)
