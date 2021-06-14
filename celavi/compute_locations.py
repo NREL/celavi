@@ -159,11 +159,12 @@ class ComputeLocations:
 
         # find the entries in locations that have a duplicate facility_id AND
         # are not power plants.
-        _ids_update = locations[locations.duplicated(subset='facility_id',keep=False)]
+        _ids_update = locations[locations.duplicated(subset='facility_id',
+                                                     keep=False)]
         _ids_update = _ids_update.loc[_ids_update.facility_type != 'power plant'].index
 
-        # Update the facility_id values for these entries
-        # in the locations data frame.
+        # Update the facility_id values for these entries in the locations data
+        # frame.
         for i in _ids_update:
             locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
         
