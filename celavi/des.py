@@ -308,6 +308,7 @@ class Context:
                         'flow unit': 'kg',
                         'facility_id': facility_id
                     }
+                    # This is where output to child process will happen
                     self.data_for_lci.append(row)
 
     def update_cost_graph_process(self, env):

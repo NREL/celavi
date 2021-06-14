@@ -34,6 +34,8 @@ netw = CostGraph(
     max_dist=300.0
 )
 
+# This is where I will launch the LCIA subprocess and pass it into the DES
+
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=args.locations,
@@ -96,6 +98,8 @@ for facility_name, facility in mass_facility_inventories.items():
     output_filename = output_filename.replace(' ', '_')
     facility.transaction_history.to_csv(output_filename, index_label='timestep')
 
+# After PyLCA / DES integration is complete, the next 3 lines should be
+# eliminated
 data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
 data_for_lci_df = pd.DataFrame(context.data_for_lci)
 data_for_lci_df.to_csv(data_for_lci_filename, index=False)
