@@ -1,7 +1,7 @@
 import data_manager as Data
 import warnings
 import pandas as pd
-
+import pdb
 warnings.simplefilter('error', UserWarning)
 
 
@@ -143,6 +143,7 @@ class ComputeLocations:
 
         locations = facility_locations.append(wind_plant_locations)
         locations = locations.append(landfill_locations_no_nulls)
+        locations.reset_index(drop=True, inplace=True)
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         locations = locations[locations.region_id_2 != 'GU']
@@ -156,6 +157,16 @@ class ComputeLocations:
         # exclude Block Island since no transport from offshore turbine to shore
         locations = locations[locations.facility_id != 58035]
 
+        # find the entries in locations that have a duplicate facility_id AND
+        # are not power plants.
+        _ids_update = locations[locations.duplicated(subset='facility_id',keep=False)]
+        _ids_update = _ids_update.loc[_ids_update.facility_type != 'power plant'].index
+
+        # Update the facility_id values for these entries
+        # in the locations data frame.
+        for i in _ids_update:
+            locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
+        
         #facility_list = list(self.facility_id_lookup[0])
         #locations = locations[locations.facility_id.isin(facility_list)]
         locations.to_csv(locations_output_file, index=False)
