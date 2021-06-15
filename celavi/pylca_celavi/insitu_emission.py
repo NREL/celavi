@@ -8,16 +8,10 @@ import sys
 import multiprocessing
 import time
 import os
+
+# The following two lines are needed for execution on HPC
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-try:
-  os.remove('temp.csv')
-except:
-  pass
-
-    
-#Reading in static and dynamics lca databases
-df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
 
 #We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,df_static):
