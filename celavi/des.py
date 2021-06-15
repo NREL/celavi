@@ -9,6 +9,8 @@ from .inventory import FacilityInventory
 from .component import Component
 from .costgraph import CostGraph
 
+from .pylca_celavi.des_interface import pylca_run_main
+
 
 class Context:
     """
@@ -285,12 +287,13 @@ class Context:
         print(f'process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
         return total_mass
 
-    def update_lci_process(self, env):
+    def pylca_interface_process(self, env):
         timesteps_per_year = 12
         component = 'blade'
         material = 'glass fiber reinforced polymer'
         while True:
             yield env.timeout(timesteps_per_year)   # Run annually
+            annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
             for facility_name, facility in self.mass_facility_inventories.items():
@@ -308,8 +311,10 @@ class Context:
                         'flow unit': 'kg',
                         'facility_id': facility_id
                     }
-                    # This is where output to child process will happen
                     self.data_for_lci.append(row)
+                    annual_data_for_lci.append(row)
+            df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
+            pylca_run_main(df_for_pylca_interface)
 
     def update_cost_graph_process(self, env):
         """
@@ -356,7 +361,7 @@ class Context:
         # self.env.process(self.learning_by_doing_process(self.env))
 
         self.env.process(self.update_cost_graph_process(self.env))
-        self.env.process(self.update_lci_process(self.env))
+        self.env.process(self.pylca_interface_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
 
