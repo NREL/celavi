@@ -73,7 +73,7 @@ class Component:
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
 
-    def begin_life(self, env):
+    def manufacturing(self, env):
         """
         This process should be called exactly once during the discrete event
         simulation. It is what starts the lifetime this component. Since it is
