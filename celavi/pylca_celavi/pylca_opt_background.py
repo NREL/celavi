@@ -9,7 +9,7 @@ import time
 import os
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-from pylca_celavi_background_postprocess import postprocessing
+# from pylca_celavi_background_postprocess import postprocessing
 
 
 processes = {}

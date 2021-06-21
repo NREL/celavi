@@ -10,8 +10,8 @@ import time
 import os
 
 # The following two lines are needed for execution on HPC
-import pyutilib.subprocess.GlobalData
-pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+# import pyutilib.subprocess.GlobalData
+# pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 #We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,df_static):

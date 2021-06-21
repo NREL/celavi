@@ -42,11 +42,11 @@ postprocessing() writes:
 """
 
 
-def pylca_run_main(df=None):
+def pylca_run_main(df):
 
-    '''ALICIA replace this part with the dataframe you are sending'''
-    '''Delete this line after integration'''
-    df  = pd.read_csv('data_for_lci_test.csv')
+    # '''ALICIA replace this part with the dataframe you are sending'''
+    # '''Delete this line after integration'''
+    # df  = pd.read_csv('data_for_lci_test.csv')
     
     df = df[df['flow quantity'] != 0]
     

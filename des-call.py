@@ -7,8 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
 
-from celavi.des import Context
-from celavi.costgraph import CostGraph
+
+# Before other modules are loaded, working directory must be changed and
+# command line must be parsed.
 
 # Setup the command line parsing
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
@@ -20,7 +21,18 @@ parser.add_argument('--transpo_edges', help='Transportation edges file')
 parser.add_argument('--turbine_data', help='Data with turbine configurations and locations')
 parser.add_argument('--avg_blade_masses', help='Data of average blade masses for each year.')
 parser.add_argument('--outputs', help='Folder/directory where output .csv files should be written')
+parser.add_argument('--lci', help='Input and output folder for LCIA calculations.')
 args = parser.parse_args()
+
+# Because the LCIA code has filenames hardcoded and cannot be reconfigured,
+# change the working directory to the lci_folder to accommodate those read
+# and write operations.
+
+os.chdir(args.lci)
+
+
+from celavi.des import Context
+from celavi.costgraph import CostGraph
 
 # Create the cost graph
 netw = CostGraph(

@@ -25,6 +25,7 @@ except FileNotFoundError:
 
     
 #Reading in static and dynamics lca databases
+print('>>>', os.getcwd())
 df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
 
 #We are integrating static lca with dynamics lca over here. 
