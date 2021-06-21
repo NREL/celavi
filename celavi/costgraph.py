@@ -18,7 +18,7 @@ class CostGraph:
                  step_costs_file : str = '../celavi-data/inputs/step_costs.csv',
                  fac_edges_file : str = '../celavi-data/inputs/fac_edges.csv',
                  transpo_edges_file : str = '../celavi-data/inputs/transpo_edges.csv',
-                 locations_file : str = '../celavi-data/inputs/locations.csv',
+                 locations_file : str = '../celavi-data/inputs/locations_computed.csv',
                  routes_file : str = '../celavi-data/preprocessing/routes.csv',
                  sc_begin : str = 'in use',
                  sc_end = ('landfilling', 'cement co-processing'),
