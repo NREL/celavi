@@ -1,6 +1,14 @@
 import pandas as pd
 import pickle
 
+"""
+This module models a stock variable for concrete.
+
+I do not need to create a concrete stock variable in the DES.
+
+The only file that this creates is the pickle file between years.
+"""
+
 def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
   
             sand_substitution_rate = 0.15

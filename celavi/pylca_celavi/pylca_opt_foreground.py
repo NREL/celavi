@@ -9,22 +9,23 @@ Created on Tue Sep 15 12:42:32 2020
 
 import warnings
 import pandas as pd
-warnings.filterwarnings("ignore")
 import numpy as np
 import sys
 import multiprocessing
 import time
 import os
-import pyutilib.subprocess.GlobalData
-pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+# import pyutilib.subprocess.GlobalData
+# pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+warnings.filterwarnings("ignore")
 
 try:
-  os.remove('intermediate_demand.csv')
-except:
-  pass
+    os.remove('intermediate_demand.csv')
+except FileNotFoundError:
+    pass
 
     
 #Reading in static and dynamics lca databases
+print('>>>', os.getcwd())
 df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
 
 #We are integrating static lca with dynamics lca over here. 
@@ -148,6 +149,9 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
                res.loc[:,'material'] = k
             
             res = electricity_corrector_before20(res)
+
+            # Intermediate demand is not required by the framewwork, but it is useful
+            # for debugging.
             res.to_csv('intermediate_demand.csv',mode='a', header=False,index = False)
             return res
 
