@@ -7,8 +7,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
 
-from celavi.des import Context
-from celavi.costgraph import CostGraph
+
+# Before other modules are loaded, working directory must be changed and
+# command line must be parsed.
 
 # Setup the command line parsing
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
@@ -20,7 +21,18 @@ parser.add_argument('--transpo_edges', help='Transportation edges file')
 parser.add_argument('--turbine_data', help='Data with turbine configurations and locations')
 parser.add_argument('--avg_blade_masses', help='Data of average blade masses for each year.')
 parser.add_argument('--outputs', help='Folder/directory where output .csv files should be written')
+parser.add_argument('--lci', help='Input and output folder for LCIA calculations.')
 args = parser.parse_args()
+
+# Because the LCIA code has filenames hardcoded and cannot be reconfigured,
+# change the working directory to the lci_folder to accommodate those read
+# and write operations.
+
+os.chdir(args.lci)
+
+
+from celavi.des import Context
+from celavi.costgraph import CostGraph
 
 # Create the cost graph
 netw = CostGraph(
@@ -33,6 +45,8 @@ netw = CostGraph(
     year=2000.0,
     max_dist=300.0
 )
+
+# This is where I will launch the LCIA subprocess and pass it into the DES
 
 # Create the DES context and tie it to the CostGraph
 context = Context(
@@ -96,6 +110,8 @@ for facility_name, facility in mass_facility_inventories.items():
     output_filename = output_filename.replace(' ', '_')
     facility.transaction_history.to_csv(output_filename, index_label='timestep')
 
+# After PyLCA / DES integration is complete, the next 3 lines should be
+# eliminated
 data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
 data_for_lci_df = pd.DataFrame(context.data_for_lci)
 data_for_lci_df.to_csv(data_for_lci_filename, index=False)

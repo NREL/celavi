@@ -9,6 +9,8 @@ from .inventory import FacilityInventory
 from .component import Component
 from .costgraph import CostGraph
 
+from .pylca_celavi.des_interface import pylca_run_main
+
 
 class Context:
     """
@@ -243,7 +245,7 @@ class Context:
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
             )
-            self.env.process(component.begin_life(self.env))
+            self.env.process(component.manufacturing(self.env))
             self.components.append(component)
 
     def cumulative_mass_for_component_in_process_at_timestep(self,
@@ -285,37 +287,36 @@ class Context:
         print(f'process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
         return total_mass
 
-    def update_lci_process(self, env):
+    def pylca_interface_process(self, env):
         timesteps_per_year = 12
         component = 'blade'
         material = 'glass fiber reinforced polymer'
         while True:
             yield env.timeout(timesteps_per_year)   # Run annually
+            annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
-            process_windows: Dict[str, List[Tuple[pd.DataFrame, int]]] = {}
-            for name, facility_inventory in self.mass_facility_inventories.items():
-                process, id = name.split('_')
-                facility = facility_inventory.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
-                if process in process_windows:
-                    process_windows[process].append((facility, int(id)))
-                else:
-                    process_windows[process] = [(facility, int(id))]
-            for process, facilities in process_windows.items():
-                process_facilities_total = 0.0
-                for facility, id in facilities:
-                    for mass_kg in facility:
-                        if mass_kg > 0:
-                            process_facilities_total += mass_kg * 1000  # Convert from tonnes to kg
+            for facility_name, facility in self.mass_facility_inventories.items():
+                process_name, facility_id = facility_name.split("_")
+                annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
+                positive_annual_transactions = annual_transactions[annual_transactions > 0]
+                mass_tonnes = positive_annual_transactions.sum()
+                mass_kg = mass_tonnes * 1000
+                if mass_kg > 0:
                     row = {
-                        'mass_kg': process_facilities_total,
-                        'process': process,
+                        'flow quantity': mass_kg,
+                        'stage': process_name,
                         'year': ceil(self.timesteps_to_years(env.now)),
                         'material': material,
                         'flow unit': 'kg',
-                        'facility_id': id
+                        'facility_id': facility_id
                     }
                     self.data_for_lci.append(row)
+                    annual_data_for_lci.append(row)
+            if len(annual_data_for_lci) > 0:
+                print('DES interface: Found flow quantities greater than 0, performing LCI')
+                df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
+                pylca_run_main(df_for_pylca_interface)
 
     def update_cost_graph_process(self, env):
         """
@@ -362,7 +363,7 @@ class Context:
         # self.env.process(self.learning_by_doing_process(self.env))
 
         self.env.process(self.update_cost_graph_process(self.env))
-        self.env.process(self.update_lci_process(self.env))
+        self.env.process(self.pylca_interface_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
 
