@@ -313,8 +313,10 @@ class Context:
                     }
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
-            df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
-            pylca_run_main(df_for_pylca_interface)
+            if len(annual_data_for_lci) > 0:
+                print('DES interface: Found flow quantities greater than 0, performing LCI')
+                df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
+                pylca_run_main(df_for_pylca_interface)
 
     def update_cost_graph_process(self, env):
         """
