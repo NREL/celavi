@@ -122,7 +122,6 @@ class Context:
                 step=step,
                 possible_items=possible_items,
                 timesteps=max_timesteps,
-                processing_steps=[],  # TODO: Put real data here
                 quantity_unit="tonne",
                 can_be_negative=False
             )
@@ -132,7 +131,6 @@ class Context:
                 step=step,
                 possible_items=possible_items,
                 timesteps=max_timesteps,
-                processing_steps=[],  # TODO: Put real data here
                 quantity_unit="count",
                 can_be_negative=False
             )

@@ -11,7 +11,6 @@ class FacilityInventory:
         step: str,
         possible_items: List[str],
         timesteps: int,
-        processing_steps: List[str],
         quantity_unit: str = "tonne",
         can_be_negative: bool = False,
     ):
@@ -42,9 +41,6 @@ class FacilityInventory:
             The number of discrete timesteps in the simulation that this
             inventory will hold.
 
-        processing_steps: List[str]
-            A list of processing steps in this FacilityInventory.
-
         can_be_negative: bool
             True if the quantity in this inventory can be negative. If False,
             the quantity must always be positive.
@@ -62,7 +58,6 @@ class FacilityInventory:
         self.step = step
         self.facility_id = facility_id
         self.facility_type = facility_type
-        self.processing_steps = processing_steps
         self.can_be_negative = can_be_negative
         self.quantity_unit = quantity_unit
         self.component_materials: Dict[str, float] = {}
