@@ -87,7 +87,7 @@ def pylca_run_main(df):
                 res_df = pd.concat([res_df,res])
     
     # The line below is just for debugging if needed
-    res_df.to_csv('final_lcia_results_to_des.csv',index = False)
+    res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
 
     # This is the result that needs to be analyzed every timestep.
     return res_df
