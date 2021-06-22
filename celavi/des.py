@@ -104,12 +104,15 @@ class Context:
 
         locations = pd.read_csv(locations_filename)
         step_costs = pd.read_csv(step_costs_filename)
+
+        # After this merge, there will be "facility_type_x" and
+        # "facility_type_y" columns
         locations_step_costs = locations.merge(step_costs, on='facility_id')
 
         self.mass_facility_inventories = {}
         self.count_facility_inventories = {}
         for _, row in locations_step_costs.iterrows():
-            facility_type = row['facility_type']
+            facility_type = row['facility_type_x']
             facility_id = row['facility_id']
             step = row['step']
             step_facility_id = f"{step}_{facility_id}"
@@ -314,7 +317,7 @@ class Context:
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
             if len(annual_data_for_lci) > 0:
-                print('DES interface: Found flow quantities greater than 0, performing LCI')
+                print('DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 pylca_run_main(df_for_pylca_interface)
 
