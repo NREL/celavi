@@ -35,17 +35,13 @@ def preprocessing(year,df_static):
     df_dynamic_year = df_dynamic[df_dynamic['year'] == year]
     frames = [df_static,df_dynamic_year]
     df = pd.concat(frames)
-    
-    
-    
+
     df_input = df[df['input'] == True]
     df_output = df[df['input'] == False]
     
     df_input.loc[:,'value'] = df_input.loc[:,'value']  * (-1)
     df = pd.concat([df_input,df_output])
-    
-    
-    
+
     #Removing flows without source because optimization problem becomes infeasible
     #Removing flows without source
     #For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
@@ -64,69 +60,66 @@ def preprocessing(year,df_static):
 
 
 def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
-        X_matrix = tech_matrix.to_numpy()
-        # Creation of a Concrete Model
-        model = ConcreteModel()
-        
-        def set_create(a,b):
-            i_list = []
-            for i in range(a,b):
-                i_list.append(i)
-            return i_list
-            
-            
-            
-        model.i = Set(initialize=set_create(0,X_matrix.shape[0]), doc='indices')
-        model.j = Set(initialize=set_create(0,X_matrix.shape[1]), doc='indices')
-        
-        
-        def x_init(model,i,j):
-            return X_matrix[i,j]
-        model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
-        
-        
-        def f_init(model,i):
-            return F[i]
-        
-        model.f = Param(model.i, initialize=f_init, doc='Final demand')
-        
-        model.s = Var(model.j, bounds=(0,None), doc='Scaling Factor')
-        
-        def supply_rule(model, i):
-          return sum(model.x[i,j]*model.s[j] for j in model.j) >= model.f[i]
-        model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
-        
-        
-        def objective_rule(model):
-          return sum(model.s[j] for j in model.j)
-        model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
-        
-        
-        def pyomo_postprocess(options=None, instance=None, results=None):
-            df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
-            return df
-          #model.s.display()
-          
-        # This is an optional code path that allows the script to be run outside of
-        # pyomo command-line.  For example:  python transport.py
-            # This emulates what the pyomo command-line tools does
-        from pyomo.opt import SolverFactory
-        import pyomo.environ
-        opt = SolverFactory("ipopt")
-        results = opt.solve(model)
-        solution = pyomo_postprocess(None, model, results)
-        scaling_vector = pd.DataFrame()
-        scaling_vector['process'] = process
-        scaling_vector['scaling_factor'] = solution['s']
+    X_matrix = tech_matrix.to_numpy()
+    # Creation of a Concrete Model
+    model = ConcreteModel()
 
-        results_df = df_with_all_other_flows.merge(scaling_vector, on = ['process'], how = 'left')
-        
-        results_df['value'] = abs(results_df['value']) * results_df['scaling_factor']
-        results_df = results_df[results_df['value'] > 0]
-        results_df = results_df.fillna(0)
-        results_total = results_df.groupby(by = ['product','unit'])['value'].agg(sum).reset_index()
-        
-        return results_total
+    def set_create(a,b):
+        i_list = []
+        for i in range(a,b):
+            i_list.append(i)
+        return i_list
+
+    model.i = Set(initialize=set_create(0,X_matrix.shape[0]), doc='indices')
+    model.j = Set(initialize=set_create(0,X_matrix.shape[1]), doc='indices')
+
+    def x_init(model,i,j):
+        return X_matrix[i,j]
+    model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
+
+
+    def f_init(model,i):
+        return F[i]
+
+    model.f = Param(model.i, initialize=f_init, doc='Final demand')
+
+    model.s = Var(model.j, bounds=(0,None), doc='Scaling Factor')
+
+    def supply_rule(model, i):
+      return sum(model.x[i,j]*model.s[j] for j in model.j) >= model.f[i]
+    model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
+
+
+    def objective_rule(model):
+      return sum(model.s[j] for j in model.j)
+    model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
+
+
+    def pyomo_postprocess(options=None, instance=None, results=None):
+        df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
+        return df
+      #model.s.display()
+
+    # This is an optional code path that allows the script to be run outside of
+    # pyomo command-line.  For example:  python transport.py
+        # This emulates what the pyomo command-line tools does
+    from pyomo.opt import SolverFactory
+    import pyomo.environ
+    opt = SolverFactory("ipopt")
+    results = opt.solve(model)
+    solution = pyomo_postprocess(None, model, results)
+    scaling_vector = pd.DataFrame()
+    scaling_vector['process'] = process
+    scaling_vector['scaling_factor'] = solution['s']
+
+    results_df = df_with_all_other_flows.merge(scaling_vector, on = ['process'], how = 'left')
+
+    results_df['value'] = abs(results_df['value']) * results_df['scaling_factor']
+    results_df = results_df[results_df['value'] > 0]
+    results_df = results_df.fillna(0)
+    results_total = results_df.groupby(by = ['product','unit'])['value'].agg(sum).reset_index()
+
+    return results_total
 
 
 def electricity_corrector_before20(df):
@@ -163,7 +156,6 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
     final_lci_result = pd.DataFrame()
     #Running LCA for all years as obtained from CELAVI
 
-
     #Incorporating dynamics lci database
     process_df,df_with_all_other_flows = preprocessing(int(yr),df_static)
     #Creating the technoology matrix for performing LCA caluclations
@@ -188,12 +180,5 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
     
         res = runner(tech_matrix,F,yr,fac_id,stage,material,100000,process,df_with_all_other_flows)            
         res.columns = ['flow name','unit','flow quantity','year','facility_id','stage','material']
-       
-    
+
         return res
-
-
-
-
-
-
