@@ -3,7 +3,6 @@ from math import floor, ceil
 
 import simpy
 import pandas as pd
-import pysd  # type: ignore
 
 from .inventory import FacilityInventory
 from .component import Component
@@ -34,8 +33,7 @@ class Context:
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
-        years_per_timestep: float = 0.0833,
-        learning_by_doing_timesteps: int = 1
+        years_per_timestep: float = 0.0833
     ):
         """
         For the average_blade_masses file, the columns are "p_year" and "Glass Fiber:Blade"
@@ -75,10 +73,6 @@ class Context:
             The number of years covered by each timestep. Fractional
             values are allowed for timesteps that have a duration of
             less than one year. Default value is 0.25 or quarters (3 months).
-
-        learning_by_doing_timesteps: int
-            The number of timesteps that happen between each learning by
-            doing recalculation.
         """
 
         self.cost_params = cost_params
@@ -134,32 +128,6 @@ class Context:
                 quantity_unit="count",
                 can_be_negative=False
             )
-
-        # initialize dictionary to hold pathway costs over time
-        self.cost_history = {'year': [],
-                             'landfilling cost': [],
-                             'recycling to clinker cost': [],
-                             'recycling to raw material cost': [],
-                             'blade removal cost, per tonne': [],
-                             'blade removal cost, per blade': [],
-                             'blade mass, tonne': [],
-                             'coarse grinding cost': [],
-                             'fine grinding cost': [],
-                             'segment transpo cost': [],
-                             'landfill tipping fee': []}
-
-        # initialize dictionary to hold transportation requirements
-        self.transpo_eol = {'year': [],
-                            'total eol transportation': []}
-
-        # These are the costs from the learning by doing model
-        self.learning_by_doing_costs = {
-            "landfilling": 1.0,
-            "recycle_to_clink_pathway": 2.0,
-            "recycle_to_rawmat_pathway": 2.0
-        }
-
-        self.learning_by_doing_timesteps = learning_by_doing_timesteps
 
         self.cost_graph = cost_graph
         self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
