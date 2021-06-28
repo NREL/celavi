@@ -2,7 +2,6 @@ from typing import List, Dict, Deque, Tuple
 from collections import deque
 
 from .unique_identifier import UniqueIdentifier
-from .states import StateTransition, NextState
 
 
 class Component:
