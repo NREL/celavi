@@ -15,6 +15,7 @@ import multiprocessing
 import time
 import os
 # import pyutilib.subprocess.GlobalData
+from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
 # pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 warnings.filterwarnings("ignore")
 
@@ -63,9 +64,6 @@ def preprocessing(year,df_static):
 
 
 def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
-        # Import of the pyomo module
-        from pyomo.environ import ConcreteModel,Set,Param,Var,Constraint,Objective,minimize
-        
         X_matrix = tech_matrix.to_numpy()
         # Creation of a Concrete Model
         model = ConcreteModel()
@@ -130,30 +128,31 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
         
         return results_total
 
+
 def electricity_corrector_before20(df):
     #This part is used to replace pre 2020 electricity flows with US'Electricity, at Grid, US, 2010'
     
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
-def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
-    
-            res = pd.DataFrame()
-            res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
-            res['value'] = res['value']*final_demand_scaler
-            if res.empty == False:
-               
-               res.loc[:,'year'] =  yr
-               res.loc[:,'facility_id'] = i
-               res.loc[:,'stage'] = j
-               res.loc[:,'material'] = k
-            
-            res = electricity_corrector_before20(res)
 
-            # Intermediate demand is not required by the framewwork, but it is useful
-            # for debugging.
-            res.to_csv('intermediate_demand.csv',mode='a', header=False,index = False)
-            return res
+def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
+    res = pd.DataFrame()
+    res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
+    res['value'] = res['value']*final_demand_scaler
+    if res.empty == False:
+
+       res.loc[:,'year'] =  yr
+       res.loc[:,'facility_id'] = i
+       res.loc[:,'stage'] = j
+       res.loc[:,'material'] = k
+
+    res = electricity_corrector_before20(res)
+
+    # Intermediate demand is not required by the framewwork, but it is useful
+    # for debugging.
+    res.to_csv('intermediate_demand.csv',mode='a', header=False,index = False)
+    return res
 
 
 def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
