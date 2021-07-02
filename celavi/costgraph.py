@@ -68,14 +68,30 @@ class CostGraph:
             Average mass of a single turbine blade at the beginning of the
             model run. Units: metric tons/tonnes
 
-        cumul_finegrind_initial : float
-            Initial cumulative fine grinding at the beginning of the model run.
+        finegrind_cumul_initial : float
+            Cumulative production of fine grinding at the beginning of the
+            model run.
             Units: metric tons/tonnes
 
-        cumul_coarsegrind_initial : float
-            Initial cumulative coarse grinding at the beginning of the model
-            run. NOTE: This value may be greater than cumul_finegrind_initial.
+        coarsegrind_cumul_initial : float
+            Cumulative production of coarse grinding at the beginning of the
+            model run. NOTE: This value may be greater than
+            cumul_finegrind_initial.
             Units: metric tons/tonnes
+
+        finegrind_initial_cost : float
+            Cost in USD/metric ton of fine grinding at the beginning of the
+            model run.
+
+        coarsegrind_initial_cost : float
+            Cost in USD/metric ton of coarse grinding at the beginning of the
+            model run.
+
+        finegrind_learnrate : float
+            Industrial learning-by-doing rate for fine grinding. Unitless.
+
+        coarsegrind_learnrate : float
+            Industrial learning-by-doing rate for coarse grinding. Unitless.
         """
 
         self.step_costs=pd.read_csv(step_costs_file)
@@ -97,14 +113,20 @@ class CostGraph:
         # mathematical errors in the learning-by-doing equation.
         # Here, if the cumulative production value provided at instantiation is
         # zero, it is replaced with 1; otherwise, the provided value is used.
-        if kwargs['cumul_finegrind_initial']==0:
-            self.cumul_finegrind=1.0
+        if kwargs['finegrind_cumul_initial']==0:
+            self.finegrind_cumul_initial=1.0
         else:
-            self.cumul_finegrind=kwargs['cumul_finegrind_initial']
-        if kwargs['cumul_coarsegrind_initial']==0:
-            self.cumul_coarsegrind=1.0
+            self.finegrind_cumul_initial=kwargs['finegrind_cumul_initial']
+        if kwargs['coarsegrind_cumul_initial']==0:
+            self.coarsegrind_cumul_initial=1.0
         else:
-            self.cumul_coarsegrind=kwargs['cumul_coarsegrind_initial']
+            self.coarsegrind_cumul_initial=kwargs['coarsegrind_cumul_initial']
+
+        self.finegrind_initial_cost = kwargs['finegrind_initial_cost']
+        self.coarsegrind_initial_cost = kwargs['coarsegrind_initial_cost']
+
+        self.finegrind_learnrate = kwargs['finegrind_learnrate']
+        self.coarsegrind_learnrate = kwargs['finegrind_learnrate']
 
         self.max_dist = max_dist
 
@@ -538,8 +560,12 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=self.year,
                                                            blade_mass=self.blade_mass,
-                                                           cumul_finegrind=self.cumul_finegrind,
-                                                           cumul_coarsegrind=self.cumul_coarsegrind)
+                                                           finegrind_cumul_initial=self.finegrind_cumul_initial,
+                                                           coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
+                                                           finegrind_initial_cost=self.finegrind_initial_cost,
+                                                           coarsegrind_initial_cost=self.coarsegrind_initial_cost,
+                                                           finegrind_learnrate=self.finegrind_learnrate,
+                                                           coarsegrind_learnrate=self.coarsegrind_learnrate)
                                                          for f in self.supply_chain.edges[edge]['cost_method']])
 
         if self.verbose > 0:
@@ -589,18 +615,17 @@ class CostGraph:
         -----------------
         year : float
             Model year provided by DES.
+
         blade_mass : float
             Average turbine blade mass provided by DES.
-        cumul_finegrind : float
+
+        finegrind_cumul : float
             Cumulative mass of blades that have been finely ground,
             provided by DES.
-        cumul_coarsegrind : float
+
+        coarsegrind_cumul : float
             Cumulative mass of blades that have been coarsely ground,
             provided by DES.
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
@@ -611,6 +636,12 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=kwargs['year'],
                                                            blade_mass=kwargs['blade_mass'],
-                                                           cumul_finegrind=kwargs['cumul_finegrind'],
-                                                           cumul_coarsegrind=kwargs['cumul_coarsegrind'])
+                                                           finegrind_cumul=kwargs['finegrind_cumul'],
+                                                           coarsegrind_cumul=kwargs['coarsegrind_cumul'],
+                                                           finegrind_cumul_initial=self.finegrind_cumul_initial,
+                                                           coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
+                                                           finegrind_initial_cost=self.finegrind_initial_cost,
+                                                           coarsegrind_initial_cost=self.coarsegrind_initial_cost,
+                                                           finegrind_learnrate=self.finegrind_learnrate,
+                                                           coarsegrind_learnrate=self.coarsegrind_learnrate)
                                                          for f in self.supply_chain.edges[edge]['cost_method']])
