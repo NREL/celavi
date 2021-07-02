@@ -42,7 +42,10 @@ netw = CostGraph(
     sc_end=['landfilling', 'cement co-processing'],
     year=2000.0,
     max_dist=300.0,
-    verbose=2
+    verbose=2,
+    blade_mass=50.0,
+    cumul_coarsegrind_initial=1.0,
+    cumul_finegrind_initial=1.0,
 )
 
 print(netw.choose_paths(),'\n')
