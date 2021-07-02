@@ -24,7 +24,8 @@ class CostGraph:
                  sc_end = ('landfilling', 'cement co-processing'),
                  year : float = 2000.0,
                  max_dist : float = 300.0,
-                 verbose : int = 0):
+                 verbose : int = 0,
+                 **kwargs):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -60,6 +61,21 @@ class CostGraph:
             0 = No information other than return values
             1 = Info on when key methods start and stop
             >1 = Detailed info on facilities, nodes, and edges
+
+        Keyword Arguments
+        -----------------
+        blade_mass : float
+            Average mass of a single turbine blade at the beginning of the
+            model run. Units: metric tons/tonnes
+
+        cumul_finegrind_initial : float
+            Initial cumulative fine grinding at the beginning of the model run.
+            Units: metric tons/tonnes
+
+        cumul_coarsegrind_initial : float
+            Initial cumulative coarse grinding at the beginning of the model
+            run. NOTE: This value may be greater than cumul_finegrind_initial.
+            Units: metric tons/tonnes
         """
 
         self.step_costs=pd.read_csv(step_costs_file)
@@ -75,7 +91,20 @@ class CostGraph:
 
         self.year=year
 
-        self.blade_mass=1000.0
+        self.blade_mass=kwargs['blade_mass']
+
+        # The cumulative production numbers must not be zero to prevent
+        # mathematical errors in the learning-by-doing equation.
+        # Here, if the cumulative production value provided at instantiation is
+        # zero, it is replaced with 1; otherwise, the provided value is used.
+        if kwargs['cumul_finegrind_initial']==0:
+            self.cumul_finegrind=1.0
+        else:
+            self.cumul_finegrind=kwargs['cumul_finegrind_initial']
+        if kwargs['cumul_coarsegrind_initial']==0:
+            self.cumul_coarsegrind=1.0
+        else:
+            self.cumul_coarsegrind=kwargs['cumul_coarsegrind_initial']
 
         self.max_dist = max_dist
 
@@ -84,6 +113,7 @@ class CostGraph:
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
 
+        # build the initial supply chain graph
         self.build_supplychain_graph()
 
 
@@ -508,8 +538,9 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=self.year,
                                                            blade_mass=self.blade_mass,
-                                                           cumul_finegrind=1000.0,
-                                                           cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
+                                                           cumul_finegrind=self.cumul_finegrind,
+                                                           cumul_coarsegrind=self.cumul_coarsegrind)
+                                                         for f in self.supply_chain.edges[edge]['cost_method']])
 
         if self.verbose > 0:
             print('-------Supply chain graph is built-------')
@@ -523,10 +554,6 @@ class CostGraph:
         modifications to the crit argument of the find_nearest call.
 
         @todo verify that this method works for a cyclic graph
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
@@ -558,19 +585,22 @@ class CostGraph:
         """
         Re-calculates all edge costs based on arguments passed to cost methods.
 
+        Keyword Arguments
+        -----------------
+        year : float
+            Model year provided by DES.
+        blade_mass : float
+            Average turbine blade mass provided by DES.
+        cumul_finegrind : float
+            Cumulative mass of blades that have been finely ground,
+            provided by DES.
+        cumul_coarsegrind : float
+            Cumulative mass of blades that have been coarsely ground,
+            provided by DES.
+
         Parameters
         ----------
-        **kwargs may include:
-            year : float
-                Model year provided by DES.
-            blade_mass : float
-                Average turbine blade mass provided by DES.
-            cumul_finegrind : float
-                Cumulative mass of blades that have been finely ground,
-                provided by DES.
-            cumul_coarsegrind : float
-                Cumulative mass of blades that have been coarsely ground,
-                provided by DES.
+        None
 
         Returns
         -------
@@ -582,4 +612,5 @@ class CostGraph:
                                                            year=kwargs['year'],
                                                            blade_mass=kwargs['blade_mass'],
                                                            cumul_finegrind=kwargs['cumul_finegrind'],
-                                                           cumul_coarsegrind=kwargs['cumul_coarsegrind']) for f in self.supply_chain.edges[edge]['cost_method']])
+                                                           cumul_coarsegrind=kwargs['cumul_coarsegrind'])
+                                                         for f in self.supply_chain.edges[edge]['cost_method']])
