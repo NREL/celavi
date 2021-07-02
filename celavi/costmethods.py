@@ -112,29 +112,46 @@ class CostMethods:
     @staticmethod
     def coarse_grinding_onsite(**kwargs):
         """
-        Cost method for coarsely grinding turbine blades on-site at the wind
-        power plant. This calculation uses industrial learning-by-doing to
-        gradually reduce costs over time.
+        Cost method for coarsely grinding turbine blades onsite at a wind
+        power plant. This calculation uses industrial learning-by-doing
+        to gradually reduce costs over time.
 
         Keyword Arguments
         -----------------
-        cumul_coarsegrind
+        coarsegrind_cumul
+            Current cumulative production (blade mass processed through coarse
+            grinding)
+
+        coarsegrind_cumul_initial
+            Cumulative production when the model run begins. Value is provided
+            on CostGraph instantiation and cannot be zero.
+
+        coarsegrind_initial_cost
+            Cost in USD/metric ton of coarse grinding when the model run
+            begins.
+
+        coarsegrind_learnrate
+            Rate of cost reduction via learning-by-doing for coarse grinding.
+            Must be negative. Unitless.
 
         Returns
         -------
-            Cost of coarse grinding one metric ton of blade material onsite at
-            the wind power plant.
+            Current cost of coarse grinding one metric ton of segmented blade
+            material onsite at a wind power plant.
         """
-        cumulative_coarsegrind_mass = kwargs['cumul_coarsegrind']
+        # If no updated cumulative production value is passed in, use the
+        # initial value from CostGraph instantiation
 
-        if cumulative_coarsegrind_mass is None:
-            cumulative_coarsegrind_mass = 1000
+        if 'coarsegrind_cumul' in kwargs:
+            coarsegrind_cumul = kwargs['coarsegrind_cumul']
+        else:
+            coarsegrind_cumul = kwargs['coarsegrind_cumul_initial']
 
-        coarse_grinding_onsite_initial = 90.0
+        # calculate cost reduction factors from learning-by-doing model
+        # these factors are unitless
+        coarsegrind_learning = coarsegrind_cumul ** kwargs['coarsegrind_learnrate']
 
-        coarse_grind_learning = (cumulative_coarsegrind_mass + 1.0) ** -0.05
-
-        return coarse_grinding_onsite_initial * coarse_grind_learning
+        return kwargs['coarsegrind_initial_cost'] * coarsegrind_learning
 
 
     @staticmethod
@@ -146,27 +163,41 @@ class CostMethods:
 
         Keyword Arguments
         -----------------
-        cumul_coarsegrind
+        coarsegrind_cumul
+            Current cumulative production (blade mass processed through coarse
+            grinding)
+
+        coarsegrind_cumul_initial
+            Cumulative production when the model run begins. Value is provided
+            on CostGraph instantiation and cannot be zero.
+
+        coarsegrind_initial_cost
+            Cost in USD/metric ton of coarse grinding when the model run
+            begins.
+
+        coarsegrind_learnrate
+            Rate of cost reduction via learning-by-doing for coarse grinding.
+            Must be negative. Unitless.
 
         Returns
         -------
-            Cost of coarse grinding one metric ton of segmented blade material
-            in a mechanical recycling facility.
+            Current cost of coarse grinding one metric ton of segmented blade
+            material in a mechanical recycling facility.
         """
-        cumulative_coarsegrind_mass = kwargs['cumul_coarsegrind']
 
-        if cumulative_coarsegrind_mass is None:
-            cumulative_coarsegrind_mass = 1000
+        # If no updated cumulative production value is passed in, use the
+        # initial value from CostGraph instantiation
 
-        coarse_grinding_initial = 80.0
+        if 'coarsegrind_cumul' in kwargs:
+            coarsegrind_cumul = kwargs['coarsegrind_cumul']
+        else:
+            coarsegrind_cumul = kwargs['coarsegrind_cumul_initial']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        # add 1.0 to avoid mathematical errors when the cumulative numbers are
-        # both zero
-        coarse_grind_learning = (cumulative_coarsegrind_mass + 1.0) ** -0.05
+        coarsegrind_learning = coarsegrind_cumul ** kwargs['coarsegrind_learnrate']
 
-        return coarse_grinding_initial * coarse_grind_learning
+        return kwargs['coarsegrind_initial_cost'] * coarsegrind_learning
 
 
     @staticmethod
@@ -178,23 +209,40 @@ class CostMethods:
 
         Keyword Arguments
         -----------------
-        cumul_finegrind
+        finegrind_cumul
+            Current cumulative production (blade mass processed through fine
+            grinding)
+
+        finegrind_cumul_initial
+            Cumulative production when the model run begins. Value is provided
+            on CostGraph instantiation and cannot be zero.
+
+        finegrind_initial_cost
+            Cost in USD/metric ton of fine grinding when the model run
+            begins.
+
+        finegrind_learnrate
+            Rate of cost reduction via learning-by-doing for fine grinding.
+            Must be negative. Unitless.
 
         Returns
         -------
-            Cost of grinding one metric ton of coarse-ground blade material at
+            Cost of grinding one metric ton of fine-ground blade material at
             a mechanical recycling facility.
         """
-        cumulative_finegrind_mass = kwargs['cumul_finegrind']
 
-        if cumulative_finegrind_mass is None:
-            cumulative_finegrind_mass = 1000
+        # If no updated cumulative production value is passed in, use the
+        # initial value from CostGraph instantiation
+        if 'finegrind_cumul' in kwargs:
+            finegrind_cumul = kwargs['finegrind_cumul']
+        else:
+            finegrind_cumul = kwargs['finegrind_cumul_initial']
 
-        fine_grinding_initial = 100.0
+        # calculate cost reduction factors from learning-by-doing model
+        # these factors are unitless
+        finegrind_learning = finegrind_cumul ** kwargs['finegrind_learnrate']
 
-        fine_grind_learning = (cumulative_finegrind_mass + 1.0) ** -0.05
-
-        return fine_grinding_initial * fine_grind_learning
+        return kwargs['finegrind_initial_cost'] * finegrind_learning
 
 
     @staticmethod
@@ -219,8 +267,13 @@ class CostMethods:
         Keyword Arguments
         -----------------
         vkmt
+            Distance traveled by blade segment. Unit: vehicle-kilometer
+
         blade_mass
+            Average blade mass in the current model year. Unit: metric tons
+
         year
+            Current model year.
 
         Returns
         -------
@@ -258,11 +311,10 @@ class CostMethods:
         Cost method for calculating shredded blade transportation costs (truck)
         in USD/metric ton.
 
-        Parameters
-        -------
-        **kwargs must include:
-            vkmt
-                Distance traveled in kilometers
+        Keyword Arguments
+        -----------------
+        vkmt
+            Distance traveled in kilometers
 
         Returns
         -------
