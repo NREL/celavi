@@ -1,12 +1,14 @@
-from typing import Dict, List, Callable
+from typing import Dict, List, Callable, Union, Tuple
+from math import floor, ceil
 
 import simpy
 import pandas as pd
-import pysd  # type: ignore
 
 from .inventory import FacilityInventory
 from .component import Component
 from .costgraph import CostGraph
+
+from .pylca_celavi.des_interface import pylca_run_main
 
 
 class Context:
@@ -24,23 +26,36 @@ class Context:
         self,
         locations_filename: str,
         step_costs_filename: str,
+        avg_blade_masses_filename: str,
         possible_items: List[str],
         cost_graph: CostGraph,
+        cost_graph_update_interval_timesteps: int,
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
-        years_per_timestep: float = 0.0833,
-        learning_by_doing_timesteps: int = 1
+        years_per_timestep: float = 0.0833
     ):
         """
+        For the average_blade_masses file, the columns are "p_year" and "Glass Fiber:Blade"
+        for the year and the average amount of glass fiber in each blade, respectively.
+
         Parameters
         ----------
         step_costs_filename: str
             The pathname to the step_costs file that will determine the steps in
             each facility.
 
+        avg_blade_masses_filename: str
+            The pathname to the file that contains the average blade masses.
+
+        possible_items: List[str]
+            The list of possible items (like "blade", "turbine", "foundation")
+
         cost_graph: CostGraph:
             The instance of the cost graph to use with this DES model.
+
+        cost_graph_update_interval_timesteps: int
+            Update the cost graph every n timesteps.
 
         cost_params: Dict
             Dictionary of parameters for the learning-by-doing models and all
@@ -58,10 +73,6 @@ class Context:
             The number of years covered by each timestep. Fractional
             values are allowed for timesteps that have a duration of
             less than one year. Default value is 0.25 or quarters (3 months).
-
-        learning_by_doing_timesteps: int
-            The number of timesteps that happen between each learning by
-            doing recalculation.
         """
 
         self.cost_params = cost_params
@@ -72,6 +83,14 @@ class Context:
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
+        # Read the average blade masses as an array. Then turn it into a dictionary
+        # that maps integer years to glass fiber blade masses.
+        avg_blade_masses_df = pd.read_csv(avg_blade_masses_filename)
+        self.avg_blade_mass_tonnes_dict = {
+            int(row['year']): float(row['Glass Fiber:Blade'])
+            for _, row in avg_blade_masses_df.iterrows()
+        }
+
         # Inventories hold the simple counts of materials at stages of
         # their lifecycle. The "component" inventories hold the counts
         # of whole components. The "material" inventories hold the mass
@@ -79,12 +98,15 @@ class Context:
 
         locations = pd.read_csv(locations_filename)
         step_costs = pd.read_csv(step_costs_filename)
+
+        # After this merge, there will be "facility_type_x" and
+        # "facility_type_y" columns
         locations_step_costs = locations.merge(step_costs, on='facility_id')
 
         self.mass_facility_inventories = {}
         self.count_facility_inventories = {}
         for _, row in locations_step_costs.iterrows():
-            facility_type = row['facility_type']
+            facility_type = row['facility_type_x']
             facility_id = row['facility_id']
             step = row['step']
             step_facility_id = f"{step}_{facility_id}"
@@ -94,7 +116,6 @@ class Context:
                 step=step,
                 possible_items=possible_items,
                 timesteps=max_timesteps,
-                processing_steps=[],  # TODO: Put real data here
                 quantity_unit="tonne",
                 can_be_negative=False
             )
@@ -104,38 +125,14 @@ class Context:
                 step=step,
                 possible_items=possible_items,
                 timesteps=max_timesteps,
-                processing_steps=[],  # TODO: Put real data here
                 quantity_unit="count",
                 can_be_negative=False
             )
 
-        # initialize dictionary to hold pathway costs over time
-        self.cost_history = {'year': [],
-                             'landfilling cost': [],
-                             'recycling to clinker cost': [],
-                             'recycling to raw material cost': [],
-                             'blade removal cost, per tonne': [],
-                             'blade removal cost, per blade': [],
-                             'blade mass, tonne': [],
-                             'coarse grinding cost': [],
-                             'fine grinding cost': [],
-                             'segment transpo cost': [],
-                             'landfill tipping fee': []}
-
-        # initialize dictionary to hold transportation requirements
-        self.transpo_eol = {'year': [],
-                            'total eol transportation': []}
-
-        # These are the costs from the learning by doing model
-        self.learning_by_doing_costs = {
-            "landfilling": 1.0,
-            "recycle_to_clink_pathway": 2.0,
-            "recycle_to_rawmat_pathway": 2.0
-        }
-
-        self.learning_by_doing_timesteps = learning_by_doing_timesteps
-
         self.cost_graph = cost_graph
+        self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
+
+        self.data_for_lci: List[Dict[str, float]] = []
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -217,144 +214,109 @@ class Context:
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
             )
-            self.env.process(component.begin_life(self.env))
+            self.env.process(component.manufacturing(self.env))
             self.components.append(component)
 
-    def choose_transition(self, component, timestep: int) -> str:
+    def cumulative_mass_for_component_in_process_at_timestep(self,
+                          component_kind: str,
+                          process_name: str,
+                          timestep: int):
         """
-        This chooses the transition (pathway) for a component when it reaches
-        end of life. Currently, this only models the linear pathway where
-        components are landfilled at the end of life
+        Calculate the cumulative mass at a certain time of a given component
+        passed through processes that contain the given name.
 
-        The timestep of the discrete sequence is used to query the SD model
-        for the current costs of each pathway as given from the learning
-        by doing model.
+        For example, if you want to find cumulative masses of blades passed
+        through coarse grinding facilities at time step 100, this is your
+        method!
 
         Parameters
         ----------
-        component: Component
-            The component for which a pathway is being chosen.
+        component_kind: str
+            The kind of component (such as "blade" passing through an inventory)
+
+        process_name: str
+            The process name (such as "fine griding") to look for in the facility
+            inventory names.
 
         timestep: int
-            The timestep at which the pathway is being chosen.
-
-        Returns
-        -------
-        str
-            The name of the transition to make. This is then passed to
-            the state machine in the component to move into the next
-            state as chosen here.
-        """
-
-        # If there is no SD model, just landfill everything.
-        # if self.sd_model_run is None:
-        #     if component.state == "use":
-        #         return "landfilling"
-        #     else:
-        #         raise ValueError("Components must always be in the state use.")
-
-        # Capacity of recycling plant will need to be accounted for here.
-        # Keep a cumulative tally of how much has been put through the
-        # recycling facility.
-        #
-        # Keep track of capacity utilization at each timestep.
-
-        _out = None
-
-        # for BLADES ONLY
-        # if the landfilling pathway cost is strictly less than recycling to raw
-        # material pathway cost, then landfill. If the recycling pathway cost is
-        # strictly less than landfilling, then recycling. If the two costs are
-        # equal, then use the recycled material strategic value to decide: a
-        # strategic value of zero means landfill while a strictly positive
-        # strategic value means recycle.
-        if component.state == "use":
-            if component.kind == 'blade' and self.timesteps_to_years(timestep) >= 2019.0:
-
-                # (recycle_to_rawmat_pathway,
-                #  recycle_to_clink_pathway,
-                #  landfill_pathway) = self.learning_by_doing(component, timestep)
-
-                recycle_to_rawmat_pathway = self.learning_by_doing_costs["recycle_to_rawmat_pathway"]
-                recycle_to_clink_pathway = self.learning_by_doing_costs["recycle_to_clink_pathway"]
-                landfill_pathway = self.learning_by_doing_costs["landfilling"]
-
-                if min(landfill_pathway, recycle_to_clink_pathway,
-                       recycle_to_rawmat_pathway) == landfill_pathway:
-                    _out = "landfilling"
-                elif min(landfill_pathway, recycle_to_clink_pathway,
-                             recycle_to_rawmat_pathway) == recycle_to_clink_pathway:
-                    _out = "recycling_to_clinker"
-                else:
-                    _out = "recycling_to_raw"
-            elif component.kind == 'blade' and self.timesteps_to_years(timestep) <= 2020:
-                # this just saves the cost history for the results; everything
-                # still gets landfilled
-                #self.learning_by_doing(component, timestep)
-
-                _out = "landfilling"
-            else:
-                # all other components get landfilled
-                _out = "landfilling"
-
-            return _out
-
-        else:
-            raise ValueError("Components must always be in the state use.")
-
-    def average_blade_mass_tonnes(self, timestep):
-        """
-        Compute the average blade mass in tonnes for every blade in this
-        context.
-
-        Parameters
-        ----------
-        timestep: int
-            The timestep at which this calculation is happening
+            The time, in timestep, to calculate the cumulative inventory for.
 
         Returns
         -------
         float
-            The average mass of the blade in tonnes.
+            Total cumulative mass of the component in the process at the
+            timestep.
         """
-        total_blade_mass_eol = 0.0
-        total_blade_count_eol = 0
+        cumulative_masses = [
+            inventory.cumulative_history['blade'][timestep]
+            for name, inventory in self.mass_facility_inventories.items()
+            if process_name in name
+        ]
+        total_mass = sum(cumulative_masses)
+        print(f'process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
+        return total_mass
 
-        # # Calculate the total mass at EOL
-        # total_blade_mass_eol += self.recycle_to_raw_material_inventory.transactions[timestep]["blade"]
-        # total_blade_mass_eol += self.recycle_to_clinker_material_inventory.transactions[timestep]["blade"]
-        # total_blade_mass_eol += self.landfill_material_inventory.transactions[timestep]["blade"]
-        #
-        # # Calculate the total count at EOL
-        # total_blade_count_eol += self.recycle_to_raw_component_inventory.transactions[timestep]["blade"]
-        # total_blade_count_eol += self.recycle_to_clinker_component_inventory.transactions[timestep]["blade"]
-        # total_blade_count_eol += self.landfill_component_inventory.transactions[timestep]["blade"]
+    def pylca_interface_process(self, env):
+        timesteps_per_year = 12
+        component = 'blade'
+        material = 'glass fiber reinforced polymer'
+        while True:
+            yield env.timeout(timesteps_per_year)   # Run annually
+            annual_data_for_lci = []
+            window_last_timestep = env.now
+            window_first_timestep = window_last_timestep - timesteps_per_year
+            for facility_name, facility in self.mass_facility_inventories.items():
+                process_name, facility_id = facility_name.split("_")
+                annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
+                positive_annual_transactions = annual_transactions[annual_transactions > 0]
+                mass_tonnes = positive_annual_transactions.sum()
+                mass_kg = mass_tonnes * 1000
+                if mass_kg > 0:
+                    row = {
+                        'flow quantity': mass_kg,
+                        'stage': process_name,
+                        'year': ceil(self.timesteps_to_years(env.now)),
+                        'material': material,
+                        'flow unit': 'kg',
+                        'facility_id': facility_id
+                    }
+                    self.data_for_lci.append(row)
+                    annual_data_for_lci.append(row)
+            if len(annual_data_for_lci) > 0:
+                print('DES interface: Found flow quantities greater than 0, performing LCIA')
+                df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
+                pylca_run_main(df_for_pylca_interface)
 
-        for mass_inventory in self.mass_facility_inventories.values():
-            total_blade_mass_eol += mass_inventory.transactions[timestep]["blade"]
+    def update_cost_graph_process(self, env):
+        """
+        This is the SimPy process that updates the cost graph periodically.
+        """
+        while True:
+            yield env.timeout(self.cost_graph_update_interval_timesteps)
+            year = self.timesteps_to_years(env.now)
+            year_int = round(year)
+            avg_blade_mass_kg = self.avg_blade_mass_tonnes_dict[year_int] * 1000
 
-        for count_inventory in self.count_facility_inventories.values():
-            total_blade_count_eol += count_inventory.transactions[timestep]["blade"]
+            cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
+                component_kind='blade',
+                process_name='coarse grinding',
+                timestep=env.now
+            )
 
-        # Return the average mass for all the blades.
-        if total_blade_count_eol > 0:
-            return total_blade_mass_eol / total_blade_count_eol
-        else:
-            return 1
+            cum_mass_fine_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
+                component_kind='blade',
+                process_name='fine grinding',
+                timestep=env.now
+            )
 
-    # def learning_by_doing_process(self, env):
-    #     """
-    #     This method contains a SimPy process that runs the learning-by-doing
-    #     model on a periodic basis.
-    #     """
-    #     while True:
-    #         yield env.timeout(self.learning_by_doing_timesteps)
-    #         avg_blade_mass = self.average_blade_mass_tonnes(env.now)
-    #         print('at timestep ', env.now, ', average blade mass is ', avg_blade_mass, ' tonnes\n')
-    #         # This is a workaround. Make the learning by doing pathway costs
-    #         # tolerant of a 0 mass for blades retired.
-    #         if avg_blade_mass > 0:
-    #             self.learning_by_doing(env.now, avg_blade_mass)
+            self.cost_graph.update_costs(
+                year=year,
+                blade_mass=avg_blade_mass_kg,
+                finegrind_cumul=cum_mass_fine_grinding,
+                coarsegrind_cumul=cum_mass_coarse_grinding
+            )
+
+            print(f"Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
@@ -368,6 +330,11 @@ class Context:
         # Schedule learning by doing timesteps (this will happen after all
         # other events have been scheduled)
         # self.env.process(self.learning_by_doing_process(self.env))
+
+        self.env.process(self.update_cost_graph_process(self.env))
+
+        # TODO: Re-enable LCIA integration
+        # self.env.process(self.pylca_interface_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
 
