@@ -312,8 +312,8 @@ class Context:
             self.cost_graph.update_costs(
                 year=year,
                 blade_mass=avg_blade_mass_kg,
-                cumul_finegrind=cum_mass_fine_grinding,
-                cumul_coarsegrind=cum_mass_coarse_grinding
+                finegrind_cumul=cum_mass_fine_grinding,
+                coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
             print(f"Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
