@@ -332,7 +332,9 @@ class Context:
         # self.env.process(self.learning_by_doing_process(self.env))
 
         self.env.process(self.update_cost_graph_process(self.env))
-        self.env.process(self.pylca_interface_process(self.env))
+
+        # TODO: Re-enable LCIA integration
+        # self.env.process(self.pylca_interface_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
 
