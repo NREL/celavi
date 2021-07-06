@@ -62,7 +62,7 @@ class Component:
             initial pathway selection from CostGraph.
         """
 
-        self.phase = ""  # There is no location initially
+        self.current_location = ""  # There is no location initially
         self.context = context
         self.id = UniqueIdentifier.unique_identifier()
         self.kind = kind
@@ -71,6 +71,35 @@ class Component:
         self.initial_facility_id = initial_facility_id
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
+
+    def create_pathway_queue(self, from_facility_id: int):
+        """
+        Query the CostGraph and construct a queue of the lifecycle for
+        this component. This method is called during the manufacturing step
+        and during the eol_process when exiting an "in use" location.
+
+        This method does not return anything, rather it modifies the
+        instance attrivute self.pathway with a new deque.
+
+        Parameters
+        ----------
+        from_facility_id: str
+            The starting location of the the component.
+        """
+        path_choices = self.context.cost_graph.choose_paths()
+        path_choice = path_choices[from_facility_id]
+        self.pathway = deque()
+
+        for facility, lifespan in path_choice['path']:
+            # Override the initial timespan when component goes into use.
+            if facility.startswith("in use"):
+                self.pathway.append((facility, self.initial_lifespan_timesteps))
+            # Set landfill timespan long enough to be permanent
+            elif facility.startswith("landfill"):
+                self.pathway.append((facility, self.context.max_timesteps * 2))
+            # Otherwise, use the timespan the model gives us.
+            else:
+                self.pathway.append((facility, lifespan))
 
     def manufacturing(self, env):
         """
@@ -87,21 +116,7 @@ class Component:
         """
         begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        path_choices = self.context.cost_graph.choose_paths()
-        path_choice = path_choices[self.initial_facility_id]
-        self.pathway = deque()
-
-        for facility, lifespan in path_choice['path']:
-            # Override the initial timespan when component goes into use.
-            if facility.startswith("in use"):
-                self.pathway.append((facility, self.initial_lifespan_timesteps))
-            # Set landfill timespan long enough to be permanent
-            elif facility.startswith("landfill"):
-                self.pathway.append((facility, self.context.max_timesteps * 2))
-            # Otherwise, use the timespan the model gives us.
-            else:
-                self.pathway.append((facility, lifespan))
-
+        self.create_pathway_queue(self.initial_facility_id)
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
@@ -116,11 +131,15 @@ class Component:
         """
         while True:
             if len(self.pathway) > 0:
+                if self.current_location.startswith('in use'):
+                    # Query cost graph again
+                    self.create_pathway_queue(self.initial_facility_id)
                 location, lifespan = self.pathway.popleft()
                 count_inventory = self.context.count_facility_inventories[location]
                 mass_inventory = self.context.mass_facility_inventories[location]
                 count_inventory.increment_quantity(self.kind, 1, env.now)
                 mass_inventory.increment_quantity(self.kind, self.mass_tonnes, env.now)
+                self.current_location = location
                 yield env.timeout(lifespan)
                 count_inventory.increment_quantity(self.kind, -1, env.now)
                 mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
