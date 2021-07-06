@@ -1,10 +1,11 @@
 import networkx as nx
 import pandas as pd
 import numpy as np
-import warnings
 from itertools import product
 
 from networkx_query import search_nodes
+
+from costmethods import CostMethods
 
 class CostGraph:
     """
@@ -23,7 +24,8 @@ class CostGraph:
                  sc_end = ('landfilling', 'cement co-processing'),
                  year : float = 2000.0,
                  max_dist : float = 300.0,
-                 verbose : int = 0):
+                 verbose : int = 0,
+                 **kwargs):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -59,6 +61,37 @@ class CostGraph:
             0 = No information other than return values
             1 = Info on when key methods start and stop
             >1 = Detailed info on facilities, nodes, and edges
+
+        Keyword Arguments
+        -----------------
+        blade_mass : float
+            Average mass of a single turbine blade at the beginning of the
+            model run. Units: metric tons/tonnes
+
+        finegrind_cumul_initial : float
+            Cumulative production of fine grinding at the beginning of the
+            model run.
+            Units: metric tons/tonnes
+
+        coarsegrind_cumul_initial : float
+            Cumulative production of coarse grinding at the beginning of the
+            model run. NOTE: This value may be greater than
+            cumul_finegrind_initial.
+            Units: metric tons/tonnes
+
+        finegrind_initial_cost : float
+            Cost in USD/metric ton of fine grinding at the beginning of the
+            model run.
+
+        coarsegrind_initial_cost : float
+            Cost in USD/metric ton of coarse grinding at the beginning of the
+            model run.
+
+        finegrind_learnrate : float
+            Industrial learning-by-doing rate for fine grinding. Unitless.
+
+        coarsegrind_learnrate : float
+            Industrial learning-by-doing rate for coarse grinding. Unitless.
         """
 
         self.step_costs=pd.read_csv(step_costs_file)
@@ -74,7 +107,26 @@ class CostGraph:
 
         self.year=year
 
-        self.blade_mass=1000.0
+        self.blade_mass=kwargs['blade_mass']
+
+        # The cumulative production numbers must not be zero to prevent
+        # mathematical errors in the learning-by-doing equation.
+        # Here, if the cumulative production value provided at instantiation is
+        # zero, it is replaced with 1; otherwise, the provided value is used.
+        if kwargs['finegrind_cumul_initial']==0:
+            self.finegrind_cumul_initial=1.0
+        else:
+            self.finegrind_cumul_initial=kwargs['finegrind_cumul_initial']
+        if kwargs['coarsegrind_cumul_initial']==0:
+            self.coarsegrind_cumul_initial=1.0
+        else:
+            self.coarsegrind_cumul_initial=kwargs['coarsegrind_cumul_initial']
+
+        self.finegrind_initial_cost = kwargs['finegrind_initial_cost']
+        self.coarsegrind_initial_cost = kwargs['coarsegrind_initial_cost']
+
+        self.finegrind_learnrate = kwargs['finegrind_learnrate']
+        self.coarsegrind_learnrate = kwargs['finegrind_learnrate']
 
         self.max_dist = max_dist
 
@@ -83,6 +135,7 @@ class CostGraph:
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
 
+        # build the initial supply chain graph
         self.build_supplychain_graph()
 
 
@@ -178,21 +231,6 @@ class CostGraph:
                 raise NotImplementedError
             else:
                 return list(map(lambda x, y: (x, y), list1, list2))
-
-
-    @staticmethod
-    def zero_method(**kwargs):
-        """
-        Cost method that returns a cost of zero under all circumstances.
-
-        Returns
-        -------
-        float
-            Use this method for any processing step or transportation edge with
-            no associated cost
-        """
-        return 0.0
-
 
 
     def find_nearest(self,
@@ -377,7 +415,7 @@ class CostGraph:
         _edges = self.get_edges(facility_df)
         _unique_edges = [tuple(map(lambda w: w+'_'+_id, x)) for x in _edges]
 
-        _methods = [{'cost_method': [getattr(CostGraph, _facility.nodes[edge[0]]['step_cost_method'])],
+        _methods = [{'cost_method': [getattr(CostMethods, _facility.nodes[edge[0]]['step_cost_method'])],
                      'cost': 0.0,
                      'dist': 0.0}
                     for edge in _unique_edges]
@@ -447,19 +485,19 @@ class CostGraph:
             _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
 
             if not any([self.supply_chain.nodes[_v]['step'] in self.sc_end for _v in _v_nodes]):
-                _methods = [{'cost_method': [getattr(CostGraph,
+                _methods = [{'cost_method': [getattr(CostMethods,
                                                     self.supply_chain.nodes[edge[0]]['step_cost_method']),
-                                             getattr(CostGraph,
+                                             getattr(CostMethods,
                                                      _transpo_cost)],
                              'cost': 0.0,
                              'dist': np.nan}
                             for edge in _edge_list]
             else:
-                _methods = [{'cost_method': [getattr(CostGraph,
+                _methods = [{'cost_method': [getattr(CostMethods,
                                                     self.supply_chain.nodes[edge[0]]['step_cost_method']),
-                                             getattr(CostGraph,
+                                             getattr(CostMethods,
                                                      _transpo_cost),
-                                             getattr(CostGraph,
+                                             getattr(CostMethods,
                                                      self.supply_chain.nodes[edge[1]]['step_cost_method'])],
                              'cost': 0.0,
                              'dist': np.nan}
@@ -522,8 +560,13 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=self.year,
                                                            blade_mass=self.blade_mass,
-                                                           cumul_finegrind=1000.0,
-                                                           cumul_coarsegrind=1000.0) for f in self.supply_chain.edges[edge]['cost_method']])
+                                                           finegrind_cumul_initial=self.finegrind_cumul_initial,
+                                                           coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
+                                                           finegrind_initial_cost=self.finegrind_initial_cost,
+                                                           coarsegrind_initial_cost=self.coarsegrind_initial_cost,
+                                                           finegrind_learnrate=self.finegrind_learnrate,
+                                                           coarsegrind_learnrate=self.coarsegrind_learnrate)
+                                                         for f in self.supply_chain.edges[edge]['cost_method']])
 
         if self.verbose > 0:
             print('-------Supply chain graph is built-------')
@@ -537,10 +580,6 @@ class CostGraph:
         modifications to the crit argument of the find_nearest call.
 
         @todo verify that this method works for a cyclic graph
-
-        Parameters
-        ----------
-        None
 
         Returns
         -------
@@ -572,19 +611,21 @@ class CostGraph:
         """
         Re-calculates all edge costs based on arguments passed to cost methods.
 
-        Parameters
-        ----------
-        **kwargs may include:
-            year : float
-                Model year provided by DES.
-            blade_mass : float
-                Average turbine blade mass provided by DES.
-            cumul_finegrind : float
-                Cumulative mass of blades that have been finely ground,
-                provided by DES.
-            cumul_coarsegrind : float
-                Cumulative mass of blades that have been coarsely ground,
-                provided by DES.
+        Keyword Arguments
+        -----------------
+        year : float
+            Model year provided by DES.
+
+        blade_mass : float
+            Average turbine blade mass provided by DES.
+
+        finegrind_cumul : float
+            Cumulative mass of blades that have been finely ground,
+            provided by DES.
+
+        coarsegrind_cumul : float
+            Cumulative mass of blades that have been coarsely ground,
+            provided by DES.
 
         Returns
         -------
@@ -595,207 +636,12 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=kwargs['year'],
                                                            blade_mass=kwargs['blade_mass'],
-                                                           cumul_finegrind=kwargs['cumul_finegrind'],
-                                                           cumul_coarsegrind=kwargs['cumul_coarsegrind']) for f in self.supply_chain.edges[edge]['cost_method']])
-
-    @staticmethod
-    def landfilling(**kwargs):
-        """
-        Tipping fee model based on tipping fees in the South-Central region
-        of the U.S. which includes TX.
-
-        Parameters
-        ----------
-        year
-            Model year obtained from DES model (timestep converted to year)
-        Returns
-        -------
-        _fee
-            Landfill tipping fee in USD/metric ton
-        """
-        _year = kwargs['year']
-        _fee = 3.0E-29 * np.exp(0.0344 * _year)
-        return _fee
-
-
-    @staticmethod
-    def rotor_teardown(**kwargs):
-        """
-        Cost of removing one blade from the turbine, calculated as one-third
-        the rotor teardown cost.
-
-        Parameters
-        ----------
-        year
-            Model year obtained from DES model (timestep converted to year)
-        Returns
-        -------
-        _cost
-            Cost in USD per blade (note units!) of removing a blade from an
-            in-use turbine. Equivalent to 1/3 the rotor teardown cost.
-        """
-        _year = kwargs['year']
-        _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
-                169851728.663209
-        return _cost
-
-
-    @staticmethod
-    def segmenting(**kwargs):
-        """
-        Cost method for blade segmenting into 30m sections performed on-site at
-        the wind power plant.
-
-        Returns
-        -------
-            Cost (USD/metric ton) of cutting a turbine blade into 30-m segments.
-        """
-        return 27.56
-
-
-    @staticmethod
-    def coarse_grinding_onsite(**kwargs):
-        """
-        Cost method for coarsely grinding turbine blades on-site at the wind
-        power plant. This calculation uses industrial learning-by-doing to
-        gradually reduce costs over time.
-
-        Returns
-        -------
-            Cost of coarse grinding one metric ton of blade material onsite at
-            the wind power plant.
-        """
-        cumulative_coarsegrind_mass = kwargs['cumul_coarsegrind']
-
-        if cumulative_coarsegrind_mass is None:
-            cumulative_coarsegrind_mass = 1000
-
-        coarse_grinding_onsite_initial = 90.0
-
-        coarse_grind_learning = (cumulative_coarsegrind_mass + 1.0) ** -0.05
-
-        return coarse_grinding_onsite_initial * coarse_grind_learning
-
-
-    @staticmethod
-    def coarse_grinding(**kwargs):
-        """
-        Cost method for coarsely grinding turbine blades at a mechanical
-        recycling facility. This calculation uses industrial learning-by-doing
-        to gradually reduce costs over time.
-
-        Returns
-        -------
-            Cost of coarse grinding one metric ton of segmented blade material
-            in a mechanical recycling facility.
-        """
-        cumulative_coarsegrind_mass = kwargs['cumul_coarsegrind']
-
-        if cumulative_coarsegrind_mass is None:
-            cumulative_coarsegrind_mass = 1000
-
-        coarse_grinding_initial = 80.0
-
-        # calculate cost reduction factors from learning-by-doing model
-        # these factors are unitless
-        # add 1.0 to avoid mathematical errors when the cumulative numbers are both zero
-        coarse_grind_learning = (cumulative_coarsegrind_mass + 1.0) ** -0.05
-
-        return coarse_grinding_initial * coarse_grind_learning
-
-
-    @staticmethod
-    def fine_grinding(**kwargs):
-        """
-        Cost method for finely grinding turbine blades at a mechanical
-        recycling facility. This calculation uses industrial learning-by-doing
-        to gradually reduce costs over time.
-
-        Returns
-        -------
-            Cost of grinding one metric ton of coarse-ground blade material at
-            a mechanical recycling facility.
-        """
-        cumulative_finegrind_mass = kwargs['cumul_finegrind']
-
-        if cumulative_finegrind_mass is None:
-            cumulative_finegrind_mass = 1000
-
-        fine_grinding_initial = 100.0
-
-        fine_grind_learning = (cumulative_finegrind_mass + 1.0) ** -0.05
-
-        return fine_grinding_initial * fine_grind_learning
-
-
-    @staticmethod
-    def coprocessing(**kwargs):
-        """
-        Cost method that calculates revenue from sale of coarsely-ground blade
-        material to cement co-processing plant.
-
-        Returns
-        -------
-            Revenue (USD/metric ton) from selling 1 metric ton of ground blade
-             to cement co-processing plant
-        """
-        return -10.37
-
-
-    @staticmethod
-    def segment_transpo(**kwargs):
-        """
-        Calculate segment transportation cost in USD/metric ton
-
-        Returns
-        -------
-            Cost of transporting one segmented blade one kilometer. Units:
-            USD/blade
-        """
-        _vkmt = kwargs['vkmt']
-        _mass = kwargs['blade_mass']
-        _year = kwargs['year']
-
-        if np.isnan(_vkmt) or np.isnan(_mass):
-            return 0.0
-        else:
-            if _year < 2001.0 or 2002.0 <= _year < 2003.0:
-                _cost = 4.35
-            elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
-                _cost = 8.70
-            elif 2019.0 <= _year < 2031.0:
-                _cost = 13.05
-            elif 2031.0 <= _year < 2044.0:
-                _cost = 17.40
-            elif 2044.0 <= _year <= 2050.0:
-                _cost = 21.75
-            else:
-                warnings.warn(
-                    'Year out of range for segment transport; setting cost = 17.40')
-                _cost = 17.40
-
-            return _cost * _vkmt / _mass
-
-
-    @staticmethod
-    def shred_transpo(**kwargs):
-        """
-        Cost method for calculating shredded blade transportation costs (truck)
-        in USD/metric ton.
-
-        Parameters
-        -------
-        **kwargs must include:
-            vkmt
-                Distance traveled in kilometers
-
-        Returns
-        -------
-            Cost of transporting 1 metric ton of shredded blade material by
-            one kilometer. Units: USD/metric ton.
-        """
-        _vkmt = kwargs['vkmt']
-        if np.isnan(_vkmt):
-            return 0.0
-        else:
-            return 0.08 * _vkmt
+                                                           finegrind_cumul=kwargs['finegrind_cumul'],
+                                                           coarsegrind_cumul=kwargs['coarsegrind_cumul'],
+                                                           finegrind_cumul_initial=self.finegrind_cumul_initial,
+                                                           coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
+                                                           finegrind_initial_cost=self.finegrind_initial_cost,
+                                                           coarsegrind_initial_cost=self.coarsegrind_initial_cost,
+                                                           finegrind_learnrate=self.finegrind_learnrate,
+                                                           coarsegrind_learnrate=self.coarsegrind_learnrate)
+                                                         for f in self.supply_chain.edges[edge]['cost_method']])

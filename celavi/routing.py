@@ -104,7 +104,8 @@ class Router(object):
         return _summary[['region_transportation', 'fclass', 'vmt']]
 
 
-    def get_all_routes(locations_file : str = '../celavi-data/inputs/locations.csv'):
+    def get_all_routes(locations_file : str = '../../celavi-data/inputs/locations.csv',
+                       route_pair_file : str = '../../celavi-data/inputs/route_pairs.csv'):
         """
         Calculates distances traveled between all locations in the locations_file.
         Includes distance traveled through each transportation region (e.g., county FIPS) and road class.
@@ -114,12 +115,12 @@ class Router(object):
         backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
 
         # set input file paths for precomputed US road network data
-        transportation_graph = '../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
-        node_locations = '../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
+        transportation_graph = '../../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
+        node_locations = '../../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
 
         # set output folders for intermediate routing data
-        routing_output_folder = '../celavi-data/preprocessing/routing_intermediate_files/'
-        preprocessing_output_folder = '../celavi-data/preprocessing/'  # data in this folder will be inputs to CELAVI
+        routing_output_folder = '../../celavi-data/preprocessing/routing_intermediate_files/'
+        preprocessing_output_folder = '../../celavi-data/preprocessing/'  # data in this folder will be inputs to CELAVI
 
         # import transportation graph and node locations
         _transportation_graph = Data.TransportationGraph(fpath=transportation_graph, backfill=backfill)
@@ -135,6 +136,7 @@ class Router(object):
 
         # import locations data
         locations = pd.read_csv(locations_file)
+        route_pairs = pd.read_csv(route_pair_file)
 
         # identify states in locations data and loop through states (useful for debugging; loop could be removed)
         # compute routes for all locations in each state and save results
@@ -153,7 +155,12 @@ class Router(object):
             _dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
             _source_loc.insert(0, 'merge', 'True')
             _dest_loc.insert(0, 'merge', 'True')
-            route_list = _source_loc.merge(_dest_loc, on='merge')
+            all_route_list = _source_loc.merge(_dest_loc, on='merge')
+
+            # filter down the route_list which has all combinations of
+            # facility_type values using the route_pairs dataframe which
+            # specifies allowable source/destination facility_type pairs
+            route_list = all_route_list[all_route_list[['source_facility_type','destination_facility_type']].apply(tuple,axis=1).isin(route_pairs.apply(tuple,axis=1))]
 
             # if route_list is empty, generate empty data frame for export (e.g., create column for total_vmt)
             # otherwise, loop through all locations in route_list and compute routing distances

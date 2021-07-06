@@ -1,7 +1,7 @@
 import argparse
-from .routing import Router
-from .costgraph import CostGraph
-from .compute_locations import ComputeLocations
+from routing import Router
+from costgraph import CostGraph
+from compute_locations import ComputeLocations
 
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
 parser.add_argument('--locations', help='Path to locations file')
@@ -42,7 +42,14 @@ netw = CostGraph(
     sc_end=['landfilling', 'cement co-processing'],
     year=2000.0,
     max_dist=300.0,
-    verbose=2
+    verbose=2,
+    blade_mass=50.0, #@todo update with actual value
+    finegrind_cumul_initial=1.0,
+    coarsegrind_cumul_initial=1.0,
+    finegrind_initial_cost=80.0, #@todo update with actual value
+    coarsegrind_initial_cost=60.0, #@todo update with actual value
+    finegrind_learnrate=-0.05,
+    coarsegrind_learnrate=-0.05
 )
 
 print(netw.choose_paths(),'\n')
@@ -50,7 +57,7 @@ print(netw.choose_paths(),'\n')
 netw.update_costs(
     year=2010.0,
     blade_mass=1500.0,
-    cumul_finegrind=2000.0,
-    cumul_coarsegrind=4000.0)
+    finegrind_cumul=2000.0,
+    coarsegrind_cumul=4000.0)
 
 print(netw.choose_paths())
