@@ -29,6 +29,7 @@ setuptools.setup(
         "simpy",
 	    "networkx-query",
         "olca-ipc",
-        "pyutilib"
+        "pyutilib",
+        "joblib"
     ]
 )
