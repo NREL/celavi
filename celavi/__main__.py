@@ -5,6 +5,7 @@ from compute_locations import ComputeLocations
 
 parser = argparse.ArgumentParser(description='Check CELAVI input data')
 parser.add_argument('--locations', help='Path to locations file')
+parser.add_argument('--locations_computed', help='Path to computed locations file')
 parser.add_argument('--step_costs', help='Path to step_costs file')
 parser.add_argument('--fac_edges', help='Facility edges file')
 parser.add_argument('--routes', help='Routes file')
@@ -18,12 +19,13 @@ use_computed_locations = True
 # to include all facility ids. Otherwise, cost graph can't run with the full
 # computed data set.
 if compute_locations:
-    args.locations = '../../celavi-data/inputs/locations_computed.csv'
     loc = ComputeLocations()
-    loc.join_facilities(locations_output_file=args.locations)
+    loc.join_facilities(locations_output_file=args.locations_computed)
 
 if use_computed_locations:
-    args.locations = '../../celavi-data/inputs/locations_computed.csv'
+    locations = args.locations_computed
+else:
+    locations = args.locations
 
 # if run_routes is enabled (True), compute routing distances between all input locations
 run_routes = False
@@ -36,7 +38,7 @@ netw = CostGraph(
     step_costs_file=args.step_costs,
     fac_edges_file=args.fac_edges,
     transpo_edges_file=args.transpo_edges,
-    locations_file=args.locations,
+    locations_file=locations,
     routes_file=args.routes,
     sc_begin= 'in use',
     sc_end=['landfilling', 'cement co-processing'],
