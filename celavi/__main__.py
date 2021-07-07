@@ -1,5 +1,10 @@
 import argparse
 import os
+from math import ceil
+import matplotlib.pyplot as plt
+from scipy.stats import weibull_min
+import numpy as np
+import pandas as pd
 from routing import Router
 from costgraph import CostGraph
 from compute_locations import ComputeLocations
@@ -15,6 +20,22 @@ fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
 routes_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
 transpo_edges_filename = os.path.join(args.data, 'inputs', 'transpo_edges.csv')
 routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
+lci_folder = os.path.join(args.data, 'pylca_celavi_data')
+outputs_folder = os.path.join(args.data, 'outputs')
+avg_blade_masses_filename = os.path.join(args.data, 'inputs', 'avgblademass.csv')
+
+# TODO: The tiny data and national data should use the same filename.
+# When that is the case, place that filename below.
+turbine_data_filename = os.path.join(args.data, 'inputs', 'TX_input_data_with_masses.csv')
+
+# Because the LCIA code has filenames hardcoded and cannot be reconfigured,
+# change the working directory to the lci_folder to accommodate those read
+# and write operations. Also, the Context must be imported down here after
+# the working directory is changed because the LCIA will attempt to read
+# files immediately.
+
+os.chdir(lci_folder)
+from des import Context
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
@@ -60,12 +81,89 @@ netw = CostGraph(
     coarsegrind_learnrate=-0.05
 )
 
-print(netw.choose_paths(),'\n')
+# Create the DES context and tie it to the CostGraph
+context = Context(
+    locations_filename=locations_filename,
+    step_costs_filename=step_costs_filename,
+    possible_items=["nacelle", "blade", "tower", "foundation"],
+    cost_graph=netw,
+    cost_graph_update_interval_timesteps=12,
+    avg_blade_masses_filename=avg_blade_masses_filename
+)
 
-netw.update_costs(
-    year=2010.0,
-    blade_mass=1500.0,
-    finegrind_cumul=2000.0,
-    coarsegrind_cumul=4000.0)
+# Create the turbine dataframe that will be used to populate
+# the context with components. Repeat the creation of blades
+# 3 times for each turbine.
 
-print(netw.choose_paths())
+turbine_data = pd.read_csv(turbine_data_filename)
+components = []
+for _, row in turbine_data.iterrows():
+    year = row['year']
+    blade_mass_tonnes = row['Glass Fiber:Blade']
+    foundation_mass_tonnes = row['foundation_mass_tonnes']
+    facility_id = int(row['facility_id'])
+    n_turbine = int(row['n_turbine'])
+
+    for _ in range(n_turbine):
+        for _ in range(3):
+            components.append({
+                'year': year,
+                'kind': 'blade',
+                'mass_tonnes': blade_mass_tonnes,
+                'facility_id': facility_id
+            })
+
+components = pd.DataFrame(components)
+
+# Create the lifespan functions for the components.
+np.random.seed(13)
+timesteps_per_year = 12
+min_lifespan = 120
+L = 240
+K = 2.2
+lifespan_fns = {
+    "nacelle": lambda: 30 * timesteps_per_year,
+    "blade": lambda: 20 * timesteps_per_year,
+    # "blade": lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
+    "foundation": lambda: 50 * timesteps_per_year,
+    "tower": lambda: 50 * timesteps_per_year,
+}
+
+# Populate the context with components.
+context.populate(components, lifespan_fns)
+
+# Run the context
+result = context.run()
+
+# Output .csv files of the mass flows of each mass inventory.
+mass_facility_inventories = result["mass_facility_inventories"]
+outputs = args.outputs
+for facility_name, facility in mass_facility_inventories.items():
+    output_filename = os.path.join(outputs, f'{facility_name}.csv')
+    output_filename = output_filename.replace(' ', '_')
+    facility.transaction_history.to_csv(output_filename, index_label='timestep')
+
+# After PyLCA / DES integration is complete, the next 3 lines should be
+# eliminated
+data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
+data_for_lci_df = pd.DataFrame(context.data_for_lci)
+data_for_lci_df.to_csv(data_for_lci_filename, index=False)
+
+# Plot the cumulative count levels of the inventories
+count_facility_inventory_items = list(result["mass_facility_inventories"].items())
+nrows = 5
+ncols = ceil(len(count_facility_inventory_items) / nrows)
+fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
+plt.tight_layout()
+for i in range(len(count_facility_inventory_items)):
+    subplot_col = i // nrows
+    subplot_row = i % nrows
+    ax = axs[subplot_row][subplot_col]
+    facility_name, facility = count_facility_inventory_items[i]
+    cum_hist_blade = facility.cumulative_history["blade"]
+    ax.set_title(facility_name)
+    ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
+    ax.set_ylabel("tonnes")
+plot_output_path = os.path.join(outputs, 'blade_counts.png')
+plt.savefig(plot_output_path)
+
