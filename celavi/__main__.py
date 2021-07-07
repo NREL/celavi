@@ -137,15 +137,14 @@ result = context.run()
 
 # Output .csv files of the mass flows of each mass inventory.
 mass_facility_inventories = result["mass_facility_inventories"]
-outputs = args.outputs
 for facility_name, facility in mass_facility_inventories.items():
-    output_filename = os.path.join(outputs, f'{facility_name}.csv')
+    output_filename = os.path.join(outputs_folder, f'{facility_name}.csv')
     output_filename = output_filename.replace(' ', '_')
     facility.transaction_history.to_csv(output_filename, index_label='timestep')
 
 # After PyLCA / DES integration is complete, the next 3 lines should be
 # eliminated
-data_for_lci_filename = os.path.join(outputs, 'data_for_lci.csv')
+data_for_lci_filename = os.path.join(outputs_folder, 'data_for_lci.csv')
 data_for_lci_df = pd.DataFrame(context.data_for_lci)
 data_for_lci_df.to_csv(data_for_lci_filename, index=False)
 
@@ -164,6 +163,6 @@ for i in range(len(count_facility_inventory_items)):
     ax.set_title(facility_name)
     ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
     ax.set_ylabel("tonnes")
-plot_output_path = os.path.join(outputs, 'blade_counts.png')
+plot_output_path = os.path.join(outputs_folder, 'blade_counts.png')
 plt.savefig(plot_output_path)
 
