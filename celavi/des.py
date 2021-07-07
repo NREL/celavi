@@ -4,11 +4,11 @@ from math import floor, ceil
 import simpy
 import pandas as pd
 
-from .inventory import FacilityInventory
-from .component import Component
-from .costgraph import CostGraph
+from inventory import FacilityInventory
+from component import Component
+from costgraph import CostGraph
 
-from .pylca_celavi.des_interface import pylca_run_main
+from pylca_celavi.des_interface import pylca_run_main
 
 
 class Context:
@@ -327,14 +327,8 @@ class Context:
         Dict[str, pd.DataFrame]
             A dictionary of inventories mapped to their cumulative histories.
         """
-        # Schedule learning by doing timesteps (this will happen after all
-        # other events have been scheduled)
-        # self.env.process(self.learning_by_doing_process(self.env))
-
         self.env.process(self.update_cost_graph_process(self.env))
-
-        # TODO: Re-enable LCIA integration
-        # self.env.process(self.pylca_interface_process(self.env))
+        self.env.process(self.pylca_interface_process(self.env))
 
         self.env.run(until=int(self.max_timesteps))
 
