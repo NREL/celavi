@@ -20,7 +20,7 @@ from networkx.algorithms.shortest_paths.weighted import bidirectional_dijkstra
 from scipy.spatial import ckdtree
 from joblib import Memory
 import tempfile
-import data_manager as Data
+import celavi.data_manager as Data
 
 
 class Router(object):
@@ -104,8 +104,12 @@ class Router(object):
         return _summary[['region_transportation', 'fclass', 'vmt']]
 
 
-    def get_all_routes(locations_file : str = '../../celavi-data/inputs/locations.csv',
-                       route_pair_file : str = '../../celavi-data/inputs/route_pairs.csv'):
+    def get_all_routes(locations_file,
+                       route_pair_file,
+                       transportation_graph,
+                       node_locations,
+                       routing_output_folder,
+                       preprocessing_output_folder):
         """
         Calculates distances traveled between all locations in the locations_file.
         Includes distance traveled through each transportation region (e.g., county FIPS) and road class.
@@ -113,14 +117,6 @@ class Router(object):
         :return:
         """
         backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
-
-        # set input file paths for precomputed US road network data
-        transportation_graph = '../../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
-        node_locations = '../../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
-
-        # set output folders for intermediate routing data
-        routing_output_folder = '../../celavi-data/preprocessing/routing_intermediate_files/'
-        preprocessing_output_folder = '../../celavi-data/preprocessing/'  # data in this folder will be inputs to CELAVI
 
         # import transportation graph and node locations
         _transportation_graph = Data.TransportationGraph(fpath=transportation_graph, backfill=backfill)
