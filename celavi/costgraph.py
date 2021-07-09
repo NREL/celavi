@@ -5,7 +5,7 @@ from itertools import product
 
 from networkx_query import search_nodes
 
-from costmethods import CostMethods
+from celavi.costmethods import CostMethods
 
 class CostGraph:
     """
