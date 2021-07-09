@@ -1,8 +1,6 @@
 from typing import List, Dict, Deque, Tuple
 from collections import deque
 
-from .unique_identifier import UniqueIdentifier
-
 
 class Component:
     """
@@ -64,7 +62,6 @@ class Component:
 
         self.current_location = ""  # There is no location initially
         self.context = context
-        self.id = UniqueIdentifier.unique_identifier()
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
