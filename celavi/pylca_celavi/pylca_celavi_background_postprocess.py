@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Dec 23 15:33:28 2020
-
-@author: tghosh
-"""
-
 import pickle
 import sys
 import pandas as pd
@@ -31,10 +23,14 @@ def postprocessing(final_res,insitu):
         total_em = total_em.fillna(0)
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
         final_res = total_em.drop(columns = ['flow quantity_x','flow quantity_y'])
+        
+    return final_res
 
 
+def impact_calculations(final_res):    
    
-
+     
+   
     traci = pd.read_csv('traci21.csv')
     traci = traci.fillna(0)
     impacts = list(traci.columns)
@@ -72,7 +68,7 @@ def postprocessing(final_res,insitu):
     df_lcia['impact'] = df_lcia['flow quantity'] * df_lcia['value']
     df_lcia = df_lcia.groupby(['year','facility_id', 'material','stage','impacts'])['impact'].agg('sum').reset_index()
     
-    return df_lcia                               
+    return df_lcia                      
     #impacts = ['Global Warming Air (kg CO2 eq / kg substance)']   
     '''                                
     for im in valuevars:
