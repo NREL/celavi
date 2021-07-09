@@ -326,3 +326,29 @@ class CostMethods:
             return 0.0
         else:
             return 0.08 * _vkmt
+
+
+    @staticmethod
+    def manufacturing(**kwargs):
+        """
+        Cost method for calculating blade manufacturing costs in USD/metric
+        ton. Data sourced from Murray et al. (2019), a techno-economic analysis
+        of a thermoplastic blade compared to the standard thermoset epoxy blade
+        using a 61.5m blade as basis. The baseline cost for the thermoset blade
+        ($11.44/kg) is used here, converted to USD / metric ton.
+
+
+        Keyword Arguments
+        -----------------
+        None
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+            Cost of manufacturing 1 metric ton of new turbine blade.
+
+        """
+        return 11440.0
