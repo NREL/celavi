@@ -12,8 +12,7 @@ def pylca_run_main(df=None):
 
     '''ALICIA replace this part with the dataframe you are sending'''
     '''Delete this line after integration'''
-    df  = pd.read_csv('data_for_lci_test.csv')
-    
+    df  = pd.read_csv('data_for_lci_test.csv')    
     df = df[df['flow quantity'] != 0]
     
    
@@ -27,10 +26,10 @@ def pylca_run_main(df=None):
         stage = row['stage']
         material = row['material']
         facility_id = row['facility_id']
-    
-    
-    
-    
+
+
+
+
         'Correcting life cycle inventory with material is concrete'
         df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage)
      
@@ -38,14 +37,15 @@ def pylca_run_main(df=None):
             
             new_df['flow name'] = new_df['material'] + ', ' + new_df['stage']
             new_df= new_df[['flow name','flow quantity']]
-            
             res = model_celavi_lci(new_df,year,facility_id,stage,material,df_static)
             emission = model_celavi_lci_insitu(new_df,year,facility_id,stage,material,df_emissions)
-    
+
             if res.empty == False:
-                res = model_celavi_lci_background(res,year,facility_id,stage,material)               
-                res = postprocessing(res,emission)            
+                res = model_celavi_lci_background(res,year,facility_id,stage,material)   
+                lci = postprocessing(res,emission)
+                res = impact_calculations(lci)
                 res_df = pd.concat([res_df,res])
+                lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
     
           
     res_df.to_csv('final_lcia_results_to_des.csv',index = False)
