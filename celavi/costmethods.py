@@ -352,3 +352,52 @@ class CostMethods:
 
         """
         return 11440.0
+
+
+    @staticmethod
+    def blade_transpo(**kwargs):
+        """
+        @TODO Check for updated blade transportation costs.
+
+        Cost of transporting 1 metric ton of complete wind blade by 1 km.
+        Currently the segment transportation cost is used as proxy.
+
+        Keyword Arguments
+        -----------------
+        vkmt
+            Distance traveled by blade segment. Unit: vehicle-kilometer
+
+        blade_mass
+            Average blade mass in the current model year. Unit: metric tons
+
+        year
+            Current model year.
+
+        Returns
+        -------
+            Cost of transporting one segmented blade one kilometer. Units:
+            USD/blade
+        """
+        _vkmt = kwargs['vkmt']
+        _mass = kwargs['blade_mass']
+        _year = kwargs['year']
+
+        if np.isnan(_vkmt) or np.isnan(_mass):
+            return 0.0
+        else:
+            if _year < 2001.0 or 2002.0 <= _year < 2003.0:
+                _cost = 4.35
+            elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
+                _cost = 8.70
+            elif 2019.0 <= _year < 2031.0:
+                _cost = 13.05
+            elif 2031.0 <= _year < 2044.0:
+                _cost = 17.40
+            elif 2044.0 <= _year <= 2050.0:
+                _cost = 21.75
+            else:
+                warnings.warn(
+                    'Year out of range for blade transport; setting cost = 17.40')
+                _cost = 17.40
+
+            return _cost * _vkmt / _mass
