@@ -47,7 +47,6 @@ def pylca_run_main(df):
 
     res_df = pd.DataFrame()
     df=df.reset_index()
-    df['flow quantity'] = df['flow quantity'].round(1)
     for index,row in df.iterrows():
         new_df = df[df['index'] == index]
         year = row['year']
@@ -55,29 +54,26 @@ def pylca_run_main(df):
         material = row['material']
         facility_id = row['facility_id']
 
-        if year > 2007:
-            print(row['flow quantity'])
+        # Correcting life cycle inventory with material is concrete
+        # Calculates the concrete lifecycle flow and emissions inventory
+        df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage)
 
-            # Correcting life cycle inventory with material is concrete
-            # Calculates the concrete lifecycle flow and emissions inventory
-            df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage)
+        if not df_static.empty:
+            new_df['flow name'] = new_df['material'] + ', ' + new_df['stage']
+            new_df= new_df[['flow name','flow quantity']]
 
-            if not df_static.empty:
-                new_df['flow name'] = new_df['material'] + ', ' + new_df['stage']
-                new_df= new_df[['flow name','flow quantity']]
+            # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
+            # It calculates the LCI flows of the foreground process.
+            res = model_celavi_lci(new_df,year,facility_id,stage,material,df_static)
 
-                # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
-                # It calculates the LCI flows of the foreground process.
-                res = model_celavi_lci(new_df,year,facility_id,stage,material,df_static)
+            # model_celavi_lci_insitu() calculating direct emissions from foreground
+            # processes.
+            emission = model_celavi_lci_insitu(new_df,year,facility_id,stage,material,df_emissions)
 
-                # model_celavi_lci_insitu() calculating direct emissions from foreground
-                # processes.
-                emission = model_celavi_lci_insitu(new_df,year,facility_id,stage,material,df_emissions)
-
-                if not res.empty:
-                    res = model_celavi_lci_background(res,year,facility_id,stage,material)
-                    res = postprocessing(res,emission)
-                    res_df = pd.concat([res_df,res])
+            if not res.empty:
+                res = model_celavi_lci_background(res,year,facility_id,stage,material)
+                res = postprocessing(res,emission)
+                res_df = pd.concat([res_df,res])
     
     # The line below is just for debugging if needed
     res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
