@@ -133,6 +133,9 @@ class Router(object):
         # import locations data
         locations = pd.read_csv(locations_file)
         route_pairs = pd.read_csv(route_pair_file)
+        # Get a list of destination facility types that must be in-state
+        # from route_pairs
+        _instate_dest = route_pairs[['destination_facility_type']][route_pairs['in_state'] == True].drop_duplicates().values.tolist()
 
         # identify states in locations data and loop through states (useful for debugging; loop could be removed)
         # compute routes for all locations in each state and save results
@@ -146,21 +149,30 @@ class Router(object):
             # select all source locations within this state
             _source_loc = locations[locations.region_id_2 == state]
             # select all destination locations in the complete data set
-            _dest_loc = locations #[locations.region_id_2 == state]
+            _dest_loc = locations
             # rename columns before merging
-            _source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
-            _dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
+            _source_loc = _source_loc[['facility_id', 'facility_type', 'region_id_2', 'lat', 'long']].add_prefix('source_')
+            _dest_loc = _dest_loc[['facility_id', 'facility_type', 'region_id_2', 'lat', 'long']].add_prefix('destination_')
             _source_loc.insert(0, 'merge', 'True')
             _dest_loc.insert(0, 'merge', 'True')
+
             # merge source and destination pairs
             all_route_list = _source_loc.merge(_dest_loc, on='merge')
 
-            # filter down all_route_list which has all combinations of
-            # facility_type values using the route_pairs dataframe which
-            # specifies allowable source/destination facility_type pairs and
-            # whether the connection between facilities is required to remain
-            # in-state or not
-            route_list = all_route_list[all_route_list[['source_facility_type','destination_facility_type']].apply(tuple,axis=1).isin(route_pairs.apply(tuple,axis=1))]
+            # Filter down to only the source/destination pairs allowed by
+            # route_pairs
+            route_list = all_route_list[all_route_list[['source_facility_type','destination_facility_type']].apply(tuple,axis=1).isin(route_pairs[['source_facility_type','destination_facility_type']].apply(tuple, axis=1))]
+            pdb.set_trace()
+            # Filter down further using the in_state column, which specifies
+            # whether facility connections should be made out-of-state or not
+
+            # Remove all routes from route_list that have the facility_type
+            # specified in _instate_dest and are out-of-state
+            # a FALSE value in _remove means that row will be removed from
+            # route_list
+            _remove = (route_list.destination_facility_type.isin(_instate_dest)) & (route_list.destination_region_id_2 != state)
+
+            route_list = route_list[_remove]
             pdb.set_trace()
             # if route_list is empty, generate empty data frame for export (e.g., create column for total_vmt)
             # otherwise, loop through all locations in route_list and compute routing distances
@@ -172,6 +184,7 @@ class Router(object):
                                                                  'source_long', 'destination_facility_id', 'destination_facility_type',
                                                                  'destination_lat', 'destination_long'])['vmt'].transform('sum')
                 route_list.to_csv(file_output)
+
             else:
 
                 route_list.to_csv(routing_output_folder + 'route_list.csv')
