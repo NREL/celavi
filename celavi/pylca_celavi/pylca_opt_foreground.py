@@ -105,7 +105,7 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
         # This emulates what the pyomo command-line tools does
     from pyomo.opt import SolverFactory
     import pyomo.environ
-    opt = SolverFactory("ipopt")
+    opt = SolverFactory("glpk")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
     scaling_vector = pd.DataFrame()
