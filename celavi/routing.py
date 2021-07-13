@@ -12,7 +12,7 @@ Unmodified FPEAM code is available at https://github.com/NREL/fpeam.
 
 @author: aeberle
 """
-
+import pdb
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -143,21 +143,25 @@ class Router(object):
             file_output = routing_output_folder + 'route_list_output_{}.csv'.format(state)
             file_output_list.append(file_output)
 
-            # select all source and destination locations (right now source locations = destination locations)
-            # this setup allows us to find routs between all locations in the input locations file
+            # select all source locations within this state
             _source_loc = locations[locations.region_id_2 == state]
-            _dest_loc = locations[locations.region_id_2 == state]
+            # select all destination locations in the complete data set
+            _dest_loc = locations #[locations.region_id_2 == state]
+            # rename columns before merging
             _source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
             _dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
             _source_loc.insert(0, 'merge', 'True')
             _dest_loc.insert(0, 'merge', 'True')
+            # merge source and destination pairs
             all_route_list = _source_loc.merge(_dest_loc, on='merge')
 
-            # filter down the route_list which has all combinations of
+            # filter down all_route_list which has all combinations of
             # facility_type values using the route_pairs dataframe which
-            # specifies allowable source/destination facility_type pairs
+            # specifies allowable source/destination facility_type pairs and
+            # whether the connection between facilities is required to remain
+            # in-state or not
             route_list = all_route_list[all_route_list[['source_facility_type','destination_facility_type']].apply(tuple,axis=1).isin(route_pairs.apply(tuple,axis=1))]
-
+            pdb.set_trace()
             # if route_list is empty, generate empty data frame for export (e.g., create column for total_vmt)
             # otherwise, loop through all locations in route_list and compute routing distances
             if route_list.empty:
