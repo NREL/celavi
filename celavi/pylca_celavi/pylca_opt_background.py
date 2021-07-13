@@ -285,7 +285,7 @@ def solver_optimization(tech_matrix,F):
     # pyomo command-line.  For example:  python transport.py
 
     # This emulates what the pyomo command-line tools does
-    opt = SolverFactory("ipopt")
+    opt = SolverFactory("glpk")
     
     results = opt.solve(model)        
     solution = pyomo_postprocess(None, model, results)   
