@@ -103,7 +103,6 @@ class Router(object):
 
         return _summary[['region_transportation', 'fclass', 'vmt']]
 
-
     def get_all_routes(locations_file,
                        route_pair_file,
                        transportation_graph,
@@ -159,9 +158,12 @@ class Router(object):
             # merge source and destination pairs
             source_dest_pairs = _source_loc.merge(_dest_loc, on='merge')
 
-            # Filter down to only the source/destination pairs allowed by
-            # route_pairs
-            all_route_list = source_dest_pairs[source_dest_pairs[['source_facility_type','destination_facility_type']].apply(tuple,axis=1).isin(route_pairs[['source_facility_type','destination_facility_type']].apply(tuple, axis=1))].merge(route_pairs, on=['source_facility_type', 'destination_facility_type'])
+            # Filter down to only the source/destination pairs allowed by route_pairs
+            source_dest_allowable_pairs = route_pairs[['source_facility_type', 'destination_facility_type']].apply(tuple, axis=1)
+            source_dest_complete_pairs = source_dest_pairs[['source_facility_type', 'destination_facility_type']].apply(tuple, axis=1)
+            source_dest_select_route_types = source_dest_complete_pairs.isin(source_dest_allowable_pairs)
+            selected_routes = source_dest_pairs[source_dest_select_route_types]
+            all_route_list = selected_routes.merge(route_pairs, on=['source_facility_type', 'destination_facility_type'])
 
             # divide all_route_list into two sets of routes, one with connections
             # within this state and one with connections out of state
