@@ -15,12 +15,12 @@ class CostGraph:
     """
 
     def __init__(self,
-                 step_costs_file : str = '../celavi-data/inputs/step_costs.csv',
-                 fac_edges_file : str = '../celavi-data/inputs/fac_edges.csv',
-                 transpo_edges_file : str = '../celavi-data/inputs/transpo_edges.csv',
-                 locations_file : str = '../celavi-data/inputs/locations_computed.csv',
-                 routes_file : str = '../celavi-data/preprocessing/routes.csv',
-                 sc_begin : str = 'in use',
+                 step_costs_file : str,
+                 fac_edges_file : str,
+                 transpo_edges_file : str,
+                 locations_file : str,
+                 routes_file : str,
+                 sc_begin : str = 'manufacturing',
                  sc_end = ('landfilling', 'cement co-processing'),
                  year : float = 2000.0,
                  max_dist : float = 300.0,
