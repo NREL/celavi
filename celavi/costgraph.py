@@ -548,7 +548,8 @@ class CostGraph:
                                   u_node,
                                   ' and ',
                                   v_node)
-                        data['dist'] = _line['total_vmt'].values[0]
+                        # Additional factor converts miles to km
+                        data['dist'] = 1.60934 * _line['total_vmt'].values[0]
 
         if self.verbose > 1:
             print('Calculating edge costs')
