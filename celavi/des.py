@@ -1,5 +1,6 @@
 from typing import Dict, List, Callable, Union, Tuple
 from math import floor, ceil
+from datetime import datetime
 
 import simpy
 import pandas as pd
@@ -253,7 +254,7 @@ class Context:
             if process_name in name
         ]
         total_mass = sum(cumulative_masses)
-        print(f'process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
+        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
         return total_mass
 
     def pylca_interface_process(self, env):
@@ -283,7 +284,7 @@ class Context:
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
             if len(annual_data_for_lci) > 0:
-                print('DES interface: Found flow quantities greater than 0, performing LCIA')
+                print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 pylca_run_main(df_for_pylca_interface)
 
@@ -316,7 +317,7 @@ class Context:
                 coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
-            print(f"Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
