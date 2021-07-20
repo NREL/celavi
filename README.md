@@ -9,8 +9,9 @@ On macOS, use Terminal to type the commands. On Windows, use the Anaconda Prompt
 
 ## Installation
 
-This installation assumes you are using `conda` to create virtual environments.
+This installation assumes you are using `conda` to create virtual environments. CELAVI requires packages from `pip` and `conda`, so there are two steps to the installation. These installation commands only need to be executed once before CELAAVI can be executed.
 
+### Installation step 1: pip install
 From the command prompt with the folder of your cloned repository, execute the following commands (these only need to be ran once at installation time):
 
 ```
@@ -19,12 +20,23 @@ conda activate celavi
 pip install -e .
 ```
 
+### Installation step 2: conda install
+
+Now you need to install some pakages with `conda`. Run the following commands:
+
+```
+conda config --add channels conda-forge
+conda install glpk
+conda install ipopt
+conda install pyomo
+```
+
 ## Running the package
 
 From the root of the repo, type a command similar to the following. This will execute the costgraph. Note that the paths to the files will need to be changed for your particular folder structure.
 
 ```
-python -m celavi --locations /Users/akey/Projects/celavi-data/celavi-data/inputs/locations.csv --step_costs /Users/akey/Projects/celavi-data/celavi-data/inputs/step_costs.csv --fac_edges /Users/akey/Projects/celavi-data/celavi-data/inputs/fac_edges.csv --routes /Users/akey/Projects/celavi-data/celavi-data/preprocessing/routes.csv --transpo_edges /Users/akey/Projects/celavi-data/celavi-data/inputs/transpo_edges.csv
+python -m celavi --data /Users/akey/Projects/celavi-data/celavi-data
 ```
 
 ## Guide for development
