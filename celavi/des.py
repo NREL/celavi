@@ -275,8 +275,6 @@ class Context:
             window_first_timestep = window_last_timestep - timesteps_per_year
             
             print(f'{datetime.now()}ENTERING For Loop Line 272',flush = True)
-            chk = pd.DataFrame()
-            chk.to_csv('EnteringDeadloop.csv')
             for index,(facility_name, facility) in enumerate(self.mass_facility_inventories.items()):
                 process_name, facility_id = facility_name.split("_")
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
@@ -286,14 +284,14 @@ class Context:
 
                 f = open("output.txt", "a")
                 f.write(f'{datetime.now()}Looping through mass inventory dictionary '+ str(index + 1) + ' ' + str(len(self.mass_facility_inventories)))
+                f.write("\n")
                 f.close()
-                chk.to_csv(str(facility_name)+'.csv')
                 if mass_kg > 0:
 
                     f = open("ifelse_mass.txt", "a")
                     f.write(f'{datetime.now()}Creating row for appending in mass if loop line 289 '+ str(mass_kg) + ' ' + str(facility_name))
+                    f.write("\n")
                     f.close()
-                    chk.to_csv(str(facility_name)+'appendedwithmass.csv')
 
                     print(f'{datetime.now()}Creating row for appending in mass if loop line 289 '+ str(mass_kg) + ' ' + str(facility_name),flush = True)
                     row = {
@@ -314,18 +312,18 @@ class Context:
 
 
                 else:
-                     chk.to_csv(str(facility_name)+'skippednomass.csv')
 
                      f = open("ifelse_mass.txt", "a")
                      f.write(f'{datetime.now()}Skipped because mass is 0 '+ str(mass_kg) + ' ' + str(facility_name))
+                     f.write("\n")
                      f.close()
                      print('Skipped because mass is 0 -' + str(facility_name),flush = True)
 
                 
                 print('Size of the annual_data_list ' + str(len(annual_data_for_lci)))
-                chk.to_csv(str(facility_name)+'finalannualsizelist.csv')
                 f = open("output.txt", "a")
                 f.write(f'{datetime.now()}Size of the annual_data_list ' + str(len(annual_data_for_lci)))
+                f.write("\n")
                 f.close()
 
             if len(annual_data_for_lci) > 0:

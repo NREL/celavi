@@ -9,6 +9,7 @@ from routing import Router
 from costgraph import CostGraph
 from compute_locations import ComputeLocations
 import time
+import pickle
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
@@ -62,6 +63,7 @@ if run_routes:
 else:
     routes = routes_filename
 
+'''
 tim0 = time.time()
 netw = CostGraph(
     step_costs_file=step_costs_filename,
@@ -84,10 +86,14 @@ netw = CostGraph(
 )
 print(str(time.time() - tim0) + ' ' + 'taken for Cost Graph run',flush=True)
 
-import pickle 
-import math 
 file_pi = open('netw_pi.obj', 'wb') 
 pickle.dump(netw, file_pi)
+
+'''
+tim0 = time.time()
+print('Bypassing NETW Cost graph calculations',flush=True)
+netw=pickle.load(open('netw_pi.obj', 'rb'))
+print(str(time.time() - tim0) + ' ' + 'taken for Cost Graph pickle reading',flush=True)
 
 
 # Create the DES context and tie it to the CostGraph
