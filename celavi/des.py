@@ -268,22 +268,30 @@ class Context:
         
         print(f'{datetime.now()}ENTERING WHILE Loop Line 266',flush = True)
         
+        counter = 0
         while True:
-            yield env.timeout(timesteps_per_year)   # Run annually
+            
+            print(counter)
+            #print(env.timeout(timesteps_per_year))            
+            yield env.timeout(timesteps_per_year)   # Run annually            
             annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
             
             print(f'{datetime.now()}ENTERING For Loop Line 272',flush = True)
-            for index,(facility_name, facility) in enumerate(self.mass_facility_inventories.items()):
-                process_name, facility_id = facility_name.split("_")
-                annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
+            df = pd.DataFrame.from_dict(self.mass_facility_inventories,orient = 'index')            
+            
+            
+            for index,row in df.itertuples():
+                facility_name = index
+                process_name, facility_id = index.split("_")
+                annual_transactions = row.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 positive_annual_transactions = annual_transactions[annual_transactions > 0]
                 mass_tonnes = positive_annual_transactions.sum()
                 mass_kg = mass_tonnes * 1000
 
                 f = open("output.txt", "a")
-                f.write(f'{datetime.now()}Looping through mass inventory dictionary '+ str(index + 1) + ' ' + str(len(self.mass_facility_inventories)))
+                f.write(f'{datetime.now()}Looping through mass inventory dictionary '+ str(index) + ' ' + str(len(self.mass_facility_inventories)))
                 f.write("\n")
                 f.close()
                 if mass_kg > 0:
@@ -293,7 +301,7 @@ class Context:
                     f.write("\n")
                     f.close()
 
-                    print(f'{datetime.now()}Creating row for appending in mass if loop line 289 '+ str(mass_kg) + ' ' + str(facility_name),flush = True)
+
                     row = {
                         'flow quantity': mass_kg,
                         'stage': process_name,
@@ -308,19 +316,13 @@ class Context:
                     annual_data_for_lci.append(row)
                     print(f'{datetime.now()}Appended row data for LCI Line 302',flush = True)
 
-
-
-
                 else:
 
                      f = open("ifelse_mass.txt", "a")
                      f.write(f'{datetime.now()}Skipped because mass is 0 '+ str(mass_kg) + ' ' + str(facility_name))
                      f.write("\n")
                      f.close()
-                     print('Skipped because mass is 0 -' + str(facility_name),flush = True)
-
                 
-                print('Size of the annual_data_list ' + str(len(annual_data_for_lci)))
                 f = open("output.txt", "a")
                 f.write(f'{datetime.now()}Size of the annual_data_list ' + str(len(annual_data_for_lci)))
                 f.write("\n")
@@ -331,7 +333,11 @@ class Context:
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, sending dataframe to LCIA',flush=True)
                 pylca_run_main(df_for_pylca_interface)
+                
+            else:
+                print('Going to next time step')
 
+            counter = counter +1 
     def update_cost_graph_process(self, env):
         """
         This is the SimPy process that updates the cost graph periodically.
@@ -373,9 +379,12 @@ class Context:
             A dictionary of inventories mapped to their cumulative histories.
         """
         self.env.process(self.update_cost_graph_process(self.env))
+        print('Running The pylca_interface_function')
         self.env.process(self.pylca_interface_process(self.env))
-
         self.env.run(until=int(self.max_timesteps))
+        print('The pylca_interface_function ran once')
+        import sys
+        sys.exit(0)
 
         result = {
             "count_facility_inventories": self.count_facility_inventories,
