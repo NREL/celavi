@@ -8,6 +8,7 @@ import pandas as pd
 from routing import Router
 from costgraph import CostGraph
 from compute_locations import ComputeLocations
+import time
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
@@ -61,6 +62,7 @@ if run_routes:
 else:
     routes = routes_filename
 
+tim0 = time.time()
 netw = CostGraph(
     step_costs_file=step_costs_filename,
     fac_edges_file=fac_edges_filename,
@@ -71,7 +73,7 @@ netw = CostGraph(
     sc_end=['landfilling', 'cement co-processing'],
     year=2000.0,
     max_dist=300.0,
-    verbose=0,
+    verbose=1,
     blade_mass=50.0, #@todo update with actual value
     finegrind_cumul_initial=1.0,
     coarsegrind_cumul_initial=1.0,
@@ -80,8 +82,16 @@ netw = CostGraph(
     finegrind_learnrate=-0.05,
     coarsegrind_learnrate=-0.05
 )
+print(str(time.time() - tim0) + ' ' + 'taken for Cost Graph run',flush=True)
+
+import pickle 
+import math 
+file_pi = open('netw_pi.obj', 'wb') 
+pickle.dump(netw, file_pi)
+
 
 # Create the DES context and tie it to the CostGraph
+tim0 = time.time()
 context = Context(
     locations_filename=locations_filename,
     step_costs_filename=step_costs_filename,
@@ -91,10 +101,14 @@ context = Context(
     avg_blade_masses_filename=avg_blade_masses_filename
 )
 
+
+print(str(time.time() - tim0) + ' ' + 'taken for Context Creation',flush=True)
 # Create the turbine dataframe that will be used to populate
 # the context with components. Repeat the creation of blades
 # 3 times for each turbine.
 
+
+tim0 = time.time()
 turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
@@ -131,9 +145,16 @@ lifespan_fns = {
 
 # Populate the context with components.
 context.populate(components, lifespan_fns)
+print(str(time.time() - tim0) + ' ' + 'data prepared for context run',flush=True)
+
 
 # Run the context
+tim0 = time.time()
+print('DES and Pylca Starting',flush = True)
 result = context.run()
+print(str(time.time() - tim0) + ' ' + 'DES and Pylca completed',flush=True)
+
+
 
 # Output .csv files of the mass flows of each mass inventory.
 mass_facility_inventories = result["mass_facility_inventories"]

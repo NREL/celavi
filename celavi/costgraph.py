@@ -2,7 +2,7 @@ import networkx as nx
 import pandas as pd
 import numpy as np
 from itertools import product
-
+from time import time
 from networkx_query import search_nodes
 
 from costmethods import CostMethods
@@ -93,7 +93,7 @@ class CostGraph:
         coarsegrind_learnrate : float
             Industrial learning-by-doing rate for coarse grinding. Unitless.
         """
-
+        self.start_time = time()
         self.step_costs=pd.read_csv(step_costs_file)
         self.fac_edges=pd.read_csv(fac_edges_file)
         self.transpo_edges = pd.read_csv(transpo_edges_file)
@@ -441,7 +441,8 @@ class CostGraph:
         None
         """
         if self.verbose > 0:
-            print('-------Building supply chain graph-------')
+            print('Adding nodes and edges at        %d s' % np.round(
+                time() - self.start_time, 0), flush=True)
 
         # add all facilities and intra-facility edges to supply chain
         with open(self.loc_df, 'r') as _loc_file:
@@ -459,13 +460,16 @@ class CostGraph:
                 self.supply_chain.add_edges_from(_fac_graph.edges(data=True))
 
         if self.verbose > 0:
-            print('Adding inter-facility cost methods to supply chain graph')
+            print('Nodes and edges added at         %d s' % np.round(
+                time() - self.start_time, 0), flush=True)
+            print('Adding transport cost methods at %d s' % np.round(
+                time() - self.start_time, 0), flush=True)
 
         # add all inter-facility edges, with costs but without distances
         # this is a relatively short loop
         for index, row in self.transpo_edges.iterrows():
             if self.verbose > 1:
-                print('Adding transportation cost methods to edges between ',
+                print('Adding transport cost methods to edges between ',
                       row['u_step'],
                       ' and ',
                       row['v_step'])
@@ -507,11 +511,15 @@ class CostGraph:
             self.supply_chain.add_edges_from(self.list_of_tuples([edge[0] for edge in _edge_list],
                                                                  [edge[1] for edge in _edge_list],
                                                                  _methods))
+        if self.verbose > 0:
+            print('Transport cost methods added at  %d s' % np.round(
+                time() - self.start_time, 0), flush=True)
 
         # read in and process routes line by line
         with open(self.routes_df, 'r') as _route_file:
             if self.verbose > 0:
-                print('Adding distances to supply chain graph')
+                print('Adding route distances at        %d s' % np.round(
+                    time() - self.start_time, 0), flush=True)
 
             # Only read in columns relevant to CostGraph building
             _reader = pd.read_csv(_route_file,
@@ -550,8 +558,11 @@ class CostGraph:
                                   v_node)
                         data['dist'] = _line['total_vmt'].values[0]
 
-        if self.verbose > 1:
-            print('Calculating edge costs')
+        if self.verbose > 0:
+            print('Route distances added at         %d s' % np.round(
+                time() - self.start_time, 0), flush=True)
+            print('Calculating edge costs at        %d s' % np.round(
+                time() - self.start_time, 0), flush=True)
 
         for edge in self.supply_chain.edges():
             if self.verbose > 1:
@@ -569,7 +580,8 @@ class CostGraph:
                                                          for f in self.supply_chain.edges[edge]['cost_method']])
 
         if self.verbose > 0:
-            print('-------Supply chain graph is built-------')
+            print('Supply chain graph is built at   %d s' % np.round(
+                time() - self.start_time, 0), flush=True)
 
 
     def choose_paths(self):

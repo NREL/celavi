@@ -1,5 +1,6 @@
 from typing import Dict, List, Callable, Union, Tuple
 from math import floor, ceil
+from datetime import datetime
 
 import simpy
 import pandas as pd
@@ -106,7 +107,8 @@ class Context:
         self.mass_facility_inventories = {}
         self.count_facility_inventories = {}
         for _, row in locations_step_costs.iterrows():
-            facility_type = row['facility_type_x']
+
+            facility_type = row['facility_type_x']            
             facility_id = row['facility_id']
             step = row['step']
             step_facility_id = f"{step}_{facility_id}"
@@ -253,25 +255,47 @@ class Context:
             if process_name in name
         ]
         total_mass = sum(cumulative_masses)
-        print(f'process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
+        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}', flush=True)
         return total_mass
 
     def pylca_interface_process(self, env):
+        
+        print(f'{datetime.now()}This function may be causing ISSUES',flush = True)
+        
         timesteps_per_year = 12
         component = 'blade'
         material = 'glass fiber reinforced polymer'
+        
+        print(f'{datetime.now()}ENTERING WHILE Loop Line 266',flush = True)
+        
         while True:
             yield env.timeout(timesteps_per_year)   # Run annually
             annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
-            for facility_name, facility in self.mass_facility_inventories.items():
+            
+            print(f'{datetime.now()}ENTERING For Loop Line 272',flush = True)
+            chk = pd.DataFrame()
+            chk.to_csv('EnteringDeadloop.csv')
+            for index,(facility_name, facility) in enumerate(self.mass_facility_inventories.items()):
                 process_name, facility_id = facility_name.split("_")
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 positive_annual_transactions = annual_transactions[annual_transactions > 0]
                 mass_tonnes = positive_annual_transactions.sum()
                 mass_kg = mass_tonnes * 1000
+
+                f = open("output.txt", "a")
+                f.write(f'{datetime.now()}Looping through mass inventory dictionary '+ str(index + 1) + ' ' + str(len(self.mass_facility_inventories)))
+                f.close()
+                chk.to_csv(str(facility_name)+'.csv')
                 if mass_kg > 0:
+
+                    f = open("ifelse_mass.txt", "a")
+                    f.write(f'{datetime.now()}Creating row for appending in mass if loop line 289 '+ str(mass_kg) + ' ' + str(facility_name))
+                    f.close()
+                    chk.to_csv(str(facility_name)+'appendedwithmass.csv')
+
+                    print(f'{datetime.now()}Creating row for appending in mass if loop line 289 '+ str(mass_kg) + ' ' + str(facility_name),flush = True)
                     row = {
                         'flow quantity': mass_kg,
                         'stage': process_name,
@@ -280,11 +304,34 @@ class Context:
                         'flow unit': 'kg',
                         'facility_id': facility_id
                     }
+                    
+                    print(f'{datetime.now()}Compiling Data for LCI Line 299',flush = True)                    
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
+                    print(f'{datetime.now()}Appended row data for LCI Line 302',flush = True)
+
+
+
+
+                else:
+                     chk.to_csv(str(facility_name)+'skippednomass.csv')
+
+                     f = open("ifelse_mass.txt", "a")
+                     f.write(f'{datetime.now()}Skipped because mass is 0 '+ str(mass_kg) + ' ' + str(facility_name))
+                     f.close()
+                     print('Skipped because mass is 0 -' + str(facility_name),flush = True)
+
+                
+                print('Size of the annual_data_list ' + str(len(annual_data_for_lci)))
+                chk.to_csv(str(facility_name)+'finalannualsizelist.csv')
+                f = open("output.txt", "a")
+                f.write(f'{datetime.now()}Size of the annual_data_list ' + str(len(annual_data_for_lci)))
+                f.close()
+
             if len(annual_data_for_lci) > 0:
-                print('DES interface: Found flow quantities greater than 0, performing LCIA')
+                print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, preparing dataframe for LCIA',flush=True)
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
+                print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, sending dataframe to LCIA',flush=True)
                 pylca_run_main(df_for_pylca_interface)
 
     def update_cost_graph_process(self, env):
@@ -316,7 +363,7 @@ class Context:
                 coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
-            print(f"Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
