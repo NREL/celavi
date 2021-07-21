@@ -5,9 +5,9 @@ from datetime import datetime
 import simpy
 import pandas as pd
 
-from inventory import FacilityInventory
-from component import Component
-from costgraph import CostGraph
+from celavi.inventory import FacilityInventory
+from celavi.component import Component
+from celavi.costgraph import CostGraph
 
 from pylca_celavi.des_interface import pylca_run_main
 

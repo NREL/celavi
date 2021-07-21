@@ -5,24 +5,71 @@ import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
 import numpy as np
 import pandas as pd
-from routing import Router
-from costgraph import CostGraph
-from compute_locations import ComputeLocations
+from celavi.routing import Router
+from celavi.costgraph import CostGraph
+from celavi.compute_locations import ComputeLocations
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
 
+# SUB FOLDERS
+subfolder_dict = {}
+# input data folder for pre-processed route data
+subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data, 'preprocessing/')
+# input data folder for LCI
+subfolder_dict['lci_folder'] = os.path.join(args.data, 'pylca_celavi_data')
+# output folder for CELAVI results
+subfolder_dict['outputs_folder'] = os.path.join(args.data, 'outputs')
+# output folder for intermediate routing data
+subfolder_dict['routing_output_folder'] = os.path.join(args.data, 'preprocessing', 'routing_intermediate_files/')
+
+# check if directories exist, if not, create them
+for folder in subfolder_dict.values():
+    isdir = os.path.isdir(folder)
+    if not isdir:
+        os.makedirs(folder)
+
+# FILE NAMES FOR INPUT DATA
+# TODO: add check to ensure files exist
+# general inputs
 locations_filename = os.path.join(args.data, 'inputs', 'locations.csv')
 locations_computed_filename = os.path.join(args.data, 'inputs', 'locations_computed.csv')
 step_costs_filename = os.path.join(args.data, 'inputs', 'step_costs.csv')
 fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
-routes_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
 transpo_edges_filename = os.path.join(args.data, 'inputs', 'transpo_edges.csv')
-routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
-lci_folder = os.path.join(args.data, 'pylca_celavi_data')
-outputs_folder = os.path.join(args.data, 'outputs')
+route_pair_filename = os.path.join(args.data, 'inputs', 'route_pairs.csv')
 avg_blade_masses_filename = os.path.join(args.data, 'inputs', 'avgblademass.csv')
+routes_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
+routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
+
+# input file paths for precomputed US road network data
+# transport graph (pre computed; don't change)
+transportation_graph_filename = os.path.join(args.data, 'inputs',
+                                             'precomputed_us_road_network',
+                                             'transportation_graph.csv')
+
+# node locations for transport graph (pre computed; don't change)
+node_locations_filename = os.path.join(args.data, 'inputs',
+                                       'precomputed_us_road_network',
+                                       'node_locations.csv')
+
+# file paths for raw data used to compute locations
+wind_turbine_locations_filename = os.path.join(args.data, 'inputs',
+                                               'raw_location_data',
+                                               'uswtdb_v3_3_20210114.csv')
+# LMOP data for landfill locations
+landfill_locations_filename = os.path.join(args.data, 'inputs',
+                                           'raw_location_data',
+                                           'landfilllmopdata.csv')
+# other facility locations (e.g., cement)
+other_facility_locations_filename = os.path.join(args.data, 'inputs',
+                                                 'raw_location_data',
+                                                 'other_facility_locations_all_us.csv')
+
+lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
+                                             'facility_type.csv')
+
 
 # TODO: The tiny data and national data should use the same filename.
 # When that is the case, place that filename below.
@@ -34,8 +81,8 @@ turbine_data_filename = os.path.join(args.data, 'inputs', 'TX_input_data_with_ma
 # the working directory is changed because the LCIA will attempt to read
 # files immediately.
 
-os.chdir(lci_folder)
-from des import Context
+os.chdir(subfolder_dict['lci_folder'])
+from celavi.des import Context
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
@@ -44,7 +91,12 @@ use_computed_locations = True
 # to include all facility ids. Otherwise, cost graph can't run with the full
 # computed data set.
 if compute_locations:
-    loc = ComputeLocations()
+    loc = ComputeLocations(wind_turbine_locations=wind_turbine_locations_filename,
+                           landfill_locations=landfill_locations_filename,
+                           other_facility_locations=other_facility_locations_filename,
+                           transportation_graph=transportation_graph_filename,
+                           node_locations=node_locations_filename,
+                           lookup_facility_type=lookup_facility_type_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 if use_computed_locations:
@@ -55,7 +107,12 @@ else:
 # if run_routes is enabled (True), compute routing distances between all input locations
 run_routes = False
 if run_routes:
-    routes_computed = Router.get_all_routes(locations_file=locations_filename)
+    routes_computed = Router.get_all_routes(locations_file=locations_filename,
+                                            route_pair_file=route_pair_filename,
+                                            transportation_graph=transportation_graph_filename,
+                                            node_locations=node_locations_filename,
+                                            routing_output_folder=subfolder_dict['routing_output_folder'],
+                                            preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
     # reset argument for routes file to use computed routes rather than user input
     args.routes = routes_computed_filename
 else:
@@ -138,13 +195,13 @@ result = context.run()
 # Output .csv files of the mass flows of each mass inventory.
 mass_facility_inventories = result["mass_facility_inventories"]
 for facility_name, facility in mass_facility_inventories.items():
-    output_filename = os.path.join(outputs_folder, f'{facility_name}.csv')
+    output_filename = os.path.join(subfolder_dict['outputs_folder'], f'{facility_name}.csv')
     output_filename = output_filename.replace(' ', '_')
     facility.transaction_history.to_csv(output_filename, index_label='timestep')
 
 # After PyLCA / DES integration is complete, the next 3 lines should be
 # eliminated
-data_for_lci_filename = os.path.join(outputs_folder, 'data_for_lci.csv')
+data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
 data_for_lci_df = pd.DataFrame(context.data_for_lci)
 data_for_lci_df.to_csv(data_for_lci_filename, index=False)
 
@@ -163,6 +220,5 @@ for i in range(len(count_facility_inventory_items)):
     ax.set_title(facility_name)
     ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
     ax.set_ylabel("tonnes")
-plot_output_path = os.path.join(outputs_folder, 'blade_counts.png')
+plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
 plt.savefig(plot_output_path)
-

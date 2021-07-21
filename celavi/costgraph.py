@@ -5,7 +5,7 @@ from itertools import product
 from time import time
 from networkx_query import search_nodes
 
-from costmethods import CostMethods
+from celavi.costmethods import CostMethods
 
 class CostGraph:
     """
@@ -15,12 +15,12 @@ class CostGraph:
     """
 
     def __init__(self,
-                 step_costs_file : str = '../celavi-data/inputs/step_costs.csv',
-                 fac_edges_file : str = '../celavi-data/inputs/fac_edges.csv',
-                 transpo_edges_file : str = '../celavi-data/inputs/transpo_edges.csv',
-                 locations_file : str = '../celavi-data/inputs/locations_computed.csv',
-                 routes_file : str = '../celavi-data/preprocessing/routes.csv',
-                 sc_begin : str = 'in use',
+                 step_costs_file : str,
+                 fac_edges_file : str,
+                 transpo_edges_file : str,
+                 locations_file : str,
+                 routes_file : str,
+                 sc_begin : str = 'manufacturing',
                  sc_end = ('landfilling', 'cement co-processing'),
                  year : float = 2000.0,
                  max_dist : float = 300.0,
@@ -556,7 +556,8 @@ class CostGraph:
                                   u_node,
                                   ' and ',
                                   v_node)
-                        data['dist'] = _line['total_vmt'].values[0]
+                        # Additional factor converts miles to km
+                        data['dist'] = 1.60934 * _line['total_vmt'].values[0]
 
         if self.verbose > 0:
             print('Route distances added at         %d s' % np.round(

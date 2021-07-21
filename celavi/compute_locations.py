@@ -1,4 +1,4 @@
-import data_manager as Data
+import celavi.data_manager as Data
 import warnings
 import pandas as pd
 
@@ -6,13 +6,22 @@ warnings.simplefilter('error', UserWarning)
 
 
 class ComputeLocations:
-    def __init__(self):
+    def __init__(self,
+                 wind_turbine_locations,
+                 landfill_locations,
+                 other_facility_locations,
+                 transportation_graph,
+                 node_locations,
+                 lookup_facility_type):
+
         # file paths for raw data used to compute locations
-        self.wind_turbine_locations = '../../celavi-data/inputs/raw_location_data/uswtdb_v3_3_20210114.csv'  # wind turbine locations using USWTDB format
-        self.landfill_locations = '../../celavi-data/inputs/raw_location_data/landfilllmopdata.csv' # LMOP data for landfill locations
-        self.other_facility_locations = '../../celavi-data/inputs/raw_location_data/other_facility_locations_all_us.csv'  # other facility locations (e.g., cement)
-        self.transportation_graph = '../../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
-        self.node_locations = '../../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
+        self.wind_turbine_locations = wind_turbine_locations
+        self.landfill_locations = landfill_locations
+        self.other_facility_locations = other_facility_locations
+        self.transportation_graph = transportation_graph
+        self.node_locations = node_locations
+
+        self.lookup_facility_type_file=lookup_facility_type
 
         # data backfill flag
         self.backfill = True
@@ -20,11 +29,9 @@ class ComputeLocations:
         # flag to use limited set of source data
         self.toy = False
 
-        self.lookup_facility_type_file = '../../celavi-data/lookup_tables/facility_type.csv'
+
         self.facility_type_lookup = pd.read_csv(self.lookup_facility_type_file, header=None)
 
-        self.lookup_facility_id = '../../celavi-data/lookup_tables/facility_id.csv'
-        self.facility_id_lookup = pd.read_csv(self.lookup_facility_id, header=None)
 
     def wind_power_plant(self):
         """Process data for wind power plants - from USWTDB"""

@@ -20,7 +20,7 @@ from networkx.algorithms.shortest_paths.weighted import bidirectional_dijkstra
 from scipy.spatial import ckdtree
 from joblib import Memory
 import tempfile
-import data_manager as Data
+import celavi.data_manager as Data
 
 
 class Router(object):
@@ -103,9 +103,12 @@ class Router(object):
 
         return _summary[['region_transportation', 'fclass', 'vmt']]
 
-
-    def get_all_routes(locations_file : str = '../../celavi-data/inputs/locations.csv',
-                       route_pair_file : str = '../../celavi-data/inputs/route_pairs.csv'):
+    def get_all_routes(locations_file,
+                       route_pair_file,
+                       transportation_graph,
+                       node_locations,
+                       routing_output_folder,
+                       preprocessing_output_folder):
         """
         Calculates distances traveled between all locations in the locations_file.
         Includes distance traveled through each transportation region (e.g., county FIPS) and road class.
@@ -113,14 +116,6 @@ class Router(object):
         :return:
         """
         backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
-
-        # set input file paths for precomputed US road network data
-        transportation_graph = '../../celavi-data/inputs/precomputed_us_road_network/transportation_graph.csv'  # transport graph (pre computed; don't change)
-        node_locations = '../../celavi-data/inputs/precomputed_us_road_network/node_locations.csv'  # node locations for transport graph (pre computed; don't change)
-
-        # set output folders for intermediate routing data
-        routing_output_folder = '../../celavi-data/preprocessing/routing_intermediate_files/'
-        preprocessing_output_folder = '../../celavi-data/preprocessing/'  # data in this folder will be inputs to CELAVI
 
         # import transportation graph and node locations
         _transportation_graph = Data.TransportationGraph(fpath=transportation_graph, backfill=backfill)
@@ -137,6 +132,9 @@ class Router(object):
         # import locations data
         locations = pd.read_csv(locations_file)
         route_pairs = pd.read_csv(route_pair_file)
+        # Get a list of destination facility types that must be in-state
+        # from route_pairs
+        _instate_dest = route_pairs[route_pairs['connection'] == 'in_state'].destination_facility_type.drop_duplicates().values
 
         # identify states in locations data and loop through states (useful for debugging; loop could be removed)
         # compute routes for all locations in each state and save results
@@ -147,20 +145,35 @@ class Router(object):
             file_output = routing_output_folder + 'route_list_output_{}.csv'.format(state)
             file_output_list.append(file_output)
 
-            # select all source and destination locations (right now source locations = destination locations)
-            # this setup allows us to find routs between all locations in the input locations file
+            # select all source locations within this state
             _source_loc = locations[locations.region_id_2 == state]
-            _dest_loc = locations[locations.region_id_2 == state]
-            _source_loc = _source_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('source_')
-            _dest_loc = _dest_loc[['facility_id', 'facility_type', 'lat', 'long']].add_prefix('destination_')
+            # select all destination locations in the complete data set
+            _dest_loc = locations
+            # rename columns before merging
+            _source_loc = _source_loc[['facility_id', 'facility_type', 'region_id_2', 'lat', 'long']].add_prefix('source_')
+            _dest_loc = _dest_loc[['facility_id', 'facility_type', 'region_id_2', 'lat', 'long']].add_prefix('destination_')
             _source_loc.insert(0, 'merge', 'True')
             _dest_loc.insert(0, 'merge', 'True')
-            all_route_list = _source_loc.merge(_dest_loc, on='merge')
 
-            # filter down the route_list which has all combinations of
-            # facility_type values using the route_pairs dataframe which
-            # specifies allowable source/destination facility_type pairs
-            route_list = all_route_list[all_route_list[['source_facility_type','destination_facility_type']].apply(tuple,axis=1).isin(route_pairs.apply(tuple,axis=1))]
+            # merge source and destination pairs
+            source_dest_pairs = _source_loc.merge(_dest_loc, on='merge')
+
+            # Filter down to only the source/destination pairs allowed by route_pairs
+            source_dest_allowable_pairs = route_pairs[['source_facility_type', 'destination_facility_type']].apply(tuple, axis=1)
+            source_dest_complete_pairs = source_dest_pairs[['source_facility_type', 'destination_facility_type']].apply(tuple, axis=1)
+            source_dest_select_route_types = source_dest_complete_pairs.isin(source_dest_allowable_pairs)
+            selected_routes = source_dest_pairs[source_dest_select_route_types]
+            all_route_list = selected_routes.merge(route_pairs, on=['source_facility_type', 'destination_facility_type'])
+
+            # divide all_route_list into two sets of routes, one with connections
+            # within this state and one with connections out of state
+            instate_routes = all_route_list[all_route_list.destination_region_id_2 == state]
+            outstate_routes = all_route_list[all_route_list.destination_region_id_2 != state]
+
+            # Remove entries from the out-of-state route list where the
+            # connections are required to be in-state
+            _keep = outstate_routes.connection == 'any'
+            route_list = instate_routes.append(outstate_routes[_keep])
 
             # if route_list is empty, generate empty data frame for export (e.g., create column for total_vmt)
             # otherwise, loop through all locations in route_list and compute routing distances
@@ -172,6 +185,7 @@ class Router(object):
                                                                  'source_long', 'destination_facility_id', 'destination_facility_type',
                                                                  'destination_lat', 'destination_long'])['vmt'].transform('sum')
                 route_list.to_csv(file_output)
+
             else:
 
                 route_list.to_csv(routing_output_folder + 'route_list.csv')
