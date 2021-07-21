@@ -13,7 +13,7 @@ import time
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
-
+args.data='/Users/tghosh/OneDrive - NREL/work_NREL/CELAVI/celavi/celavi-data'
 locations_filename = os.path.join(args.data, 'inputs', 'locations.csv')
 locations_computed_filename = os.path.join(args.data, 'inputs', 'locations_computed.csv')
 step_costs_filename = os.path.join(args.data, 'inputs', 'step_costs.csv')
