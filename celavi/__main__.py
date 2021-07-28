@@ -74,7 +74,7 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 
 # TODO: The tiny data and national data should use the same filename.
 # When that is the case, place that filename below.
-turbine_data_filename = os.path.join(args.data, 'inputs', 'TX_input_data_with_masses.csv')
+turbine_data_filename = os.path.join(args.data, 'inputs', 'US_number_of_turbines.csv')
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
@@ -185,7 +185,6 @@ turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
-    foundation_mass_tonnes = row['foundation_mass_tonnes']
     facility_id = int(row['facility_id'])
     n_turbine = int(row['n_turbine'])
 
