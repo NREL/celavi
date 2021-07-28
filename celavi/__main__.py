@@ -1,5 +1,6 @@
 import argparse
 import os
+import pickle
 from math import ceil
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
@@ -153,7 +154,6 @@ pickle.dump(netw, file_pi)
 '''
 
 print('Bypassing NETW Cost graph calculations',flush=True)
-import pickle
 netw=pickle.load(open('netw_p_medium.obj', 'rb'))
 print(str(time.time() - time0) + ' ' + 'taken for Cost Graph pickle reading',flush=True)
 
@@ -185,7 +185,6 @@ turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
-    blade_mass_tonnes = row['Glass Fiber:Blade']
     foundation_mass_tonnes = row['foundation_mass_tonnes']
     facility_id = int(row['facility_id'])
     n_turbine = int(row['n_turbine'])
@@ -195,7 +194,6 @@ for _, row in turbine_data.iterrows():
             components.append({
                 'year': year,
                 'kind': 'blade',
-                'mass_tonnes': blade_mass_tonnes,
                 'facility_id': facility_id
             })
 
