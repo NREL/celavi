@@ -262,10 +262,18 @@ class Context:
         component = 'blade'
         material = 'glass fiber reinforced polymer'
         while True:
+            print(f'{datetime.now()}In While loop pylca interface',flush = True)
+            import time
+            time0 = time.time()
             yield env.timeout(timesteps_per_year)   # Run annually
+            print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
+
+
             annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
+            import time
+            time0 = time.time()
             for facility_name, facility in self.mass_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
@@ -283,6 +291,7 @@ class Context:
                     }
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
+            print(str(time.time() - time0)+' For loop of pylca took these many seconds')
             if len(annual_data_for_lci) > 0:
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
@@ -292,8 +301,13 @@ class Context:
         """
         This is the SimPy process that updates the cost graph periodically.
         """
+        print('Updating cost graph')
         while True:
+            print(f'{datetime.now()}In While loop update cost graph',flush = True)
+            import time
+            time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
+            print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             year = self.timesteps_to_years(env.now)
             year_int = round(year)
             avg_blade_mass_kg = self.avg_blade_mass_tonnes_dict[year_int] * 1000
@@ -314,10 +328,11 @@ class Context:
                 year=year,
                 blade_mass=avg_blade_mass_kg,
                 finegrind_cumul=cum_mass_fine_grinding,
-                coarsegrind_cumul=cum_mass_coarse_grinding
+                coarsegrind_cumul=cum_mass_coarse_grinding,
+                verbose=0
             )
 
-            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}",flush = True)
 
     def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
         """
@@ -328,6 +343,9 @@ class Context:
         Dict[str, pd.DataFrame]
             A dictionary of inventories mapped to their cumulative histories.
         """
+
+        print('DES RUN STARTING\n\n\n',flush=True)
+        
         self.env.process(self.update_cost_graph_process(self.env))
         self.env.process(self.pylca_interface_process(self.env))
 

@@ -118,6 +118,11 @@ if run_routes:
 else:
     routes = routes_filename
 
+
+import time
+time0 = time.time()
+print('Cost Graph Startss\n\n\n')
+'''
 netw = CostGraph(
     step_costs_file=step_costs_filename,
     fac_edges_file=fac_edges_filename,
@@ -128,7 +133,7 @@ netw = CostGraph(
     sc_end=['landfilling', 'cement co-processing'],
     year=2000.0,
     max_dist=300.0,
-    verbose=0,
+    verbose=1,
     blade_mass=50.0, #@todo update with actual value
     finegrind_cumul_initial=1.0,
     coarsegrind_cumul_initial=1.0,
@@ -138,6 +143,25 @@ netw = CostGraph(
     coarsegrind_learnrate=-0.05
 )
 
+
+import pickle 
+import math 
+file_pi = open('netw_p_medium.obj', 'wb') 
+pickle.dump(netw, file_pi)
+
+
+'''
+
+print('Bypassing NETW Cost graph calculations',flush=True)
+import pickle
+netw=pickle.load(open('netw_p_medium.obj', 'rb'))
+print(str(time.time() - time0) + ' ' + 'taken for Cost Graph pickle reading',flush=True)
+
+
+
+
+print(str(time.time() - time0) + ' ' + 'taken for Cost Graph run',flush=True)
+print('Cost Graph Stops\n\n\n')
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_filename,
@@ -151,6 +175,11 @@ context = Context(
 # Create the turbine dataframe that will be used to populate
 # the context with components. Repeat the creation of blades
 # 3 times for each turbine.
+
+import time
+time0 = time.time()
+print('Reading turbine file\n\n\n',flush=True)
+
 
 turbine_data = pd.read_csv(turbine_data_filename)
 components = []
@@ -170,6 +199,7 @@ for _, row in turbine_data.iterrows():
                 'facility_id': facility_id
             })
 
+
 components = pd.DataFrame(components)
 
 # Create the lifespan functions for the components.
@@ -186,11 +216,33 @@ lifespan_fns = {
     "tower": lambda: 50 * timesteps_per_year,
 }
 
+
+print(time0 - time.time())
+print('TUrbine Stops\n\n\n',flush=True)
+
+
+import time
+time0 = time.time()
+print('Components created\n\n\n',flush=True)
+
 # Populate the context with components.
 context.populate(components, lifespan_fns)
 
+print(time0 - time.time())
+print('Components Stops\n\n\n',flush=True)
+
+
+import time
+time0 = time.time()
+print('Context created created\n\n\n',flush=True)
+
+
+print('Run starting for DES\n\n\n',flush=True)
 # Run the context
 result = context.run()
+
+print(time0 - time.time())
+print('FINISHED RUN',flush=True)
 
 # Output .csv files of the mass flows of each mass inventory.
 mass_facility_inventories = result["mass_facility_inventories"]
