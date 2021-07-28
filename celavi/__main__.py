@@ -255,6 +255,6 @@ for i in range(len(count_facility_inventory_items)):
     cum_hist_blade = facility.cumulative_history["blade"]
     ax.set_title(facility_name)
     ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
-    ax.set_ylabel("tonnes")
+    ax.set_ylabel("count")
 plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
 plt.savefig(plot_output_path)
