@@ -134,14 +134,16 @@ class Component:
                 if self.current_location.startswith('in use'):
                     # Query cost graph again
                     self.create_pathway_queue(self.initial_facility_id)
+                    # Since the blade was immediately prior in use, just go to next step.
+                    self.pathway.popleft()
+
                 location, lifespan = self.pathway.popleft()
+                if not location.startswith("in use"):
+                    print("Yay! Something is going to another place")
                 count_inventory = self.context.count_facility_inventories[location]
-                mass_inventory = self.context.mass_facility_inventories[location]
                 count_inventory.increment_quantity(self.kind, 1, env.now)
-                mass_inventory.increment_quantity(self.kind, self.mass_tonnes, env.now)
                 self.current_location = location
                 yield env.timeout(lifespan)
                 count_inventory.increment_quantity(self.kind, -1, env.now)
-                mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
             else:
                 break
