@@ -241,21 +241,14 @@ result = context.run()
 print(time0 - time.time())
 print('FINISHED RUN',flush=True)
 
-# Output .csv files of the mass flows of each mass inventory.
-mass_facility_inventories = result["mass_facility_inventories"]
-for facility_name, facility in mass_facility_inventories.items():
-    output_filename = os.path.join(subfolder_dict['outputs_folder'], f'{facility_name}.csv')
-    output_filename = output_filename.replace(' ', '_')
-    facility.transaction_history.to_csv(output_filename, index_label='timestep')
-
 # After PyLCA / DES integration is complete, the next 3 lines should be
 # eliminated
-data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
-data_for_lci_df = pd.DataFrame(context.data_for_lci)
-data_for_lci_df.to_csv(data_for_lci_filename, index=False)
+# data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
+# data_for_lci_df = pd.DataFrame(context.data_for_lci)
+# data_for_lci_df.to_csv(data_for_lci_filename, index=False)
 
 # Plot the cumulative count levels of the inventories
-count_facility_inventory_items = list(result["mass_facility_inventories"].items())
+count_facility_inventory_items = list(result["count_facility_inventories"].items())
 nrows = 5
 ncols = ceil(len(count_facility_inventory_items) / nrows)
 fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
