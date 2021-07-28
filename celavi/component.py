@@ -138,8 +138,6 @@ class Component:
                     self.pathway.popleft()
 
                 location, lifespan = self.pathway.popleft()
-                if not location.startswith("in use"):
-                    print("Yay! Something is going to another place")
                 count_inventory = self.context.count_facility_inventories[location]
                 count_inventory.increment_quantity(self.kind, 1, env.now)
                 self.current_location = location
