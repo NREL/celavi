@@ -13,7 +13,7 @@ from celavi.compute_locations import ComputeLocations
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
-#args.data = '/Users/tghosh/OneDrive - NREL/work_NREL/CELAVI/celavi/celavi-data/'
+
 # SUB FOLDERS
 subfolder_dict = {}
 # input data folder for pre-processed route data
@@ -123,7 +123,7 @@ else:
 import time
 time0 = time.time()
 print('Cost Graph Startss\n\n\n')
-'''
+
 netw = CostGraph(
     step_costs_file=step_costs_filename,
     fac_edges_file=fac_edges_filename,
@@ -151,7 +151,7 @@ file_pi = open('netw_p_medium.obj', 'wb')
 pickle.dump(netw, file_pi)
 
 
-'''
+
 
 print('Bypassing NETW Cost graph calculations',flush=True)
 netw=pickle.load(open('netw_p_medium.obj', 'rb'))

@@ -65,7 +65,7 @@ def lca_performance_improvement(df):
 
 
 def pylca_run_main(df):
-    df = df[df['flow quantity'] != 0]
+    df = df[df['flow quantity'] != 0]    
 
     res_df = pd.DataFrame()
     df=df.reset_index()

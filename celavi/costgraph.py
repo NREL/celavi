@@ -217,7 +217,8 @@ class CostGraph:
         -------
             list of 2-tuples
         """
-
+        if self.verbose > 1:
+            print('Getting list of tuples')
 
         if list3 is not None:
             _len = len(list1)
@@ -255,7 +256,8 @@ class CostGraph:
         [1] "length" of path between source and the closest node
         [2] list of nodes defining the path between source and the closest node
         """
-
+        if self.verbose > 1:
+            print('Finding shortest paths from', source)
 
         # Calculate the length of paths from fromnode to all other nodes
         lengths = nx.single_source_dijkstra_path_length(self.supply_chain,
@@ -600,7 +602,8 @@ class CostGraph:
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
         # is get the shortest path using the 'cost' attribute as the edge weight
-
+        if self.verbose > 1:
+            print('Choosing shortest paths')
 
         _sources = list(search_nodes(self.supply_chain,
                                      {"in": [("step",), self.sc_begin]}))

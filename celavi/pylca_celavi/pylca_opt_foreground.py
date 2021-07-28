@@ -152,7 +152,6 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-    f_d.to_csv('Final_demand_from_iterface.csv')
     final_lci_result = pd.DataFrame()
     #Running LCA for all years as obtained from CELAVI
 
@@ -163,14 +162,11 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
     tech_matrix = tech_matrix.fillna(0)
     #This list of products and processes essentially help to determine the indexes and the products and processes
     #to which they belong.
-    tech_matrix.to_csv('techmatrix.csv')
     products = list(tech_matrix.index)
     process = list(tech_matrix.columns)
     product_df = pd.DataFrame(products)
-    product_df.to_csv('product_df.csv')
     final_dem = product_df.merge(f_d, left_on = 0, right_on = 'flow name', how = 'left')
     final_dem = final_dem.fillna(0)
-    final_dem.to_csv('final_dem.csv')
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
         print('No proper final demand for '+str(yr)+' '+stage+' '+material) 
