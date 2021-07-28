@@ -236,19 +236,13 @@ print('Context created created\n\n\n',flush=True)
 
 print('Run starting for DES\n\n\n',flush=True)
 # Run the context
-result = context.run()
+count_facility_inventories = context.run()
 
 print(time0 - time.time())
 print('FINISHED RUN',flush=True)
 
-# After PyLCA / DES integration is complete, the next 3 lines should be
-# eliminated
-# data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
-# data_for_lci_df = pd.DataFrame(context.data_for_lci)
-# data_for_lci_df.to_csv(data_for_lci_filename, index=False)
-
 # Plot the cumulative count levels of the inventories
-count_facility_inventory_items = list(result["count_facility_inventories"].items())
+count_facility_inventory_items = list(count_facility_inventories.items())
 nrows = 5
 ncols = ceil(len(count_facility_inventory_items) / nrows)
 fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
