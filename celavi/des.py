@@ -248,13 +248,16 @@ class Context:
             Total cumulative mass of the component in the process at the
             timestep.
         """
-        cumulative_masses = [
+        year = int(ceil(self.timesteps_to_years(timestep)))
+        avg_blade_mass = self.avg_blade_mass_tonnes_dict[year]
+        cumulative_counts = [
             inventory.cumulative_history['blade'][timestep]
-            for name, inventory in self.mass_facility_inventories.items()
+            for name, inventory in self.count_facility_inventories.items()
             if process_name in name
         ]
-        total_mass = sum(cumulative_masses)
-        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
+        total_count = sum(cumulative_counts)
+        total_mass = total_count * avg_blade_mass
+        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass} kg')
         return total_mass
 
     def pylca_interface_process(self, env):
