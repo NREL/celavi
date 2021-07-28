@@ -105,22 +105,12 @@ class Context:
         # "facility_type_y" columns
         locations_step_costs = locations.merge(step_costs, on='facility_id')
 
-        self.mass_facility_inventories = {}
         self.count_facility_inventories = {}
         for _, row in locations_step_costs.iterrows():
             facility_type = row['facility_type_x']
             facility_id = row['facility_id']
             step = row['step']
             step_facility_id = f"{step}_{facility_id}"
-            self.mass_facility_inventories[step_facility_id] = FacilityInventory(
-                facility_id=facility_id,
-                facility_type=facility_type,
-                step=step,
-                possible_items=possible_items,
-                timesteps=max_timesteps,
-                quantity_unit="tonne",
-                can_be_negative=False
-            )
             self.count_facility_inventories[step_facility_id] = FacilityInventory(
                 facility_id=facility_id,
                 facility_type=facility_type,
@@ -339,7 +329,7 @@ class Context:
 
             print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}",flush = True)
 
-    def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
+    def run(self) -> Dict[str, FacilityInventory]:
         """
         This method starts the discrete event simulation running.
 
@@ -350,15 +340,7 @@ class Context:
         """
 
         print('DES RUN STARTING\n\n\n',flush=True)
-        
         self.env.process(self.update_cost_graph_process(self.env))
         self.env.process(self.pylca_interface_process(self.env))
-
         self.env.run(until=int(self.max_timesteps))
-
-        result = {
-            "count_facility_inventories": self.count_facility_inventories,
-            "mass_facility_inventories": self.mass_facility_inventories
-        }
-
-        return result
+        return self.count_facility_inventories
