@@ -641,7 +641,9 @@ class CostGraph:
         -------
         None
         """
-
+        if self.verbose > 0:
+            print('Updating supply chain costs',flush=True)
+        
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=kwargs['year'],
