@@ -1,6 +1,7 @@
 from typing import Dict, List, Callable, Union, Tuple
 from math import floor, ceil
 from datetime import datetime
+import time
 
 import simpy
 import pandas as pd
@@ -210,7 +211,6 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=row["year"],
-                mass_tonnes=row["mass_tonnes"],
                 initial_facility_id=row["facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
@@ -263,7 +263,6 @@ class Context:
         material = 'glass fiber reinforced polymer'
         while True:
             print(f'{datetime.now()}In While loop pylca interface',flush = True)
-            import time
             time0 = time.time()
             yield env.timeout(timesteps_per_year)   # Run annually
             print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
@@ -272,7 +271,6 @@ class Context:
             annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
-            import time
             time0 = time.time()
             for facility_name, facility in self.mass_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
@@ -304,7 +302,6 @@ class Context:
         print('Updating cost graph')
         while True:
             print(f'{datetime.now()}In While loop update cost graph',flush = True)
-            import time
             time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
