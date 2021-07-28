@@ -272,17 +272,18 @@ class Context:
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
             time0 = time.time()
-            for facility_name, facility in self.mass_facility_inventories.items():
+            year = int(ceil(self.timesteps_to_years(env.now)))
+            for facility_name, facility in self.count_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 positive_annual_transactions = annual_transactions[annual_transactions > 0]
-                mass_tonnes = positive_annual_transactions.sum()
+                mass_tonnes = positive_annual_transactions.sum() * self.avg_blade_mass_tonnes_dict[year]
                 mass_kg = mass_tonnes * 1000
                 if mass_kg > 0:
                     row = {
                         'flow quantity': mass_kg,
                         'stage': process_name,
-                        'year': ceil(self.timesteps_to_years(env.now)),
+                        'year': year,
                         'material': material,
                         'flow unit': 'kg',
                         'facility_id': facility_id
