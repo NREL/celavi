@@ -13,7 +13,7 @@ from celavi.compute_locations import ComputeLocations
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
-
+#args.data = '/Users/tghosh/OneDrive - NREL/work_NREL/CELAVI/celavi/celavi-data/'
 # SUB FOLDERS
 subfolder_dict = {}
 # input data folder for pre-processed route data
@@ -74,7 +74,7 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 
 # TODO: The tiny data and national data should use the same filename.
 # When that is the case, place that filename below.
-turbine_data_filename = os.path.join(args.data, 'inputs', 'US_number_of_turbines.csv')
+turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
