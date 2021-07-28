@@ -19,8 +19,8 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
-        mass_tonnes: float,
-        initial_facility_id: int
+        initial_facility_id: int,
+        mass_tonnes: float = None,
     ):
         """
         This takes parameters named the same as the instance variables. See
@@ -53,7 +53,8 @@ class Component:
             outside this class which may return floating point values.
 
         mass_tonnes: float
-            The total mass of the component, in tonnes.
+            The total mass of the component, in tonnes. Can be None if the component
+            mass is not being used.
 
         initial_facility_id: int
             The initial facility id (where the component begins life) used in
