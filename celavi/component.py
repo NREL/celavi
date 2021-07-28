@@ -20,7 +20,7 @@ class Component:
         year: int,
         lifespan_timesteps: float,
         initial_facility_id: int,
-        mass_tonnes: float = None,
+        mass_tonnes: float = 0,
     ):
         """
         This takes parameters named the same as the instance variables. See
@@ -85,7 +85,9 @@ class Component:
             The starting location of the the component.
         """
         path_choices = self.context.cost_graph.choose_paths()
-        path_choice = path_choices[from_facility_id]
+        path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
+        in_use_facility_id = f"in use_{from_facility_id}"
+        path_choice = path_choices_dict[in_use_facility_id]
         self.pathway = deque()
 
         for facility, lifespan in path_choice['path']:
