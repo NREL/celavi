@@ -86,13 +86,13 @@ class Component:
         """
         path_choices = self.context.cost_graph.choose_paths()
         path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
-        in_use_facility_id = f"in use_{from_facility_id}"
+        in_use_facility_id = f"manufacturing_{from_facility_id}"
         path_choice = path_choices_dict[in_use_facility_id]
         self.pathway = deque()
 
         for facility, lifespan in path_choice['path']:
             # Override the initial timespan when component goes into use.
-            if facility.startswith("in use"):
+            if facility.startswith("manufacturing"):
                 self.pathway.append((facility, self.initial_lifespan_timesteps))
             # Set landfill timespan long enough to be permanent
             elif facility.startswith("landfill"):
@@ -131,7 +131,7 @@ class Component:
         """
         while True:
             if len(self.pathway) > 0:
-                if self.current_location.startswith('in use'):
+                if self.current_location.startswith('manufacturing'):
                     # Query cost graph again
                     self.create_pathway_queue(self.initial_facility_id)
                     # Since the blade was immediately prior in use, just go to next step.
