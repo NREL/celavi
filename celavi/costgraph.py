@@ -494,7 +494,7 @@ class CostGraph:
                                              getattr(CostMethods,
                                                      _transpo_cost)],
                              'cost': 0.0,
-                             'dist': np.nan}
+                             'dist': -1.0}
                             for edge in _edge_list]
             else:
                 _methods = [{'cost_method': [getattr(CostMethods,
@@ -504,7 +504,7 @@ class CostGraph:
                                              getattr(CostMethods,
                                                      self.supply_chain.nodes[edge[1]]['step_cost_method'])],
                              'cost': 0.0,
-                             'dist': np.nan}
+                             'dist': -1.0}
                             for edge in _edge_list]
 
             # add these edges to the supply chain
@@ -540,7 +540,7 @@ class CostGraph:
                 # find the source nodes for this route
                 _u = list(search_nodes(self.supply_chain,
                                        {'and': [{"==": [("facility_id",), _line['source_facility_id'].values[0]]},
-                                                {"==": [("connects",), "out"]}]}))
+                                                {"in": [("connects",), ["out","bid"]]}]}))
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
