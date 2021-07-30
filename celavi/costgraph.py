@@ -645,7 +645,9 @@ class CostGraph:
         None
         """
         if self.verbose > 0:
-            print('Updating supply chain costs',flush=True)
+            print('Updating costs for %d at         %d s' %
+                  (kwargs['year'], np.round(time() - self.start_time, 0)),
+                  flush=True)
         
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
@@ -660,3 +662,8 @@ class CostGraph:
                                                            finegrind_learnrate=self.finegrind_learnrate,
                                                            coarsegrind_learnrate=self.coarsegrind_learnrate)
                                                          for f in self.supply_chain.edges[edge]['cost_method']])
+
+        if self.verbose > 0:
+            print('Costs updated for  %d at         %d s' %
+                 (kwargs['year'], np.round(time() - self.start_time, 0)),
+                 flush=True)
