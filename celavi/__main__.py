@@ -34,7 +34,6 @@ for folder in subfolder_dict.values():
 # FILE NAMES FOR INPUT DATA
 # TODO: add check to ensure files exist
 # general inputs
-locations_filename = os.path.join(args.data, 'inputs', 'locations.csv')
 locations_computed_filename = os.path.join(args.data, 'inputs', 'locations_computed.csv')
 step_costs_filename = os.path.join(args.data, 'inputs', 'step_costs.csv')
 fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
@@ -71,9 +70,6 @@ other_facility_locations_filename = os.path.join(args.data, 'inputs',
 lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
                                              'facility_type.csv')
 
-
-# TODO: The tiny data and national data should use the same filename.
-# When that is the case, place that filename below.
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
@@ -87,7 +83,6 @@ from celavi.des import Context
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
-use_computed_locations = True
 # Note that the step_cost file must be updated (or programmatically generated)
 # to include all facility ids. Otherwise, cost graph can't run with the full
 # computed data set.
@@ -100,15 +95,10 @@ if compute_locations:
                            lookup_facility_type=lookup_facility_type_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
-if use_computed_locations:
-    locations = locations_computed_filename
-else:
-    locations = locations_filename
-
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = False
+run_routes = True
 if run_routes:
-    routes_computed = Router.get_all_routes(locations_file=locations_filename,
+    routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
                                             transportation_graph=transportation_graph_filename,
                                             node_locations=node_locations_filename,
@@ -128,7 +118,7 @@ netw = CostGraph(
     step_costs_file=step_costs_filename,
     fac_edges_file=fac_edges_filename,
     transpo_edges_file=transpo_edges_filename,
-    locations_file=locations_filename,
+    locations_file=locations_computed_filename,
     routes_file=routes_filename,
     sc_begin= 'in use',
     sc_end=['landfilling', 'cement co-processing'],
@@ -162,7 +152,7 @@ print(str(time.time() - time0) + ' ' + 'taken for Cost Graph run',flush=True)
 print('Cost Graph Stops\n\n\n')
 # Create the DES context and tie it to the CostGraph
 context = Context(
-    locations_filename=locations_filename,
+    locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
     possible_items=["nacelle", "blade", "tower", "foundation"],
     cost_graph=netw,
