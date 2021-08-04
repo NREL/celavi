@@ -135,6 +135,7 @@ netw = CostGraph(
     year=2000.0,
     max_dist=300.0,
     verbose=1,
+    save_copy=True,
     blade_mass=50.0, #@todo update with actual value
     finegrind_cumul_initial=1.0,
     coarsegrind_cumul_initial=1.0,
@@ -145,19 +146,16 @@ netw = CostGraph(
 )
 
 
-import pickle 
-import math 
-file_pi = open('netw_p_medium.obj', 'wb') 
+import pickle
+import math
+file_pi = open('netw.obj', 'wb')
 pickle.dump(netw, file_pi)
 
 
 
-
-print('Bypassing NETW Cost graph calculations',flush=True)
-netw=pickle.load(open('netw_p_medium.obj', 'rb'))
+print('Reading in CostGraph object',flush=True)
+netw=pickle.load(open('netw.obj', 'rb'))
 print(str(time.time() - time0) + ' ' + 'taken for Cost Graph pickle reading',flush=True)
-
-
 
 
 print(str(time.time() - time0) + ' ' + 'taken for Cost Graph run',flush=True)
