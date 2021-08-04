@@ -100,7 +100,10 @@ if compute_locations:
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = False
+run_routes = True
+# if use_computed_routes is enabled, read in a pre-assembled routes file instead
+# of generating a new one
+use_computed_routes = True
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
@@ -108,10 +111,11 @@ if run_routes:
                                             node_locations=node_locations_filename,
                                             routing_output_folder=subfolder_dict['routing_output_folder'],
                                             preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
-    # reset argument for routes file to use computed routes rather than user input
+
+if use_computed_routes:
     args.routes = routes_computed_filename
 else:
-    routes = routes_filename
+    args.routes = routes_filename
 
 
 time0 = time.time()
@@ -121,13 +125,14 @@ pickle_costgraph = True
 
 if initialize_costgraph:
     # Initialize the CostGraph using these parameter settings
-    print('Cost Graph Starts at %d s' % time.time())
+    print('Cost Graph Starts at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
     netw = CostGraph(
         step_costs_file=step_costs_filename,
         fac_edges_file=fac_edges_filename,
         transpo_edges_file=transpo_edges_filename,
         locations_file=locations_computed_filename,
-        routes_file=routes_filename,
+        routes_file=args.routes,
         sc_begin= 'in use',
         sc_end=['landfilling', 'cement co-processing'],
         year=2000.0,
