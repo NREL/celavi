@@ -96,7 +96,7 @@ if compute_locations:
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = True
+run_routes = False
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
