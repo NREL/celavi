@@ -71,9 +71,7 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
                                              'facility_type.csv')
 
 
-# TODO: The tiny data and national data should use the same filename.
-# When that is the case, place that filename below.
-turbine_data_filename = os.path.join(args.data, 'inputs', 'TX_input_data_with_masses.csv')
+turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
