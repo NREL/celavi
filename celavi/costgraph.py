@@ -25,6 +25,7 @@ class CostGraph:
                  year : float = 2000.0,
                  max_dist : float = 300.0,
                  verbose : int = 0,
+                 save_copy = False,
                  **kwargs):
         """
         Reads in small datasets to DataFrames and stores the path to the large
@@ -137,6 +138,9 @@ class CostGraph:
 
         # build the initial supply chain graph
         self.build_supplychain_graph()
+
+        if save_copy:
+            nx.write_edgelist(self.supply_chain, 'netw.csv', delimiter=',')
 
 
     @staticmethod
@@ -602,8 +606,6 @@ class CostGraph:
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
         # is get the shortest path using the 'cost' attribute as the edge weight
-        if self.verbose > 1:
-            print('Choosing shortest paths')
 
         _sources = list(search_nodes(self.supply_chain,
                                      {"in": [("step",), self.sc_begin]}))
