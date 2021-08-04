@@ -11,6 +11,19 @@ from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 
+# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
+compute_locations = False
+# if run_routes is enabled (True), compute routing distances between all input locations
+run_routes = False
+# if use_computed_routes is enabled, read in a pre-assembled routes file instead
+# of generating a new one
+use_computed_routes = True
+# create cost graph fresh or use an imported version
+initialize_costgraph = True
+# save the newly initialized costgraph as a pickle file
+pickle_costgraph = True
+
+
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
@@ -86,8 +99,7 @@ costgraph_csv_filename = os.path.join(args.data, 'inputs', 'netw.csv')
 os.chdir(subfolder_dict['lci_folder'])
 from celavi.des import Context
 
-# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
-compute_locations = False
+
 # Note that the step_cost file must be updated (or programmatically generated)
 # to include all facility ids. Otherwise, cost graph can't run with the full
 # computed data set.
@@ -100,11 +112,7 @@ if compute_locations:
                            lookup_facility_type=lookup_facility_type_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
-# if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = False
-# if use_computed_routes is enabled, read in a pre-assembled routes file instead
-# of generating a new one
-use_computed_routes = True
+
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
@@ -120,9 +128,6 @@ else:
 
 
 time0 = time.time()
-
-initialize_costgraph = True
-pickle_costgraph = True
 
 if initialize_costgraph:
     # Initialize the CostGraph using these parameter settings
