@@ -4,7 +4,7 @@ import numpy as np
 from itertools import product
 from time import time
 from networkx_query import search_nodes
-
+import pdb
 from celavi.costmethods import CostMethods
 
 class CostGraph:
@@ -590,7 +590,8 @@ class CostGraph:
                 time() - self.start_time, 0), flush=True)
 
 
-    def choose_paths(self):
+    def choose_paths(self,
+                     crit : str = 'cost'):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
         all possible pathways between source and target nodes. Other "costs"
@@ -598,6 +599,11 @@ class CostGraph:
         modifications to the crit argument of the find_nearest call.
 
         @todo verify that this method works for a cyclic graph
+
+        Parameters
+        ----------
+        crit
+            Criterion on which "shortest" path is defined. Defaults to cost.
 
         Returns
         -------
@@ -614,13 +620,83 @@ class CostGraph:
         _paths = []
         # Find the lowest-cost path from EACH source node to ANY target node
         for _node in _sources:
-            _chosen_path = self.find_nearest(source=_node, crit='cost')
+            _chosen_path = self.find_nearest(source=_node, crit=crit)
             _paths.append({'source': _node,
                            'target': _chosen_path[0],
                            'path': _chosen_path[2],
                            'cost': _chosen_path[1]})
 
         return _paths
+
+
+    def find_upstream_neighbor(self,
+                               node_id : int,
+                               connect_to : str = 'manufacturing',
+                               crit : str = 'dist'):
+        """
+        Given a node in the network, find the "nearest" upstream neighbor to
+        that node that is of the type specified by connect_to. "Nearest" is
+        determined according to the crit parameter.
+
+        Parameters
+        ----------
+        node_id
+            facility_id of a node in the supply chain network. No default.
+        connect_to
+            facility_type of the upstream node.
+        crit
+            Criteron used to decide which manufacturing node is "nearest".
+            Defaults to distance.
+
+        Returns
+        -------
+        _nearest_facility_id
+            Integer identifying the "closest" upstream node of type connect_to
+            that connects to the node with the provided node_id. Returns None
+            if node_id does not exist in the network or if the node_id does not
+            connect to any nodes of the connect_to type.
+
+        """
+
+        # Check that the node_id exists in the supply chain.
+        # If it doesn't, print a message and return None
+        if not node_id in nx.get_node_attributes(self.supply_chain,
+                                                 name='facility_id').values():
+            print('Facility %d does not exist in CostGraph' % node_id,
+                  flush=True)
+            return None
+        else:
+            # If node_id does exist in the supply chain, pull out the node name
+            _node = [x for x,y in self.supply_chain.nodes(data=True)
+                     if y['facility_id'] == node_id
+                     and y['connects'] == 'in'][0]
+
+        # Get a list of all nodes with an outgoing edge that connects to this
+        # node_id, with the specified facility type
+        _upstream_nodes = [n for n in self.supply_chain.predecessors(_node) if n.find(connect_to) != -1]
+        
+        # Search the list for the "closest" node
+        if len(_upstream_nodes) == 0:
+            # If there are no upstream nodes of the correct type, print a
+            # message and return None
+            print('Facility %d does not have any upstream neighbors of type %s'
+                  % node_id, connect_to,
+                  flush=True)
+            return None
+
+        elif len(_upstream_nodes) > 1:
+            # If there are multiple options, identify the nearest neighbor
+            # according to the crit(eria) parameter
+            _upstream_dists = [self.supply_chain.edges[_up_n, _node]['dist'] for _up_n in _upstream_nodes]
+            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
+            _nearest_facility_id = _nearest_upstream_node.split('_')[1]
+
+        else:
+            # If there is only one option, pull that node's facility_id directly
+            _nearest_facility_id = _upstream_nodes[0].split('_')[1]
+
+        # Return the "closest" node's facility_id as an integer
+        return int(_nearest_facility_id)
 
 
     def update_costs(self, **kwargs):
