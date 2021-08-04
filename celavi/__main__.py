@@ -173,6 +173,10 @@ else:
 
 print('CostGraph exists\n\n\n')
 
+# Get the initial supply chain pathways to connect power plants to their
+# nearest-neighbor manufacturing facilities
+initial_paths = netw.choose_paths()
+
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
@@ -194,9 +198,7 @@ turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
-    # @todo replace the power plant facility_id with the corresponding
-    # manufacturing plant facility_id from CostGraph.choose_paths call
-    facility_id = int(row['facility_id'])
+    facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
     n_turbine = int(row['n_turbine'])
 
     for _ in range(n_turbine):
