@@ -26,6 +26,7 @@ class CostGraph:
                  max_dist : float = 300.0,
                  verbose : int = 0,
                  save_copy = False,
+                 save_name = 'netw.csv',
                  **kwargs):
         """
         Reads in small datasets to DataFrames and stores the path to the large
@@ -140,7 +141,7 @@ class CostGraph:
         self.build_supplychain_graph()
 
         if save_copy:
-            nx.write_edgelist(self.supply_chain, 'netw.csv', delimiter=',')
+            nx.write_edgelist(self.supply_chain, save_name, delimiter=',')
 
 
     @staticmethod
