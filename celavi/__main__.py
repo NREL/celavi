@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+import time
 from math import ceil
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
@@ -72,6 +73,9 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
+# Pickle file containing CostGraph object
+costgraph_filename = os.path.join(args.data, 'inputs', 'netw.obj')
+
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
 # and write operations. Also, the Context must be imported down here after
@@ -96,7 +100,7 @@ if compute_locations:
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = True
+run_routes = False
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
@@ -110,46 +114,53 @@ else:
     routes = routes_filename
 
 
-import time
 time0 = time.time()
-print('Cost Graph Startss\n\n\n')
 
-netw = CostGraph(
-    step_costs_file=step_costs_filename,
-    fac_edges_file=fac_edges_filename,
-    transpo_edges_file=transpo_edges_filename,
-    locations_file=locations_computed_filename,
-    routes_file=routes_filename,
-    sc_begin= 'in use',
-    sc_end=['landfilling', 'cement co-processing'],
-    year=2000.0,
-    max_dist=300.0,
-    verbose=1,
-    save_copy=True,
-    blade_mass=50.0, #@todo update with actual value
-    finegrind_cumul_initial=1.0,
-    coarsegrind_cumul_initial=1.0,
-    finegrind_initial_cost=80.0, #@todo update with actual value
-    coarsegrind_initial_cost=60.0, #@todo update with actual value
-    finegrind_learnrate=-0.05,
-    coarsegrind_learnrate=-0.05
-)
+initialize_costgraph = True
+pickle_costgraph = True
 
+if initialize_costgraph:
+    # Initialize the CostGraph using these parameter settings
+    print('Cost Graph Starts at %d s' % time.time())
+    netw = CostGraph(
+        step_costs_file=step_costs_filename,
+        fac_edges_file=fac_edges_filename,
+        transpo_edges_file=transpo_edges_filename,
+        locations_file=locations_computed_filename,
+        routes_file=routes_filename,
+        sc_begin= 'in use',
+        sc_end=['landfilling', 'cement co-processing'],
+        year=2000.0,
+        max_dist=300.0,
+        verbose=1,
+        save_copy=False,
+        blade_mass=50.0, #@todo update with actual value
+        finegrind_cumul_initial=1.0,
+        coarsegrind_cumul_initial=1.0,
+        finegrind_initial_cost=80.0, #@todo update with actual value
+        coarsegrind_initial_cost=60.0, #@todo update with actual value
+        finegrind_learnrate=-0.05,
+        coarsegrind_learnrate=-0.05
+    )
+    print('CostGraph initialized at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
 
-import pickle
-import math
-file_pi = open('netw.obj', 'wb')
-pickle.dump(netw, file_pi)
+    if pickle_costgraph:
+        # Save the CostGraph object using pickle
+        pickle.dump(netw, open(costgraph_filename, 'wb'))
 
+else:
+    # Read in a previously generated CostGraph object
+    print('Reading in CostGraph object at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
 
+    netw = pickle.load(open(costgraph_filename, 'rb'))
 
-print('Reading in CostGraph object',flush=True)
-netw=pickle.load(open('netw.obj', 'rb'))
-print(str(time.time() - time0) + ' ' + 'taken for Cost Graph pickle reading',flush=True)
+    print('CostGraph object read in at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
 
+print('CostGraph exists\n\n\n')
 
-print(str(time.time() - time0) + ' ' + 'taken for Cost Graph run',flush=True)
-print('Cost Graph Stops\n\n\n')
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
@@ -164,10 +175,8 @@ context = Context(
 # the context with components. Repeat the creation of blades
 # 3 times for each turbine.
 
-import time
-time0 = time.time()
-print('Reading turbine file\n\n\n',flush=True)
-
+print('Reading turbine file at %d \n\n\n' % np.round(time.time() - time0, 1),
+      flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
 components = []
@@ -185,6 +194,9 @@ for _, row in turbine_data.iterrows():
             })
 
 
+print('Turbine file read at %d\n\n\n' % np.round(time.time() - time0, 1),
+      flush=True)
+
 components = pd.DataFrame(components)
 
 # Create the lifespan functions for the components.
@@ -201,33 +213,23 @@ lifespan_fns = {
     "tower": lambda: 50 * timesteps_per_year,
 }
 
-
-print(time0 - time.time())
-print('TUrbine Stops\n\n\n',flush=True)
-
-
-import time
-time0 = time.time()
-print('Components created\n\n\n',flush=True)
+print('Components created at %d\n\n\n' % np.round(time.time() - time0),
+      flush=True)
 
 # Populate the context with components.
 context.populate(components, lifespan_fns)
 
-print(time0 - time.time())
-print('Components Stops\n\n\n',flush=True)
+print('Context created  at %d\n\n\n' % np.round(time.time() - time0),
+      flush=True)
 
+print('Run starting for DES at %d\n\n\n' % np.round(time.time() - time0),
+      flush=True)
 
-import time
-time0 = time.time()
-print('Context created created\n\n\n',flush=True)
-
-
-print('Run starting for DES\n\n\n',flush=True)
 # Run the context
 count_facility_inventories = context.run()
 
-print(time0 - time.time())
-print('FINISHED RUN',flush=True)
+print('FINISHED RUN at %d s' % np.round(time.time() - time0),
+      flush=True)
 
 # Plot the cumulative count levels of the inventories
 count_facility_inventory_items = list(count_facility_inventories.items())
