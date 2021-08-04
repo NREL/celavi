@@ -194,6 +194,8 @@ turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
+    # @todo replace the power plant facility_id with the corresponding
+    # manufacturing plant facility_id from CostGraph.choose_paths call
     facility_id = int(row['facility_id'])
     n_turbine = int(row['n_turbine'])
 
