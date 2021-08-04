@@ -74,7 +74,8 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 # Pickle file containing CostGraph object
-costgraph_filename = os.path.join(args.data, 'inputs', 'netw.obj')
+costgraph_pickle_filename = os.path.join(args.data, 'inputs', 'netw.obj')
+costgraph_csv_filename = os.path.join(args.data, 'inputs', 'netw.csv')
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
@@ -100,7 +101,7 @@ if compute_locations:
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = True
+run_routes = False
 # if use_computed_routes is enabled, read in a pre-assembled routes file instead
 # of generating a new one
 use_computed_routes = True
@@ -133,12 +134,13 @@ if initialize_costgraph:
         transpo_edges_file=transpo_edges_filename,
         locations_file=locations_computed_filename,
         routes_file=args.routes,
-        sc_begin= 'in use',
+        sc_begin= 'manufacturing',
         sc_end=['landfilling', 'cement co-processing'],
         year=2000.0,
         max_dist=300.0,
         verbose=1,
-        save_copy=False,
+        save_copy=True,
+        save_name=costgraph_csv_filename,
         blade_mass=50.0, #@todo update with actual value
         finegrind_cumul_initial=1.0,
         coarsegrind_cumul_initial=1.0,
@@ -152,14 +154,14 @@ if initialize_costgraph:
 
     if pickle_costgraph:
         # Save the CostGraph object using pickle
-        pickle.dump(netw, open(costgraph_filename, 'wb'))
+        pickle.dump(netw, open(costgraph_pickle_filename, 'wb'))
 
 else:
     # Read in a previously generated CostGraph object
     print('Reading in CostGraph object at %d s' % np.round(time.time() - time0, 1),
           flush=True)
 
-    netw = pickle.load(open(costgraph_filename, 'rb'))
+    netw = pickle.load(open(costgraph_pickle_filename, 'rb'))
 
     print('CostGraph object read in at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -180,7 +182,7 @@ context = Context(
 # the context with components. Repeat the creation of blades
 # 3 times for each turbine.
 
-print('Reading turbine file at %d \n\n\n' % np.round(time.time() - time0, 1),
+print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
       flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
@@ -199,7 +201,7 @@ for _, row in turbine_data.iterrows():
             })
 
 
-print('Turbine file read at %d\n\n\n' % np.round(time.time() - time0, 1),
+print('Turbine file read at %d s\n\n\n' % np.round(time.time() - time0, 1),
       flush=True)
 
 components = pd.DataFrame(components)
@@ -218,16 +220,16 @@ lifespan_fns = {
     "tower": lambda: 50 * timesteps_per_year,
 }
 
-print('Components created at %d\n\n\n' % np.round(time.time() - time0),
+print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)
 
 # Populate the context with components.
 context.populate(components, lifespan_fns)
 
-print('Context created  at %d\n\n\n' % np.round(time.time() - time0),
+print('Context created  at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)
 
-print('Run starting for DES at %d\n\n\n' % np.round(time.time() - time0),
+print('Run starting for DES at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)
 
 # Run the context
