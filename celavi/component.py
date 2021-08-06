@@ -19,7 +19,7 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
-        initial_facility_id: int,
+        in_use_facility_id: int,
         mass_tonnes: float = 0,
     ):
         """
@@ -56,7 +56,7 @@ class Component:
             The total mass of the component, in tonnes. Can be None if the component
             mass is not being used.
 
-        initial_facility_id: int
+        in_use_facility_id: int
             The initial facility id (where the component begins life) used in
             initial pathway selection from CostGraph.
         """
@@ -66,7 +66,7 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
-        self.initial_facility_id = initial_facility_id
+        self.in_use_facility_id = in_use_facility_id
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
 
@@ -86,13 +86,13 @@ class Component:
         """
         path_choices = self.context.cost_graph.choose_paths()
         path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
-        in_use_facility_id = f"manufacturing_{from_facility_id}"
-        path_choice = path_choices_dict[in_use_facility_id]
+        manufacturing_facility_id = f"manufacturing_{from_facility_id}"
+        path_choice = path_choices_dict[manufacturing_facility_id]
         self.pathway = deque()
 
         for facility, lifespan in path_choice['path']:
             # Override the initial timespan when component goes into use.
-            if facility.startswith("manufacturing"):
+            if facility.startswith("in use"):
                 self.pathway.append((facility, self.initial_lifespan_timesteps))
             # Set landfill timespan long enough to be permanent
             elif facility.startswith("landfill"):
@@ -116,7 +116,7 @@ class Component:
         """
         begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        self.create_pathway_queue(self.initial_facility_id)
+        self.create_pathway_queue(self.in_use_facility_id)
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
@@ -133,7 +133,7 @@ class Component:
             if len(self.pathway) > 0:
                 if self.current_location.startswith('manufacturing'):
                     # Query cost graph again
-                    self.create_pathway_queue(self.initial_facility_id)
+                    self.create_pathway_queue(self.in_use_facility_id)
                     # Since the blade was immediately prior in use, just go to next step.
                     self.pathway.popleft()
 
