@@ -201,7 +201,7 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=row["year"],
-                initial_facility_id=row["facility_id"],
+                in_use_facility_id=row["facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
             )
