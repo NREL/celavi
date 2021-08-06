@@ -86,7 +86,7 @@ class Component:
         """
         path_choices = self.context.cost_graph.choose_paths()
         path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
-        in_use_facility_id = f"in use_{from_facility_id}"
+        in_use_facility_id = f"manufacturing_{from_facility_id}"
         path_choice = path_choices_dict[in_use_facility_id]
         self.pathway = deque()
 
