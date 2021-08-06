@@ -10,7 +10,7 @@ from celavi.inventory import FacilityInventory
 from celavi.component import Component
 from celavi.costgraph import CostGraph
 
-from pylca_celavi.des_interface import pylca_run_main
+from celavi.pylca_celavi.des_interface import pylca_run_main
 
 
 class Context:
