@@ -4,7 +4,7 @@ import numpy as np
 from itertools import product
 from time import time
 from networkx_query import search_nodes
-import pdb
+
 from celavi.costmethods import CostMethods
 
 class CostGraph:
