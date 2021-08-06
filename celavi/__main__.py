@@ -10,6 +10,7 @@ import pandas as pd
 from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
+from celavi.data_filtering import data_filter
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
@@ -85,6 +86,18 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
                                              'facility_type.csv')
 
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
+
+
+
+
+#Data filtering for states
+data_filtering_choice = False
+if data_filtering_choice:
+    states_to_filter = ['IA']
+    data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
+
+
+
 
 # Pickle file containing CostGraph object
 costgraph_pickle_filename = os.path.join(args.data, 'inputs', 'netw.obj')
