@@ -10,7 +10,7 @@ from celavi.inventory import FacilityInventory
 from celavi.component import Component
 from celavi.costgraph import CostGraph
 
-from pylca_celavi.des_interface import pylca_run_main
+from celavi.pylca_celavi.des_interface import pylca_run_main
 
 
 class Context:
@@ -323,8 +323,7 @@ class Context:
                 year=year,
                 blade_mass=avg_blade_mass_kg,
                 finegrind_cumul=cum_mass_fine_grinding,
-                coarsegrind_cumul=cum_mass_coarse_grinding,
-                verbose=0
+                coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
             print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)

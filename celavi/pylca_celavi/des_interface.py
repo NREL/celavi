@@ -1,14 +1,14 @@
 import pandas as pd
-from pylca_celavi.pylca_opt_foreground import model_celavi_lci
-from pylca_celavi.insitu_emission import model_celavi_lci_insitu
+from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
+from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
 import sys
-from pylca_celavi.pylca_opt_background import model_celavi_lci_background
+from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 
 # Concrete lifecycle inventory updater
-from pylca_celavi.concrete_life_cycle_inventory_editor import concrete_life_cycle_inventory_updater
+from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_life_cycle_inventory_updater
 
 # Background LCA runs on the USLCI after the foreground process
-from .pylca_celavi_background_postprocess import postprocessing,impact_calculations
+from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing,impact_calculations
 
 
 """

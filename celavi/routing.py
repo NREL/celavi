@@ -103,6 +103,7 @@ class Router(object):
 
         return _summary[['region_transportation', 'fclass', 'vmt']]
 
+    @staticmethod
     def get_all_routes(locations_file,
                        route_pair_file,
                        transportation_graph,
