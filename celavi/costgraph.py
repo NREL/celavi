@@ -68,18 +68,18 @@ class CostGraph:
         -----------------
         blade_mass : float
             Average mass of a single turbine blade at the beginning of the
-            model run. Units: metric tons/tonnes
+            model run. Units: metric tons (tonnes)
 
         finegrind_cumul_initial : float
             Cumulative production of fine grinding at the beginning of the
             model run.
-            Units: metric tons/tonnes
+            Units: metric tons (tonnes)
 
         coarsegrind_cumul_initial : float
             Cumulative production of coarse grinding at the beginning of the
             model run. NOTE: This value may be greater than
             cumul_finegrind_initial.
-            Units: metric tons/tonnes
+            Units: metric tons (tonnes)
 
         finegrind_initial_cost : float
             Cost in USD/metric ton of fine grinding at the beginning of the
