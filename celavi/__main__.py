@@ -20,7 +20,7 @@ run_routes = False
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
-initialize_costgraph = True
+initialize_costgraph = False
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
 
@@ -139,6 +139,7 @@ if use_computed_routes:
 else:
     args.routes = routes_filename
 
+avgblade = pd.read_csv(avg_blade_masses_filename)
 
 time0 = time.time()
 
@@ -159,11 +160,12 @@ if initialize_costgraph:
         verbose=1,
         save_copy=True,
         save_name=costgraph_csv_filename,
-        blade_mass=50.0, #@todo update with actual value
+        blade_mass=avgblade.loc[avgblade.year==2000,
+                                'Glass Fiber:Blade'].values[0],
         finegrind_cumul_initial=1.0,
         coarsegrind_cumul_initial=1.0,
-        finegrind_initial_cost=80.0, #@todo update with actual value
-        coarsegrind_initial_cost=60.0, #@todo update with actual value
+        finegrind_initial_cost=143.33,
+        coarsegrind_initial_cost=106.40,
         finegrind_learnrate=-0.05,
         coarsegrind_learnrate=-0.05
     )
