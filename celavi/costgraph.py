@@ -89,6 +89,10 @@ class CostGraph:
             Cost in USD/metric ton of coarse grinding at the beginning of the
             model run.
 
+        finegrind_revenue : float
+            Revenue in USD/metric ton from sales of finely ground blade
+            material.
+
         finegrind_learnrate : float
             Industrial learning-by-doing rate for fine grinding. Unitless.
 
@@ -126,6 +130,8 @@ class CostGraph:
 
         self.finegrind_initial_cost = kwargs['finegrind_initial_cost']
         self.coarsegrind_initial_cost = kwargs['coarsegrind_initial_cost']
+
+        self.finegrind_revenue = kwargs['finegrind_revenue']
 
         self.finegrind_learnrate = kwargs['finegrind_learnrate']
         self.coarsegrind_learnrate = kwargs['finegrind_learnrate']
@@ -737,6 +743,7 @@ class CostGraph:
                                                            finegrind_cumul_initial=self.finegrind_cumul_initial,
                                                            coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
                                                            finegrind_initial_cost=self.finegrind_initial_cost,
+                                                           finegrind_revenue=self.finegrind_revenue,
                                                            coarsegrind_initial_cost=self.coarsegrind_initial_cost,
                                                            finegrind_learnrate=self.finegrind_learnrate,
                                                            coarsegrind_learnrate=self.coarsegrind_learnrate)
