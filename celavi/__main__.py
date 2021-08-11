@@ -168,7 +168,8 @@ if initialize_costgraph:
         finegrind_revenue=242.56,
         coarsegrind_initial_cost=121.28,
         finegrind_learnrate=-0.05,
-        coarsegrind_learnrate=-0.05
+        coarsegrind_learnrate=-0.05,
+        finegrind_material_loss=0.3,
     )
     print('CostGraph initialized at %d s' % np.round(time.time() - time0, 1),
           flush=True)
