@@ -226,30 +226,56 @@ class CostMethods:
             material. Further use of material is outside the scope of this
             study.
 
+        finegrind_material_loss
+            Fraction of total blade material lost during fine grinding.
+            Unitless. This is the amount of finely ground blade material that
+            must be landfilled.
+
         finegrind_learnrate
             Rate of cost reduction via learning-by-doing for fine grinding.
             Must be negative. Unitless.
 
+        year
+            Model year provided by DES
+
         Returns
         -------
-            Net cost (process cost minuse revenue) of fine grinding one metric
-            ton of blade material at a mechanical recycling facility.
+            Net cost (process cost plus landfilling cost minus revenue) of fine
+            grinding one metric ton of blade material at a mechanical recycling
+            facility and disposing of material losses in a landfill.
         """
 
         # If no updated cumulative production value is passed in, use the
         # initial value from CostGraph instantiation
         if 'finegrind_cumul' in kwargs:
-            finegrind_cumul = kwargs['finegrind_cumul']
+            _finegrind_cumul = kwargs['finegrind_cumul']
         else:
-            finegrind_cumul = kwargs['finegrind_cumul_initial']
+            _finegrind_cumul = kwargs['finegrind_cumul_initial']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        finegrind_learning = finegrind_cumul ** kwargs['finegrind_learnrate']
+        _finegrind_learning = _finegrind_cumul ** kwargs['finegrind_learnrate']
+
+        # get fine grinding material loss
+        _loss = kwargs['finegrind_material_loss']
+
+        # calculate process cost based on total input mass (no material loss
+        # yet) (USD/metric ton)
+        _cost = kwargs['finegrind_initial_cost'] * _finegrind_learning
+
+        # calculate revenue based on total output mass accounting for material
+        # loss (USD/metric ton)
+        _revenue = (1 - _loss) * kwargs['finegrind_revenue']
+
+        # calculate additional cost of landfilling the lost material
+        # (USD/metric ton)
+        # see the landfilling method - this cost model is identical
+        _landfill = _loss * 3.0E-29 * np.exp(0.0344 * kwargs['year'])
+
         # returns processing cost, reduced by learning, minus revenue which
-        # stays constant over time
-        return kwargs['finegrind_initial_cost'] * finegrind_learning - \
-               kwargs['finegrind_revenue']
+        # stays constant over time (USD/metric ton)
+        return _cost + _landfill - _revenue
+
 
 
     @staticmethod
