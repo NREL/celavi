@@ -594,8 +594,10 @@ class CostGraph:
                                                            coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
                                                            finegrind_initial_cost=self.finegrind_initial_cost,
                                                            coarsegrind_initial_cost=self.coarsegrind_initial_cost,
+                                                           finegrind_revenue=self.finegrind_revenue,
                                                            finegrind_learnrate=self.finegrind_learnrate,
-                                                           coarsegrind_learnrate=self.coarsegrind_learnrate)
+                                                           coarsegrind_learnrate=self.coarsegrind_learnrate,
+                                                           finegrind_material_loss=self.finegrind_material_loss)
                                                          for f in self.supply_chain.edges[edge]['cost_method']])
 
         if self.verbose > 0:
