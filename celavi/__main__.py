@@ -164,8 +164,9 @@ if initialize_costgraph:
                                 'Glass Fiber:Blade'].values[0],
         finegrind_cumul_initial=1.0,
         coarsegrind_cumul_initial=1.0,
-        finegrind_initial_cost=143.33,
-        coarsegrind_initial_cost=106.40,
+        finegrind_initial_cost=165.38,
+        finegrind_revenue=242.56,
+        coarsegrind_initial_cost=121.28,
         finegrind_learnrate=-0.05,
         coarsegrind_learnrate=-0.05
     )
