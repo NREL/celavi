@@ -221,14 +221,19 @@ class CostMethods:
             Cost in USD/metric ton of fine grinding when the model run
             begins.
 
+        finegrind_revenue
+            Revenue in USD/metric ton from sales of finely ground blade
+            material. Further use of material is outside the scope of this
+            study.
+
         finegrind_learnrate
             Rate of cost reduction via learning-by-doing for fine grinding.
             Must be negative. Unitless.
 
         Returns
         -------
-            Cost of grinding one metric ton of fine-ground blade material at
-            a mechanical recycling facility.
+            Net cost (process cost minuse revenue) of fine grinding one metric
+            ton of blade material at a mechanical recycling facility.
         """
 
         # If no updated cumulative production value is passed in, use the
@@ -241,8 +246,10 @@ class CostMethods:
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         finegrind_learning = finegrind_cumul ** kwargs['finegrind_learnrate']
-
-        return kwargs['finegrind_initial_cost'] * finegrind_learning
+        # returns processing cost, reduced by learning, minus revenue which
+        # stays constant over time
+        return kwargs['finegrind_initial_cost'] * finegrind_learning - \
+               kwargs['finegrind_revenue']
 
 
     @staticmethod
