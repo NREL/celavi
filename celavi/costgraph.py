@@ -98,6 +98,11 @@ class CostGraph:
 
         coarsegrind_learnrate : float
             Industrial learning-by-doing rate for coarse grinding. Unitless.
+
+        finegrind_material_loss : float
+            Fraction of total blade material lost during fine grinding.
+            Unitless. This is the amount of finely ground blade material that
+            must be landfilled.
         """
         self.start_time = time()
         self.step_costs=pd.read_csv(step_costs_file)
@@ -135,6 +140,8 @@ class CostGraph:
 
         self.finegrind_learnrate = kwargs['finegrind_learnrate']
         self.coarsegrind_learnrate = kwargs['finegrind_learnrate']
+
+        self.finegrind_material_loss = kwargs['finegrind_material_loss']
 
         self.max_dist = max_dist
 
@@ -746,7 +753,8 @@ class CostGraph:
                                                            finegrind_revenue=self.finegrind_revenue,
                                                            coarsegrind_initial_cost=self.coarsegrind_initial_cost,
                                                            finegrind_learnrate=self.finegrind_learnrate,
-                                                           coarsegrind_learnrate=self.coarsegrind_learnrate)
+                                                           coarsegrind_learnrate=self.coarsegrind_learnrate,
+                                                           finegrind_material_loss=self.finegrind_material_loss)
                                                          for f in self.supply_chain.edges[edge]['cost_method']])
 
         if self.verbose > 0:
