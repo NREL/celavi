@@ -20,7 +20,7 @@ run_routes = False
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
-initialize_costgraph = False
+initialize_costgraph = True
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
 
@@ -154,7 +154,7 @@ if initialize_costgraph:
         locations_file=locations_computed_filename,
         routes_file=args.routes,
         sc_begin= 'manufacturing',
-        sc_end=['landfilling', 'cement co-processing'],
+        sc_end=['landfilling', 'cement co-processing', 'blade next use'],
         year=2000.0,
         max_dist=300.0,
         verbose=1,
