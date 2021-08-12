@@ -362,6 +362,35 @@ class CostMethods:
 
 
     @staticmethod
+    def finegrind_shred_transpo(**kwargs):
+        """
+        Cost method for calculating lost material transportation costs (truck)
+        in USD/metric ton by accounting for the fraction of material lost from
+        the fine grinding step. @note Assume that the transportation to
+        landfill is one-tenth the distance to the next use facility.
+
+        Keyword Arguments
+        -----------------
+        vkmt
+            Distance traveled in kilometers
+
+        material_loss
+            Fraction of material lost. Used to scale down the distance.
+
+        Returns
+        -------
+            Cost of transporting material_loss metric ton of shredded blade
+            material by one kilometer. Units: USD/metric ton.
+        """
+        _vkmt = kwargs['vkmt']
+        _loss = kwargs['finegrind_material_loss']
+        if np.isnan(_vkmt):
+            return 0.0
+        else:
+            return 0.08 * ( (1 - _loss) * _vkmt + _loss * 0.10 * _vkmt)
+
+
+    @staticmethod
     def manufacturing(**kwargs):
         """
         Cost method for calculating blade manufacturing costs in USD/metric
