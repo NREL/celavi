@@ -72,24 +72,31 @@ class CostMethods:
     @staticmethod
     def rotor_teardown(**kwargs):
         """
-        Cost of removing one blade from the turbine, calculated as one-third
-        the rotor teardown cost.
+        Cost (USD/metric ton) of removing one metric ton of blade from the
+        turbine. The cost of removing a single blade is calculated as one-third
+        the rotor teardown cost, and this cost is divided by blade mass to
+        calculate rotor teardown per metric ton of blade material.
 
         Keyword Arguments
         -----------------
         year
             Model year obtained from DES model (timestep converted to year)
 
+        blade_mass
+            Average blade mass obtained from DES model
+
         Returns
         -------
         _cost
-            Cost in USD per blade (note units!) of removing a blade from an
-            in-use turbine. Equivalent to 1/3 the rotor teardown cost.
+            Cost in USD per metric ton of removing a blade from an
+            in-use turbine. Equivalent to 1/3 the rotor teardown cost divided
+            by the blade mass.
         """
         _year = kwargs['year']
+        _mass = kwargs['blade_mass']
         _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
                 169851728.663209
-        return _cost
+        return _cost / _mass
 
 
     @staticmethod
