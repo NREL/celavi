@@ -1,5 +1,7 @@
 import argparse
 import os
+import pickle
+import time
 from math import ceil
 import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
@@ -8,6 +10,20 @@ import pandas as pd
 from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
+from celavi.data_filtering import data_filter
+
+# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
+compute_locations = False
+# if run_routes is enabled (True), compute routing distances between all input locations
+run_routes = False
+# if use_computed_routes is enabled, read in a pre-assembled routes file instead
+# of generating a new one
+use_computed_routes = True
+# create cost graph fresh or use an imported version
+initialize_costgraph = False
+# save the newly initialized costgraph as a pickle file
+pickle_costgraph = True
+
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
@@ -33,7 +49,6 @@ for folder in subfolder_dict.values():
 # FILE NAMES FOR INPUT DATA
 # TODO: add check to ensure files exist
 # general inputs
-locations_filename = os.path.join(args.data, 'inputs', 'locations.csv')
 locations_computed_filename = os.path.join(args.data, 'inputs', 'locations_computed.csv')
 step_costs_filename = os.path.join(args.data, 'inputs', 'step_costs.csv')
 fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
@@ -70,8 +85,23 @@ other_facility_locations_filename = os.path.join(args.data, 'inputs',
 lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
                                              'facility_type.csv')
 
-
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
+
+
+
+
+#Data filtering for states
+data_filtering_choice = False
+if data_filtering_choice:
+    states_to_filter = ['IA']
+    data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
+
+
+
+
+# Pickle file containing CostGraph object
+costgraph_pickle_filename = os.path.join(args.data, 'inputs', 'netw.obj')
+costgraph_csv_filename = os.path.join(args.data, 'inputs', 'netw.csv')
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
@@ -82,9 +112,7 @@ turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.cs
 os.chdir(subfolder_dict['lci_folder'])
 from celavi.des import Context
 
-# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
-compute_locations = False
-use_computed_locations = True
+
 # Note that the step_cost file must be updated (or programmatically generated)
 # to include all facility ids. Otherwise, cost graph can't run with the full
 # computed data set.
@@ -97,48 +125,76 @@ if compute_locations:
                            lookup_facility_type=lookup_facility_type_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
-if use_computed_locations:
-    locations = locations_computed_filename
-else:
-    locations = locations_filename
 
-# if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = False
 if run_routes:
-    routes_computed = Router.get_all_routes(locations_file=locations_filename,
+    routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
                                             transportation_graph=transportation_graph_filename,
                                             node_locations=node_locations_filename,
                                             routing_output_folder=subfolder_dict['routing_output_folder'],
                                             preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
-    # reset argument for routes file to use computed routes rather than user input
+
+if use_computed_routes:
     args.routes = routes_computed_filename
 else:
-    routes = routes_filename
+    args.routes = routes_filename
 
-netw = CostGraph(
-    step_costs_file=step_costs_filename,
-    fac_edges_file=fac_edges_filename,
-    transpo_edges_file=transpo_edges_filename,
-    locations_file=locations_filename,
-    routes_file=routes_filename,
-    sc_begin= 'in use',
-    sc_end=['landfilling', 'cement co-processing'],
-    year=2000.0,
-    max_dist=300.0,
-    verbose=0,
-    blade_mass=50.0, #@todo update with actual value
-    finegrind_cumul_initial=1.0,
-    coarsegrind_cumul_initial=1.0,
-    finegrind_initial_cost=80.0, #@todo update with actual value
-    coarsegrind_initial_cost=60.0, #@todo update with actual value
-    finegrind_learnrate=-0.05,
-    coarsegrind_learnrate=-0.05
-)
+avgblade = pd.read_csv(avg_blade_masses_filename)
+
+time0 = time.time()
+
+if initialize_costgraph:
+    # Initialize the CostGraph using these parameter settings
+    print('Cost Graph Starts at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
+    netw = CostGraph(
+        step_costs_file=step_costs_filename,
+        fac_edges_file=fac_edges_filename,
+        transpo_edges_file=transpo_edges_filename,
+        locations_file=locations_computed_filename,
+        routes_file=args.routes,
+        sc_begin= 'manufacturing',
+        sc_end=['landfilling', 'cement co-processing'],
+        year=2000.0,
+        max_dist=300.0,
+        verbose=1,
+        save_copy=True,
+        save_name=costgraph_csv_filename,
+        blade_mass=avgblade.loc[avgblade.year==2000,
+                                'Glass Fiber:Blade'].values[0],
+        finegrind_cumul_initial=1.0,
+        coarsegrind_cumul_initial=1.0,
+        finegrind_initial_cost=143.33,
+        coarsegrind_initial_cost=106.40,
+        finegrind_learnrate=-0.05,
+        coarsegrind_learnrate=-0.05
+    )
+    print('CostGraph initialized at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
+
+    if pickle_costgraph:
+        # Save the CostGraph object using pickle
+        pickle.dump(netw, open(costgraph_pickle_filename, 'wb'))
+
+else:
+    # Read in a previously generated CostGraph object
+    print('Reading in CostGraph object at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
+
+    netw = pickle.load(open(costgraph_pickle_filename, 'rb'))
+
+    print('CostGraph object read in at %d s' % np.round(time.time() - time0, 1),
+          flush=True)
+
+print('CostGraph exists\n\n\n')
+
+# Get the initial supply chain pathways to connect power plants to their
+# nearest-neighbor manufacturing facilities
+initial_paths = netw.choose_paths()
 
 # Create the DES context and tie it to the CostGraph
 context = Context(
-    locations_filename=locations_filename,
+    locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
     possible_items=["nacelle", "blade", "tower", "foundation"],
     cost_graph=netw,
@@ -150,13 +206,14 @@ context = Context(
 # the context with components. Repeat the creation of blades
 # 3 times for each turbine.
 
+print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
+      flush=True)
+
 turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
-    blade_mass_tonnes = row['Glass Fiber:Blade']
-    foundation_mass_tonnes = row['foundation_mass_tonnes']
-    facility_id = int(row['facility_id'])
+    facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
     n_turbine = int(row['n_turbine'])
 
     for _ in range(n_turbine):
@@ -164,9 +221,12 @@ for _, row in turbine_data.iterrows():
             components.append({
                 'year': year,
                 'kind': 'blade',
-                'mass_tonnes': blade_mass_tonnes,
                 'facility_id': facility_id
             })
+
+
+print('Turbine file read at %d s\n\n\n' % np.round(time.time() - time0, 1),
+      flush=True)
 
 components = pd.DataFrame(components)
 
@@ -184,27 +244,26 @@ lifespan_fns = {
     "tower": lambda: 50 * timesteps_per_year,
 }
 
+print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
+      flush=True)
+
 # Populate the context with components.
 context.populate(components, lifespan_fns)
 
+print('Context created  at %d s\n\n\n' % np.round(time.time() - time0),
+      flush=True)
+
+print('Run starting for DES at %d s\n\n\n' % np.round(time.time() - time0),
+      flush=True)
+
 # Run the context
-result = context.run()
+count_facility_inventories = context.run()
 
-# Output .csv files of the mass flows of each mass inventory.
-mass_facility_inventories = result["mass_facility_inventories"]
-for facility_name, facility in mass_facility_inventories.items():
-    output_filename = os.path.join(subfolder_dict['outputs_folder'], f'{facility_name}.csv')
-    output_filename = output_filename.replace(' ', '_')
-    facility.transaction_history.to_csv(output_filename, index_label='timestep')
-
-# After PyLCA / DES integration is complete, the next 3 lines should be
-# eliminated
-data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
-data_for_lci_df = pd.DataFrame(context.data_for_lci)
-data_for_lci_df.to_csv(data_for_lci_filename, index=False)
+print('FINISHED RUN at %d s' % np.round(time.time() - time0),
+      flush=True)
 
 # Plot the cumulative count levels of the inventories
-count_facility_inventory_items = list(result["mass_facility_inventories"].items())
+count_facility_inventory_items = list(count_facility_inventories.items())
 nrows = 5
 ncols = ceil(len(count_facility_inventory_items) / nrows)
 fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
@@ -217,6 +276,6 @@ for i in range(len(count_facility_inventory_items)):
     cum_hist_blade = facility.cumulative_history["blade"]
     ax.set_title(facility_name)
     ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
-    ax.set_ylabel("tonnes")
+    ax.set_ylabel("count")
 plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
 plt.savefig(plot_output_path)

@@ -152,7 +152,6 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-   
     final_lci_result = pd.DataFrame()
     #Running LCA for all years as obtained from CELAVI
 
@@ -170,7 +169,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
-        print('No proper final demand for '+str(yr)+' '+stage+' '+material) 
+        print('Final demand for %s %s %s is zero' % (str(yr), stage ,material))
         return pd.DataFrame()
     
     else:

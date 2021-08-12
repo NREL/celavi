@@ -341,7 +341,7 @@ def runner(tech_matrix, F,i,l,j,k,final_demand_scaler):
     else:
        pass
 
-    print(str(time.time() - tim0) + ' ' + 'taken to do this run')
+    print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)
 
     return res
 

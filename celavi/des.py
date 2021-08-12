@@ -1,6 +1,7 @@
 from typing import Dict, List, Callable, Union, Tuple
 from math import floor, ceil
 from datetime import datetime
+import time
 
 import simpy
 import pandas as pd
@@ -104,22 +105,12 @@ class Context:
         # "facility_type_y" columns
         locations_step_costs = locations.merge(step_costs, on='facility_id')
 
-        self.mass_facility_inventories = {}
         self.count_facility_inventories = {}
         for _, row in locations_step_costs.iterrows():
             facility_type = row['facility_type_x']
             facility_id = row['facility_id']
             step = row['step']
             step_facility_id = f"{step}_{facility_id}"
-            self.mass_facility_inventories[step_facility_id] = FacilityInventory(
-                facility_id=facility_id,
-                facility_type=facility_type,
-                step=step,
-                possible_items=possible_items,
-                timesteps=max_timesteps,
-                quantity_unit="tonne",
-                can_be_negative=False
-            )
             self.count_facility_inventories[step_facility_id] = FacilityInventory(
                 facility_id=facility_id,
                 facility_type=facility_type,
@@ -210,8 +201,7 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=row["year"],
-                mass_tonnes=row["mass_tonnes"],
-                initial_facility_id=row["facility_id"],
+                in_use_facility_id=row["facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
             )
@@ -248,52 +238,92 @@ class Context:
             Total cumulative mass of the component in the process at the
             timestep.
         """
-        cumulative_masses = [
+        year = int(ceil(self.timesteps_to_years(timestep)))
+        avg_blade_mass = self.avg_blade_mass_tonnes_dict[year]
+        cumulative_counts = [
             inventory.cumulative_history['blade'][timestep]
-            for name, inventory in self.mass_facility_inventories.items()
+            for name, inventory in self.count_facility_inventories.items()
             if process_name in name
         ]
-        total_mass = sum(cumulative_masses)
-        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass}')
+        total_count = sum(cumulative_counts)
+        total_mass = total_count * avg_blade_mass
+        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass} kg')
         return total_mass
 
     def pylca_interface_process(self, env):
-        timesteps_per_year = 12
+        """
+        pylca_interface_process() runs periodically to update the LCIA model with
+        results from the DES model. It updates the LCA code with the latest distance
+        and mass flow calculation.
+
+        When this process computes the blade mass, it divides the result by 3.0 because
+        the mass input file assumes a mass for the entire rotor.
+        TODO correct the mass input file to simply have single blade mass
+
+        Currently, the material is assumed to be "glass fiber reinforced polymer"
+        TODO Replace this hardcoding by reading from the Components.
+
+        It only calls the LCA code for timesteps where the mass_kg > 0. Years with
+        zero mass flows are not passed to the LCA.
+
+        Parameters
+        ----------
+        env: Environment
+            The SimPy environment this process belongs to.
+        """
+        timesteps_per_year = round(1 / self.years_per_timestep)
         component = 'blade'
         material = 'glass fiber reinforced polymer'
         while True:
+            print(f'{datetime.now()}In While loop pylca interface',flush = True)
+            time0 = time.time()
             yield env.timeout(timesteps_per_year)   # Run annually
+            print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
+
             annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - timesteps_per_year
-            for facility_name, facility in self.mass_facility_inventories.items():
+            time0 = time.time()
+            year = int(ceil(self.timesteps_to_years(env.now)))
+            for facility_name, facility in self.count_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 positive_annual_transactions = annual_transactions[annual_transactions > 0]
-                mass_tonnes = positive_annual_transactions.sum()
+                # TODO: Correct input data instead of dividing by 3.0
+                # The masses in the input data are for 3 blades at once, so approximate the single
+                # blade mass by dividing by 3.0
+                mass_tonnes = positive_annual_transactions.sum() * self.avg_blade_mass_tonnes_dict[year] / 3.0
                 mass_kg = mass_tonnes * 1000
                 if mass_kg > 0:
                     row = {
                         'flow quantity': mass_kg,
                         'stage': process_name,
-                        'year': ceil(self.timesteps_to_years(env.now)),
+                        'year': year,
                         'material': material,
                         'flow unit': 'kg',
                         'facility_id': facility_id
                     }
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
+            print(str(time.time() - time0)+' For loop of pylca took these many seconds')
             if len(annual_data_for_lci) > 0:
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 pylca_run_main(df_for_pylca_interface)
+            else:
+                print(f'{datetime.now()} DES interface: All Masses are 0')
+                
 
     def update_cost_graph_process(self, env):
         """
         This is the SimPy process that updates the cost graph periodically.
         """
+        print('Updating cost graph')
         while True:
+            print(f'{datetime.now()}In While loop update cost graph',flush = True)
+            time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
+            print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             year = self.timesteps_to_years(env.now)
             year_int = round(year)
             avg_blade_mass_kg = self.avg_blade_mass_tonnes_dict[year_int] * 1000
@@ -317,9 +347,9 @@ class Context:
                 coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
-            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}")
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)
 
-    def run(self) -> Dict[str, Dict[str, FacilityInventory]]:
+    def run(self) -> Dict[str, FacilityInventory]:
         """
         This method starts the discrete event simulation running.
 
@@ -328,14 +358,9 @@ class Context:
         Dict[str, pd.DataFrame]
             A dictionary of inventories mapped to their cumulative histories.
         """
+
+        print('DES RUN STARTING\n\n\n',flush=True)
         self.env.process(self.update_cost_graph_process(self.env))
         self.env.process(self.pylca_interface_process(self.env))
-
         self.env.run(until=int(self.max_timesteps))
-
-        result = {
-            "count_facility_inventories": self.count_facility_inventories,
-            "mass_facility_inventories": self.mass_facility_inventories
-        }
-
-        return result
+        return self.count_facility_inventories

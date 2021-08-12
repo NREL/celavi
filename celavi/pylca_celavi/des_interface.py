@@ -8,7 +8,7 @@ from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_life_cycle_inventory_updater
 
 # Background LCA runs on the USLCI after the foreground process
-from celavi.pylca_celavi_background_postprocess import postprocessing,impact_calculations
+from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing,impact_calculations
 
 
 """
@@ -65,7 +65,7 @@ def lca_performance_improvement(df):
 
 
 def pylca_run_main(df):
-    df = df[df['flow quantity'] != 0]
+    df = df[df['flow quantity'] != 0]    
 
     res_df = pd.DataFrame()
     df=df.reset_index()
@@ -117,7 +117,7 @@ def pylca_run_main(df):
 	                lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
     
         else:
-		        print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done')    
+		        print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
 		        
                 
         res_df = pd.concat([res_df,result_shortcut])

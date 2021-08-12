@@ -25,6 +25,8 @@ class CostGraph:
                  year : float = 2000.0,
                  max_dist : float = 300.0,
                  verbose : int = 0,
+                 save_copy = False,
+                 save_name = 'netw.csv',
                  **kwargs):
         """
         Reads in small datasets to DataFrames and stores the path to the large
@@ -66,18 +68,18 @@ class CostGraph:
         -----------------
         blade_mass : float
             Average mass of a single turbine blade at the beginning of the
-            model run. Units: metric tons/tonnes
+            model run. Units: metric tons (tonnes)
 
         finegrind_cumul_initial : float
             Cumulative production of fine grinding at the beginning of the
             model run.
-            Units: metric tons/tonnes
+            Units: metric tons (tonnes)
 
         coarsegrind_cumul_initial : float
             Cumulative production of coarse grinding at the beginning of the
             model run. NOTE: This value may be greater than
             cumul_finegrind_initial.
-            Units: metric tons/tonnes
+            Units: metric tons (tonnes)
 
         finegrind_initial_cost : float
             Cost in USD/metric ton of fine grinding at the beginning of the
@@ -137,6 +139,9 @@ class CostGraph:
 
         # build the initial supply chain graph
         self.build_supplychain_graph()
+
+        if save_copy:
+            nx.write_edgelist(self.supply_chain, save_name, delimiter=',')
 
 
     @staticmethod
@@ -494,7 +499,7 @@ class CostGraph:
                                              getattr(CostMethods,
                                                      _transpo_cost)],
                              'cost': 0.0,
-                             'dist': np.nan}
+                             'dist': -1.0}
                             for edge in _edge_list]
             else:
                 _methods = [{'cost_method': [getattr(CostMethods,
@@ -504,7 +509,7 @@ class CostGraph:
                                              getattr(CostMethods,
                                                      self.supply_chain.nodes[edge[1]]['step_cost_method'])],
                              'cost': 0.0,
-                             'dist': np.nan}
+                             'dist': -1.0}
                             for edge in _edge_list]
 
             # add these edges to the supply chain
@@ -540,7 +545,7 @@ class CostGraph:
                 # find the source nodes for this route
                 _u = list(search_nodes(self.supply_chain,
                                        {'and': [{"==": [("facility_id",), _line['source_facility_id'].values[0]]},
-                                                {"==": [("connects",), "out"]}]}))
+                                                {"in": [("connects",), ["out","bid"]]}]}))
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
@@ -585,7 +590,8 @@ class CostGraph:
                 time() - self.start_time, 0), flush=True)
 
 
-    def choose_paths(self):
+    def choose_paths(self,
+                     crit : str = 'cost'):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
         all possible pathways between source and target nodes. Other "costs"
@@ -593,6 +599,11 @@ class CostGraph:
         modifications to the crit argument of the find_nearest call.
 
         @todo verify that this method works for a cyclic graph
+
+        Parameters
+        ----------
+        crit
+            Criterion on which "shortest" path is defined. Defaults to cost.
 
         Returns
         -------
@@ -602,8 +613,6 @@ class CostGraph:
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
         # is get the shortest path using the 'cost' attribute as the edge weight
-        if self.verbose > 1:
-            print('Choosing shortest paths')
 
         _sources = list(search_nodes(self.supply_chain,
                                      {"in": [("step",), self.sc_begin]}))
@@ -611,13 +620,83 @@ class CostGraph:
         _paths = []
         # Find the lowest-cost path from EACH source node to ANY target node
         for _node in _sources:
-            _chosen_path = self.find_nearest(source=_node, crit='cost')
+            _chosen_path = self.find_nearest(source=_node, crit=crit)
             _paths.append({'source': _node,
                            'target': _chosen_path[0],
                            'path': _chosen_path[2],
                            'cost': _chosen_path[1]})
 
         return _paths
+
+
+    def find_upstream_neighbor(self,
+                               node_id : int,
+                               connect_to : str = 'manufacturing',
+                               crit : str = 'dist'):
+        """
+        Given a node in the network, find the "nearest" upstream neighbor to
+        that node that is of the type specified by connect_to. "Nearest" is
+        determined according to the crit parameter.
+
+        Parameters
+        ----------
+        node_id
+            facility_id of a node in the supply chain network. No default.
+        connect_to
+            facility_type of the upstream node.
+        crit
+            Criteron used to decide which manufacturing node is "nearest".
+            Defaults to distance.
+
+        Returns
+        -------
+        _nearest_facility_id
+            Integer identifying the "closest" upstream node of type connect_to
+            that connects to the node with the provided node_id. Returns None
+            if node_id does not exist in the network or if the node_id does not
+            connect to any nodes of the connect_to type.
+
+        """
+
+        # Check that the node_id exists in the supply chain.
+        # If it doesn't, print a message and return None
+        if not node_id in nx.get_node_attributes(self.supply_chain,
+                                                 name='facility_id').values():
+            print('Facility %d does not exist in CostGraph' % node_id,
+                  flush=True)
+            return None
+        else:
+            # If node_id does exist in the supply chain, pull out the node name
+            _node = [x for x,y in self.supply_chain.nodes(data=True)
+                     if y['facility_id'] == node_id
+                     and y['connects'] == 'in'][0]
+
+        # Get a list of all nodes with an outgoing edge that connects to this
+        # node_id, with the specified facility type
+        _upstream_nodes = [n for n in self.supply_chain.predecessors(_node) if n.find(connect_to) != -1]
+        
+        # Search the list for the "closest" node
+        if len(_upstream_nodes) == 0:
+            # If there are no upstream nodes of the correct type, print a
+            # message and return None
+            print('Facility %d does not have any upstream neighbors of type %s'
+                  % node_id, connect_to,
+                  flush=True)
+            return None
+
+        elif len(_upstream_nodes) > 1:
+            # If there are multiple options, identify the nearest neighbor
+            # according to the crit(eria) parameter
+            _upstream_dists = [self.supply_chain.edges[_up_n, _node]['dist'] for _up_n in _upstream_nodes]
+            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
+            _nearest_facility_id = _nearest_upstream_node.split('_')[1]
+
+        else:
+            # If there is only one option, pull that node's facility_id directly
+            _nearest_facility_id = _upstream_nodes[0].split('_')[1]
+
+        # Return the "closest" node's facility_id as an integer
+        return int(_nearest_facility_id)
 
 
     def update_costs(self, **kwargs):
@@ -644,7 +723,11 @@ class CostGraph:
         -------
         None
         """
-
+        if self.verbose > 0:
+            print('Updating costs for %d at         %d s' %
+                  (kwargs['year'], np.round(time() - self.start_time, 0)),
+                  flush=True)
+        
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
                                                            year=kwargs['year'],
@@ -658,3 +741,8 @@ class CostGraph:
                                                            finegrind_learnrate=self.finegrind_learnrate,
                                                            coarsegrind_learnrate=self.coarsegrind_learnrate)
                                                          for f in self.supply_chain.edges[edge]['cost_method']])
+
+        if self.verbose > 0:
+            print('Costs updated for  %d at         %d s' %
+                 (kwargs['year'], np.round(time() - self.start_time, 0)),
+                 flush=True)

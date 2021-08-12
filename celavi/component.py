@@ -19,8 +19,8 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
-        mass_tonnes: float,
-        initial_facility_id: int
+        in_use_facility_id: int,
+        mass_tonnes: float = 0,
     ):
         """
         This takes parameters named the same as the instance variables. See
@@ -53,9 +53,10 @@ class Component:
             outside this class which may return floating point values.
 
         mass_tonnes: float
-            The total mass of the component, in tonnes.
+            The total mass of the component, in tonnes. Can be None if the component
+            mass is not being used.
 
-        initial_facility_id: int
+        in_use_facility_id: int
             The initial facility id (where the component begins life) used in
             initial pathway selection from CostGraph.
         """
@@ -65,7 +66,7 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
-        self.initial_facility_id = initial_facility_id
+        self.in_use_facility_id = in_use_facility_id
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
 
@@ -84,7 +85,9 @@ class Component:
             The starting location of the the component.
         """
         path_choices = self.context.cost_graph.choose_paths()
-        path_choice = path_choices[from_facility_id]
+        path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
+        manufacturing_facility_id = f"manufacturing_{from_facility_id}"
+        path_choice = path_choices_dict[manufacturing_facility_id]
         self.pathway = deque()
 
         for facility, lifespan in path_choice['path']:
@@ -113,7 +116,7 @@ class Component:
         """
         begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        self.create_pathway_queue(self.initial_facility_id)
+        self.create_pathway_queue(self.in_use_facility_id)
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
@@ -128,17 +131,17 @@ class Component:
         """
         while True:
             if len(self.pathway) > 0:
-                if self.current_location.startswith('in use'):
+                if self.current_location.startswith('manufacturing'):
                     # Query cost graph again
-                    self.create_pathway_queue(self.initial_facility_id)
+                    self.create_pathway_queue(self.in_use_facility_id)
+                    # Since the blade was immediately prior in use, just go to next step.
+                    self.pathway.popleft()
+
                 location, lifespan = self.pathway.popleft()
                 count_inventory = self.context.count_facility_inventories[location]
-                mass_inventory = self.context.mass_facility_inventories[location]
                 count_inventory.increment_quantity(self.kind, 1, env.now)
-                mass_inventory.increment_quantity(self.kind, self.mass_tonnes, env.now)
                 self.current_location = location
                 yield env.timeout(lifespan)
                 count_inventory.increment_quantity(self.kind, -1, env.now)
-                mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
             else:
                 break
