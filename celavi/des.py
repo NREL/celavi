@@ -251,7 +251,27 @@ class Context:
         return total_mass
 
     def pylca_interface_process(self, env):
-        timesteps_per_year = 12
+        """
+        pylca_interface_process() runs periodically to update the LCIA model with
+        results from the DES model. It updates the LCA code with the latest distance
+        and mass flow calculation.
+
+        When this process computes the blade mass, it divides the result by 3.0 because
+        the mass input file assumes a mass for the entire rotor.
+        TODO correct the mass input file to simply have single blade mass
+
+        Currently, the material is assumed to be "glass fiber reinforced polymer"
+        TODO Replace this hardcoding by reading from the Components.
+
+        It only calls the LCA code for timesteps where the mass_kg > 0. Years with
+        zero mass flows are not passed to the LCA.
+
+        Parameters
+        ----------
+        env: Environment
+            The SimPy environment this process belongs to.
+        """
+        timesteps_per_year = round(1 / self.years_per_timestep)
         component = 'blade'
         material = 'glass fiber reinforced polymer'
         while True:
@@ -259,7 +279,6 @@ class Context:
             time0 = time.time()
             yield env.timeout(timesteps_per_year)   # Run annually
             print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
-
 
             annual_data_for_lci = []
             window_last_timestep = env.now
@@ -271,6 +290,8 @@ class Context:
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 positive_annual_transactions = annual_transactions[annual_transactions > 0]
                 # TODO: Correct input data instead of dividing by 3.0
+                # The masses in the input data are for 3 blades at once, so approximate the single
+                # blade mass by dividing by 3.0
                 mass_tonnes = positive_annual_transactions.sum() * self.avg_blade_mass_tonnes_dict[year] / 3.0
                 mass_kg = mass_tonnes * 1000
                 if mass_kg > 0:
