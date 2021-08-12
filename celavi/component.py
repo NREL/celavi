@@ -134,7 +134,9 @@ class Component:
                 if self.current_location.startswith('manufacturing'):
                     # Query cost graph again
                     self.create_pathway_queue(self.in_use_facility_id)
-                    # Since the blade was immediately prior in use, just go to next step.
+                    # Because the blade was just manufactured, skip the first
+                    # manufacturing step so that the blade is not manufactured twice in
+                    # a row.
                     self.pathway.popleft()
 
                 location, lifespan = self.pathway.popleft()
