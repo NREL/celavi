@@ -26,5 +26,5 @@ def data_filter(loc_file_name,routes_file_name,num_of_turbines_filename,states):
         
         
         number_of_turbines = pd.read_csv(num_of_turbines_filename)
-        number_of_turbines_filtered = number_of_turbines[number_of_turbines['eia_id'].isin(facility_id_included)]
+        number_of_turbines_filtered = number_of_turbines[number_of_turbines['facility_id'].isin(facility_id_included)]
         number_of_turbines_filtered.to_csv(num_of_turbines_filename)
