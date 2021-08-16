@@ -340,12 +340,6 @@ class Context:
                 timestep=env.now
             )
 
-            cum_mass_rotor_teardown = self.cumulative_mass_for_component_in_process_at_timestep(
-                component_kind='blade',
-                process_name=['rotor teardown'],
-                timestep=env.now
-            )
-
             self.cost_graph.update_costs(
                 year=year,
                 blade_mass=avg_blade_mass_kg,
