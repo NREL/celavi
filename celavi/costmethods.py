@@ -150,7 +150,7 @@ class CostMethods:
         # initial value from CostGraph instantiation
 
         if 'coarsegrind_cumul' in kwargs:
-            coarsegrind_cumul = kwargs['coarsegrind_cumul']
+            coarsegrind_cumul = max(1, kwargs['coarsegrind_cumul'])
         else:
             coarsegrind_cumul = kwargs['coarsegrind_cumul_initial']
 
@@ -196,7 +196,7 @@ class CostMethods:
         # initial value from CostGraph instantiation
 
         if 'coarsegrind_cumul' in kwargs:
-            coarsegrind_cumul = kwargs['coarsegrind_cumul']
+            coarsegrind_cumul = max(1, kwargs['coarsegrind_cumul'])
         else:
             coarsegrind_cumul = kwargs['coarsegrind_cumul_initial']
 
@@ -255,7 +255,7 @@ class CostMethods:
         # If no updated cumulative production value is passed in, use the
         # initial value from CostGraph instantiation
         if 'finegrind_cumul' in kwargs:
-            _finegrind_cumul = kwargs['finegrind_cumul']
+            _finegrind_cumul = max(1, kwargs['finegrind_cumul'])
         else:
             _finegrind_cumul = kwargs['finegrind_cumul_initial']
 
