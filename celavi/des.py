@@ -353,7 +353,7 @@ class Context:
                 coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
-            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, cum_mass_rotor_teardown {cum_mass_rotor_teardown}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """
