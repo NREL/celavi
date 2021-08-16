@@ -210,7 +210,7 @@ class Context:
 
     def cumulative_mass_for_component_in_process_at_timestep(self,
                           component_kind: str,
-                          process_name: str,
+                          process_name: List[str],
                           timestep: int):
         """
         Calculate the cumulative mass at a certain time of a given component
@@ -243,7 +243,7 @@ class Context:
         cumulative_counts = [
             inventory.cumulative_history['blade'][timestep]
             for name, inventory in self.count_facility_inventories.items()
-            if process_name in name
+            if any(pname in name for pname in process_name)
         ]
         total_count = sum(cumulative_counts)
         total_mass = total_count * avg_blade_mass
@@ -330,13 +330,13 @@ class Context:
 
             cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
                 component_kind='blade',
-                process_name='coarse grinding',
+                process_name=['coarse grinding','coarse grinding onsite'],
                 timestep=env.now
             )
 
             cum_mass_fine_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
                 component_kind='blade',
-                process_name='fine grinding',
+                process_name=['fine grinding'],
                 timestep=env.now
             )
 
