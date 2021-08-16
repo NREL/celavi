@@ -241,8 +241,8 @@ class Context:
         year = int(ceil(self.timesteps_to_years(timestep)))
         avg_blade_mass = self.avg_blade_mass_tonnes_dict[year]
         cumulative_counts = [
-            inventory.cumulative_history['blade'][timestep]
-            for name, inventory in self.count_facility_inventories.items()
+            facility.cumulative_input_history['blade'][timestep]
+            for name, facility in self.count_facility_inventories.items()
             if any(pname in name for pname in process_name)
         ]
         total_count = sum(cumulative_counts)
@@ -340,6 +340,12 @@ class Context:
                 timestep=env.now
             )
 
+            cum_mass_rotor_teardown = self.cumulative_mass_for_component_in_process_at_timestep(
+                component_kind='blade',
+                process_name=['rotor teardown'],
+                timestep=env.now
+            )
+
             self.cost_graph.update_costs(
                 year=year,
                 blade_mass=avg_blade_mass_kg,
@@ -347,7 +353,7 @@ class Context:
                 coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
-            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, cum_mass_rotor_teardown {cum_mass_rotor_teardown}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """

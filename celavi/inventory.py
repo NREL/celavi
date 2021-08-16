@@ -70,6 +70,12 @@ class FacilityInventory:
         for _ in range(timesteps):
             self.transactions.append(self.component_materials.copy())
 
+        # Populate the deposit-only history with copies of the
+        # initialized dictionary from above that has all values set to 0.0
+        self.input_transactions: List[Dict[str, float]] = []
+        for _ in range(timesteps):
+            self.input_transactions.append(self.component_materials.copy())
+
     def increment_quantity(
         self, item_name: str, quantity: float, timestep: int
     ) -> float:
@@ -107,6 +113,11 @@ class FacilityInventory:
         timestep = int(timestep)
         self.transactions[timestep][item_name] += quantity
 
+        # Only if the quantity is an input, attach the transaction to the
+        # input transactions table
+        if quantity > 0:
+            self.input_transactions[timestep][item_name] += quantity
+
         # Now increment the inventory
         self.component_materials[item_name] += quantity
 
@@ -142,6 +153,26 @@ class FacilityInventory:
         return cumulative_history
 
     @property
+    def cumulative_input_history(self) -> pd.DataFrame:
+        """
+        Calculate the cumulative input quantities of a facility inventory over
+        all its input transactions.
+
+        Returns
+        -------
+        pd.DataFrame
+            The cumulative history of all the transactions of the component
+            materials.
+        """
+        component_materials_history_df = pd.DataFrame(self.input_transactions)
+        cumulative_history = pd.DataFrame()
+        for column in component_materials_history_df.columns:
+            cumulative_history[column] = np.cumsum(
+                component_materials_history_df[column].values
+            )
+        return cumulative_history
+
+    @property
     def transaction_history(self) -> pd.DataFrame:
         """
         Because this method instantiates a DataFrame, it should be called
@@ -154,3 +185,14 @@ class FacilityInventory:
         """
         transactions_df = pd.DataFrame(self.transactions)
         return transactions_df
+
+    @property
+    def input_transaction_history(self) -> pd.DataFrame:
+        """
+
+        Returns
+        -------
+
+        """
+        input_transactions_df = pd.DataFrame(self.input_transactions)
+        return input_transactions_df
