@@ -72,24 +72,31 @@ class CostMethods:
     @staticmethod
     def rotor_teardown(**kwargs):
         """
-        Cost of removing one blade from the turbine, calculated as one-third
-        the rotor teardown cost.
+        Cost (USD/metric ton) of removing one metric ton of blade from the
+        turbine. The cost of removing a single blade is calculated as one-third
+        the rotor teardown cost, and this cost is divided by blade mass to
+        calculate rotor teardown per metric ton of blade material.
 
         Keyword Arguments
         -----------------
         year
             Model year obtained from DES model (timestep converted to year)
 
+        blade_mass
+            Average blade mass obtained from DES model
+
         Returns
         -------
         _cost
-            Cost in USD per blade (note units!) of removing a blade from an
-            in-use turbine. Equivalent to 1/3 the rotor teardown cost.
+            Cost in USD per metric ton of removing a blade from an
+            in-use turbine. Equivalent to 1/3 the rotor teardown cost divided
+            by the blade mass.
         """
         _year = kwargs['year']
+        _mass = kwargs['blade_mass']
         _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
                 169851728.663209
-        return _cost
+        return _cost / _mass
 
 
     @staticmethod
@@ -143,7 +150,7 @@ class CostMethods:
         # initial value from CostGraph instantiation
 
         if 'coarsegrind_cumul' in kwargs:
-            coarsegrind_cumul = kwargs['coarsegrind_cumul']
+            coarsegrind_cumul = max(1, kwargs['coarsegrind_cumul'])
         else:
             coarsegrind_cumul = kwargs['coarsegrind_cumul_initial']
 
@@ -189,7 +196,7 @@ class CostMethods:
         # initial value from CostGraph instantiation
 
         if 'coarsegrind_cumul' in kwargs:
-            coarsegrind_cumul = kwargs['coarsegrind_cumul']
+            coarsegrind_cumul = max(1, kwargs['coarsegrind_cumul'])
         else:
             coarsegrind_cumul = kwargs['coarsegrind_cumul_initial']
 
@@ -221,28 +228,61 @@ class CostMethods:
             Cost in USD/metric ton of fine grinding when the model run
             begins.
 
+        finegrind_revenue
+            Revenue in USD/metric ton from sales of finely ground blade
+            material. Further use of material is outside the scope of this
+            study.
+
+        finegrind_material_loss
+            Fraction of total blade material lost during fine grinding.
+            Unitless. This is the amount of finely ground blade material that
+            must be landfilled.
+
         finegrind_learnrate
             Rate of cost reduction via learning-by-doing for fine grinding.
             Must be negative. Unitless.
 
+        year
+            Model year provided by DES
+
         Returns
         -------
-            Cost of grinding one metric ton of fine-ground blade material at
-            a mechanical recycling facility.
+            Net cost (process cost plus landfilling cost minus revenue) of fine
+            grinding one metric ton of blade material at a mechanical recycling
+            facility and disposing of material losses in a landfill.
         """
 
         # If no updated cumulative production value is passed in, use the
         # initial value from CostGraph instantiation
         if 'finegrind_cumul' in kwargs:
-            finegrind_cumul = kwargs['finegrind_cumul']
+            _finegrind_cumul = max(1, kwargs['finegrind_cumul'])
         else:
-            finegrind_cumul = kwargs['finegrind_cumul_initial']
+            _finegrind_cumul = kwargs['finegrind_cumul_initial']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        finegrind_learning = finegrind_cumul ** kwargs['finegrind_learnrate']
+        _finegrind_learning = _finegrind_cumul ** kwargs['finegrind_learnrate']
 
-        return kwargs['finegrind_initial_cost'] * finegrind_learning
+        # get fine grinding material loss
+        _loss = kwargs['finegrind_material_loss']
+
+        # calculate process cost based on total input mass (no material loss
+        # yet) (USD/metric ton)
+        _cost = kwargs['finegrind_initial_cost'] * _finegrind_learning
+
+        # calculate revenue based on total output mass accounting for material
+        # loss (USD/metric ton)
+        _revenue = (1 - _loss) * kwargs['finegrind_revenue']
+
+        # calculate additional cost of landfilling the lost material
+        # (USD/metric ton)
+        # see the landfilling method - this cost model is identical
+        _landfill = _loss * 3.0E-29 * np.exp(0.0344 * kwargs['year'])
+
+        # returns processing cost, reduced by learning, minus revenue which
+        # stays constant over time (USD/metric ton)
+        return _cost + _landfill - _revenue
+
 
 
     @staticmethod
@@ -326,6 +366,35 @@ class CostMethods:
             return 0.0
         else:
             return 0.08 * _vkmt
+
+
+    @staticmethod
+    def finegrind_shred_transpo(**kwargs):
+        """
+        Cost method for calculating lost material transportation costs (truck)
+        in USD/metric ton by accounting for the fraction of material lost from
+        the fine grinding step. @note Assume that the transportation to
+        landfill is one-tenth the distance to the next use facility.
+
+        Keyword Arguments
+        -----------------
+        vkmt
+            Distance traveled in kilometers
+
+        material_loss
+            Fraction of material lost. Used to scale down the distance.
+
+        Returns
+        -------
+            Cost of transporting material_loss metric ton of shredded blade
+            material by one kilometer. Units: USD/metric ton.
+        """
+        _vkmt = kwargs['vkmt']
+        _loss = kwargs['finegrind_material_loss']
+        if np.isnan(_vkmt):
+            return 0.0
+        else:
+            return 0.08 * ( (1 - _loss) * _vkmt + _loss * 0.10 * _vkmt)
 
 
     @staticmethod

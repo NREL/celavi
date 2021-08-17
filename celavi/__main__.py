@@ -154,7 +154,7 @@ if initialize_costgraph:
         locations_file=locations_computed_filename,
         routes_file=args.routes,
         sc_begin= 'manufacturing',
-        sc_end=['landfilling', 'cement co-processing'],
+        sc_end=['landfilling', 'cement co-processing', 'blade next use'],
         year=2000.0,
         max_dist=300.0,
         verbose=1,
@@ -164,10 +164,12 @@ if initialize_costgraph:
                                 'Glass Fiber:Blade'].values[0],
         finegrind_cumul_initial=1.0,
         coarsegrind_cumul_initial=1.0,
-        finegrind_initial_cost=143.33,
-        coarsegrind_initial_cost=106.40,
+        finegrind_initial_cost=165.38,
+        finegrind_revenue=242.56,
+        coarsegrind_initial_cost=121.28,
         finegrind_learnrate=-0.05,
-        coarsegrind_learnrate=-0.05
+        coarsegrind_learnrate=-0.05,
+        finegrind_material_loss=0.3,
     )
     print('CostGraph initialized at %d s' % np.round(time.time() - time0, 1),
           flush=True)
