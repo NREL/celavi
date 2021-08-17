@@ -87,9 +87,10 @@ class Context:
 
         # Read the average blade masses as an array. Then turn it into a dictionary
         # that maps integer years to glass fiber blade masses.
+        # File data is mass per turbine. Divide by 3 to get mass per blade.
         avg_blade_masses_df = pd.read_csv(avg_blade_masses_filename)
         self.avg_blade_mass_tonnes_dict = {
-            int(row['year']): float(row['Glass Fiber:Blade'])
+            int(row['year']): float(row['Glass Fiber:Blade']) / 3.0
             for _, row in avg_blade_masses_df.iterrows()
         }
 
@@ -289,10 +290,7 @@ class Context:
                 process_name, facility_id = facility_name.split("_")
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 positive_annual_transactions = annual_transactions[annual_transactions > 0]
-                # TODO: Correct input data instead of dividing by 3.0
-                # The masses in the input data are for 3 blades at once, so approximate the single
-                # blade mass by dividing by 3.0
-                mass_tonnes = positive_annual_transactions.sum() * self.avg_blade_mass_tonnes_dict[year] / 3.0
+                mass_tonnes = positive_annual_transactions.sum() * self.avg_blade_mass_tonnes_dict[year]
                 mass_kg = mass_tonnes * 1000
                 if mass_kg > 0:
                     row = {
