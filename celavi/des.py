@@ -290,10 +290,7 @@ class Context:
                 process_name, facility_id = facility_name.split("_")
                 annual_transactions = facility.transaction_history.loc[window_first_timestep:window_last_timestep + 1, component]
                 positive_annual_transactions = annual_transactions[annual_transactions > 0]
-                # TODO: Correct input data instead of dividing by 3.0
-                # The masses in the input data are for 3 blades at once, so approximate the single
-                # blade mass by dividing by 3.0
-                mass_tonnes = positive_annual_transactions.sum() * self.avg_blade_mass_tonnes_dict[year] / 3.0
+                mass_tonnes = positive_annual_transactions.sum() * self.avg_blade_mass_tonnes_dict[year]
                 mass_kg = mass_tonnes * 1000
                 if mass_kg > 0:
                     row = {
