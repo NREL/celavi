@@ -51,8 +51,8 @@ class CostMethods:
     @staticmethod
     def landfilling(**kwargs):
         """
-        Tipping fee model based on tipping fees in the South-Central region
-        of the U.S. which includes TX.
+        Tipping fee model based on national average tipping fees and year-over-
+        year percent increase of 3.5%.
 
         Keyword Arguments
         -----------------
@@ -65,7 +65,7 @@ class CostMethods:
             Landfill tipping fee in USD/metric ton
         """
         _year = kwargs['year']
-        _fee = 3.0E-29 * np.exp(0.0344 * _year)
+        _fee = 8.0E-30 * np.exp(0.0352 * _year)
         return _fee
 
 
