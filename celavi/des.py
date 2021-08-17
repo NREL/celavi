@@ -247,7 +247,7 @@ class Context:
         ]
         total_count = sum(cumulative_counts)
         total_mass = total_count * avg_blade_mass
-        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass} kg')
+        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass} tonnes')
         return total_mass
 
     def pylca_interface_process(self, env):
