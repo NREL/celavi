@@ -278,11 +278,11 @@ class CostGraph:
             print('Finding shortest paths from', source)
 
         # Calculate the length of paths from fromnode to all other nodes
-        lengths = nx.single_source_dijkstra_path_length(self.supply_chain,
+        lengths = nx.single_source_bellman_ford_path_length(self.supply_chain,
                                                         source,
                                                         weight=crit)
 
-        short_paths = nx.single_source_dijkstra_path(self.supply_chain,
+        short_paths = nx.single_source_bellman_ford_path(self.supply_chain,
                                                      source)
 
         # We are only interested in a particular type(s) of node
