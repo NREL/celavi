@@ -15,12 +15,12 @@ from celavi.data_filtering import data_filter
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = False
+run_routes = True
 # if use_computed_routes is enabled, read in a pre-assembled routes file instead
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
-initialize_costgraph = False
+initialize_costgraph = True
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
 
@@ -91,9 +91,11 @@ turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.cs
 
 
 #Data filtering for states
-data_filtering_choice = False
+data_filtering_choice = True
 if data_filtering_choice:
-    states_to_filter = ['IA']
+    states_to_filter = ['TX','IA','CO']
+    print('filtering')
+    print(states_to_filter)
     data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
 
 
