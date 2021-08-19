@@ -7,6 +7,7 @@ import simpy
 import pandas as pd
 
 from celavi.inventory import FacilityInventory
+from celavi.transportation_tracker import TransportationTracker
 from celavi.component import Component
 from celavi.costgraph import CostGraph
 
@@ -106,6 +107,7 @@ class Context:
         locations_step_costs = locations.merge(step_costs, on='facility_id')
 
         self.count_facility_inventories = {}
+        self.transportation_trackers = {}
         for _, row in locations_step_costs.iterrows():
             facility_type = row['facility_type_x']
             facility_id = row['facility_id']
@@ -120,6 +122,7 @@ class Context:
                 quantity_unit="count",
                 can_be_negative=False
             )
+            self.transportation_trackers[step_facility_id] = TransportationTracker(timesteps=max_timesteps)
 
         self.cost_graph = cost_graph
         self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
@@ -198,12 +201,14 @@ class Context:
         """
 
         for _, row in df.iterrows():
+            avg_blade_mass_tonnes_for_year = self.avg_blade_mass_tonnes_dict[row["year"]]
             component = Component(
                 kind=row["kind"],
                 year=row["year"],
                 in_use_facility_id=row["facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
+                mass_tonnes=avg_blade_mass_tonnes_for_year
             )
             self.env.process(component.manufacturing(self.env))
             self.components.append(component)
@@ -301,6 +306,21 @@ class Context:
                         'year': year,
                         'material': material,
                         'flow unit': 'kg',
+                        'facility_id': facility_id
+                    }
+                    self.data_for_lci.append(row)
+                    annual_data_for_lci.append(row)
+            for facility_name, tracker in self.transportation_trackers.items():
+                _, facility_id = facility_name.split("_")
+                annual_transportations = tracker.inbound_tonne_km[window_first_timestep:window_last_timestep + 1]
+                tonne_km = annual_transportations.sum()
+                if tonne_km > 0:
+                    row = {
+                        'flow quantity': tonne_km,
+                        'stage': 'Transportation',
+                        'year': year,
+                        'material': 'transportation',
+                        'flow unit': 't * km',
                         'facility_id': facility_id
                     }
                     self.data_for_lci.append(row)
