@@ -20,7 +20,7 @@ run_routes = False
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
-initialize_costgraph = True
+initialize_costgraph = False
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
 
