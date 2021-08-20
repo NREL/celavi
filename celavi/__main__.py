@@ -15,7 +15,7 @@ from celavi.data_filtering import data_filter
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = True
+run_routes = False
 # if use_computed_routes is enabled, read in a pre-assembled routes file instead
 # of generating a new one
 use_computed_routes = True
@@ -91,7 +91,7 @@ turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.cs
 
 
 #Data filtering for states
-data_filtering_choice = True
+data_filtering_choice = False
 if data_filtering_choice:
     states_to_filter = ['TX','IA','CO']
     print('filtering')
