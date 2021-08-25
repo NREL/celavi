@@ -93,7 +93,9 @@ turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.cs
 #Data filtering for states
 data_filtering_choice = False
 if data_filtering_choice:
-    states_to_filter = ['IA']
+    states_to_filter = ['TX','IA','CO']
+    print('filtering')
+    print(states_to_filter)
     data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
 
 
