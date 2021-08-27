@@ -11,23 +11,35 @@ from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import data_filter
-
-# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
-compute_locations = False
-# if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = False
-# if use_computed_routes is enabled, read in a pre-assembled routes file instead
-# of generating a new one
-use_computed_routes = True
-# create cost graph fresh or use an imported version
-initialize_costgraph = False
-# save the newly initialized costgraph as a pickle file
-pickle_costgraph = True
-
+import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
+
+# YAML filename
+config_yaml_filename = os.path.join(args.data, 'inputs', 'config.yaml')
+try:
+    with open(config_yaml_filename, 'r') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+        flags = config.get('flags', {})
+except IOError as err:
+    print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
+    exit(1)
+
+
+# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
+compute_locations = flags.get('compute_locations', False)  # default to False
+# if run_routes is enabled (True), compute routing distances between all input locations
+run_routes = flags.get('compute_locations', False)
+# if use_computed_routes is enabled, read in a pre-assembled routes file instead
+# of generating a new one
+use_computed_routes = flags.get('use_computes_routes', True)
+# create cost graph fresh or use an imported version
+initialize_costgraph = flags.get('initialize_costgraph', False)
+# save the newly initialized costgraph as a pickle file
+pickle_costgraph = flags.get('pickle_costgraph', True)
+
 
 # SUB FOLDERS
 subfolder_dict = {}
