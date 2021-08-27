@@ -23,6 +23,7 @@ try:
     with open(config_yaml_filename, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         flags = config.get('flags', {})
+        data_filtering = config.get('data_filtering', {})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -103,9 +104,9 @@ turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.cs
 
 
 #Data filtering for states
-data_filtering_choice = False
+data_filtering_choice = data_filtering.get('enable_data_filtering', False)
 if data_filtering_choice:
-    states_to_filter = ['TX','IA','CO']
+    states_to_filter = data_filtering_choice.get('states_to_filter', [])
     print('filtering')
     print(states_to_filter)
     data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
