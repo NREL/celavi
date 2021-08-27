@@ -72,7 +72,7 @@ node_locations_filename = os.path.join(args.data, 'inputs',
 # file paths for raw data used to compute locations
 wind_turbine_locations_filename = os.path.join(args.data, 'inputs',
                                                'raw_location_data',
-                                               'uswtdb_v3_3_20210114.csv')
+                                               'uswtdb_v4_1_20210721.csv')
 # LMOP data for landfill locations
 landfill_locations_filename = os.path.join(args.data, 'inputs',
                                            'raw_location_data',
