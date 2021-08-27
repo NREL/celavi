@@ -30,6 +30,7 @@ setuptools.setup(
 	    "networkx-query",
         "olca-ipc",
         "pyutilib",
-        "joblib"
+        "joblib",
+        "PyYAML"
     ]
 )
