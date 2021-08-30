@@ -55,7 +55,7 @@ fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
 transpo_edges_filename = os.path.join(args.data, 'inputs', 'transpo_edges.csv')
 route_pair_filename = os.path.join(args.data, 'inputs', 'route_pairs.csv')
 avg_blade_masses_filename = os.path.join(args.data, 'inputs', 'avgblademass.csv')
-routes_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
+routes_custom_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
 routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
 
 # input file paths for precomputed US road network data
@@ -139,7 +139,7 @@ if run_routes:
 if use_computed_routes:
     args.routes = routes_computed_filename
 else:
-    args.routes = routes_filename
+    args.routes = routes_custom_filename
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
