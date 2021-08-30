@@ -99,6 +99,9 @@ class Component:
             # Set landfill timespan long enough to be permanent
             elif facility.startswith("landfill"):
                 self.pathway.append((facility, self.context.max_timesteps * 2, distance))
+            # Also set the next use facility timespan to permanent
+            elif facility.startswith("next use"):
+                self.pathway.append((facility, self.context.max_timesteps * 2, distance))
             # Otherwise, use the timespan the model gives us.
             else:
                 self.pathway.append((facility, lifespan, distance))
@@ -142,10 +145,23 @@ class Component:
                     self.pathway.popleft()
 
                 location, lifespan, distance = self.pathway.popleft()
-                count_inventory = self.context.count_facility_inventories[location]
-                transport = self.context.transportation_trackers[location]
-                count_inventory.increment_quantity(self.kind, 1, env.now)
-                transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
+                if 'next use' in location:
+                    count_inventory = self.context.count_facility_inventories[location]
+                    transport = self.context.transportation_trackers[location]
+                    count_inventory.increment_quantity(self.kind, 1 - self.context.cost_graph.finegrind_material_loss, env.now)
+                    transport.increment_inbound_tonne_km((1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes * distance, env.now)
+
+                    _loss_landfill = self.context.cost_graph.find_landfill(int(location.split('_')[1]))
+                    count_inventory = self.context.count_facility_inventories[_loss_landfill]
+                    transport = self.context.transportation_trackers[_loss_landfill]
+                    count_inventory.increment_quantity(self.kind, self.context.cost_graph.finegrind_material_loss, env.now)
+                    transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
+                else:
+                    count_inventory = self.context.count_facility_inventories[location]
+                    transport = self.context.transportation_trackers[location]
+                    count_inventory.increment_quantity(self.kind, 1, env.now)
+                    transport.increment_inbound_tonne_km(self.context.cost_graph.finegrind_material_loss * self.mass_tonnes * distance, env.now)
+
                 self.current_location = location
                 yield env.timeout(lifespan)
                 count_inventory.increment_quantity(self.kind, -1, env.now)

@@ -296,7 +296,7 @@ class CostMethods:
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
              to cement co-processing plant
         """
-        return -10.37
+        return 100000.0
 
 
     @staticmethod
@@ -381,7 +381,7 @@ class CostMethods:
         vkmt
             Distance traveled in kilometers
 
-        material_loss
+        finegrind_material_loss
             Fraction of material lost. Used to scale down the distance.
 
         Returns
@@ -394,7 +394,30 @@ class CostMethods:
         if np.isnan(_vkmt):
             return 0.0
         else:
-            return 0.08 * ( (1 - _loss) * _vkmt + _loss * 0.10 * _vkmt)
+            return 0.08 * (1 - _loss) * _vkmt
+
+    @staticmethod
+    def finegrind_loss_transpo(**kwargs):
+        """
+
+        Keyword Arguments
+        ----------
+        vkmt
+            Distance traveled in kilometers
+
+        finegrind_material_loss
+            Fraction of material lost. Used to scale down the distance.
+
+        Returns
+        -------
+
+        """
+        _vkmt = kwargs['vkmt']
+        _loss = kwargs['finegrind_material_loss']
+        if np.isnan(_vkmt):
+            return 0.0
+        else:
+            return 0.08 * _loss * _vkmt
 
 
     @staticmethod

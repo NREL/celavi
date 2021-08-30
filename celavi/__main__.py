@@ -20,7 +20,7 @@ run_routes = False
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
-initialize_costgraph = False
+initialize_costgraph = True
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
 
@@ -156,7 +156,7 @@ if initialize_costgraph:
         locations_file=locations_computed_filename,
         routes_file=args.routes,
         sc_begin= 'manufacturing',
-        sc_end=['landfilling', 'cement co-processing', 'blade next use'],
+        sc_end=['landfilling', 'cement co-processing', 'next use'],
         year=2000.0,
         max_dist=300.0,
         verbose=1,
@@ -166,9 +166,9 @@ if initialize_costgraph:
                                 'Glass Fiber:Blade'].values[0],
         finegrind_cumul_initial=1.0,
         coarsegrind_cumul_initial=1.0,
-        finegrind_initial_cost=165.38,
-        finegrind_revenue=242.56,
-        coarsegrind_initial_cost=121.28,
+        finegrind_initial_cost=10.0,
+        finegrind_revenue=1000.0,
+        coarsegrind_initial_cost=10.0,
         finegrind_learnrate=-0.05,
         coarsegrind_learnrate=-0.05,
         finegrind_material_loss=0.3,
@@ -281,5 +281,5 @@ for i in range(len(count_facility_inventory_items)):
     ax.set_title(facility_name)
     ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
     ax.set_ylabel("count")
-plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
+plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts' + str(time.time()) + '.png')
 plt.savefig(plot_output_path)

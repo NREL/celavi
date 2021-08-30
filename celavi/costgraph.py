@@ -21,7 +21,7 @@ class CostGraph:
                  locations_file : str,
                  routes_file : str,
                  sc_begin : str = 'manufacturing',
-                 sc_end = ('landfilling', 'cement co-processing'),
+                 sc_end = ('landfilling', 'cement co-processing', 'next use'),
                  year : float = 2000.0,
                  max_dist : float = 300.0,
                  verbose : int = 0,
@@ -703,7 +703,7 @@ class CostGraph:
         elif len(_upstream_nodes) > 1:
             # If there are multiple options, identify the nearest neighbor
             # according to the crit(eria) parameter
-            _upstream_dists = [self.supply_chain.edges[_up_n, _node]['dist'] for _up_n in _upstream_nodes]
+            _upstream_dists = [self.supply_chain.edges[_up_n, _node][crit] for _up_n in _upstream_nodes]
             _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
             _nearest_facility_id = _nearest_upstream_node.split('_')[1]
 
@@ -713,6 +713,65 @@ class CostGraph:
 
         # Return the "closest" node's facility_id as an integer
         return int(_nearest_facility_id)
+
+
+    def find_landfill(self,
+                      node_id : int,
+                      connect_to : str = 'landfill',
+                      crit : str = 'dist'):
+        """
+
+        Parameters
+        ----------
+        node_id
+        connect_to
+        crit
+
+        Returns
+        -------
+            Facility ID of the closest (according to "crit") landfill downstream
+            of the node indicated by node_id.
+
+        """
+        # Check that the node_id exists in the supply chain.
+        # If it doesn't, print a message and return None
+        if not node_id in nx.get_node_attributes(self.supply_chain,
+                                                 name='facility_id').values():
+            print('Facility %d does not exist in CostGraph' % node_id,
+                  flush=True)
+            return None
+        else:
+            # If node_id does exist in the supply chain, pull out the node name
+            _node = [x for x, y in self.supply_chain.nodes(data=True)
+                     if y['facility_id'] == node_id][0]
+        # Get a list of all nodes with an outgoing edge that connects to this
+        # node_id, with the specified facility type
+        _landfill_nodes = [n for n in self.supply_chain.successors(_node) if
+                           n.find(connect_to) != -1]
+
+        # Search the list for the "closest" node
+        if len(_landfill_nodes) == 0:
+            # If there are no upstream nodes of the correct type, print a
+            # message and return None
+            print('Facility %d does not have any downstream neighbors of type %s'
+                  % node_id, connect_to,
+                  flush=True)
+            return None
+
+        elif len(_landfill_nodes) > 1:
+            # If there are multiple options, identify the nearest neighbor
+            # according to the crit(eria) parameter
+
+            _upstream_dists = [self.supply_chain.edges[_node, _lnd_n][crit]
+                               for _lnd_n in _landfill_nodes]
+            _nearest_landfill_node = _landfill_nodes[_upstream_dists.index(min(_upstream_dists))]
+            _nearest_facility_id = _nearest_landfill_node.split('_')[1]
+
+        else:
+            # If there is only one option, pull that node's facility_id directly
+            _nearest_facility_id = _landfill_nodes[0].split('_')[1]
+
+        return 'landfilling_' + str(_nearest_facility_id)
 
 
     def update_costs(self, **kwargs):
