@@ -283,3 +283,7 @@ for i in range(len(count_facility_inventory_items)):
     ax.set_ylabel("count")
 plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
 plt.savefig(plot_output_path)
+
+pickle.dump(count_facility_inventory_items, open('graph_context_count_facility.obj', 'wb'))
+
+
