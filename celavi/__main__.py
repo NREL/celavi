@@ -214,6 +214,11 @@ print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
       flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
+step_costs_data = pd.read_csv(step_costs_filename)
+corrected_turbine_data = turbine_data.merge(step_costs_data, on = ['facility_id'], how = 'inner')
+turbine_data = corrected_turbine_data[['facility_id','p_name','year','n_turbine']]
+turbine_data.to_csv('corrected turbine data.csv', index = False)
+
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
