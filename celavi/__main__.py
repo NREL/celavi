@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import pickle
 import time
 from math import ceil
@@ -20,18 +21,19 @@ run_routes = False
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
-initialize_costgraph = False
+initialize_costgraph = True
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
 
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
+parser.add_argument('-l','--list', nargs='+', help='Enter the states to filter')
 args = parser.parse_args()
 
 # SUB FOLDERS
 subfolder_dict = {}
-# input data folder for pre-processed route data
+# input data folder for pre-processed route datas
 subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data, 'preprocessing/')
 # input data folder for LCI
 subfolder_dict['lci_folder'] = os.path.join(args.data, 'pylca_celavi_data')
@@ -88,12 +90,15 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 
-
-
+data_filtering_choice = True
+if args.list == ['US']:
+   print('National Scale Run')
+   data_filtering_choice = False
 #Data filtering for states
-data_filtering_choice = False
+
 if data_filtering_choice:
-    states_to_filter = ['TX','IA','CO']
+    print('Filtered Runs')
+    states_to_filter = args.list
     print('filtering')
     print(states_to_filter)
     data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
@@ -179,6 +184,7 @@ if initialize_costgraph:
     if pickle_costgraph:
         # Save the CostGraph object using pickle
         pickle.dump(netw, open(costgraph_pickle_filename, 'wb'))
+        print('Cost graph pickled and saved',flush = True)
 
 else:
     # Read in a previously generated CostGraph object
@@ -217,7 +223,7 @@ turbine_data = pd.read_csv(turbine_data_filename)
 step_costs_data = pd.read_csv(step_costs_filename)
 corrected_turbine_data = turbine_data.merge(step_costs_data, on = ['facility_id'], how = 'inner')
 turbine_data = corrected_turbine_data[['facility_id','p_name','year','n_turbine']]
-turbine_data.to_csv('corrected turbine data.csv', index = False)
+turbine_data.to_csv('corrected_turbine_data.csv', index = False)
 
 components = []
 for _, row in turbine_data.iterrows():
