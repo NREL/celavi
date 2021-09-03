@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import pickle
 import time
 from math import ceil
@@ -44,7 +45,7 @@ pickle_costgraph = flags.get('pickle_costgraph', True)
 
 # SUB FOLDERS
 subfolder_dict = {}
-# input data folder for pre-processed route data
+# input data folder for pre-processed route datas
 subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data, 'preprocessing/')
 # input data folder for LCI
 subfolder_dict['lci_folder'] = os.path.join(args.data, 'pylca_celavi_data')
@@ -68,7 +69,7 @@ fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
 transpo_edges_filename = os.path.join(args.data, 'inputs', 'transpo_edges.csv')
 route_pair_filename = os.path.join(args.data, 'inputs', 'route_pairs.csv')
 avg_blade_masses_filename = os.path.join(args.data, 'inputs', 'avgblademass.csv')
-routes_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
+routes_custom_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
 routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
 
 # input file paths for precomputed US road network data
@@ -101,8 +102,10 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 
-
-
+data_filtering_choice = True
+if args.list == ['US']:
+   print('National Scale Run')
+   data_filtering_choice = False
 #Data filtering for states
 data_filtering_choice = data_filtering.get('enable_data_filtering', False)
 if data_filtering_choice:
@@ -152,7 +155,7 @@ if run_routes:
 if use_computed_routes:
     args.routes = routes_computed_filename
 else:
-    args.routes = routes_filename
+    args.routes = routes_custom_filename
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
@@ -192,6 +195,7 @@ if initialize_costgraph:
     if pickle_costgraph:
         # Save the CostGraph object using pickle
         pickle.dump(netw, open(costgraph_pickle_filename, 'wb'))
+        print('Cost graph pickled and saved',flush = True)
 
 else:
     # Read in a previously generated CostGraph object
@@ -227,6 +231,11 @@ print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
       flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
+step_costs_data = pd.read_csv(step_costs_filename)
+corrected_turbine_data = turbine_data.merge(step_costs_data, on = ['facility_id'], how = 'inner')
+turbine_data = corrected_turbine_data[['facility_id','p_name','year','n_turbine']]
+turbine_data.to_csv('corrected_turbine_data.csv', index = False)
+
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
@@ -296,3 +305,7 @@ for i in range(len(count_facility_inventory_items)):
     ax.set_ylabel("count")
 plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
 plt.savefig(plot_output_path)
+
+pickle.dump(count_facility_inventory_items, open('graph_context_count_facility.obj', 'wb'))
+
+
