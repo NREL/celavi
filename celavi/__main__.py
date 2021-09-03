@@ -90,7 +90,7 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 
-data_filtering_choice = True
+data_filtering_choice = False
 if args.list == ['US']:
    print('National Scale Run')
    data_filtering_choice = False
