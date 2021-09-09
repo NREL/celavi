@@ -13,13 +13,13 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import data_filter
 import yaml
-
+import pdb
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
 
 # YAML filename
-config_yaml_filename = os.path.join(args.data, 'inputs', 'config.yaml')
+config_yaml_filename = os.path.join(args.data, 'config.yaml')
 try:
     with open(config_yaml_filename, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
@@ -52,16 +52,16 @@ pickle_costgraph = flags.get('pickle_costgraph', True)
 subfolder_dict = {}
 # input data folder for pre-processed route datas
 subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data,
-                                                             data_dirs.get('preprocessing_output_folder'))
+                                                             data_dirs.get('preprocessing_output'))
 # input data folder for LCI
 subfolder_dict['lci_folder'] = os.path.join(args.data,
-                                            data_dirs.get('lci_folder'))
+                                            data_dirs.get('lci'))
 # output folder for CELAVI results
 subfolder_dict['outputs_folder'] = os.path.join(args.data,
-                                                data_dirs.get('outputs_folder'))
+                                                data_dirs.get('outputs'))
 # output folder for intermediate routing data
 subfolder_dict['routing_output_folder'] = os.path.join(args.data,
-                                                       data_dirs.get('routing_output_folder'))
+                                                       data_dirs.get('routing_output'))
 
 # check if directories exist, if not, create them
 for folder in subfolder_dict.values():
@@ -89,12 +89,12 @@ route_pair_filename = os.path.join(args.data,
                                    inputs.get('route_pairs'))
 avg_blade_masses_filename = os.path.join(args.data,
                                          data_dirs.get('inputs'),
-                                         inputs.get('avgblademass'))
+                                         inputs.get('avg_blade_masses'))
 routes_custom_filename = os.path.join(args.data,
                                       data_dirs.get('inputs'),
                                       inputs.get('routes_custom'))
 routes_computed_filename = os.path.join(args.data,
-                                        data_dirs.get('preprocessing_outputs'),
+                                        data_dirs.get('preprocessing_output'),
                                         inputs.get('routes_computed'))
 
 # input file paths for precomputed US road network data
@@ -206,7 +206,7 @@ if initialize_costgraph:
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
-        blade_mass=avgblade.loc[avgblade.year==cg_params.get('start_year'),
+        blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
                                 'Glass Fiber:Blade'].values[0],
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
         coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
