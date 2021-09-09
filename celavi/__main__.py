@@ -118,6 +118,7 @@ costgraph_csv_filename = os.path.join(args.data, 'inputs', 'netw.csv')
 
 os.chdir(subfolder_dict['lci_folder'])
 from celavi.des import Context
+from celavi.diagnostic_viz import DiagnosticViz
 
 
 # Note that the step_cost file must be updated (or programmatically generated)
@@ -275,23 +276,5 @@ print('FINISHED RUN at %d s' % np.round(time.time() - time0),
       flush=True)
 
 # Plot the cumulative count levels of the inventories
-count_facility_inventory_items = list(count_facility_inventories.items())
-nrows = 5
-ncols = ceil(len(count_facility_inventory_items) / nrows)
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
-plt.tight_layout()
-for i in range(len(count_facility_inventory_items)):
-    subplot_col = i // nrows
-    subplot_row = i % nrows
-    ax = axs[subplot_row][subplot_col]
-    facility_name, facility = count_facility_inventory_items[i]
-    cum_hist_blade = facility.cumulative_history["blade"]
-    ax.set_title(facility_name)
-    ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
-    ax.set_ylabel("count")
-plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
-plt.savefig(plot_output_path)
-
-pickle.dump(count_facility_inventory_items, open('graph_context_count_facility.obj', 'wb'))
-
-
+diagnostic_viz = DiagnosticViz(context, subfolder_dict['outputs_folder'])
+diagnostic_viz.generate_blade_count_plots()
