@@ -41,7 +41,8 @@ class ComputeLocations:
         turbine_locations = Data.TurbineLocations(fpath=self.wind_turbine_locations, backfill=self.backfill)
         
         # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
-        turbine_locations_with_eia = turbine_locations[turbine_locations['eia_id'] != '-1']
+        turbine_locations_with_eia = turbine_locations[(turbine_locations['eia_id'] != '-1') &
+                                                       (turbine_locations['p_year'] != '-1')]
 
         # determine average lat and long for all turbines by eia_id (this is the plant location for each eia_id)
         plant_locations = turbine_locations_with_eia[['eia_id', 'xlong', 'ylat']].groupby(by=['eia_id']).mean().reset_index()
