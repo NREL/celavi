@@ -60,6 +60,18 @@ class ComputeLocations:
                                                                     "ylat": "lat",
                                                                     "eia_id": "facility_id"})
 
+        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'GU']
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'HI']
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'PR']
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'AK']
+
+        # exclude Nantucket since transport routing doesn't currently include ferries
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_3 != 'Nantucket']
+
+        # exclude Block Island since no transport from offshore turbine to shore
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.facility_id != 58035]
+
         # if there are still duplicate facility_id values, keep only the first
         # entry with that value and drop the rest
         wind_plant_locations.drop_duplicates(subset='facility_id',keep='first',
@@ -75,18 +87,6 @@ class ComputeLocations:
         wind_plant_locations["region_id_1"] = 'USA'
         wind_plant_locations["region_id_4"] = ''
         wind_plant_locations = wind_plant_locations.astype({'facility_id': 'int'})
-
-        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
-        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'GU']
-        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'HI']
-        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'PR']
-        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'AK']
-
-        # exclude Nantucket since transport routing doesn't currently include ferries
-        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_3 != 'Nantucket']
-
-        # exclude Block Island since no transport from offshore turbine to shore
-        wind_plant_locations = wind_plant_locations[wind_plant_locations.facility_id != 58035]      
 
         return wind_plant_locations
 
