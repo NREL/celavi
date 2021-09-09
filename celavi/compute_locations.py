@@ -95,7 +95,8 @@ class ComputeLocations:
             turbine_locations_with_eia.facility_id.isin(
                 n_turb5_corr1.facility_id
             )
-        ]
+        ].drop_duplicates(subset='facility_id',
+                          keep='first')
 
         # determine average lat and long for all turbines by facility_id
         # #(this is the plant location for each facility_id)
