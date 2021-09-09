@@ -12,7 +12,8 @@ class ComputeLocations:
                  other_facility_locations,
                  transportation_graph,
                  node_locations,
-                 lookup_facility_type):
+                 lookup_facility_type,
+                 turbine_data_filename):
 
         # file paths for raw data used to compute locations
         self.wind_turbine_locations = wind_turbine_locations
@@ -20,6 +21,7 @@ class ComputeLocations:
         self.other_facility_locations = other_facility_locations
         self.transportation_graph = transportation_graph
         self.node_locations = node_locations
+        self.turbine_data_filename = turbine_data_filename
 
         self.lookup_facility_type_file=lookup_facility_type
 
@@ -34,10 +36,10 @@ class ComputeLocations:
 
 
     def wind_power_plant(self):
+
         """Process data for wind power plants - from USWTDB"""
-
         turbine_locations = Data.TurbineLocations(fpath=self.wind_turbine_locations, backfill=self.backfill)
-
+        
         # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
         turbine_locations_with_eia = turbine_locations[turbine_locations['eia_id'] != '-1']
 
@@ -74,7 +76,59 @@ class ComputeLocations:
         wind_plant_locations["region_id_4"] = ''
         wind_plant_locations = wind_plant_locations.astype({'facility_id': 'int'})
 
+        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'GU']
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'HI']
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'PR']
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'AK']
+
+        # exclude Nantucket since transport routing doesn't currently include ferries
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_3 != 'Nantucket']
+
+        # exclude Block Island since no transport from offshore turbine to shore
+        wind_plant_locations = wind_plant_locations[wind_plant_locations.facility_id != 58035]      
+
         return wind_plant_locations
+
+    def number_of_turbines(self):
+                """Create number of turbines file"""
+   
+                turbine_locations = pd.read_csv(self.wind_turbine_locations)
+                # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
+                turbine_locations_with_eia = turbine_locations[turbine_locations['eia_id'] != '-1']
+                wind_plant_locations = turbine_locations_with_eia[['eia_id','p_name','t_state','t_county','p_year', 'p_tnum','t_model','t_cap']]
+                wind_plant_locations = wind_plant_locations.rename(columns={"t_state": "region_id_2",
+                	                                                        "t_county": "region_id_3",
+                                                                            "eia_id": "facility_id"})
+                # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
+                wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'GU']
+                wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'HI']
+                wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'PR']
+                wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_2 != 'AK']
+
+                # exclude Nantucket since transport routing doesn't currently include ferries
+                wind_plant_locations = wind_plant_locations[wind_plant_locations.region_id_3 != 'Nantucket']
+
+                # exclude Block Island since no transport from offshore turbine to shore
+                wind_plant_locations = wind_plant_locations[wind_plant_locations.facility_id != 58035]      
+               
+
+
+                #Create the number of turbines file
+                data = wind_plant_locations[['facility_id','p_name', 'p_year', 'p_tnum','t_model','t_cap']]
+                data2 = data.drop_duplicates(['facility_id','p_name', 'p_year', 'p_tnum','t_model','t_cap']).dropna()
+                data2 = data2[data2['p_year'] > 1999]
+                data3 = data2[['facility_id','p_name', 'p_year', 'p_tnum']]
+                data3 = data3.drop_duplicates(['facility_id','p_name', 'p_year', 'p_tnum']).dropna()
+                data4 = data3[['facility_id', 'p_year','p_name','p_tnum']]
+                data4['indicator'] = data4.duplicated(subset = ['facility_id', 'p_year'],keep = False)
+                data4_corr = data4.drop_duplicates(['facility_id', 'p_year'],keep = 'last')
+                data5_corr = data4_corr.drop_duplicates(['p_name', 'p_year'],keep = 'last')
+                data5_corr['indicator'] = data5_corr.duplicated(subset = ['facility_id','p_year'],keep = False)
+                data5_corr['n_turbine'] = data5_corr['p_tnum']
+                data5_corr['year'] = data5_corr['p_year']
+                data5_corr1 = data5_corr[['facility_id','year','p_name','n_turbine']]
+                data5_corr1.to_csv(self.turbine_data_filename,index = False)
 
     def landfill(self):
         """Process data for landfills - from EPA LMOP"""
@@ -143,7 +197,7 @@ class ComputeLocations:
 
     def join_facilities(self, locations_output_file):
         """Join all facility data into single file"""
-
+        ComputeLocations.number_of_turbines(self)
         wind_plant_locations = ComputeLocations.wind_power_plant(self)
         landfill_locations_no_nulls = ComputeLocations.landfill(self)
         facility_locations = ComputeLocations.other_facility(self)
@@ -151,18 +205,6 @@ class ComputeLocations:
         locations = facility_locations.append(wind_plant_locations)
         locations = locations.append(landfill_locations_no_nulls)
         locations.reset_index(drop=True, inplace=True)
-
-        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
-        locations = locations[locations.region_id_2 != 'GU']
-        locations = locations[locations.region_id_2 != 'HI']
-        locations = locations[locations.region_id_2 != 'PR']
-        locations = locations[locations.region_id_2 != 'AK']
-
-        # exclude Nantucket since transport routing doesn't currently include ferries
-        locations = locations[locations.region_id_3 != 'Nantucket']
-
-        # exclude Block Island since no transport from offshore turbine to shore
-        locations = locations[locations.facility_id != 58035]
 
         # find the entries in locations that have a duplicate facility_id AND
         # are not power plants.
@@ -176,3 +218,5 @@ class ComputeLocations:
             locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
         
         locations.to_csv(locations_output_file, index=False)
+
+

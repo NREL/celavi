@@ -129,7 +129,8 @@ if compute_locations:
                            other_facility_locations=other_facility_locations_filename,
                            transportation_graph=transportation_graph_filename,
                            node_locations=node_locations_filename,
-                           lookup_facility_type=lookup_facility_type_filename)
+                           lookup_facility_type=lookup_facility_type_filename,
+                           turbine_data_filename=turbine_data_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 
@@ -220,10 +221,6 @@ print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
       flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
-step_costs_data = pd.read_csv(step_costs_filename)
-corrected_turbine_data = turbine_data.merge(step_costs_data, on = ['facility_id'], how = 'inner')
-turbine_data = corrected_turbine_data[['facility_id','p_name','year','n_turbine']]
-turbine_data.to_csv('corrected_turbine_data.csv', index = False)
 
 components = []
 for _, row in turbine_data.iterrows():
