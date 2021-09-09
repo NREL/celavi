@@ -1,8 +1,6 @@
 from typing import List, Dict, Deque, Tuple
 from collections import deque
 
-from transportation_tracker import TransportationTracker
-
 
 class Component:
     """
@@ -79,29 +77,29 @@ class Component:
         and during the eol_process when exiting an "in use" location.
 
         This method does not return anything, rather it modifies the
-        instance attribute self.pathway with a new deque.
+        instance attrivute self.pathway with a new deque.
 
         Parameters
         ----------
-        from_facility_id: int
+        from_facility_id: str
             The starting location of the the component.
         """
         path_choices = self.context.cost_graph.choose_paths()
         path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
-        manufacturing_facility_id = f"manufacturing_{int(from_facility_id)}"
+        manufacturing_facility_id = f"manufacturing_{from_facility_id}"
         path_choice = path_choices_dict[manufacturing_facility_id]
         self.pathway = deque()
 
-        for facility, lifespan, distance in path_choice['path']:
+        for facility, lifespan in path_choice['path']:
             # Override the initial timespan when component goes into use.
             if facility.startswith("in use"):
-                self.pathway.append((facility, self.initial_lifespan_timesteps, distance))
+                self.pathway.append((facility, self.initial_lifespan_timesteps))
             # Set landfill timespan long enough to be permanent
             elif facility.startswith("landfill"):
-                self.pathway.append((facility, self.context.max_timesteps * 2, distance))
+                self.pathway.append((facility, self.context.max_timesteps * 2))
             # Otherwise, use the timespan the model gives us.
             else:
-                self.pathway.append((facility, lifespan, distance))
+                self.pathway.append((facility, lifespan))
 
     def manufacturing(self, env):
         """
@@ -136,16 +134,12 @@ class Component:
                 if self.current_location.startswith('manufacturing'):
                     # Query cost graph again
                     self.create_pathway_queue(self.in_use_facility_id)
-                    # Because the blade was just manufactured, skip the first
-                    # manufacturing step so that the blade is not manufactured twice in
-                    # a row.
+                    # Since the blade was immediately prior in use, just go to next step.
                     self.pathway.popleft()
 
-                location, lifespan, distance = self.pathway.popleft()
+                location, lifespan = self.pathway.popleft()
                 count_inventory = self.context.count_facility_inventories[location]
-                transport = self.context.transportation_trackers[location]
                 count_inventory.increment_quantity(self.kind, 1, env.now)
-                transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
                 self.current_location = location
                 yield env.timeout(lifespan)
                 count_inventory.increment_quantity(self.kind, -1, env.now)

@@ -196,7 +196,7 @@ class Router(object):
                                       'destination_long',
                                       'destination_lat']]  # .drop_duplicates()
 
-                _routes.to_csv(routing_output_folder + 'latlongs.csv')
+                _routes.to_csv(routing_output_folder + 'routes.csv')
 
                 # if routing engine is specified, use it to get the route (fips and
                 # vmt) for each pair of input locations
