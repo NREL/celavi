@@ -194,6 +194,7 @@ class TurbineLocations(Data):
     COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
                {'name': 't_county', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'p_name', 'type': str, 'index': False, 'backfill': None},
                {'name': 'p_year', 'type': float, 'index': False, 'backfill': '-1'},
                {'name': 'p_tnum', 'type': float, 'index': False, 'backfill': '-1'},
                {'name': 't_model', 'type': str, 'index': False, 'backfill': None},
