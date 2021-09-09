@@ -30,6 +30,8 @@ setuptools.setup(
 	    "networkx-query",
         "olca-ipc",
         "pyutilib",
-        "joblib"
+        "joblib",
+        "plotly",
+        "kaleido"
     ]
 )
