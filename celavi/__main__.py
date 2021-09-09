@@ -25,6 +25,11 @@ try:
         config = yaml.load(f, Loader=yaml.FullLoader)
         flags = config.get('flags', {})
         data_filtering = config.get('data_filtering', {})
+        scenario_params = config.get('scenario_parameters', {})
+        data_dirs = config.get('data_directories', {})
+        inputs = config.get('input_filenames', {})
+        outputs = config.get('output_filenames', {})
+        cg_params = config.get('costgraph_parameters', {})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -46,13 +51,21 @@ pickle_costgraph = flags.get('pickle_costgraph', True)
 # SUB FOLDERS
 subfolder_dict = {}
 # input data folder for pre-processed route datas
-subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data, 'preprocessing/')
+subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data,
+                                                             data_dirs.get('preprocessing_output_folder',
+                                                                           'preprocessing/'))
 # input data folder for LCI
-subfolder_dict['lci_folder'] = os.path.join(args.data, 'pylca_celavi_data')
+subfolder_dict['lci_folder'] = os.path.join(args.data,
+                                            data_dirs.get('lci_folder',
+                                                          'pylca_celavi_data'))
 # output folder for CELAVI results
-subfolder_dict['outputs_folder'] = os.path.join(args.data, 'outputs')
+subfolder_dict['outputs_folder'] = os.path.join(args.data,
+                                                data_dirs.get('outputs_folder',
+                                                              'outputs'))
 # output folder for intermediate routing data
-subfolder_dict['routing_output_folder'] = os.path.join(args.data, 'preprocessing', 'routing_intermediate_files/')
+subfolder_dict['routing_output_folder'] = os.path.join(args.data,
+                                                       data_dirs.get('routing_output_folder',
+                                                                     'preprocessing/routing_intermediate_files/'))
 
 # check if directories exist, if not, create them
 for folder in subfolder_dict.values():
@@ -63,18 +76,45 @@ for folder in subfolder_dict.values():
 # FILE NAMES FOR INPUT DATA
 # TODO: add check to ensure files exist
 # general inputs
-locations_computed_filename = os.path.join(args.data, 'inputs', 'locations_computed.csv')
-step_costs_filename = os.path.join(args.data, 'inputs', 'step_costs.csv')
-fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
-transpo_edges_filename = os.path.join(args.data, 'inputs', 'transpo_edges.csv')
-route_pair_filename = os.path.join(args.data, 'inputs', 'route_pairs.csv')
-avg_blade_masses_filename = os.path.join(args.data, 'inputs', 'avgblademass.csv')
-routes_custom_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
-routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
+locations_computed_filename = os.path.join(args.data,
+                                           data_dirs.get('main',
+                                                         'inputs/'),
+                                           inputs.get('locs',
+                                                      'locations_computed.csv'))
+step_costs_filename = os.path.join(args.data,
+                                   data_dirs.get('main',
+                                                 'inputs/'),
+                                   'step_costs.csv')
+fac_edges_filename = os.path.join(args.data,
+                                   data_dirs.get('main',
+                                                 'inputs/'),
+                                   'fac_edges.csv')
+transpo_edges_filename = os.path.join(args.data,
+                                   data_dirs.get('main',
+                                                 'inputs/'),
+                                   'transpo_edges.csv')
+route_pair_filename = os.path.join(args.data,
+                                   data_dirs.get('main',
+                                                 'inputs/'),
+                                   'route_pairs.csv')
+avg_blade_masses_filename = os.path.join(args.data,
+                                   data_dirs.get('main',
+                                                 'inputs/'),
+                                   'avgblademass.csv')
+routes_custom_filename = os.path.join(args.data,
+                                      data_dirs.get('main',
+                                                    'preprocessing_output/'),
+                                   'routes.csv')
+routes_computed_filename = os.path.join(args.data,
+                                   data_dirs.get('main',
+                                                 'preprocessing_output/'),
+                                   'routes_computed.csv')
 
 # input file paths for precomputed US road network data
 # transport graph (pre computed; don't change)
-transportation_graph_filename = os.path.join(args.data, 'inputs',
+transportation_graph_filename = os.path.join(args.data,
+                                   data_dirs.get('main',
+                                                 'inputs/'),
                                              'precomputed_us_road_network',
                                              'transportation_graph.csv')
 
@@ -102,7 +142,6 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 
-data_filtering_choice = True
 if args.list == ['US']:
    print('National Scale Run')
    data_filtering_choice = False
