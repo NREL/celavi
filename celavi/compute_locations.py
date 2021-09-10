@@ -90,9 +90,9 @@ class ComputeLocations:
         n_turb5_corr['n_turbine'] = n_turb5_corr['p_tnum']
         n_turb5_corr['year'] = n_turb5_corr['p_year']
         n_turb5_corr1 = n_turb5_corr[['facility_id','year','p_name','n_turbine', 't_cap']]
-
+        n_turb5_corr1.to_csv('number_of_turbines.csv', index=False)
         # Add capacity expansion projections onto the historical data
-        self.capacity_projections(n_turb5_corr1)
+        #self.capacity_projections(n_turb5_corr1)
 
         turbine_locations_filtered = turbine_locations_with_eia[
             turbine_locations_with_eia.p_year > 1999
@@ -251,6 +251,15 @@ class ComputeLocations:
         locations = facility_locations.append(wind_plant_locations)
         locations = locations.append(landfill_locations_no_nulls)
         locations.reset_index(drop=True, inplace=True)
+
+        # exclude Hawaii, Guam, Puerto Rico, and Alaska
+        # (only have road network data for the contiguous United States)
+        locations = locations[locations.region_id_2 != 'GU']
+        locations = locations[locations.region_id_2 != 'HI']
+        locations = locations[locations.region_id_2 != 'PR']
+        locations = locations[locations.region_id_2 != 'AK']
+
+        locations = locations[locations.region_id_3 != 'Nantucket']
 
         # find the entries in locations that have a duplicate facility_id AND
         # are not power plants.
