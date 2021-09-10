@@ -13,7 +13,6 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import data_filter
 
-
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
 # if run_routes is enabled (True), compute routing distances between all input locations
@@ -22,6 +21,8 @@ run_routes = False
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
+#Initialize cost graph should be always set to true because the cost graph pickle will not exists for users. 
+#Setting this to false should only be done when exploring same regions multiple times on the same machine. 
 initialize_costgraph = True
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
@@ -90,7 +91,11 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
-
+#The code is setup such that data filtering is always true unless user sends 'US' as an argument to the code run statement. 
+#Sending any other arguments, namely state abbreviations will result in filtering to occur
+#Send python __main__.py --list US for national scale run
+#Send python __main__.py --list IO CO .... for state runs. 
+#maximum of 6 states can be entered on the HPC runs right now. Can be modified later. 
 data_filtering_choice = True
 if args.list == ['US']:
    print('National Scale Run')
@@ -103,9 +108,6 @@ if data_filtering_choice:
     print('filtering')
     print(states_to_filter)
     data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
-
-
-
 
 # Pickle file containing CostGraph object
 costgraph_pickle_filename = os.path.join(args.data, 'inputs', 'netw.obj')
