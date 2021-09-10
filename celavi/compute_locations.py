@@ -74,29 +74,26 @@ class ComputeLocations:
 
         n_turb2 = n_turb[n_turb['p_year'] > 1999]
         n_turb3 = n_turb2[
+            ['facility_id','p_name', 'p_year', 'p_tnum', 't_cap']
+        ].drop_duplicates(
             ['facility_id','p_name', 'p_year', 'p_tnum']
-        ].drop_duplicates().dropna()
+        ).dropna()
 
-        n_turb4 = n_turb3[['facility_id', 'p_year','p_name','p_tnum']]
+        n_turb4 = n_turb3[['facility_id', 'p_year','p_name','p_tnum', 't_cap']]
         n_turb4['indicator'] = n_turb4.duplicated(subset = ['facility_id', 'p_year'],keep = False)
         n_turb4_corr = n_turb4.drop_duplicates(['facility_id', 'p_year'],keep = 'last')
         n_turb5_corr = n_turb4_corr.drop_duplicates(['p_name', 'p_year'],keep = 'last')
         n_turb5_corr['indicator'] = n_turb5_corr.duplicated(subset = ['facility_id','p_year'],keep = False)
         n_turb5_corr['n_turbine'] = n_turb5_corr['p_tnum']
         n_turb5_corr['year'] = n_turb5_corr['p_year']
-        n_turb5_corr1 = n_turb5_corr[['facility_id','year','p_name','n_turbine']]
+        n_turb5_corr1 = n_turb5_corr[['facility_id','year','p_name','n_turbine', 't_cap']]
 
         # save the number_of_turbines data structure
         n_turb5_corr1.to_csv(self.turbine_data_filename,index = False)
 
-        # use the number_of_turbines data structure to filter down the
-        # turbine_locations_with_eia data structure
         turbine_locations_filtered = turbine_locations_with_eia[
-            turbine_locations_with_eia.facility_id.isin(
-                n_turb5_corr1.facility_id
-            )
-        ].drop_duplicates(subset='facility_id',
-                          keep='first')
+            turbine_locations_with_eia.p_year > 1999
+        ]
 
         # determine average lat and long for all turbines by facility_id
         # #(this is the plant location for each facility_id)
@@ -110,6 +107,15 @@ class ComputeLocations:
 
         # merge plant list with location data
         wind_plant_locations = wind_plant_list.merge(plant_locations, on='facility_id')
+
+        # use the number_of_turbines data structure to filter down the
+        # turbine_locations_with_eia data structure
+        wind_plant_locations = wind_plant_locations[
+            wind_plant_locations.facility_id.isin(
+                n_turb5_corr1.facility_id
+            )
+        ].drop_duplicates(subset='facility_id',
+                          keep='first')
 
         wind_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if wind_plant_type_lookup:
