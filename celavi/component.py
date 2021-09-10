@@ -77,16 +77,16 @@ class Component:
         and during the eol_process when exiting an "in use" location.
 
         This method does not return anything, rather it modifies the
-        instance attrivute self.pathway with a new deque.
+        instance attribute self.pathway with a new deque.
 
         Parameters
         ----------
-        from_facility_id: str
+        from_facility_id: int
             The starting location of the the component.
         """
         path_choices = self.context.cost_graph.choose_paths()
         path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
-        manufacturing_facility_id = f"manufacturing_{from_facility_id}"
+        manufacturing_facility_id = f"manufacturing_{int(from_facility_id)}"
         path_choice = path_choices_dict[manufacturing_facility_id]
         self.pathway = deque()
 

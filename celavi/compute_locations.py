@@ -12,7 +12,8 @@ class ComputeLocations:
                  other_facility_locations,
                  transportation_graph,
                  node_locations,
-                 lookup_facility_type):
+                 lookup_facility_type,
+                 turbine_data_filename):
 
         # file paths for raw data used to compute locations
         self.wind_turbine_locations = wind_turbine_locations
@@ -20,6 +21,7 @@ class ComputeLocations:
         self.other_facility_locations = other_facility_locations
         self.transportation_graph = transportation_graph
         self.node_locations = node_locations
+        self.turbine_data_filename = turbine_data_filename
 
         self.lookup_facility_type_file=lookup_facility_type
 
@@ -29,39 +31,85 @@ class ComputeLocations:
         # flag to use limited set of source data
         self.toy = False
 
+        # Store turbine data in self for use in generating both the locations
+        # file and the number_of_turbines file
+        self.wind_turbine_data = None
 
         self.facility_type_lookup = pd.read_csv(self.lookup_facility_type_file, header=None)
 
 
     def wind_power_plant(self):
+
         """Process data for wind power plants - from USWTDB"""
-
         turbine_locations = Data.TurbineLocations(fpath=self.wind_turbine_locations, backfill=self.backfill)
-
+        
         # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
-        turbine_locations_with_eia = turbine_locations[turbine_locations['eia_id'] != '-1']
+        turbine_locations_with_eia = turbine_locations[(turbine_locations['eia_id'] != '-1') &
+                                                       (turbine_locations['p_year'] != '-1')]
 
-        # determine average lat and long for all turbines by eia_id (this is the plant location for each eia_id)
-        plant_locations = turbine_locations_with_eia[['eia_id', 'xlong', 'ylat']].groupby(by=['eia_id']).mean().reset_index()
-        plant_locations = plant_locations.astype({'eia_id': 'int'})  # recast type for eia_id
+        # reformat data for later use
+        turbine_locations_with_eia.rename(columns={"t_state": "region_id_2",
+                                                   "t_county": "region_id_3",
+                                                   "xlong": "long",
+                                                   "ylat": "lat",
+                                                   "eia_id": "facility_id"},
+                                          inplace=True)
+
+        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
+        turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'GU']
+        turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'HI']
+        turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'PR']
+        turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'AK']
+
+        # exclude Nantucket since transport routing doesn't currently include ferries
+        turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_3 != 'Nantucket']
+
+        # exclude Block Island since no transport from offshore turbine to shore
+        turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.facility_id != 58035]
+
+        # Filter down the dataset to generate the number_of_turbines file
+        n_turb = turbine_locations_with_eia[
+            ['facility_id','p_name', 'p_year', 'p_tnum','t_model','t_cap']
+        ].drop_duplicates().dropna()
+
+        n_turb2 = n_turb[n_turb['p_year'] > 1999]
+        n_turb3 = n_turb2[
+            ['facility_id','p_name', 'p_year', 'p_tnum']
+        ].drop_duplicates().dropna()
+
+        n_turb4 = n_turb3[['facility_id', 'p_year','p_name','p_tnum']]
+        n_turb4['indicator'] = n_turb4.duplicated(subset = ['facility_id', 'p_year'],keep = False)
+        n_turb4_corr = n_turb4.drop_duplicates(['facility_id', 'p_year'],keep = 'last')
+        n_turb5_corr = n_turb4_corr.drop_duplicates(['p_name', 'p_year'],keep = 'last')
+        n_turb5_corr['indicator'] = n_turb5_corr.duplicated(subset = ['facility_id','p_year'],keep = False)
+        n_turb5_corr['n_turbine'] = n_turb5_corr['p_tnum']
+        n_turb5_corr['year'] = n_turb5_corr['p_year']
+        n_turb5_corr1 = n_turb5_corr[['facility_id','year','p_name','n_turbine']]
+
+        # save the number_of_turbines data structure
+        n_turb5_corr1.to_csv(self.turbine_data_filename,index = False)
+
+        # use the number_of_turbines data structure to filter down the
+        # turbine_locations_with_eia data structure
+        turbine_locations_filtered = turbine_locations_with_eia[
+            turbine_locations_with_eia.facility_id.isin(
+                n_turb5_corr1.facility_id
+            )
+        ].drop_duplicates(subset='facility_id',
+                          keep='first')
+
+        # determine average lat and long for all turbines by facility_id
+        # #(this is the plant location for each facility_id)
+        plant_locations = turbine_locations_filtered[['facility_id', 'long', 'lat']].groupby(by=['facility_id']).mean().reset_index()
+        plant_locations = plant_locations.astype({'facility_id': 'int'})  # recast type for facility_id
         # select turbine data for county with most capacity (some plants have turbines in multiple counties and/or
         # multiple phases with different amounts of capacity)
-        plant_turbine_capacity = turbine_locations_with_eia[['eia_id', 't_state', 't_county', 'p_cap', 't_cap']]
-        plant_county_phase = plant_turbine_capacity.groupby(by=['eia_id', 't_state', 't_county', 'p_cap']).sum().reset_index()
-        wind_plant_list = plant_county_phase.groupby(by=['eia_id', 't_state']).max().reset_index()[['eia_id', 't_state', 't_county']]
+        plant_turbine_capacity = turbine_locations_filtered[['facility_id', 'region_id_2', 'region_id_3', 'p_cap', 't_cap']]
+        plant_county_phase = plant_turbine_capacity.groupby(by=['facility_id', 'region_id_2', 'region_id_3', 'p_cap']).sum().reset_index()
+        wind_plant_list = plant_county_phase.groupby(by=['facility_id', 'region_id_2']).max().reset_index()[['facility_id', 'region_id_2', 'region_id_3']]
 
-        # merge plant list with location data and reformat data for use
-        wind_plant_locations = wind_plant_list.merge(plant_locations, on='eia_id')
-        wind_plant_locations = wind_plant_locations.rename(columns={"t_state": "region_id_2",
-                                                                    "t_county": "region_id_3",
-                                                                    "xlong": "long",
-                                                                    "ylat": "lat",
-                                                                    "eia_id": "facility_id"})
-
-        # if there are still duplicate facility_id values, keep only the first
-        # entry with that value and drop the rest
-        wind_plant_locations.drop_duplicates(subset='facility_id',keep='first',
-                                             inplace=True)
+        # merge plant list with location data
+        wind_plant_locations = wind_plant_list.merge(plant_locations, on='facility_id')
 
         wind_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if wind_plant_type_lookup:
@@ -75,6 +123,7 @@ class ComputeLocations:
         wind_plant_locations = wind_plant_locations.astype({'facility_id': 'int'})
 
         return wind_plant_locations
+
 
     def landfill(self):
         """Process data for landfills - from EPA LMOP"""
@@ -152,18 +201,6 @@ class ComputeLocations:
         locations = locations.append(landfill_locations_no_nulls)
         locations.reset_index(drop=True, inplace=True)
 
-        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
-        locations = locations[locations.region_id_2 != 'GU']
-        locations = locations[locations.region_id_2 != 'HI']
-        locations = locations[locations.region_id_2 != 'PR']
-        locations = locations[locations.region_id_2 != 'AK']
-
-        # exclude Nantucket since transport routing doesn't currently include ferries
-        locations = locations[locations.region_id_3 != 'Nantucket']
-
-        # exclude Block Island since no transport from offshore turbine to shore
-        locations = locations[locations.facility_id != 58035]
-
         # find the entries in locations that have a duplicate facility_id AND
         # are not power plants.
         _ids_update = locations[locations.duplicated(subset='facility_id',
@@ -176,3 +213,5 @@ class ComputeLocations:
             locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
         
         locations.to_csv(locations_output_file, index=False)
+
+

@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 import pickle
 import time
 from math import ceil
@@ -11,6 +12,7 @@ from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import data_filter
+
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
@@ -27,11 +29,12 @@ pickle_costgraph = True
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
+parser.add_argument('-l','--list', nargs='+', help='Enter the states to filter')
 args = parser.parse_args()
 
 # SUB FOLDERS
 subfolder_dict = {}
-# input data folder for pre-processed route data
+# input data folder for pre-processed route datas
 subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data, 'preprocessing/')
 # input data folder for LCI
 subfolder_dict['lci_folder'] = os.path.join(args.data, 'pylca_celavi_data')
@@ -55,7 +58,7 @@ fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
 transpo_edges_filename = os.path.join(args.data, 'inputs', 'transpo_edges.csv')
 route_pair_filename = os.path.join(args.data, 'inputs', 'route_pairs.csv')
 avg_blade_masses_filename = os.path.join(args.data, 'inputs', 'avgblademass.csv')
-routes_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
+routes_custom_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
 routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
 
 # input file paths for precomputed US road network data
@@ -72,7 +75,7 @@ node_locations_filename = os.path.join(args.data, 'inputs',
 # file paths for raw data used to compute locations
 wind_turbine_locations_filename = os.path.join(args.data, 'inputs',
                                                'raw_location_data',
-                                               'uswtdb_v3_3_20210114.csv')
+                                               'uswtdb_v4_1_20210721.csv')
 # LMOP data for landfill locations
 landfill_locations_filename = os.path.join(args.data, 'inputs',
                                            'raw_location_data',
@@ -88,12 +91,17 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 
-
-
+data_filtering_choice = True
+if args.list == ['US']:
+   print('National Scale Run')
+   data_filtering_choice = False
 #Data filtering for states
-data_filtering_choice = False
+
 if data_filtering_choice:
-    states_to_filter = ['IA']
+    print('Filtered Runs')
+    states_to_filter = args.list
+    print('filtering')
+    print(states_to_filter)
     data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
 
 
@@ -111,6 +119,7 @@ costgraph_csv_filename = os.path.join(args.data, 'inputs', 'netw.csv')
 
 os.chdir(subfolder_dict['lci_folder'])
 from celavi.des import Context
+from celavi.diagnostic_viz import DiagnosticViz
 
 
 # Note that the step_cost file must be updated (or programmatically generated)
@@ -122,7 +131,8 @@ if compute_locations:
                            other_facility_locations=other_facility_locations_filename,
                            transportation_graph=transportation_graph_filename,
                            node_locations=node_locations_filename,
-                           lookup_facility_type=lookup_facility_type_filename)
+                           lookup_facility_type=lookup_facility_type_filename,
+                           turbine_data_filename=turbine_data_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 
@@ -137,7 +147,7 @@ if run_routes:
 if use_computed_routes:
     args.routes = routes_computed_filename
 else:
-    args.routes = routes_filename
+    args.routes = routes_custom_filename
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
@@ -177,6 +187,7 @@ if initialize_costgraph:
     if pickle_costgraph:
         # Save the CostGraph object using pickle
         pickle.dump(netw, open(costgraph_pickle_filename, 'wb'))
+        print('Cost graph pickled and saved',flush = True)
 
 else:
     # Read in a previously generated CostGraph object
@@ -212,6 +223,7 @@ print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
       flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
+
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
@@ -264,20 +276,8 @@ count_facility_inventories = context.run()
 print('FINISHED RUN at %d s' % np.round(time.time() - time0),
       flush=True)
 
+pickle.dump(count_facility_inventories, open('graph_context_count_facility.obj', 'wb'))
+
 # Plot the cumulative count levels of the inventories
-count_facility_inventory_items = list(count_facility_inventories.items())
-nrows = 5
-ncols = ceil(len(count_facility_inventory_items) / nrows)
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
-plt.tight_layout()
-for i in range(len(count_facility_inventory_items)):
-    subplot_col = i // nrows
-    subplot_row = i % nrows
-    ax = axs[subplot_row][subplot_col]
-    facility_name, facility = count_facility_inventory_items[i]
-    cum_hist_blade = facility.cumulative_history["blade"]
-    ax.set_title(facility_name)
-    ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
-    ax.set_ylabel("count")
-plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
-plt.savefig(plot_output_path)
+diagnostic_viz = DiagnosticViz(context, subfolder_dict['outputs_folder'])
+diagnostic_viz.generate_blade_count_plots()
