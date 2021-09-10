@@ -244,3 +244,15 @@ class LandfillLocations(Data):
                  backfill=True):
         super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
+
+class StandardScenarios(Data):
+    COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},
+               {'name': 't', 'type': int, 'index': False, 'backfill': None},
+               {'name': 'wind-ons_MW', 'type': float, 'index': False, 'backfill': '-1'}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(StandardScenarios,self).__init__(df=df, fpath=fpath, columns=columns,
+                                               backfill=backfill)
