@@ -1,6 +1,7 @@
 import celavi.data_manager as Data
 import warnings
 import pandas as pd
+import numpy as np
 
 warnings.simplefilter('error', UserWarning)
 
@@ -13,7 +14,8 @@ class ComputeLocations:
                  transportation_graph,
                  node_locations,
                  lookup_facility_type,
-                 turbine_data_filename):
+                 turbine_data_filename,
+                 standard_scenarios_filename):
 
         # file paths for raw data used to compute locations
         self.wind_turbine_locations = wind_turbine_locations
@@ -22,6 +24,7 @@ class ComputeLocations:
         self.transportation_graph = transportation_graph
         self.node_locations = node_locations
         self.turbine_data_filename = turbine_data_filename
+        self.standard_scenarios_filename = standard_scenarios_filename
 
         self.lookup_facility_type_file=lookup_facility_type
 
@@ -33,7 +36,7 @@ class ComputeLocations:
 
         # Store turbine data in self for use in generating both the locations
         # file and the number_of_turbines file
-        self.wind_turbine_data = None
+        self.capacity_data = None
 
         self.facility_type_lookup = pd.read_csv(self.lookup_facility_type_file, header=None)
 
@@ -88,8 +91,8 @@ class ComputeLocations:
         n_turb5_corr['year'] = n_turb5_corr['p_year']
         n_turb5_corr1 = n_turb5_corr[['facility_id','year','p_name','n_turbine', 't_cap']]
 
-        # save the number_of_turbines data structure
-        n_turb5_corr1.to_csv(self.turbine_data_filename,index = False)
+        # Add capacity expansion projections onto the historical data
+        self.capacity_projections(n_turb5_corr1)
 
         turbine_locations_filtered = turbine_locations_with_eia[
             turbine_locations_with_eia.p_year > 1999
@@ -195,6 +198,48 @@ class ComputeLocations:
                           "number unique faclity_id is %d." % (number_other_facilities, number_unique_facility_id)
             warnings.warn(warning_str)
         return facility_locations
+
+    def capacity_projections(self, capacity_data):
+        """
+        Parameters
+        ----------
+        capacity_data
+
+        Returns
+        -------
+        None
+        """
+        raise NotImplementedError
+        # Read in the standard scenario data
+        stscen = Data.StandardScenarios(fpath=self.standard_scenarios_filename,
+                                        backfill=self.backfill).rename(columns={'t':'year'})
+
+        # group stscen by state and take the consecutive difference of the
+        # capacity column
+        stscen['cap_new'] = stscen.groupby('state')['wind-ons_MW'].diff()
+
+        # where total capacity decreases in a year, set the new capacity value
+        # to 0
+        stscen['cap_new'][stscen['cap_new'] < 0] = 0
+
+        # .diff() leaves empty values where there is no previous row.
+        # replace these NAs with 0
+        stscen.fillna(value=0, inplace=True)
+
+        # capacity_data is historical
+        # find the average turbine capacity, weighted by number of turbines,
+        # in each year up to the present day
+        avg_cap_hist = capacity_data.groupby(
+            by='year'
+        ).apply(
+            lambda x: np.average(x.t_cap, weights=x.n_turbine)
+        ).reset_index(
+        ).rename(
+            columns={0:'avg_t_cap'}
+        )
+
+        joined = stscen.join(avg_cap_hist, on='year', how='left')
+
 
     def join_facilities(self, locations_output_file):
         """Join all facility data into single file"""
