@@ -21,6 +21,8 @@ run_routes = False
 # of generating a new one
 use_computed_routes = True
 # create cost graph fresh or use an imported version
+#Initialize cost graph should be always set to true because the cost graph pickle will not exists for users. 
+#Setting this to false should only be done when exploring same regions multiple times on the same machine. 
 initialize_costgraph = True
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = True
@@ -89,8 +91,12 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
-
-data_filtering_choice = False
+#The code is setup such that data filtering is always true unless user sends 'US' as an argument to the code run statement. 
+#Sending any other arguments, namely state abbreviations will result in filtering to occur
+#Send python __main__.py --list US for national scale run
+#Send python __main__.py --list IO CO .... for state runs. 
+#maximum of 6 states can be entered on the HPC runs right now. Can be modified later. 
+data_filtering_choice = True
 if args.list == ['US']:
    print('National Scale Run')
    data_filtering_choice = False
