@@ -89,6 +89,10 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
+standard_scenarios_filename = os.path.join(args.data,
+                                           'inputs',
+                                           'raw_location_data',
+                                           'StScen20A_MidCase_annual_state.csv')
 
 data_filtering_choice = False
 if args.list == ['US']:
@@ -131,7 +135,8 @@ if compute_locations:
                            transportation_graph=transportation_graph_filename,
                            node_locations=node_locations_filename,
                            lookup_facility_type=lookup_facility_type_filename,
-                           turbine_data_filename=turbine_data_filename)
+                           turbine_data_filename=turbine_data_filename,
+                           standard_scenarios_filename=standard_scenarios_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 
