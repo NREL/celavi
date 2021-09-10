@@ -13,6 +13,7 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import data_filter
 
+
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
 # if run_routes is enabled (True), compute routing distances between all input locations
@@ -90,7 +91,7 @@ lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
 turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
 
 
-data_filtering_choice = False
+data_filtering_choice = True
 if args.list == ['US']:
    print('National Scale Run')
    data_filtering_choice = False
@@ -274,6 +275,8 @@ count_facility_inventories = context.run()
 
 print('FINISHED RUN at %d s' % np.round(time.time() - time0),
       flush=True)
+
+pickle.dump(count_facility_inventories, open('graph_context_count_facility.obj', 'wb'))
 
 # Plot the cumulative count levels of the inventories
 diagnostic_viz = DiagnosticViz(context, subfolder_dict['outputs_folder'])

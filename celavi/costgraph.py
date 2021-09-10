@@ -299,9 +299,8 @@ class CostGraph:
             a_dictionary = {1: "a", 2: "b", 3: "c"}
             timeout = nx.get_node_attributes(self.supply_chain, 'timeout')
             timeout_list = [value for key, value in timeout.items() if key in short_paths[nearest]]
-            dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist'] for d in range(len(short_paths[nearest])-1)]
-            dist_list.insert(0, 0.0)
-            _out = self.list_of_tuples(short_paths[nearest], timeout_list, dist_list)
+
+            _out = self.list_of_tuples(short_paths[nearest], timeout_list)
 
             return nearest, subdict[nearest], _out
         else:
@@ -695,7 +694,8 @@ class CostGraph:
         if len(_upstream_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
             # message and return None
-            print(f'Facility {node_id} does not have any upstream neighbors of type {connect_to}',
+            print('Facility %d does not have any upstream neighbors of type %s'
+                  % node_id, connect_to,
                   flush=True)
             return None
 
