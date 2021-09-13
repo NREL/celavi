@@ -32,12 +32,14 @@ except IOError as err:
     exit(1)
 
 
-# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
+# if compute_locations is enabled (True), compute locations from raw input
+# files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = flags.get('compute_locations', False)  # default to False
-# if run_routes is enabled (True), compute routing distances between all input locations
+# if run_routes is enabled (True), compute routing distances between all
+# input locations
 run_routes = flags.get('run_routes', False)
-# if use_computed_routes is enabled, read in a pre-assembled routes file instead
-# of generating a new one
+# if use_computed_routes is enabled, read in a pre-assembled routes file
+# instead of generating a new one
 use_computed_routes = flags.get('use_computed_routes', True)
 # create cost graph fresh or use an imported version
 initialize_costgraph = flags.get('initialize_costgraph', False)
@@ -175,14 +177,16 @@ from celavi.diagnostic_viz import DiagnosticViz
 # to include all facility ids. Otherwise, cost graph can't run with the full
 # computed data set.
 if compute_locations:
-    loc = ComputeLocations(wind_turbine_locations=wind_turbine_locations_filename,
-                           landfill_locations=landfill_locations_filename,
-                           other_facility_locations=other_facility_locations_filename,
-                           transportation_graph=transportation_graph_filename,
-                           node_locations=node_locations_filename,
-                           lookup_facility_type=lookup_facility_type_filename,
-                           turbine_data_filename=turbine_data_filename,
-                           standard_scenarios_filename=standard_scenarios_filename)
+    loc = ComputeLocations(
+        wind_turbine_locations=wind_turbine_locations_filename,
+        landfill_locations=landfill_locations_filename,
+        other_facility_locations=other_facility_locations_filename,
+        transportation_graph=transportation_graph_filename,
+        node_locations=node_locations_filename,
+        lookup_facility_type=lookup_facility_type_filename,
+        turbine_data_filename=turbine_data_filename,
+        standard_scenarios_filename=standard_scenarios_filename)
+
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 # if the step_costs file is being generated, then all facilities of the same
@@ -202,12 +206,13 @@ if generate_step_costs:
     )
 
 if run_routes:
-    routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
-                                            route_pair_file=route_pair_filename,
-                                            transportation_graph=transportation_graph_filename,
-                                            node_locations=node_locations_filename,
-                                            routing_output_folder=subfolder_dict['routing_output_folder'],
-                                            preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
+    routes_computed = Router.get_all_routes(
+        locations_file=locations_computed_filename,
+        route_pair_file=route_pair_filename,
+        transportation_graph=transportation_graph_filename,
+        node_locations=node_locations_filename,
+        routing_output_folder=subfolder_dict['routing_output_folder'],
+        preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
 
 if use_computed_routes:
     routes = routes_computed_filename
@@ -256,12 +261,12 @@ if initialize_costgraph:
 
 else:
     # Read in a previously generated CostGraph object
-    print('Reading in CostGraph object at %d s' % np.round(time.time() - time0, 1),
+    print(f'Reading in CostGraph object at {np.round(time.time() - time0, 1)}',
           flush=True)
 
     netw = pickle.load(open(costgraph_pickle_filename, 'rb'))
 
-    print('CostGraph object read in at %d s' % np.round(time.time() - time0, 1),
+    print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
 
 print('CostGraph exists\n\n\n')
@@ -284,7 +289,7 @@ context = Context(
 # the context with components. Repeat the creation of blades
 # 3 times for each turbine.
 
-print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
+print(f'Creating components at {np.round(time.time() - time0, 1)} s',
       flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
@@ -303,8 +308,7 @@ for _, row in turbine_data.iterrows():
                 'facility_id': facility_id
             })
 
-
-print('Turbine file read at %d s\n\n\n' % np.round(time.time() - time0, 1),
+print(f'Components created at {np.round(time.time() - time0, 1)} s',
       flush=True)
 
 components = pd.DataFrame(components)
@@ -312,31 +316,29 @@ components = pd.DataFrame(components)
 # Create the lifespan functions for the components.
 np.random.seed(des_params.get('seed', 13))
 timesteps_per_year = scenario_params.get('timesteps_per_year')
-min_lifespan = des_params.get('min_lifespan')
-L = des_params.get('L')
-K = des_params.get('K')
 lifespan_fns = {
     "nacelle": lambda: des_params.get(
         'component_fixed_lifetimes'
-    ).get(
-        'nacelle'
-    ) * timesteps_per_year,
+    )['nacelle'] * timesteps_per_year,
     "foundation": lambda: des_params.get(
         'component_fixed_lifetimes'
-    ).get(
-        'foundation'
-    ) * timesteps_per_year,
+    )['foundation'] * timesteps_per_year,
     "tower": lambda: des_params.get(
         'component_fixed_lifetimes'
-    ).get(
-        'tower'
-    ) * timesteps_per_year,
+    )['tower'] * timesteps_per_year,
 }
 
 if use_fixed_lifetime:
-    lifespan_fns['blade'] = lambda: des_params.get('component_fixed_lifetimes').get('blade') * timesteps_per_year
+    lifespan_fns['blade'] = lambda: des_params.get(
+        'component_fixed_lifetimes'
+    )['blade'] * timesteps_per_year
 else:
-    lifespan_fns['blade'] = lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
+    lifespan_fns['blade'] = lambda: weibull_min.rvs(
+        des_params.get('K'),
+        loc=des_params.get('min_lifespan'),
+        scale=des_params.get('L')-des_params.get('min_lifespan'),
+        size=1
+    )[0]
 
 print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)
@@ -344,16 +346,16 @@ print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
 # Populate the context with components.
 context.populate(components, lifespan_fns)
 
-print('Context created  at %d s\n\n\n' % np.round(time.time() - time0),
+print(f'Context created  at {np.round(time.time() - time0)} s\n\n\n',
       flush=True)
 
-print('Run starting for DES at %d s\n\n\n' % np.round(time.time() - time0),
+print(f'Run starting for DES at {np.round(time.time() - time0)} s\n\n\n',
       flush=True)
 
 # Run the context
 count_facility_inventories = context.run()
 
-print('FINISHED RUN at %d s' % np.round(time.time() - time0),
+print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
       flush=True)
 
 # Plot the cumulative count levels of the inventories
