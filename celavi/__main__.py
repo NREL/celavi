@@ -1,6 +1,5 @@
 import argparse
 import os
-import sys
 import pickle
 import time
 from math import ceil
@@ -12,36 +11,60 @@ from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import data_filter
-
-# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
-compute_locations = False
-generate_step_costs = True
-# if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = False
-# if use_computed_routes is enabled, read in a pre-assembled routes file instead
-# of generating a new one
-use_computed_routes = True
-# create cost graph fresh or use an imported version
-initialize_costgraph = True
-# save the newly initialized costgraph as a pickle file
-pickle_costgraph = True
-
+import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
-parser.add_argument('-l','--list', nargs='+', help='Enter the states to filter')
 args = parser.parse_args()
 
+# YAML filename
+config_yaml_filename = os.path.join(args.data, 'config.yaml')
+try:
+    with open(config_yaml_filename, 'r') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+        flags = config.get('flags', {})
+        scenario_params = config.get('scenario_parameters', {})
+        data_dirs = config.get('data_directories', {})
+        inputs = config.get('input_filenames', {})
+        outputs = config.get('output_filenames', {})
+        cg_params = config.get('costgraph_parameters', {})
+        des_params = config.get('discrete_event_parameters', {})
+except IOError as err:
+    print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
+    exit(1)
+
+
+# if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
+compute_locations = flags.get('compute_locations', False)  # default to False
+# if run_routes is enabled (True), compute routing distances between all input locations
+run_routes = flags.get('run_routes', False)
+# if use_computed_routes is enabled, read in a pre-assembled routes file instead
+# of generating a new one
+use_computed_routes = flags.get('use_computed_routes', True)
+# create cost graph fresh or use an imported version
+initialize_costgraph = flags.get('initialize_costgraph', False)
+enable_data_filtering = flags.get('enable_data_filtering', False)
+# save the newly initialized costgraph as a pickle file
+pickle_costgraph = flags.get('pickle_costgraph', True)
+generate_step_costs = flags.get('generate_step_costs', True)
+use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
+
+
 # SUB FOLDERS
-subfolder_dict = {}
-# input data folder for pre-processed route datas
-subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data, 'preprocessing/')
-# input data folder for LCI
-subfolder_dict['lci_folder'] = os.path.join(args.data, 'pylca_celavi_data')
-# output folder for CELAVI results
-subfolder_dict['outputs_folder'] = os.path.join(args.data, 'outputs')
-# output folder for intermediate routing data
-subfolder_dict['routing_output_folder'] = os.path.join(args.data, 'preprocessing', 'routing_intermediate_files/')
+subfolder_dict = {
+    'preprocessing_output_folder':
+        os.path.join(args.data,
+                     data_dirs.get('preprocessing_output')),
+    'lci_folder':
+        os.path.join(args.data,
+                     data_dirs.get('lci')),
+    'outputs_folder':
+        os.path.join(args.data,
+                     data_dirs.get('outputs')),
+    'routing_output_folder':
+        os.path.join(args.data,
+                     data_dirs.get('routing_output'))
+}
 
 # check if directories exist, if not, create them
 for folder in subfolder_dict.values():
@@ -52,74 +75,84 @@ for folder in subfolder_dict.values():
 # FILE NAMES FOR INPUT DATA
 # TODO: add check to ensure files exist
 # general inputs
-locations_computed_filename = os.path.join(args.data, 'inputs', 'locations_computed.csv')
-step_costs_filename = os.path.join(args.data, 'inputs', 'step_costs.csv')
-fac_edges_filename = os.path.join(args.data, 'inputs', 'fac_edges.csv')
-transpo_edges_filename = os.path.join(args.data, 'inputs', 'transpo_edges.csv')
-route_pair_filename = os.path.join(args.data, 'inputs', 'route_pairs.csv')
-avg_blade_masses_filename = os.path.join(args.data, 'inputs', 'avgblademass.csv')
-routes_custom_filename = os.path.join(args.data, 'preprocessing', 'routes.csv')
-routes_computed_filename = os.path.join(args.data, 'preprocessing', 'routes_computed.csv')
+locations_computed_filename = os.path.join(args.data,
+                                           data_dirs.get('inputs'),
+                                           inputs.get('locs'))
+step_costs_filename = os.path.join(args.data,
+                                   data_dirs.get('inputs'),
+                                   inputs.get('step_costs'))
+fac_edges_filename = os.path.join(args.data,
+                                   data_dirs.get('inputs'),
+                                   inputs.get('fac_edges'))
+transpo_edges_filename = os.path.join(args.data,
+                                      data_dirs.get('inputs'),
+                                      inputs.get('transpo_edges'))
+route_pair_filename = os.path.join(args.data,
+                                   data_dirs.get('inputs'),
+                                   inputs.get('route_pairs'))
+avg_blade_masses_filename = os.path.join(args.data,
+                                         data_dirs.get('inputs'),
+                                         inputs.get('avg_blade_masses'))
+routes_custom_filename = os.path.join(args.data,
+                                      data_dirs.get('inputs'),
+                                      inputs.get('routes_custom'))
+routes_computed_filename = os.path.join(args.data,
+                                        data_dirs.get('preprocessing_output'),
+                                        inputs.get('routes_computed'))
 
 # input file paths for precomputed US road network data
 # transport graph (pre computed; don't change)
-transportation_graph_filename = os.path.join(args.data, 'inputs',
-                                             'precomputed_us_road_network',
-                                             'transportation_graph.csv')
+transportation_graph_filename = os.path.join(args.data,
+                                             data_dirs.get('us_roads'),
+                                             inputs.get('transportation_graph'))
 
 # node locations for transport graph (pre computed; don't change)
-node_locations_filename = os.path.join(args.data, 'inputs',
-                                       'precomputed_us_road_network',
-                                       'node_locations.csv')
+node_locations_filename = os.path.join(args.data,
+                                       data_dirs.get('us_roads'),
+                                       inputs.get('node_locs'))
 
 # file paths for raw data used to compute locations
-wind_turbine_locations_filename = os.path.join(args.data, 'inputs',
-                                               'raw_location_data',
-                                               'uswtdb_v4_1_20210721.csv')
+wind_turbine_locations_filename = os.path.join(args.data,
+                                               data_dirs.get('raw_locations'),
+                                               inputs.get('power_plant_locs'))
 # LMOP data for landfill locations
-landfill_locations_filename = os.path.join(args.data, 'inputs',
-                                           'raw_location_data',
-                                           'landfilllmopdata.csv')
+landfill_locations_filename = os.path.join(args.data,
+                                           data_dirs.get('raw_locations'),
+                                           inputs.get('landfill_locs'))
 # other facility locations (e.g., cement)
-other_facility_locations_filename = os.path.join(args.data, 'inputs',
-                                                 'raw_location_data',
-                                                 'other_facility_locations_all_us.csv')
+other_facility_locations_filename = os.path.join(args.data,
+                                                 data_dirs.get('raw_locations'),
+                                                 inputs.get('other_facility_locs'))
 
-lookup_facility_type_filename = os.path.join(args.data, 'lookup_tables',
-                                             'facility_type.csv')
+lookup_facility_type_filename = os.path.join(args.data,
+                                             data_dirs.get('lookup_tables'),
+                                             inputs.get('lookup_facility_type'))
 
-turbine_data_filename = os.path.join(args.data, 'inputs', 'number_of_turbines.csv')
+# file where the turbine data will be saved after generating from raw inputs
+turbine_data_filename = os.path.join(args.data,
+                                     data_dirs.get('inputs'),
+                                     inputs.get('turbine_data'))
 
-standard_scenarios_filename = os.path.join(args.data,
-                                           'inputs',
-                                           'raw_location_data',
-                                           'StScen20A_MidCase_annual_state.csv')
+# Data filtering for states
+states_to_filter = scenario_params.get('states_to_filter', [])
+if enable_data_filtering:
+    if len(states_to_filter) == 0:
+        print('Cannot filter data; no state list provided', flush=True)
+    else:
+        print(f'Filtering: {states_to_filter}',
+              flush=True)
+        data_filter(locations_computed_filename,
+                    routes_computed_filename,
+                    turbine_data_filename,
+                    states_to_filter)
 
-step_costs_default_filename = os.path.join(args.data,
-                                           'lookup_tables',
-                                           'step_costs_default.csv')
-
-
-
-data_filtering_choice = False
-if args.list == ['US']:
-   print('National Scale Run')
-   data_filtering_choice = False
-#Data filtering for states
-
-if data_filtering_choice:
-    print('Filtered Runs')
-    states_to_filter = args.list
-    print('filtering')
-    print(states_to_filter)
-    data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
-
-
-
-
-# Pickle file containing CostGraph object
-costgraph_pickle_filename = os.path.join(args.data, 'inputs', 'netw.obj')
-costgraph_csv_filename = os.path.join(args.data, 'inputs', 'netw.csv')
+# Get pickle and CSV filenames for initialized CostGraph object
+costgraph_pickle_filename = os.path.join(args.data,
+                                         data_dirs.get('inputs'),
+                                         outputs.get('costgraph_pickle'))
+costgraph_csv_filename = os.path.join(args.data,
+                                      data_dirs.get('outputs'),
+                                      outputs.get('costgraph_csv'))
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
@@ -171,9 +204,9 @@ if run_routes:
                                             preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
 
 if use_computed_routes:
-    args.routes = routes_computed_filename
+    routes = routes_computed_filename
 else:
-    args.routes = routes_custom_filename
+    routes = routes_custom_filename
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
@@ -188,24 +221,24 @@ if initialize_costgraph:
         fac_edges_file=fac_edges_filename,
         transpo_edges_file=transpo_edges_filename,
         locations_file=locations_computed_filename,
-        routes_file=args.routes,
-        sc_begin= 'manufacturing',
-        sc_end=['landfilling', 'cement co-processing', 'blade next use'],
-        year=2000.0,
-        max_dist=300.0,
-        verbose=1,
-        save_copy=True,
+        routes_file=routes,
+        sc_begin=cg_params.get('sc_begin'),
+        sc_end=cg_params.get('sc_end'),
+        year=scenario_params.get('start_year'),
+        max_dist=scenario_params.get('max_dist'),
+        verbose=cg_params.get('cg_verbose'),
+        save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
-        blade_mass=avgblade.loc[avgblade.year==2000,
+        blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
                                 'Glass Fiber:Blade'].values[0],
-        finegrind_cumul_initial=1.0,
-        coarsegrind_cumul_initial=1.0,
-        finegrind_initial_cost=165.38,
-        finegrind_revenue=242.56,
-        coarsegrind_initial_cost=121.28,
-        finegrind_learnrate=-0.05,
-        coarsegrind_learnrate=-0.05,
-        finegrind_material_loss=0.3,
+        finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
+        coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
+        finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
+        finegrind_revenue=cg_params.get('finegrind_revenue'),
+        coarsegrind_initial_cost=cg_params.get('coarsegrind_initial_cost'),
+        finegrind_learnrate=cg_params.get('finegrind_learnrate'),
+        coarsegrind_learnrate=cg_params.get('coarsegrind_learnrate'),
+        finegrind_material_loss=cg_params.get('finegrind_material_loss'),
     )
     print('CostGraph initialized at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -235,9 +268,9 @@ initial_paths = netw.choose_paths()
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
-    possible_items=["nacelle", "blade", "tower", "foundation"],
+    possible_items=des_params.get('component_list'),
     cost_graph=netw,
-    cost_graph_update_interval_timesteps=12,
+    cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
     avg_blade_masses_filename=avg_blade_masses_filename
 )
 
@@ -271,18 +304,33 @@ print('Turbine file read at %d s\n\n\n' % np.round(time.time() - time0, 1),
 components = pd.DataFrame(components)
 
 # Create the lifespan functions for the components.
-np.random.seed(13)
-timesteps_per_year = 12
-min_lifespan = 120
-L = 240
-K = 2.2
+np.random.seed(des_params.get('seed', 13))
+timesteps_per_year = scenario_params.get('timesteps_per_year')
+min_lifespan = des_params.get('min_lifespan')
+L = des_params.get('L')
+K = des_params.get('K')
 lifespan_fns = {
-    "nacelle": lambda: 30 * timesteps_per_year,
-    "blade": lambda: 20 * timesteps_per_year,
-    # "blade": lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
-    "foundation": lambda: 50 * timesteps_per_year,
-    "tower": lambda: 50 * timesteps_per_year,
+    "nacelle": lambda: des_params.get(
+        'component_fixed_lifetimes'
+    ).get(
+        'nacelle'
+    ) * timesteps_per_year,
+    "foundation": lambda: des_params.get(
+        'component_fixed_lifetimes'
+    ).get(
+        'foundation'
+    ) * timesteps_per_year,
+    "tower": lambda: des_params.get(
+        'component_fixed_lifetimes'
+    ).get(
+        'tower'
+    ) * timesteps_per_year,
 }
+
+if use_fixed_lifetime:
+    lifespan_fns['blade'] = lambda: des_params.get('component_fixed_lifetimes').get('blade') * timesteps_per_year
+else:
+    lifespan_fns['blade'] = lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
 
 print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)

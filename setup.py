@@ -34,5 +34,6 @@ setuptools.setup(
         "plotly",
         "kaleido",
         "scikit-learn"
+        "PyYAML"
     ]
 )
