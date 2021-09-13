@@ -2,6 +2,7 @@ import celavi.data_manager as Data
 import warnings
 import pandas as pd
 import numpy as np
+from sklearn.linear_model import LinearRegression
 
 warnings.simplefilter('error', UserWarning)
 
@@ -34,9 +35,12 @@ class ComputeLocations:
         # flag to use limited set of source data
         self.toy = False
 
-        # Store turbine data in self for use in generating both the locations
-        # file and the number_of_turbines file
+        # Create place to store turbine data in self for use in generating
+        # the number_of_turbines file with capacity expansion
         self.capacity_data = None
+
+        # Create place to store final locations df for use in capcity expansion
+        self.locs = None
 
         self.facility_type_lookup = pd.read_csv(self.lookup_facility_type_file, header=None)
 
@@ -90,9 +94,10 @@ class ComputeLocations:
         n_turb5_corr['n_turbine'] = n_turb5_corr['p_tnum']
         n_turb5_corr['year'] = n_turb5_corr['p_year']
         n_turb5_corr1 = n_turb5_corr[['facility_id','year','p_name','n_turbine', 't_cap']]
-        n_turb5_corr1.to_csv('number_of_turbines.csv', index=False)
-        # Add capacity expansion projections onto the historical data
-        #self.capacity_projections(n_turb5_corr1)
+
+        # Store this dataframe into self for use in capacity projection
+        # calculations
+        self.capacity_data = n_turb5_corr1
 
         turbine_locations_filtered = turbine_locations_with_eia[
             turbine_locations_with_eia.p_year > 1999
@@ -199,24 +204,30 @@ class ComputeLocations:
             warnings.warn(warning_str)
         return facility_locations
 
-    def capacity_projections(self, capacity_data):
+    def capacity_projections(self):
         """
         Parameters
         ----------
-        capacity_data
 
         Returns
         -------
         None
         """
-        raise NotImplementedError
+
         # Read in the standard scenario data
-        stscen = Data.StandardScenarios(fpath=self.standard_scenarios_filename,
-                                        backfill=self.backfill).rename(columns={'t':'year'})
+        stscen = Data.StandardScenarios(
+            fpath=self.standard_scenarios_filename,
+            backfill=self.backfill
+        ).rename(
+            columns={'t':'year'}
+        )
 
         # group stscen by state and take the consecutive difference of the
         # capacity column
         stscen['cap_new'] = stscen.groupby('state')['wind-ons_MW'].diff()
+
+        # convert MW to kW to match the US WTDB turbine capacity data
+        stscen.cap_new = stscen.cap_new * 1000.0
 
         # where total capacity decreases in a year, set the new capacity value
         # to 0
@@ -229,7 +240,7 @@ class ComputeLocations:
         # capacity_data is historical
         # find the average turbine capacity, weighted by number of turbines,
         # in each year up to the present day
-        avg_cap_hist = capacity_data.groupby(
+        avg_cap_hist = self.capacity_data.groupby(
             by='year'
         ).apply(
             lambda x: np.average(x.t_cap, weights=x.n_turbine)
@@ -238,7 +249,123 @@ class ComputeLocations:
             columns={0:'avg_t_cap'}
         )
 
-        joined = stscen.join(avg_cap_hist, on='year', how='left')
+        # perform a linear regression of avg_t_cap on year
+        avg_t_cap_reg = LinearRegression(
+        ).fit(
+            np.array(avg_cap_hist.year).reshape(-1,1),
+            np.array(avg_cap_hist.avg_t_cap).reshape(-1,1)
+        )
+
+        # extrapolate the linear regression to generate values every 2 years
+        # from 2022 to 2050
+        predictions = [
+            [year, avg_t_cap_reg.predict(
+            np.array(
+                [[year]]
+            )
+        )[0][0]] for year in np.arange(2022, 2052, 2)
+        ]
+
+        # format extrapolations into DataFrame
+        avg_cap_pred = pd.DataFrame(
+            data = predictions,
+            columns = ['year', 'avg_t_cap']
+        )
+
+        # merge the average capacity extrapolation with the standard scenario
+        # data by year
+        # keep only the columns required to calculate the number of new
+        # turbines
+        joined = avg_cap_pred.merge(
+            stscen[stscen.year > 2020],
+            on='year',
+            how='outer',
+            suffixes=('avgcap','stdscen'),
+            sort=True
+        )[['year', 'state', 'avg_t_cap', 'cap_new']].rename(
+            columns = {'avg_t_cap': 't_cap'}
+        )
+
+        # calculate the number of new turbines by dividing the new capacity
+        # addition with the average turbine capacity
+        # round up to the nearest integer to deal in whole numbers of turbines
+        joined['n_turbine'] = np.ceil(joined.cap_new / joined.t_cap)
+
+        # remove any entries where no new turbines are installed
+        joined = joined[joined.n_turbine > 0]
+
+        # generate project names for the future capacity
+        joined['p_name'] = joined.state + '_future_cap'
+
+        # remove columns no longer needed
+        capacity_future = joined[['year', 'p_name', 'n_turbine', 't_cap']]
+
+        # Use the computed locations dataset to generate unique facility_id
+        # values for these future "power plants"
+        _facility_id_start = int(self.locs.facility_id.max() + 1)
+
+        # generate a list of new facility IDs
+        _new_facility_id = list(
+            _facility_id_start +
+            np.arange(len(capacity_future.p_name.unique()))
+        )
+
+        # create a data frame of new facility IDs and project names,
+        # for merging
+        _new_facility_id = pd.DataFrame(
+            data = {
+                'p_name': list(capacity_future.p_name.unique()),
+                'facility_id': _new_facility_id
+            }
+        )
+
+        # merge to add a facility_id column to the capacity projection data
+        capacity_future = capacity_future.merge(
+            _new_facility_id[['p_name', 'facility_id']],
+            on='p_name',
+            how='outer'
+        )
+
+        # combine the historical data with the capacity expansion projections
+        # then save to CSV to create the turbine data file (number_of_turbines)
+        self.capacity_data.append(
+            capacity_future,
+            ignore_index=True,
+            sort=True
+        ).to_csv(
+            self.turbine_data_filename,
+            index=False
+        )
+
+        # get state column back
+        _new_facility_id[
+            ['region_id_2','ig1', 'ig2']
+        ] = _new_facility_id.p_name.str.split('_',
+                                              expand=True)
+
+        # Calculate lat/long pairs for the future power plants
+        _new_facility_locs = _new_facility_id[
+            ['facility_id', 'region_id_2']
+        ].merge(
+            self.locs.groupby(
+                by='region_id_2'
+            ).mean().reset_index()[['region_id_2','lat','long']],
+            on='region_id_2',
+            how='left'
+        )
+
+        _new_facility_locs['facility_type'] = 'power plant'
+        _new_facility_locs['region_id_1'] = 'USA'
+        _new_facility_locs['region_id_3'] = ''
+        _new_facility_locs['region_id_4'] = ''
+
+        # Add the future power plants to the locations dataset stored in self
+        # It has to go back into self to get saved at the end of the
+        # join_facilities method
+        self.locs = self.locs.append(
+            _new_facility_locs,
+            ignore_index=True,
+            sort=True)
 
 
     def join_facilities(self, locations_output_file):
@@ -271,7 +398,11 @@ class ComputeLocations:
         # frame.
         for i in _ids_update:
             locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
-        
-        locations.to_csv(locations_output_file, index=False)
+
+        self.locs = locations
+
+        self.capacity_projections()
+
+        self.locs.to_csv(locations_output_file, index=False)
 
 
