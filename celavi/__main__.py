@@ -1,6 +1,5 @@
 import argparse
 import os
-import sys
 import pickle
 import time
 from math import ceil
@@ -13,7 +12,7 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import data_filter
 import yaml
-import pdb
+
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 args = parser.parse_args()
@@ -24,12 +23,12 @@ try:
     with open(config_yaml_filename, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
         flags = config.get('flags', {})
-        data_filtering = config.get('data_filtering', {})
         scenario_params = config.get('scenario_parameters', {})
         data_dirs = config.get('data_directories', {})
         inputs = config.get('input_filenames', {})
         outputs = config.get('output_filenames', {})
         cg_params = config.get('costgraph_parameters', {})
+        des_params = config.get('discrete_event_parameters', {})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -38,30 +37,34 @@ except IOError as err:
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = flags.get('compute_locations', False)  # default to False
 # if run_routes is enabled (True), compute routing distances between all input locations
-run_routes = flags.get('compute_locations', False)
+run_routes = flags.get('run_routes', False)
 # if use_computed_routes is enabled, read in a pre-assembled routes file instead
 # of generating a new one
-use_computed_routes = flags.get('use_computes_routes', True)
+use_computed_routes = flags.get('use_computed_routes', True)
 # create cost graph fresh or use an imported version
 initialize_costgraph = flags.get('initialize_costgraph', False)
+enable_data_filtering = flags.get('enable_data_filtering', False)
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = flags.get('pickle_costgraph', True)
+generate_step_costs = flags.get('generate_step_costs', True)
+use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
 
 
 # SUB FOLDERS
-subfolder_dict = {}
-# input data folder for pre-processed route datas
-subfolder_dict['preprocessing_output_folder'] = os.path.join(args.data,
-                                                             data_dirs.get('preprocessing_output'))
-# input data folder for LCI
-subfolder_dict['lci_folder'] = os.path.join(args.data,
-                                            data_dirs.get('lci'))
-# output folder for CELAVI results
-subfolder_dict['outputs_folder'] = os.path.join(args.data,
-                                                data_dirs.get('outputs'))
-# output folder for intermediate routing data
-subfolder_dict['routing_output_folder'] = os.path.join(args.data,
-                                                       data_dirs.get('routing_output'))
+subfolder_dict = {
+    'preprocessing_output_folder':
+        os.path.join(args.data,
+                     data_dirs.get('preprocessing_output')),
+    'lci_folder':
+        os.path.join(args.data,
+                     data_dirs.get('lci')),
+    'outputs_folder':
+        os.path.join(args.data,
+                     data_dirs.get('outputs')),
+    'routing_output_folder':
+        os.path.join(args.data,
+                     data_dirs.get('routing_output'))
+}
 
 # check if directories exist, if not, create them
 for folder in subfolder_dict.values():
@@ -125,23 +128,25 @@ lookup_facility_type_filename = os.path.join(args.data,
                                              data_dirs.get('lookup_tables'),
                                              inputs.get('lookup_facility_type'))
 
+# file where the turbine data will be saved after generating from raw inputs
 turbine_data_filename = os.path.join(args.data,
                                      data_dirs.get('inputs'),
                                      inputs.get('turbine_data'))
 
+# Data filtering for states
+states_to_filter = scenario_params.get('states_to_filter', [])
+if enable_data_filtering:
+    if len(states_to_filter) == 0:
+        print('Cannot filter data; no state list provided', flush=True)
+    else:
+        print(f'Filtering: {states_to_filter}',
+              flush=True)
+        data_filter(locations_computed_filename,
+                    routes_computed_filename,
+                    turbine_data_filename,
+                    states_to_filter)
 
-#Data filtering for states
-data_filtering_choice = data_filtering.get('enable_data_filtering', False)
-if data_filtering_choice:
-    states_to_filter = data_filtering_choice.get('states_to_filter', [])
-    print('filtering')
-    print(states_to_filter)
-    data_filter(locations_computed_filename, routes_computed_filename, turbine_data_filename, states_to_filter)
-
-
-
-
-# Pickle and CSV files for initialized CostGraph object
+# Get pickle and CSV filenames for initialized CostGraph object
 costgraph_pickle_filename = os.path.join(args.data,
                                          data_dirs.get('inputs'),
                                          outputs.get('costgraph_pickle'))
@@ -170,8 +175,6 @@ if compute_locations:
                            node_locations=node_locations_filename,
                            lookup_facility_type=lookup_facility_type_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
-
-
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
@@ -245,9 +248,9 @@ initial_paths = netw.choose_paths()
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
-    possible_items=["nacelle", "blade", "tower", "foundation"],
+    possible_items=des_params.get('component_list'),
     cost_graph=netw,
-    cost_graph_update_interval_timesteps=12,
+    cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
     avg_blade_masses_filename=avg_blade_masses_filename
 )
 
@@ -259,10 +262,6 @@ print('Reading turbine file at %d s\n\n\n' % np.round(time.time() - time0, 1),
       flush=True)
 
 turbine_data = pd.read_csv(turbine_data_filename)
-step_costs_data = pd.read_csv(step_costs_filename)
-corrected_turbine_data = turbine_data.merge(step_costs_data, on = ['facility_id'], how = 'inner')
-turbine_data = corrected_turbine_data[['facility_id','p_name','year','n_turbine']]
-turbine_data.to_csv('corrected_turbine_data.csv', index = False)
 
 components = []
 for _, row in turbine_data.iterrows():
@@ -285,18 +284,33 @@ print('Turbine file read at %d s\n\n\n' % np.round(time.time() - time0, 1),
 components = pd.DataFrame(components)
 
 # Create the lifespan functions for the components.
-np.random.seed(13)
-timesteps_per_year = 12
-min_lifespan = 120
-L = 240
-K = 2.2
+np.random.seed(des_params.get('seed', 13))
+timesteps_per_year = scenario_params.get('timesteps_per_year')
+min_lifespan = des_params.get('min_lifespan')
+L = des_params.get('L')
+K = des_params.get('K')
 lifespan_fns = {
-    "nacelle": lambda: 30 * timesteps_per_year,
-    "blade": lambda: 20 * timesteps_per_year,
-    # "blade": lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
-    "foundation": lambda: 50 * timesteps_per_year,
-    "tower": lambda: 50 * timesteps_per_year,
+    "nacelle": lambda: des_params.get(
+        'component_fixed_lifetimes'
+    ).get(
+        'nacelle'
+    ) * timesteps_per_year,
+    "foundation": lambda: des_params.get(
+        'component_fixed_lifetimes'
+    ).get(
+        'foundation'
+    ) * timesteps_per_year,
+    "tower": lambda: des_params.get(
+        'component_fixed_lifetimes'
+    ).get(
+        'tower'
+    ) * timesteps_per_year,
 }
+
+if use_fixed_lifetime:
+    lifespan_fns['blade'] = lambda: des_params.get('component_fixed_lifetimes').get('blade') * timesteps_per_year
+else:
+    lifespan_fns['blade'] = lambda: weibull_min.rvs(K, loc=min_lifespan, scale=L-min_lifespan, size=1)[0],
 
 print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)
