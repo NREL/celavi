@@ -2,8 +2,6 @@ import argparse
 import os
 import pickle
 import time
-from math import ceil
-import matplotlib.pyplot as plt
 from scipy.stats import weibull_min
 import numpy as np
 import pandas as pd
@@ -132,6 +130,14 @@ lookup_facility_type_filename = os.path.join(args.data,
 turbine_data_filename = os.path.join(args.data,
                                      data_dirs.get('inputs'),
                                      inputs.get('turbine_data'))
+
+standard_scenarios_filename = os.path.join(args.data,
+                                           data_dirs.get('raw_locations'),
+                                           inputs.get('standard_scenario'))
+
+step_costs_default_filename = os.path.join(args.data,
+                                           data_dirs.get('lookup_tables'),
+                                           inputs.get('lookup_step_costs'))
 
 # Data filtering for states
 states_to_filter = scenario_params.get('states_to_filter', [])
