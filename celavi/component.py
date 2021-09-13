@@ -1,7 +1,6 @@
-from typing import List, Dict, Deque, Tuple
+from typing import Deque, Tuple
 from collections import deque
 
-from transportation_tracker import TransportationTracker
 
 
 class Component:
@@ -46,7 +45,7 @@ class Component:
             The year in which this component enters the use state for the first
             time.
 
-        intitial_lifespan_timesteps: float
+        lifespan_timesteps: float
             The lifespan, in timesteps, of the component during its first
             In use phase. The argument can be
             provided as a floating point value, but it is converted into an
@@ -145,7 +144,7 @@ class Component:
                     self.pathway.popleft()
 
                 location, lifespan, distance = self.pathway.popleft()
-                if 'next use' in location:
+                if 'fine grinding' in location:
                     count_inventory = self.context.count_facility_inventories[location]
                     transport = self.context.transportation_trackers[location]
                     count_inventory.increment_quantity(self.kind, 1 - self.context.cost_graph.finegrind_material_loss, env.now)
@@ -156,6 +155,8 @@ class Component:
                     transport = self.context.transportation_trackers[_loss_landfill]
                     count_inventory.increment_quantity(self.kind, self.context.cost_graph.finegrind_material_loss, env.now)
                     transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
+                elif 'next use' in location:
+                    pass
                 else:
                     count_inventory = self.context.count_facility_inventories[location]
                     transport = self.context.transportation_trackers[location]
