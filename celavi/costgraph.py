@@ -752,8 +752,7 @@ class CostGraph:
         if len(_landfill_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
             # message and return None
-            print('Facility %d does not have any downstream neighbors of type %s'
-                  % node_id, connect_to,
+            print(f'Facility {node_id} does not have any downstream neighbors of type {connect_to}',
                   flush=True)
             return None
 
