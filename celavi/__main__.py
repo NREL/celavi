@@ -162,6 +162,7 @@ costgraph_csv_filename = os.path.join(args.data,
 
 os.chdir(subfolder_dict['lci_folder'])
 from celavi.des import Context
+from celavi.diagnostic_viz import DiagnosticViz
 
 
 # Note that the step_cost file must be updated (or programmatically generated)
@@ -173,8 +174,27 @@ if compute_locations:
                            other_facility_locations=other_facility_locations_filename,
                            transportation_graph=transportation_graph_filename,
                            node_locations=node_locations_filename,
-                           lookup_facility_type=lookup_facility_type_filename)
+                           lookup_facility_type=lookup_facility_type_filename,
+                           turbine_data_filename=turbine_data_filename,
+                           standard_scenarios_filename=standard_scenarios_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
+
+# if the step_costs file is being generated, then all facilities of the same
+# type will have the same cost models.
+if generate_step_costs:
+    pd.read_csv(
+        step_costs_default_filename
+    ).merge(
+        pd.read_csv(locations_computed_filename)[
+            ['facility_id', 'facility_type']
+        ],
+        on='facility_type',
+        how='outer'
+    ).to_csv(
+        step_costs_filename,
+        index=False
+    )
+
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
                                             route_pair_file=route_pair_filename,
@@ -331,23 +351,5 @@ print('FINISHED RUN at %d s' % np.round(time.time() - time0),
       flush=True)
 
 # Plot the cumulative count levels of the inventories
-count_facility_inventory_items = list(count_facility_inventories.items())
-nrows = 5
-ncols = ceil(len(count_facility_inventory_items) / nrows)
-fig, axs = plt.subplots(nrows=nrows, ncols=ncols, figsize=(10, 10))
-plt.tight_layout()
-for i in range(len(count_facility_inventory_items)):
-    subplot_col = i // nrows
-    subplot_row = i % nrows
-    ax = axs[subplot_row][subplot_col]
-    facility_name, facility = count_facility_inventory_items[i]
-    cum_hist_blade = facility.cumulative_history["blade"]
-    ax.set_title(facility_name)
-    ax.plot(range(len(cum_hist_blade)), cum_hist_blade)
-    ax.set_ylabel("count")
-plot_output_path = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.png')
-plt.savefig(plot_output_path)
-
-pickle.dump(count_facility_inventory_items, open('graph_context_count_facility.obj', 'wb'))
-
-
+diagnostic_viz = DiagnosticViz(context, subfolder_dict['outputs_folder'])
+diagnostic_viz.generate_blade_count_plots()

@@ -194,6 +194,10 @@ class TurbineLocations(Data):
     COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
                {'name': 't_county', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'p_name', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'p_year', 'type': float, 'index': False, 'backfill': '-1'},
+               {'name': 'p_tnum', 'type': float, 'index': False, 'backfill': '-1'},
+               {'name': 't_model', 'type': str, 'index': False, 'backfill': None},
                {'name': 't_fips', 'type': int, 'index': False, 'backfill': None},
                {'name': 'xlong', 'type': float, 'index': False, 'backfill': None},
                {'name': 'ylat', 'type': float, 'index': False, 'backfill': None},
@@ -239,4 +243,16 @@ class LandfillLocations(Data):
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                               backfill=backfill)
+
+class StandardScenarios(Data):
+    COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},
+               {'name': 't', 'type': int, 'index': False, 'backfill': None},
+               {'name': 'wind-ons_MW', 'type': float, 'index': False, 'backfill': '-1'}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(StandardScenarios,self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)

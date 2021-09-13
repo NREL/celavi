@@ -31,6 +31,9 @@ setuptools.setup(
         "olca-ipc",
         "pyutilib",
         "joblib",
+        "plotly",
+        "kaleido",
+        "scikit-learn"
         "PyYAML"
     ]
 )
