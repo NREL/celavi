@@ -158,7 +158,8 @@ if generate_step_costs:
         on='facility_type',
         how='outer'
     ).to_csv(
-        step_costs_filename
+        step_costs_filename,
+        index=False
     )
 
 if run_routes:
