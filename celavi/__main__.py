@@ -15,6 +15,7 @@ from celavi.data_filtering import data_filter
 
 # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = False
+generate_step_costs = True
 # if run_routes is enabled (True), compute routing distances between all input locations
 run_routes = False
 # if use_computed_routes is enabled, read in a pre-assembled routes file instead
@@ -94,6 +95,12 @@ standard_scenarios_filename = os.path.join(args.data,
                                            'raw_location_data',
                                            'StScen20A_MidCase_annual_state.csv')
 
+step_costs_default_filename = os.path.join(args.data,
+                                           'lookup_tables',
+                                           'step_costs_default.csv')
+
+
+
 data_filtering_choice = False
 if args.list == ['US']:
    print('National Scale Run')
@@ -139,6 +146,20 @@ if compute_locations:
                            standard_scenarios_filename=standard_scenarios_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
+# if the step_costs file is being generated, then all facilities of the same
+# type will have the same cost models.
+if generate_step_costs:
+    pd.read_csv(
+        step_costs_default_filename
+    ).merge(
+        pd.read_csv(locations_computed_filename)[
+            ['facility_id', 'facility_type']
+        ],
+        on='facility_type',
+        how='outer'
+    ).to_csv(
+        step_costs_filename
+    )
 
 if run_routes:
     routes_computed = Router.get_all_routes(locations_file=locations_computed_filename,
