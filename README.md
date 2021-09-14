@@ -36,7 +36,7 @@ conda install pyomo
 From the root of the repo, type a command similar to the following. This will execute the costgraph. Note that the paths to the files will need to be changed for your particular folder structure.
 
 ```
-python -m celavi --data /Users/akey/Projects/celavi-data/celavi-data
+python -m celavi --data [your path to the CELAVI data folder]
 ```
 
 ## Guide for development
