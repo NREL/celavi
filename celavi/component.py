@@ -145,17 +145,23 @@ class Component:
 
                 location, lifespan, distance = self.pathway.popleft()
                 if 'fine grinding' in location:
+                    # increment the fine grinding inventory and transpo tracker
                     count_inventory = self.context.count_facility_inventories[location]
                     transport = self.context.transportation_trackers[location]
                     count_inventory.increment_quantity(self.kind, 1 - self.context.cost_graph.finegrind_material_loss, env.now)
                     transport.increment_inbound_tonne_km((1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes * distance, env.now)
 
+                    # locate the nearest landfill and increment for material loss
                     _loss_landfill = self.context.cost_graph.find_landfill(int(location.split('_')[1]))
                     count_inventory = self.context.count_facility_inventories[_loss_landfill]
                     transport = self.context.transportation_trackers[_loss_landfill]
                     count_inventory.increment_quantity(self.kind, self.context.cost_graph.finegrind_material_loss, env.now)
                     transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
+
+                    # locate the nearest next use facility and increment the rest
                 elif 'next use' in location:
+                    # the inventory and transportation was incremented when the
+                    # blade hit the fine grinding step
                     pass
                 else:
                     count_inventory = self.context.count_facility_inventories[location]
