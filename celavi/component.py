@@ -2,7 +2,6 @@ from typing import Deque, Tuple
 from collections import deque
 
 
-
 class Component:
     """
     This class models a component in the discrete event simulation (DES) model.
