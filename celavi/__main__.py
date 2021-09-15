@@ -141,19 +141,6 @@ step_costs_default_filename = os.path.join(args.data,
                                            data_dirs.get('lookup_tables'),
                                            inputs.get('lookup_step_costs'))
 
-# Data filtering for states
-states_to_filter = scenario_params.get('states_to_filter', [])
-if enable_data_filtering:
-    if len(states_to_filter) == 0:
-        print('Cannot filter data; no state list provided', flush=True)
-    else:
-        print(f'Filtering: {states_to_filter}',
-              flush=True)
-        data_filter(locations_computed_filename,
-                    routes_computed_filename,
-                    turbine_data_filename,
-                    states_to_filter)
-
 # Get pickle and CSV filenames for initialized CostGraph object
 costgraph_pickle_filename = os.path.join(args.data,
                                          data_dirs.get('inputs'),
@@ -204,6 +191,18 @@ if generate_step_costs:
         step_costs_filename,
         index=False
     )
+
+# Data filtering for states
+states_to_filter = scenario_params.get('states_to_filter', [])
+if enable_data_filtering:
+    if len(states_to_filter) == 0:
+        print('Cannot filter data; no state list provided', flush=True)
+    else:
+        print(f'Filtering: {states_to_filter}',
+              flush=True)
+        data_filter(locations_computed_filename,
+                    turbine_data_filename,
+                    states_to_filter)
 
 if run_routes:
     routes_computed = Router.get_all_routes(
