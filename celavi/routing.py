@@ -54,7 +54,7 @@ class Router(object):
         if self.memory is not None:
             self.get_route = self.memory.cache(self.get_route, ignore=['self'], verbose=0)
 
-        print('loading routing graph',flush = True)
+        print('loading routing graph')
         _ = self.edges.apply(lambda x: self.Graph.add_edge(**x), axis=1)
 
     def get_route(self, start, end):
@@ -142,7 +142,7 @@ class Router(object):
         state_list = locations.region_id_2.unique()
         file_output_list = []
         for state in state_list:
-            print(state,flush = True)
+            print(state)
             file_output = routing_output_folder + 'route_list_output_{}.csv'.format(state)
             file_output_list.append(file_output)
 
@@ -206,12 +206,12 @@ class Router(object):
                     _vmt_by_county_all_routes = pd.DataFrame()
 
                     # loop through all locations to compute routes
-                    print('finding routes',flush = True)
+                    print('finding routes')
                     for i in np.arange(_routes.shape[0]):
 
                         # print every 20 routes
                         if i % 20 == 0:
-                            print(i,flush = True)
+                            print(i)
 
                         _vmt_by_county = router.get_route(start=(_routes.source_long.iloc[i],
                                                                  _routes.source_lat.iloc[i]),
