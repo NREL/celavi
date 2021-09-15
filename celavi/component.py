@@ -143,6 +143,7 @@ class Component:
                     self.pathway.popleft()
 
                 location, lifespan, distance = self.pathway.popleft()
+
                 if 'fine grinding' in location:
                     # increment the fine grinding inventory and transpo tracker
                     count_inventory = self.context.count_facility_inventories[location]
@@ -158,8 +159,11 @@ class Component:
                     )
 
                     # locate the nearest landfill and increment for material loss
-                    _loss_landfill = self.context.cost_graph.find_downst(int(location.split('_')[1]),
-                                                                         connect_to = 'landfill')
+                    _loss_landfill = self.context.cost_graph.find_downstream(
+                        facility_id = int(location.split('_')[1]),
+                        connect_to = 'landfill'
+                    )
+
                     count_inventory = self.context.count_facility_inventories[_loss_landfill]
                     transport = self.context.transportation_trackers[_loss_landfill]
                     count_inventory.increment_quantity(
@@ -173,9 +177,10 @@ class Component:
                     )
 
                     # locate the nearest next use facility and increment the rest
-                    _next_use = self.context.cost_graph.find_downst(
-                        int(location.split('_')[1]),
+                    _next_use = self.context.cost_graph.find_downstream(
+                        node_name = location,
                         connect_to = 'next use')
+
                     count_inventory = self.context.count_facility_inventories[_next_use]
                     transport = self.context.transportation_trackers[_next_use]
                     count_inventory.increment_quantity(
