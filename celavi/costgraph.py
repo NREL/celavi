@@ -714,10 +714,10 @@ class CostGraph:
         return int(_nearest_facility_id)
 
 
-    def find_landfill(self,
-                      node_id : int,
-                      connect_to : str = 'landfill',
-                      crit : str = 'dist'):
+    def find_downstream(self,
+                        node_id : int,
+                        connect_to : str = 'landfill',
+                        crit : str = 'dist'):
         """
 
         Parameters
@@ -728,15 +728,15 @@ class CostGraph:
 
         Returns
         -------
-            Facility ID of the closest (according to "crit") landfill downstream
-            of the node indicated by node_id.
+            Facility ID of the closest (according to "crit") facility
+             of type "connect_to" downstream of the node indicated by node_id.
 
         """
         # Check that the node_id exists in the supply chain.
         # If it doesn't, print a message and return None
         if not node_id in nx.get_node_attributes(self.supply_chain,
                                                  name='facility_id').values():
-            print('Facility %d does not exist in CostGraph' % node_id,
+            print(f'Facility {node_id} does not exist in CostGraph',
                   flush=True)
             return None
         else:
@@ -745,31 +745,31 @@ class CostGraph:
                      if y['facility_id'] == node_id][0]
         # Get a list of all nodes with an outgoing edge that connects to this
         # node_id, with the specified facility type
-        _landfill_nodes = [n for n in self.supply_chain.successors(_node) if
+        _downst_nodes = [n for n in self.supply_chain.successors(_node) if
                            n.find(connect_to) != -1]
 
         # Search the list for the "closest" node
-        if len(_landfill_nodes) == 0:
+        if len(_downst_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
             # message and return None
             print(f'Facility {node_id} does not have any downstream neighbors of type {connect_to}',
                   flush=True)
             return None
 
-        elif len(_landfill_nodes) > 1:
+        elif len(_downst_nodes) > 1:
             # If there are multiple options, identify the nearest neighbor
             # according to the crit(eria) parameter
 
             _upstream_dists = [self.supply_chain.edges[_node, _lnd_n][crit]
-                               for _lnd_n in _landfill_nodes]
-            _nearest_landfill_node = _landfill_nodes[_upstream_dists.index(min(_upstream_dists))]
-            _nearest_facility_id = _nearest_landfill_node.split('_')[1]
+                               for _lnd_n in _downst_nodes]
+            _nearest_downst_node = _downst_nodes[_upstream_dists.index(min(_upstream_dists))]
+            _nearest_facility_id = _nearest_downst_node.split('_')[1]
 
         else:
             # If there is only one option, pull that node's facility_id directly
-            _nearest_facility_id = _landfill_nodes[0].split('_')[1]
+            _nearest_facility_id = _downst_nodes[0].split('_')[1]
 
-        return 'landfilling_' + str(_nearest_facility_id)
+        return connect_to + '_' + str(_nearest_facility_id)
 
 
     def update_costs(self, **kwargs):
