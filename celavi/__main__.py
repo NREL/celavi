@@ -192,6 +192,9 @@ if generate_step_costs:
         index=False
     )
 
+
+time0 = time.time()
+
 # Data filtering for states
 states_to_filter = scenario_params.get('states_to_filter', [])
 if enable_data_filtering:
@@ -204,6 +207,11 @@ if enable_data_filtering:
                     turbine_data_filename,
                     states_to_filter)
 
+print('State filtering completed in %d s' % np.round(time.time() - time0, 1),
+        flush=True)
+
+time0 = time.time()
+
 if run_routes:
     routes_computed = Router.get_all_routes(
         locations_file=locations_computed_filename,
@@ -212,6 +220,10 @@ if run_routes:
         node_locations=node_locations_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'],
         preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
+
+
+    print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
+          flush=True)
 
 if use_computed_routes:
     routes = routes_computed_filename
