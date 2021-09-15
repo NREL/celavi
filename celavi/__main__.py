@@ -192,6 +192,18 @@ if generate_step_costs:
         index=False
     )
 
+# Data filtering for states
+states_to_filter = scenario_params.get('states_to_filter', [])
+if enable_data_filtering:
+    if len(states_to_filter) == 0:
+        print('Cannot filter data; no state list provided', flush=True)
+    else:
+        print(f'Filtering: {states_to_filter}',
+              flush=True)
+        data_filter(locations_computed_filename,
+                    turbine_data_filename,
+                    states_to_filter)
+
 if run_routes:
     routes_computed = Router.get_all_routes(
         locations_file=locations_computed_filename,
@@ -205,19 +217,6 @@ if use_computed_routes:
     routes = routes_computed_filename
 else:
     routes = routes_custom_filename
-
-# Data filtering for states
-states_to_filter = scenario_params.get('states_to_filter', [])
-if enable_data_filtering:
-    if len(states_to_filter) == 0:
-        print('Cannot filter data; no state list provided', flush=True)
-    else:
-        print(f'Filtering: {states_to_filter}',
-              flush=True)
-        data_filter(locations_computed_filename,
-                    routes_computed_filename,
-                    turbine_data_filename,
-                    states_to_filter)
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
