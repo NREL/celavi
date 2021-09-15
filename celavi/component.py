@@ -146,14 +146,14 @@ class Component:
 
                 if 'fine grinding' in location:
                     # increment the fine grinding inventory and transpo tracker
-                    count_inventory = self.context.count_facility_inventories[location]
-                    transport = self.context.transportation_trackers[location]
-                    count_inventory.increment_quantity(
+                    fg_count_inventory = self.context.count_facility_inventories[location]
+                    fg_transport = self.context.transportation_trackers[location]
+                    fg_count_inventory.increment_quantity(
                         self.kind,
                         1,
                         env.now
                     )
-                    transport.increment_inbound_tonne_km(
+                    fg_transport.increment_inbound_tonne_km(
                         self.mass_tonnes * distance,
                         env.now
                     )
@@ -192,17 +192,22 @@ class Component:
                         (1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes * distance,
                         env.now
                     )
+                    yield env.timeout(lifespan)
+                    fg_count_inventory.increment_quantity(self.kind, -1, env.now)
+
                 elif 'next use' in location:
                     # the inventory and transportation was incremented when the
                     # blade hit the fine grinding step
                     pass
+
                 else:
                     count_inventory = self.context.count_facility_inventories[location]
                     transport = self.context.transportation_trackers[location]
                     count_inventory.increment_quantity(self.kind, 1, env.now)
                     transport.increment_inbound_tonne_km(self.context.cost_graph.finegrind_material_loss * self.mass_tonnes * distance, env.now)
+                    self.current_location = location
+                    yield env.timeout(lifespan)
+                    count_inventory.increment_quantity(self.kind, -1, env.now)
 
-                self.current_location = location
-                yield env.timeout(lifespan)
             else:
                 break
