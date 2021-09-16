@@ -8,7 +8,7 @@ import pandas as pd
 from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
-from celavi.data_filtering import data_filter
+from celavi.data_filtering import filter_locations, filter_routes
 import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
@@ -192,6 +192,10 @@ if generate_step_costs:
         index=False
     )
 
+if use_computed_routes:
+    routes = routes_computed_filename
+else:
+    routes = routes_custom_filename
 
 time0 = time.time()
 
@@ -201,11 +205,18 @@ if enable_data_filtering:
     if len(states_to_filter) == 0:
         print('Cannot filter data; no state list provided', flush=True)
     else:
-        print(f'Filtering: {states_to_filter}',
+        print(f'Filtering locations: {states_to_filter}',
               flush=True)
-        data_filter(locations_computed_filename,
-                    turbine_data_filename,
-                    states_to_filter)
+        filter_locations(locations_computed_filename,
+                         turbine_data_filename,
+                         states_to_filter)
+    # if the data is being filtered and a new routes file is NOT being
+    # generated, then the existing routes file must also be filtered
+    if ~run_routes:
+        print(f'Filtering routes: {states_to_filter}',
+              flush=True)
+        filter_routes(locations_computed_filename,
+                      routes)
 
 print('State filtering completed in %d s' % np.round(time.time() - time0, 1),
         flush=True)
@@ -220,15 +231,6 @@ if run_routes:
         node_locations=node_locations_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'],
         preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
-
-
-    print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
-          flush=True)
-
-if use_computed_routes:
-    routes = routes_computed_filename
-else:
-    routes = routes_custom_filename
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
