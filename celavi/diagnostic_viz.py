@@ -79,7 +79,7 @@ class DiagnosticViz:
             height=1500,
         )
         facet_plots_filename = os.path.join(
-            self.output_folder_path, "blade_count_facets_" + np.round(str(time.time(),0)) + ".png"
+            self.output_folder_path, "blade_count_facets_" + str(int(time.time())) + ".png"
         )
         fig.write_image(facet_plots_filename)
         blade_counts = (
@@ -98,6 +98,6 @@ class DiagnosticViz:
             height=500,
         )
         one_plot_filename = os.path.join(
-            self.output_folder_path, "blade_count_single_" + np.round(str(time.time(),0)) + ".png"
+            self.output_folder_path, "blade_count_single_" + str(int(time.time())) + ".png"
         )
         fig.write_image(one_plot_filename)
