@@ -213,7 +213,7 @@ if enable_data_filtering:
                          states_to_filter)
     # if the data is being filtered and a new routes file is NOT being
     # generated, then the existing routes file must also be filtered
-    if ~run_routes:
+    if not run_routes:
         print(f'Filtering routes: {states_to_filter}',
               flush=True)
         filter_routes(locations_computed_filename,
