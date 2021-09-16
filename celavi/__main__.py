@@ -333,9 +333,9 @@ if use_fixed_lifetime:
     )['blade'] * timesteps_per_year
 else:
     lifespan_fns['blade'] = lambda: weibull_min.rvs(
-        des_params.get('K'),
+        des_params.get('blade_weibull_K'),
         loc=des_params.get('min_lifespan'),
-        scale=des_params.get('L')-des_params.get('min_lifespan'),
+        scale=des_params.get('blade_weibull_L') - des_params.get('min_lifespan'),
         size=1
     )[0]
 
