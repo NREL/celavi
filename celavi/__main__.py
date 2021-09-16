@@ -13,10 +13,11 @@ import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
+parser.add_argument('--config', help='Name of config file in data folder.')
 args = parser.parse_args()
 
 # YAML filename
-config_yaml_filename = os.path.join(args.data, 'config.yaml')
+config_yaml_filename = os.path.join(args.data, args.config)
 try:
     with open(config_yaml_filename, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
