@@ -296,7 +296,7 @@ class CostMethods:
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
              to cement co-processing plant
         """
-        return 100000.0
+        return -10.37
 
 
     @staticmethod
