@@ -197,6 +197,8 @@ if use_computed_routes:
 else:
     routes = routes_custom_filename
 
+time0 = time.time()
+
 # Data filtering for states
 states_to_filter = scenario_params.get('states_to_filter', [])
 if enable_data_filtering:
@@ -216,6 +218,11 @@ if enable_data_filtering:
         filter_routes(locations_computed_filename,
                       routes)
 
+print('State filtering completed in %d s' % np.round(time.time() - time0, 1),
+        flush=True)
+
+time0 = time.time()
+
 if run_routes:
     routes_computed = Router.get_all_routes(
         locations_file=locations_computed_filename,
@@ -224,7 +231,6 @@ if run_routes:
         node_locations=node_locations_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'],
         preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
-
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
@@ -341,9 +347,9 @@ if use_fixed_lifetime:
     )['blade'] * timesteps_per_year
 else:
     lifespan_fns['blade'] = lambda: weibull_min.rvs(
-        des_params.get('K'),
+        des_params.get('blade_weibull_K'),
         loc=des_params.get('min_lifespan'),
-        scale=des_params.get('L')-des_params.get('min_lifespan'),
+        scale=des_params.get('blade_weibull_L') - des_params.get('min_lifespan'),
         size=1
     )[0]
 
