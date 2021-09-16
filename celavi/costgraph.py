@@ -685,7 +685,7 @@ class CostGraph:
             # If node_id does exist in the supply chain, pull out the node name
             _node = [x for x,y in self.supply_chain.nodes(data=True)
                      if y['facility_id'] == node_id
-                     and y['connects'] == 'in'][0]
+                     and y['connects'] == 'bid'][0]
 
         # Get a list of all nodes with an outgoing edge that connects to this
         # node_id, with the specified facility type

@@ -32,6 +32,8 @@ setuptools.setup(
         "pyutilib",
         "joblib",
         "plotly",
-        "kaleido"
+        "kaleido",
+        "scikit-learn",
+        "PyYAML"
     ]
 )

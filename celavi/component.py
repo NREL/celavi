@@ -1,7 +1,7 @@
 from typing import List, Dict, Deque, Tuple
 from collections import deque
 
-from transportation_tracker import TransportationTracker
+from .transportation_tracker import TransportationTracker
 
 
 class Component:
