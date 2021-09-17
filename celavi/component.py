@@ -21,6 +21,7 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
+        manuf_facility_id: int,
         in_use_facility_id: int,
         mass_tonnes: float = 0,
     ):
@@ -58,9 +59,13 @@ class Component:
             The total mass of the component, in tonnes. Can be None if the component
             mass is not being used.
 
-        in_use_facility_id: int
+        manuf_facility_id: int
             The initial facility id (where the component begins life) used in
             initial pathway selection from CostGraph.
+
+        in_use_facility_id: int
+            The facility ID where the component spends its useful lifetime
+            before beginning the end-of-life process.
         """
 
         self.current_location = ""  # There is no location initially
@@ -68,6 +73,7 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
+        self.manuf_facility_id = manuf_facility_id
         self.in_use_facility_id = in_use_facility_id
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
@@ -118,7 +124,11 @@ class Component:
         """
         begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
         yield env.timeout(begin_timestep)
-        self.create_pathway_queue(self.in_use_facility_id)
+        location = 'manufacturing_' + str(self.manuf_facility_id)
+        count_inventory = self.context.count_facility_inventories[location]
+        count_inventory.increment_quantity(self.kind, 1, env.now)
+        # only inbound transportation is tracked
+        self.current_location = 'in use_' + str(self.in_use_facility_id)
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
@@ -133,7 +143,7 @@ class Component:
         """
         while True:
             if len(self.pathway) > 0:
-                if self.current_location.startswith('manufacturing'):
+                if self.current_location.startswith('in use'):
                     # Query cost graph again
                     self.create_pathway_queue(self.in_use_facility_id)
                     # Because the blade was just manufactured, skip the first
