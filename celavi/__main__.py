@@ -311,7 +311,8 @@ turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
-    facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
+    in_use_facility_id = int(row['facility_id'])
+    manuf_facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
     n_turbine = int(row['n_turbine'])
 
     for _ in range(n_turbine):
@@ -319,7 +320,8 @@ for _, row in turbine_data.iterrows():
             components.append({
                 'year': year,
                 'kind': 'blade',
-                'facility_id': facility_id
+                'manuf_facility_id': manuf_facility_id,
+                'in_use_facility_id': in_use_facility_id
             })
 
 print(f'Components created at {np.round(time.time() - time0, 1)} s',
