@@ -206,7 +206,8 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=row["year"],
-                in_use_facility_id=row["facility_id"],
+                manuf_facility_id=row["manuf_facility_id"],
+                in_use_facility_id=row["in_use_facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
                 mass_tonnes=avg_blade_mass_tonnes_for_year
