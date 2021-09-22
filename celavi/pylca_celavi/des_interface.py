@@ -81,49 +81,71 @@ def pylca_run_main(df):
         df_with_no_lca_entry,result_shortcut = lca_performance_improvement(new_df)
 
         if not df_with_no_lca_entry.empty:
-	        # Correcting life cycle inventory with material is concrete
-	        # Calculates the concrete lifecycle flow and emissions inventory
-	        df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage)
+            # Correcting life cycle inventory with material is concrete
+            # Calculates the concrete lifecycle flow and emissions inventory
+            df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage)
 
-	        if not df_static.empty:
+            if not df_static.empty:
 
-	            working_df = df_with_no_lca_entry
-	            working_df['flow name'] = working_df['material'] + ', ' + working_df['stage']
-	            working_df= working_df[['flow name','flow quantity']]
+                working_df = df_with_no_lca_entry
+                working_df['flow name'] = working_df['material'] + ', ' + working_df['stage']
+                working_df= working_df[['flow name','flow quantity']]
 
-	            # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
-	            # It calculates the LCI flows of the foreground process.
-	            res = model_celavi_lci(working_df,year,facility_id,stage,material,df_static)
+                # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
+                # It calculates the LCI flows of the foreground process.
+                res = model_celavi_lci(working_df,year,facility_id,stage,material,df_static)
 
-	            # model_celavi_lci_insitu() calculating direct emissions from foreground
-	            # processes.
-	            emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
+                # model_celavi_lci_insitu() calculating direct emissions from foreground
+                # processes.
+                emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
 
-	            if not res.empty:
-	                res = model_celavi_lci_background(res,year,facility_id,stage,material)   
-	                lci = postprocessing(res,emission)
-	                res = impact_calculations(lci)
-	                res_df = pd.concat([res_df,res])
-	                lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
-	                
-	                
-	                df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-	                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
-	                lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
-	                lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
-	                lca_db = lca_db[lca_db['material'] != 'concrete']
-	                lca_db['year'] = lca_db['year'].astype(int)
-	                lca_db = lca_db.drop_duplicates()
-	                lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
+                if not res.empty:
+                    res = model_celavi_lci_background(res,year,facility_id,stage,material)   
+                    lci = postprocessing(res,emission)
+                    res = impact_calculations(lci)
+                    res_df = pd.concat([res_df,res])
+                    lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
+                    
+                    
+                    df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
+                    lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
+                    lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
+                    lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+                    lca_db = lca_db[lca_db['material'] != 'concrete']
+                    lca_db['year'] = lca_db['year'].astype(int)
+                    lca_db = lca_db.drop_duplicates()
+                    lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
     
         else:
-		        print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
-		        
+                print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
+                
                 
         res_df = pd.concat([res_df,result_shortcut])
 
+    
+
+    #Correcting the units for LCIA results. 
+    for index,row in res_df.iterrows():
+
+        a = row[4]
+
+        try:
+            split_string = a.split("/kg", 1)
+            res_df = res_df.replace(a,split_string[0] + split_string[1])
+            #res_df.iloc[index,[4]] = split_string[0] + split_string[1]
+            #print(split_string)
+        except:
+            split_string = a.split("/ kg", 1)
+            res_df = res_df.replace(a,split_string[0] + split_string[1])
+            #res_df.iloc[index,[4]] = split_string[0] + split_string[1]
 
 
+        
+
+
+
+    #res_df.to_csv('final_lcia_results_to_des.csv', header=False, index=False)
+       
     # The line below is just for debugging if needed
     res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
 

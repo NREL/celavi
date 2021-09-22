@@ -235,6 +235,10 @@ if run_routes:
 
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
+print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
+        flush=True)
+
+
 time0 = time.time()
 
 if initialize_costgraph:
@@ -265,7 +269,7 @@ if initialize_costgraph:
         coarsegrind_learnrate=cg_params.get('coarsegrind_learnrate'),
         finegrind_material_loss=cg_params.get('finegrind_material_loss'),
     )
-    print('CostGraph initialized at %d s' % np.round(time.time() - time0, 1),
+    print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
 
     if pickle_costgraph:
