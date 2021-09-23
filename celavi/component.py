@@ -106,6 +106,8 @@ class Component:
             # Set landfill timespan long enough to be permanent
             elif facility.startswith("landfill"):
                 self.pathway.append((facility, self.context.max_timesteps * 2, distance))
+            elif facility.startswith("next use"):
+                self.pathway.append((facility, self.context.max_timesteps * 2, distance))
             # Otherwise, use the timespan the model gives us.
             else:
                 self.pathway.append((facility, lifespan, distance))
