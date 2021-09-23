@@ -285,10 +285,6 @@ else:
 
 print('CostGraph exists\n\n\n')
 
-# Get the initial supply chain pathways to connect power plants to their
-# nearest-neighbor manufacturing facilities
-initial_paths = netw.choose_paths()
-
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
