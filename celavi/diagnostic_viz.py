@@ -8,7 +8,7 @@ import time
 from .des import Context
 
 
-class DiagnosticViz:
+class DiagnosticVizAndDataFrame:
     """
     This class creates diagnostic visualizations from a context when after the
     model run has been executed.
@@ -37,6 +37,9 @@ class DiagnosticViz:
         pd.DataFrame
             A dataframe with the cumulative histories gathered together.
         """
+        if self.cumulative_histories is not None:
+            return self.cumulative_histories
+
         cumulative_histories = []
 
         for facility, inventory in self.context.count_facility_inventories.items():
@@ -52,10 +55,10 @@ class DiagnosticViz:
 
         gathered = pd.concat(cumulative_histories)
 
-        blades_only = gathered.drop(columns=["nacelle", "tower", "foundation"])
-        blades_only.rename(columns={"blade": "blade_count"}, inplace=True)
+        self.cumulative_histories = gathered.drop(columns=["nacelle", "tower", "foundation"])
+        self.cumulative_histories .rename(columns={"blade": "blade_count"}, inplace=True)
 
-        return blades_only
+        return self.cumulative_histories
 
     def generate_blade_count_plots(self):
         """

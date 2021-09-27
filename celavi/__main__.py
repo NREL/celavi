@@ -158,7 +158,7 @@ costgraph_csv_filename = os.path.join(args.data,
 
 os.chdir(subfolder_dict['lci_folder'])
 from celavi.des import Context
-from celavi.diagnostic_viz import DiagnosticViz
+from celavi.diagnostic_viz import DiagnosticVizAndDataFrame
 
 
 # Note that the step_cost file must be updated (or programmatically generated)
@@ -377,5 +377,8 @@ print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
       flush=True)
 
 # Plot the cumulative count levels of the inventories
-diagnostic_viz = DiagnosticViz(context, subfolder_dict['outputs_folder'])
+diagnostic_viz = DiagnosticVizAndDataFrame(context, subfolder_dict['outputs_folder'])
 diagnostic_viz.generate_blade_count_plots()
+cumulative_histories = diagnostic_viz.gather_cumulative_histories()
+cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.csv')
+cumulative_histories.to_csv(cumulative_histories_filename, index_label='id')
