@@ -21,7 +21,7 @@ class CostGraph:
                  locations_file : str,
                  routes_file : str,
                  sc_begin : str = 'manufacturing',
-                 sc_end = ('landfilling', 'cement co-processing'),
+                 sc_end = ('landfilling', 'cement co-processing', 'next use'),
                  year : float = 2000.0,
                  max_dist : float = 300.0,
                  verbose : int = 0,
@@ -705,7 +705,7 @@ class CostGraph:
         elif len(_upstream_nodes) > 1:
             # If there are multiple options, identify the nearest neighbor
             # according to the crit(eria) parameter
-            _upstream_dists = [self.supply_chain.edges[_up_n, _node]['dist'] for _up_n in _upstream_nodes]
+            _upstream_dists = [self.supply_chain.edges[_up_n, _node][crit] for _up_n in _upstream_nodes]
             _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
             _nearest_facility_id = _nearest_upstream_node.split('_')[1]
 
@@ -715,6 +715,84 @@ class CostGraph:
 
         # Return the "closest" node's facility_id as an integer
         return int(_nearest_facility_id)
+
+
+    def find_downstream(self,
+                        node_name : str = None,
+                        facility_id : int = None,
+                        connect_to : str = 'landfill',
+                        crit : str = 'dist'):
+        """
+
+        Parameters
+        ----------
+        node_name
+        node_id
+        connect_to
+        crit
+
+        Returns
+        -------
+            Facility ID of the closest (according to "crit") facility
+             of type "connect_to" downstream of the node indicated by node_id.
+
+        """
+        # Check that the node_id exists in the supply chain.
+        # If it doesn't, print a message and return None
+        # if a facility_id was provided, use that to locate the node
+        if facility_id is not None:
+            if not facility_id in nx.get_node_attributes(self.supply_chain,
+                                                     name='facility_id').values():
+                print(f'Facility {facility_id} does not exist in CostGraph',
+                      flush=True)
+                return None
+            else:
+                # If facility_id does exist in the supply chain, pull out the
+                # node name
+                _node = [x for x, y in self.supply_chain.nodes(data=True)
+                         if y['facility_id'] == facility_id][0]
+                # Get a list of all nodes with an outgoing edge that connects
+                # to this facility_id, with the specified facility type
+                _downst_nodes = [n for n in self.supply_chain.successors(_node)
+                                 if n.find(connect_to) != -1]
+        elif node_name is not None:
+            if not node_name in self.supply_chain.nodes:
+                print(f'Node {node_name} does not exist in CostGraph',
+                      flush=True)
+                return None
+            else:
+                # Get a list of all nodes with an outgoing edge that connects
+                # to this facility_id, with the specified facility type
+                _downst_nodes = [n for n in
+                                 self.supply_chain.successors(node_name)
+                                 if n.find(connect_to) != -1]
+        else:
+            print(f'No node identifier provided to find_downstream',
+                  flush=True)
+            return None
+
+        # Search the list for the "closest" node
+        if len(_downst_nodes) == 0:
+            # If there are no upstream nodes of the correct type, print a
+            # message and return None
+            print(f'Node {node_name} does not have any downstream neighbors of type {connect_to}',
+                  flush=True)
+            return None
+
+        elif len(_downst_nodes) > 1:
+            # If there are multiple options, identify the nearest neighbor
+            # according to the crit(eria) parameter
+
+            _upstream_dists = [self.supply_chain.edges[_node, _lnd_n][crit]
+                               for _lnd_n in _downst_nodes]
+            _nearest_downst_node = _downst_nodes[_upstream_dists.index(min(_upstream_dists))]
+            _nearest_facility_id = _nearest_downst_node.split('_')[1]
+
+        else:
+            # If there is only one option, pull that node's facility_id directly
+            _nearest_downst_node = _downst_nodes[0]
+
+        return _nearest_downst_node
 
 
     def update_costs(self, **kwargs):
