@@ -607,6 +607,7 @@ class CostGraph:
 
 
     def choose_paths(self,
+                     source : str = None,
                      crit : str = 'cost'):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
@@ -618,6 +619,8 @@ class CostGraph:
 
         Parameters
         ----------
+        source
+            Node name in the format "facility_type_facilityid".
         crit
             Criterion on which "shortest" path is defined. Defaults to cost.
 
@@ -629,20 +632,20 @@ class CostGraph:
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
         # is get the shortest path using the 'cost' attribute as the edge weight
+        if source is None:
+            raise ValueError(f"CostGraph.choose_paths: source node cannot be None")
+        else:
+            if source not in self.supply_chain.nodes():
+                raise ValueError(f"CostGraph.choose_paths: {source} not in CostGraph")
+            else:
+                _paths = []
+                _chosen_path = self.find_nearest(source=source, crit=crit)
+                _paths.append({'source': source,
+                               'target': _chosen_path[0],
+                               'path': _chosen_path[2],
+                               'cost': _chosen_path[1]})
 
-        _sources = list(search_nodes(self.supply_chain,
-                                     {"in": [("step",), self.sc_begin]}))
-
-        _paths = []
-        # Find the lowest-cost path from EACH source node to ANY target node
-        for _node in _sources:
-            _chosen_path = self.find_nearest(source=_node, crit=crit)
-            _paths.append({'source': _node,
-                           'target': _chosen_path[0],
-                           'path': _chosen_path[2],
-                           'cost': _chosen_path[1]})
-
-        return _paths
+                return _paths
 
 
     def find_upstream_neighbor(self,
