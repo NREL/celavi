@@ -124,7 +124,7 @@ class Component:
         env: simpy.Environment
             The SimPy environment running the DES timesteps.
         """
-        begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
+        begin_timestep = (self.year - self.context.min_year) * self.context.timesteps_per_year
         yield env.timeout(begin_timestep)
         self.current_location = 'manufacturing_' + str(self.manuf_facility_id)
         lifespan = 1
