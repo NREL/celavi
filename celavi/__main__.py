@@ -289,14 +289,23 @@ else:
 
 print('CostGraph exists\n\n\n')
 
+# calculate des timesteps such that the model runs through the end of the
+# end year rather than stopping at the beginning of the end year
+des_timesteps = scenario_params.get('timesteps_per_year') * (
+        scenario_params.get('end_year') - scenario_params.get('start_year')
+) + scenario_params.get('timesteps_per_year')
+
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
+    avg_blade_masses_filename=avg_blade_masses_filename,
     possible_items=des_params.get('component_list'),
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
-    avg_blade_masses_filename=avg_blade_masses_filename
+    min_year = scenario_params.get('start_year'),
+    max_timesteps = des_timesteps,
+    timesteps_per_year = scenario_params.get('timesteps_per_year')
 )
 
 # Create the turbine dataframe that will be used to populate
