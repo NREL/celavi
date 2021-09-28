@@ -108,6 +108,8 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     opt = SolverFactory("glpk")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
+    if all(solution.s == 0):
+        print('Solver found all-zero scaling vector',flush=True)
     scaling_vector = pd.DataFrame()
     scaling_vector['process'] = process
     scaling_vector['scaling_factor'] = solution['s']
@@ -177,7 +179,14 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
         #Dividing by scaling value to solve scaling issues
         F = F/100000
     
-        res = runner(tech_matrix,F,yr,fac_id,stage,material,100000,process,df_with_all_other_flows)            
-        res.columns = ['flow name','unit','flow quantity','year','facility_id','stage','material']
-
-        return res
+        res = runner(tech_matrix,F,yr,fac_id,stage,material,100000,process,df_with_all_other_flows)
+        if len(res.columns) != 7:
+            print(f'model_celavi_lci: res has {len(res.columns)}; needs 7 columns',
+                  flush=True)
+            return pd.DataFrame(
+                columns=['flow name','unit','flow quantity',
+                         'year','facility_id','stage','material']
+            )
+        else:
+            res.columns = ['flow name','unit','flow quantity','year','facility_id','stage','material']
+            return res
