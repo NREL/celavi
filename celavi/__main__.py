@@ -289,18 +289,23 @@ else:
 
 print('CostGraph exists\n\n\n')
 
-# Get the initial supply chain pathways to connect power plants to their
-# nearest-neighbor manufacturing facilities
-initial_paths = netw.choose_paths()
+# calculate des timesteps such that the model runs through the end of the
+# end year rather than stopping at the beginning of the end year
+des_timesteps = scenario_params.get('timesteps_per_year') * (
+        scenario_params.get('end_year') - scenario_params.get('start_year')
+) + scenario_params.get('timesteps_per_year')
 
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
+    avg_blade_masses_filename=avg_blade_masses_filename,
     possible_items=des_params.get('component_list'),
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
-    avg_blade_masses_filename=avg_blade_masses_filename
+    min_year = scenario_params.get('start_year'),
+    max_timesteps = des_timesteps,
+    timesteps_per_year = scenario_params.get('timesteps_per_year')
 )
 
 # Create the turbine dataframe that will be used to populate
@@ -315,7 +320,8 @@ turbine_data = pd.read_csv(turbine_data_filename)
 components = []
 for _, row in turbine_data.iterrows():
     year = row['year']
-    facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
+    in_use_facility_id = int(row['facility_id'])
+    manuf_facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
     n_turbine = int(row['n_turbine'])
 
     for _ in range(n_turbine):
@@ -323,7 +329,8 @@ for _, row in turbine_data.iterrows():
             components.append({
                 'year': year,
                 'kind': 'blade',
-                'facility_id': facility_id
+                'manuf_facility_id': manuf_facility_id,
+                'in_use_facility_id': in_use_facility_id
             })
 
 print(f'Components created at {np.round(time.time() - time0, 1)} s',

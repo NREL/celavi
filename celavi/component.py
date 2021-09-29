@@ -1,7 +1,5 @@
-from typing import List, Dict, Deque, Tuple
+from typing import Deque, Tuple
 from collections import deque
-
-from .transportation_tracker import TransportationTracker
 
 
 class Component:
@@ -21,6 +19,7 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
+        manuf_facility_id: int,
         in_use_facility_id: int,
         mass_tonnes: float = 0,
     ):
@@ -46,7 +45,7 @@ class Component:
             The year in which this component enters the use state for the first
             time.
 
-        intitial_lifespan_timesteps: float
+        lifespan_timesteps: float
             The lifespan, in timesteps, of the component during its first
             In use phase. The argument can be
             provided as a floating point value, but it is converted into an
@@ -58,9 +57,13 @@ class Component:
             The total mass of the component, in tonnes. Can be None if the component
             mass is not being used.
 
-        in_use_facility_id: int
+        manuf_facility_id: int
             The initial facility id (where the component begins life) used in
             initial pathway selection from CostGraph.
+
+        in_use_facility_id: int
+            The facility ID where the component spends its useful lifetime
+            before beginning the end-of-life process.
         """
 
         self.current_location = ""  # There is no location initially
@@ -68,6 +71,7 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
+        self.manuf_facility_id = manuf_facility_id
         self.in_use_facility_id = in_use_facility_id
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
@@ -86,10 +90,11 @@ class Component:
         from_facility_id: int
             The starting location of the the component.
         """
-        path_choices = self.context.cost_graph.choose_paths()
+        in_use_facility_id = f"in use_{int(from_facility_id)}"
+        path_choices = self.context.cost_graph.choose_paths(source=in_use_facility_id)
         path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
-        manufacturing_facility_id = f"manufacturing_{int(from_facility_id)}"
-        path_choice = path_choices_dict[manufacturing_facility_id]
+
+        path_choice = path_choices_dict[in_use_facility_id]
         self.pathway = deque()
 
         for facility, lifespan, distance in path_choice['path']:
@@ -98,6 +103,9 @@ class Component:
                 self.pathway.append((facility, self.initial_lifespan_timesteps, distance))
             # Set landfill timespan long enough to be permanent
             elif facility.startswith("landfill"):
+                self.pathway.append((facility, self.context.max_timesteps * 2, distance))
+            # Also set the next use facility timespan to permanent
+            elif facility.startswith("next use"):
                 self.pathway.append((facility, self.context.max_timesteps * 2, distance))
             # Otherwise, use the timespan the model gives us.
             else:
@@ -116,9 +124,15 @@ class Component:
         env: simpy.Environment
             The SimPy environment running the DES timesteps.
         """
-        begin_timestep = (self.year - self.context.min_year) / self.context.years_per_timestep
+        begin_timestep = (self.year - self.context.min_year) * self.context.timesteps_per_year
         yield env.timeout(begin_timestep)
-        self.create_pathway_queue(self.in_use_facility_id)
+        self.current_location = 'manufacturing_' + str(self.manuf_facility_id)
+        lifespan = 1
+        count_inventory = self.context.count_facility_inventories[self.current_location]
+        count_inventory.increment_quantity(self.kind, 1, env.now)
+        yield env.timeout(lifespan)
+        # only inbound transportation is tracked
+        count_inventory.increment_quantity(self.kind, -1, env.now)
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
@@ -132,22 +146,77 @@ class Component:
             The environment in which this process is running.
         """
         while True:
-            if len(self.pathway) > 0:
-                if self.current_location.startswith('manufacturing'):
-                    # Query cost graph again
-                    self.create_pathway_queue(self.in_use_facility_id)
-                    # Because the blade was just manufactured, skip the first
-                    # manufacturing step so that the blade is not manufactured twice in
-                    # a row.
-                    self.pathway.popleft()
+            if self.current_location.startswith('manufacturing'):
+                # Query cost graph
+                self.create_pathway_queue(self.in_use_facility_id)
 
+            if len(self.pathway) > 0:
                 location, lifespan, distance = self.pathway.popleft()
-                count_inventory = self.context.count_facility_inventories[location]
-                transport = self.context.transportation_trackers[location]
-                count_inventory.increment_quantity(self.kind, 1, env.now)
-                transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
-                self.current_location = location
-                yield env.timeout(lifespan)
-                count_inventory.increment_quantity(self.kind, -1, env.now)
+
+                if 'fine grinding' in location:
+                    # increment the fine grinding inventory and transpo tracker
+                    fg_count_inventory = self.context.count_facility_inventories[location]
+                    fg_transport = self.context.transportation_trackers[location]
+                    fg_count_inventory.increment_quantity(
+                        self.kind,
+                        1,
+                        env.now
+                    )
+                    fg_transport.increment_inbound_tonne_km(
+                        self.mass_tonnes * distance,
+                        env.now
+                    )
+
+                    # locate the nearest landfill and increment for material loss
+                    _loss_landfill = self.context.cost_graph.find_downstream(
+                        facility_id = int(location.split('_')[1]),
+                        connect_to = 'landfill'
+                    )
+
+                    count_inventory = self.context.count_facility_inventories[_loss_landfill]
+                    transport = self.context.transportation_trackers[_loss_landfill]
+                    count_inventory.increment_quantity(
+                        self.kind,
+                        self.context.cost_graph.finegrind_material_loss,
+                        env.now
+                    )
+                    transport.increment_inbound_tonne_km(
+                        self.context.cost_graph.finegrind_material_loss * self.mass_tonnes * distance,
+                        env.now
+                    )
+
+                    # locate the nearest next use facility and increment the rest
+                    _next_use = self.context.cost_graph.find_downstream(
+                        node_name = location,
+                        connect_to = 'next use')
+
+                    count_inventory = self.context.count_facility_inventories[_next_use]
+                    transport = self.context.transportation_trackers[_next_use]
+                    count_inventory.increment_quantity(
+                        self.kind,
+                        1 - self.context.cost_graph.finegrind_material_loss,
+                        env.now
+                    )
+                    transport.increment_inbound_tonne_km(
+                        (1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes * distance,
+                        env.now
+                    )
+                    yield env.timeout(lifespan)
+                    fg_count_inventory.increment_quantity(self.kind, -1, env.now)
+
+                elif 'next use' in location:
+                    # the inventory and transportation was incremented when the
+                    # blade hit the fine grinding step
+                    pass
+
+                else:
+                    count_inventory = self.context.count_facility_inventories[location]
+                    transport = self.context.transportation_trackers[location]
+                    count_inventory.increment_quantity(self.kind, 1, env.now)
+                    transport.increment_inbound_tonne_km(self.context.cost_graph.finegrind_material_loss * self.mass_tonnes * distance, env.now)
+                    self.current_location = location
+                    yield env.timeout(lifespan)
+                    count_inventory.increment_quantity(self.kind, -1, env.now)
+
             else:
                 break

@@ -36,7 +36,7 @@ class Context:
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
-        years_per_timestep: float = 0.0833
+        timesteps_per_year: int = 12
     ):
         """
         For the average_blade_masses file, the columns are "p_year" and "Glass Fiber:Blade"
@@ -72,16 +72,15 @@ class Context:
             The maximum number of discrete timesteps in the model. Defaults to
             200 or an end year of 2050.
 
-        years_per_timestep: float
-            The number of years covered by each timestep. Fractional
-            values are allowed for timesteps that have a duration of
-            less than one year. Default value is 0.25 or quarters (3 months).
+        timesteps_per_year: int
+            The number of timesteps in one year. Default value is 12 timesteps
+            per year, corresponding to a monthly model resolution.
         """
 
         self.cost_params = cost_params
         self.max_timesteps = max_timesteps
         self.min_year = min_year
-        self.years_per_timestep = years_per_timestep
+        self.timesteps_per_year = timesteps_per_year
 
         self.components: List[Component] = []
         self.env = simpy.Environment()
@@ -147,7 +146,7 @@ class Context:
             The discrete timestep that corresponds to the year.
         """
 
-        return int(year / self.years_per_timestep)
+        return int(year * self.timesteps_per_year)
 
     def timesteps_to_years(self, timesteps: int) -> float:
         """
@@ -163,7 +162,7 @@ class Context:
         float
             The year converted from the discrete timestep.
         """
-        return self.years_per_timestep * timesteps + self.min_year
+        return timesteps / self.timesteps_per_year + self.min_year
 
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
         """
@@ -206,7 +205,8 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=row["year"],
-                in_use_facility_id=row["facility_id"],
+                manuf_facility_id=row["manuf_facility_id"],
+                in_use_facility_id=row["in_use_facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
                 mass_tonnes=avg_blade_mass_tonnes_for_year
@@ -277,18 +277,17 @@ class Context:
         env: Environment
             The SimPy environment this process belongs to.
         """
-        timesteps_per_year = round(1 / self.years_per_timestep)
         component = 'blade'
         material = 'glass fiber reinforced polymer'
         while True:
             print(f'{datetime.now()}In While loop pylca interface',flush = True)
             time0 = time.time()
-            yield env.timeout(timesteps_per_year)   # Run annually
+            yield env.timeout(self.timesteps_per_year)
             print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
 
             annual_data_for_lci = []
             window_last_timestep = env.now
-            window_first_timestep = window_last_timestep - timesteps_per_year
+            window_first_timestep = window_last_timestep - self.timesteps_per_year
             time0 = time.time()
             year = int(ceil(self.timesteps_to_years(env.now)))
             for facility_name, facility in self.count_facility_inventories.items():
