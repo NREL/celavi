@@ -15,7 +15,7 @@ class TransportationTracker:
             recorded in the model.
         """
 
-        self.inbound_tonne_km = np.zeros(timesteps)
+        self.inbound_tonne_km = np.zeros(int(timesteps))
 
     def increment_inbound_tonne_km(self, tonne_km, timestep):
         """
