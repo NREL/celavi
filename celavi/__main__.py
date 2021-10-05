@@ -291,9 +291,9 @@ print('CostGraph exists\n\n\n')
 
 # calculate des timesteps such that the model runs through the end of the
 # end year rather than stopping at the beginning of the end year
-des_timesteps = scenario_params.get('timesteps_per_year') * (
+des_timesteps = int(scenario_params.get('timesteps_per_year') * (
         scenario_params.get('end_year') - scenario_params.get('start_year')
-) + scenario_params.get('timesteps_per_year')
+) + scenario_params.get('timesteps_per_year'))
 
 # Create the DES context and tie it to the CostGraph
 context = Context(
