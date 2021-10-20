@@ -69,7 +69,7 @@ class DiagnosticVizAndDataFrame:
 
         return self.cumulative_histories
 
-    def generate_blade_count_plots(self):
+    def generate_plots(self):
         """
         Generate the blade count history plots
         """
@@ -91,7 +91,7 @@ class DiagnosticVizAndDataFrame:
             height=1500,
         )
         facet_plots_filename = os.path.join(
-            self.output_folder_path, f"{self.units}_facets_" + str(int(time.time())) + ".png"
+            self.output_folder_path, f"{self.units}_facets.png"
         )
         fig.write_image(facet_plots_filename)
         blade_counts = (
@@ -110,6 +110,6 @@ class DiagnosticVizAndDataFrame:
             height=500,
         )
         one_plot_filename = os.path.join(
-            self.output_folder_path, f"{self.units}_single_" + str(int(time.time())) + ".png"
+            self.output_folder_path, f"{self.units}_single.png"
         )
         fig.write_image(one_plot_filename)
