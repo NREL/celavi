@@ -182,15 +182,21 @@ class Component:
                         connect_to = 'landfill'
                     )
 
-                    count_inventory = self.context.count_facility_inventories[_loss_landfill]
-                    transport = self.context.transportation_trackers[_loss_landfill]
-                    count_inventory.increment_quantity(
+                    lf_count_inventory = self.context.count_facility_inventories[_loss_landfill]
+                    lf_transport = self.context.transportation_trackers[_loss_landfill]
+                    lf_mass_inventory = self.context.mass_facility_inventories[_loss_landfill]
+                    lf_count_inventory.increment_quantity(
                         self.kind,
                         self.context.cost_graph.finegrind_material_loss,
                         env.now
                     )
-                    transport.increment_inbound_tonne_km(
+                    lf_transport.increment_inbound_tonne_km(
                         self.context.cost_graph.finegrind_material_loss * self.mass_tonnes * distance,
+                        env.now
+                    )
+                    lf_mass_inventory.increment_quantity(
+                        self.kind,
+                        self.context.cost_graph.finegrind_material_loss * self.mass_tonnes,
                         env.now
                     )
 
@@ -199,27 +205,27 @@ class Component:
                         node_name = location,
                         connect_to = 'next use')
 
-                    count_inventory = self.context.count_facility_inventories[_next_use]
-                    mass_inventory = self.context.mass_facility_inventories[_next_use]
-                    transport = self.context.transportation_trackers[_next_use]
-                    count_inventory.increment_quantity(
+                    nu_count_inventory = self.context.count_facility_inventories[_next_use]
+                    nu_mass_inventory = self.context.mass_facility_inventories[_next_use]
+                    nu_transport = self.context.transportation_trackers[_next_use]
+                    nu_count_inventory.increment_quantity(
                         self.kind,
                         1 - self.context.cost_graph.finegrind_material_loss,
                         env.now
                     )
                     # For mass self.mass_tonnes * self.context.cost_graph.finegrind_material_loss
-                    mass_inventory.increment_quantity(
+                    nu_mass_inventory.increment_quantity(
                         self.kind,
-                        (1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes * distance,
+                        (1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes,
                         env.now
                     )
-                    transport.increment_inbound_tonne_km(
+                    nu_transport.increment_inbound_tonne_km(
                         (1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes * distance,
                         env.now
                     )
                     yield env.timeout(lifespan)
                     fg_count_inventory.increment_quantity(self.kind, -1, env.now)
-                    fg_mass_inventory.increment_quantity(self.kind, -self.mass, env.now)
+                    fg_mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
 
                 elif 'next use' in location:
                     # the inventory and transportation was incremented when the
@@ -232,10 +238,11 @@ class Component:
                     transport = self.context.transportation_trackers[location]
                     count_inventory.increment_quantity(self.kind, 1, env.now)
                     mass_inventory.increment_quantity(self.kind, self.mass_tonnes, env.now)
-                    transport.increment_inbound_tonne_km(self.context.cost_graph.finegrind_material_loss * self.mass_tonnes * distance, env.now)
+                    transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
                     self.current_location = location
                     yield env.timeout(lifespan)
                     count_inventory.increment_quantity(self.kind, -1, env.now)
+                    mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
 
             else:
                 break
