@@ -300,10 +300,11 @@ context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
     avg_blade_masses_filename=avg_blade_masses_filename,
-    possible_items=des_params.get('component_list'),
+    possible_components=des_params.get('component_list', []),
+    possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
-    min_year = scenario_params.get('start_year'),
+    min_year=scenario_params.get('start_year'),
     max_timesteps = des_timesteps,
     timesteps_per_year = scenario_params.get('timesteps_per_year')
 )
@@ -391,16 +392,16 @@ count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
 count_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.csv')
 count_cumulative_histories.to_csv(count_cumulative_histories_filename, index_label='id')
 
-# Plot the mass levels of the mass inventories
-diagnostic_viz_mass = DiagnosticVizAndDataFrame(
-    context.mass_facility_inventories,
-    'tonnes',
-    subfolder_dict['outputs_folder']
-)
-diagnostic_viz_mass.generate_plots()
-mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
-mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
-mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
+# # Plot the mass levels of the mass inventories
+# diagnostic_viz_mass = DiagnosticVizAndDataFrame(
+#     context.mass_facility_inventories,
+#     'tonnes',
+#     subfolder_dict['outputs_folder']
+# )
+# diagnostic_viz_mass.generate_plots()
+# mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
+# mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
+# mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
 
 # Join LCIA and locations computed and write the result to enable creation of maps
 lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact', 'impact_value']
@@ -425,5 +426,4 @@ lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_l
 lcia_locations_df.to_csv(lcia_locations_filename)
 
 # Print run finish message
-print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
-      flush=True)
+print(f'FINISHED RUN at {np.round(time.time() - time0)} s', flush=True)

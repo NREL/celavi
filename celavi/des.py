@@ -30,7 +30,8 @@ class Context:
         locations_filename: str,
         step_costs_filename: str,
         avg_blade_masses_filename: str,
-        possible_items: List[str],
+        possible_components: List[str],
+        possible_materials: List[str],
         cost_graph: CostGraph,
         cost_graph_update_interval_timesteps: int,
         cost_params: Dict = None,
@@ -51,8 +52,12 @@ class Context:
         avg_blade_masses_filename: str
             The pathname to the file that contains the average blade masses.
 
-        possible_items: List[str]
+        possible_components: List[str]
             The list of possible items (like "blade", "turbine", "foundation")
+
+        possible_materials: List[str]
+            The possible materials in the components. This should span all
+            component types.
 
         cost_graph: CostGraph:
             The instance of the cost graph to use with this DES model.
@@ -120,7 +125,7 @@ class Context:
                 facility_id=facility_id,
                 facility_type=facility_type,
                 step=step,
-                possible_items=possible_items,
+                possible_items=possible_components,
                 timesteps=max_timesteps,
                 quantity_unit="count",
                 can_be_negative=False
@@ -130,7 +135,7 @@ class Context:
                 facility_id=facility_id,
                 facility_type=facility_type,
                 step=step,
-                possible_items=possible_items,
+                possible_items=possible_materials,
                 timesteps=max_timesteps,
                 quantity_unit="tonnes",
                 can_be_negative=False
@@ -216,6 +221,7 @@ class Context:
 
         for _, row in df.iterrows():
             avg_blade_mass_tonnes_for_year = self.avg_blade_mass_tonnes_dict[row["year"]]
+            mass_tonnes = {'gfrp': avg_blade_mass_tonnes_for_year}
             component = Component(
                 kind=row["kind"],
                 year=row["year"],
@@ -223,7 +229,7 @@ class Context:
                 in_use_facility_id=row["in_use_facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
-                mass_tonnes=avg_blade_mass_tonnes_for_year
+                mass_tonnes=mass_tonnes
             )
             self.env.process(component.manufacturing(self.env))
             self.components.append(component)
