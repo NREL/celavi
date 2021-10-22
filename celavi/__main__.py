@@ -258,8 +258,11 @@ if initialize_costgraph:
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
+
+        # TODO: Change this to take all materials into account
         blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
-                                'Glass Fiber:Blade'].values[0],
+                                'glass fiber reinforced polymer'].values[0],
+
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
         coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
         finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
@@ -426,6 +429,11 @@ locations_select_df = locations_df.loc[:, locations_columns]
 lcia_locations_df = lcia_df.merge(locations_select_df, how='inner', on='facility_id')
 lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_locations_join.csv')
 lcia_locations_df.to_csv(lcia_locations_filename)
+
+# Write the data sent to the LCIA
+data_for_lci_df = pd.DataFrame(context.data_for_lci)
+data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
+data_for_lci_df.to_csv(data_for_lci_filename, index=False)
 
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s', flush=True)
