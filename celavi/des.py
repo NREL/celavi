@@ -108,11 +108,14 @@ class Context:
 
         self.count_facility_inventories = {}
         self.transportation_trackers = {}
+        self.mass_facility_inventories = {}
+
         for _, row in locations_step_costs.iterrows():
             facility_type = row['facility_type_x']
             facility_id = row['facility_id']
             step = row['step']
             step_facility_id = f"{step}_{facility_id}"
+
             self.count_facility_inventories[step_facility_id] = FacilityInventory(
                 facility_id=facility_id,
                 facility_type=facility_type,
@@ -122,6 +125,17 @@ class Context:
                 quantity_unit="count",
                 can_be_negative=False
             )
+
+            self.mass_facility_inventories[step_facility_id] = FacilityInventory(
+                facility_id=facility_id,
+                facility_type=facility_type,
+                step=step,
+                possible_items=possible_items,
+                timesteps=max_timesteps,
+                quantity_unit="tonnes",
+                can_be_negative=False
+            )
+
             self.transportation_trackers[step_facility_id] = TransportationTracker(timesteps=max_timesteps)
 
         self.cost_graph = cost_graph
