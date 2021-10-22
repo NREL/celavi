@@ -383,9 +383,24 @@ count_facility_inventories = context.run()
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
       flush=True)
 
-# Plot the cumulative count levels of the inventories
-diagnostic_viz = DiagnosticVizAndDataFrame(context, subfolder_dict['outputs_folder'])
-diagnostic_viz.generate_blade_count_plots()
-cumulative_histories = diagnostic_viz.gather_cumulative_histories()
-cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.csv')
-cumulative_histories.to_csv(cumulative_histories_filename, index_label='id')
+# Plot the cumulative count levels of the count inventories
+diagnostic_viz_counts = DiagnosticVizAndDataFrame(
+    context.count_facility_inventories,
+    'count',
+    subfolder_dict['outputs_folder']
+)
+diagnostic_viz_counts.generate_plots()
+count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
+count_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.csv')
+count_cumulative_histories.to_csv(count_cumulative_histories_filename, index_label='id')
+
+# Plot the mass levels of the mass inventories
+diagnostic_viz_mass = DiagnosticVizAndDataFrame(
+    context.mass_facility_inventories,
+    'tonnes',
+    subfolder_dict['outputs_folder']
+)
+diagnostic_viz_mass.generate_plots()
+mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
+mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
+mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
