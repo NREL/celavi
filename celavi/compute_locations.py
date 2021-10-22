@@ -45,14 +45,6 @@ class ComputeLocations:
         self.facility_type_lookup = pd.read_csv(self.lookup_facility_type_file, header=None)
 
 
-    def w_avg(self,df, values, weights):
-        
-        """Calculate weighted averages for wind turbines"""
-        d = df[values]
-        w = df[weights]
-        return (d * w).sum() / w.sum() 
-
-
     def wind_power_plant(self):
 
         """Process data for wind power plants - from USWTDB"""
@@ -91,7 +83,7 @@ class ComputeLocations:
         n_turb2 = n_turb[n_turb['year'] > 1999]
         
         data3 = n_turb2.groupby(['year','facility_id','p_name','t_cap']).size().reset_index().rename(columns={0:'n_turbine'})        
-        data4 = data3.groupby(['year','facility_id']).apply(self.w_avg, 't_cap', 'n_turbine').reset_index().rename(columns={0:'t_cap'})
+        data4 = data3.groupby(['year','facility_id']).apply(lambda x: np.average(x.t_cap, weights=x.n_turbine)).reset_index().rename(columns={0:'t_cap'})
         data5 = data3.groupby(['year','facility_id'])['n_turbine'].agg('sum').reset_index()
         data6 = data5.merge(data4, on = ['year','facility_id'])        
 
