@@ -59,7 +59,8 @@ class ComputeLocations:
                                                    "t_county": "region_id_3",
                                                    "xlong": "long",
                                                    "ylat": "lat",
-                                                   "eia_id": "facility_id"},
+                                                   "eia_id": "facility_id",
+                                                   "p_year":"year"},
                                           inplace=True)
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
@@ -76,51 +77,45 @@ class ComputeLocations:
 
         # Filter down the dataset to generate the number_of_turbines file
         n_turb = turbine_locations_with_eia[
-            ['facility_id','p_name', 'p_year', 'p_tnum','t_model','t_cap']
+            ['facility_id','p_name', 'year', 'p_tnum','t_model','t_cap']
         ].drop_duplicates().dropna()
 
-        n_turb2 = n_turb[n_turb['p_year'] > 1999]
-        n_turb3 = n_turb2[
-            ['facility_id','p_name', 'p_year', 'p_tnum', 't_cap']
-        ].drop_duplicates(
-            ['facility_id','p_name', 'p_year', 'p_tnum']
-        ).dropna()
+        n_turb2 = n_turb[n_turb['year'] > 1999]
+        def w_avg(df, values, weights):
+            d = df[values]
+            w = df[weights]
+            return (d * w).sum() / w.sum() 
 
-        n_turb4 = n_turb3[['facility_id', 'p_year','p_name','p_tnum', 't_cap']]
-        n_turb4['indicator'] = n_turb4.duplicated(subset = ['facility_id', 'p_year'],keep = False)
-        n_turb4_corr = n_turb4.drop_duplicates(['facility_id', 'p_year'],keep = 'last')
-        n_turb5_corr = n_turb4_corr.drop_duplicates(['p_name', 'p_year'],keep = 'last')
-        n_turb5_corr['indicator'] = n_turb5_corr.duplicated(subset = ['facility_id','p_year'],keep = False)
-        n_turb5_corr['n_turbine'] = n_turb5_corr['p_tnum']
-        n_turb5_corr['year'] = n_turb5_corr['p_year']
-        n_turb5_corr1 = n_turb5_corr[['facility_id','year','p_name','n_turbine', 't_cap']]
+        data3 = n_turb2.groupby(['year','facility_id','p_name','t_cap']).size().reset_index().rename(columns={0:'n_turbine'})        
+        data4 = data3.groupby(['year','facility_id']).apply(w_avg, 't_cap', 'n_turbine').reset_index().rename(columns={0:'t_cap'})
+        data5 = data3.groupby(['year','facility_id'])['n_turbine'].agg('sum').reset_index()
+        data6 = data5.merge(data4, on = ['year','facility_id'])        
+
 
         # Store this dataframe into self for use in capacity projection
         # calculations
-        self.capacity_data = n_turb5_corr1
+        # this file created the number of turbines file.
+        self.capacity_data = data6
 
         turbine_locations_filtered = turbine_locations_with_eia[
-            turbine_locations_with_eia.p_year > 1999
+            turbine_locations_with_eia.year > 1999
         ]
+
 
         # determine average lat and long for all turbines by facility_id
         # #(this is the plant location for each facility_id)
-        plant_locations = turbine_locations_filtered[['facility_id', 'long', 'lat']].groupby(by=['facility_id']).mean().reset_index()
+        plant_locations = turbine_locations_filtered.groupby(['facility_id','region_id_2',"region_id_3"])['long', 'lat'].agg('mean').reset_index()
+        #Dropping duplicates on p year and eia id and keeping only the first county occurences in case spread over multiple counties. Assumption
+        plant_locations = plant_locations.drop_duplicates(subset = ['facility_id'],keep = 'first')
         plant_locations = plant_locations.astype({'facility_id': 'int'})  # recast type for facility_id
-        # select turbine data for county with most capacity (some plants have turbines in multiple counties and/or
-        # multiple phases with different amounts of capacity)
-        plant_turbine_capacity = turbine_locations_filtered[['facility_id', 'region_id_2', 'region_id_3', 'p_cap', 't_cap']]
-        plant_county_phase = plant_turbine_capacity.groupby(by=['facility_id', 'region_id_2', 'region_id_3', 'p_cap']).sum().reset_index()
-        wind_plant_list = plant_county_phase.groupby(by=['facility_id', 'region_id_2']).max().reset_index()[['facility_id', 'region_id_2', 'region_id_3']]
-
-        # merge plant list with location data
-        wind_plant_locations = wind_plant_list.merge(plant_locations, on='facility_id')
-
+        #Unique eia id and p _year have only one lat long associated now along with one region county and state.
+        
+        wind_plant_locations = plant_locations
         # use the number_of_turbines data structure to filter down the
         # turbine_locations_with_eia data structure
         wind_plant_locations = wind_plant_locations[
             wind_plant_locations.facility_id.isin(
-                n_turb5_corr1.facility_id
+                data6.facility_id
             )
         ].drop_duplicates(subset='facility_id',
                           keep='first')
@@ -378,15 +373,6 @@ class ComputeLocations:
         locations = facility_locations.append(wind_plant_locations)
         locations = locations.append(landfill_locations_no_nulls)
         locations.reset_index(drop=True, inplace=True)
-
-        # exclude Hawaii, Guam, Puerto Rico, and Alaska
-        # (only have road network data for the contiguous United States)
-        locations = locations[locations.region_id_2 != 'GU']
-        locations = locations[locations.region_id_2 != 'HI']
-        locations = locations[locations.region_id_2 != 'PR']
-        locations = locations[locations.region_id_2 != 'AK']
-
-        locations = locations[locations.region_id_3 != 'Nantucket']
 
         # find the entries in locations that have a duplicate facility_id AND
         # are not power plants.
