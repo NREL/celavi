@@ -380,9 +380,6 @@ print(f'Run starting for DES at {np.round(time.time() - time0)} s\n\n\n',
 # Run the context
 count_facility_inventories = context.run()
 
-print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
-      flush=True)
-
 # Plot the cumulative count levels of the count inventories
 diagnostic_viz_counts = DiagnosticVizAndDataFrame(
     context.count_facility_inventories,
@@ -404,3 +401,28 @@ diagnostic_viz_mass.generate_plots()
 mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
 mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
 mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
+
+# Join LCIA and locations computed and write the result to enable creation of maps
+lcia_names = ['year', 'facility_id', 'material', 'stage', 'imapct', 'impact_value']
+lcia_filename = os.path.join(subfolder_dict['lci_folder'], 'final_lcia_results_to_des.csv')
+lcia_df = pd.read_csv(lcia_filename, names=lcia_names)
+locations_df = pd.read_csv(locations_computed_filename)
+
+locations_columns = [
+    'facility_id',
+    'facility_type',
+    'lat',
+    'long',
+    'region_id_1',
+    'region_id_2',
+    'region_id_3'
+]
+
+locations_select_df = locations_df.loc[:, locations_columns]
+lcia_locations_df = lcia_df.merge(locations_select_df, how='inner', on='facility_id')
+lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_locations_join.csv')
+lcia_locations_df.to_csv(lcia_locations_filename)
+
+# Print run finish message
+print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
+      flush=True)
