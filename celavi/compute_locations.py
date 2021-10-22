@@ -373,6 +373,15 @@ class ComputeLocations:
         locations = facility_locations.append(wind_plant_locations)
         locations = locations.append(landfill_locations_no_nulls)
         locations.reset_index(drop=True, inplace=True)
+        
+        # exclude Hawaii, Guam, Puerto Rico, and Alaska
+        # (only have road network data for the contiguous United States)
+        locations = locations[locations.region_id_2 != 'GU']
+        locations = locations[locations.region_id_2 != 'HI']
+        locations = locations[locations.region_id_2 != 'PR']
+        locations = locations[locations.region_id_2 != 'AK']
+        
+        locations = locations[locations.region_id_3 != 'Nantucket']
 
         # find the entries in locations that have a duplicate facility_id AND
         # are not power plants.
