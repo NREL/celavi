@@ -385,23 +385,25 @@ count_facility_inventories = context.run()
 diagnostic_viz_counts = DiagnosticVizAndDataFrame(
     context.count_facility_inventories,
     'count',
-    subfolder_dict['outputs_folder']
+    subfolder_dict['outputs_folder'],
+    keep_cols=des_params.get('component_list', [])
 )
-diagnostic_viz_counts.generate_plots()
+# diagnostic_viz_counts.generate_plots()
 count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
 count_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.csv')
-count_cumulative_histories.to_csv(count_cumulative_histories_filename, index_label='id')
+count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
 
-# # Plot the mass levels of the mass inventories
-# diagnostic_viz_mass = DiagnosticVizAndDataFrame(
-#     context.mass_facility_inventories,
-#     'tonnes',
-#     subfolder_dict['outputs_folder']
-# )
+# Plot the mass levels of the mass inventories
+diagnostic_viz_mass = DiagnosticVizAndDataFrame(
+    facility_inventories=context.mass_facility_inventories,
+    units='tonnes',
+    output_folder_path=subfolder_dict['outputs_folder'],
+    keep_cols=des_params.get('material_list', [])
+)
 # diagnostic_viz_mass.generate_plots()
-# mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
-# mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
-# mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
+mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
+mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
+mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
 
 # Join LCIA and locations computed and write the result to enable creation of maps
 lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact', 'impact_value']
