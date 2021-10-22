@@ -403,7 +403,7 @@ mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder
 mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
 
 # Join LCIA and locations computed and write the result to enable creation of maps
-lcia_names = ['year', 'facility_id', 'material', 'stage', 'imapct', 'impact_value']
+lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact', 'impact_value']
 lcia_filename = os.path.join(subfolder_dict['lci_folder'], 'final_lcia_results_to_des.csv')
 lcia_df = pd.read_csv(lcia_filename, names=lcia_names)
 locations_df = pd.read_csv(locations_computed_filename)
@@ -415,7 +415,8 @@ locations_columns = [
     'long',
     'region_id_1',
     'region_id_2',
-    'region_id_3'
+    'region_id_3',
+    'region_id_4'
 ]
 
 locations_select_df = locations_df.loc[:, locations_columns]
