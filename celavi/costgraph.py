@@ -245,8 +245,6 @@ class CostGraph:
         -------
             list of 2-tuples
         """
-        if self.verbose > 1:
-            print('Getting list of tuples')
 
         if list3 is not None:
             _len = len(list1)
@@ -305,13 +303,15 @@ class CostGraph:
         if subdict:
             # dict of shortest paths to all targets
             nearest = min(subdict, key=subdict.get)
-            # shortest "distance" to any of the targets
-            a_dictionary = {1: "a", 2: "b", 3: "c"}
             timeout = nx.get_node_attributes(self.supply_chain, 'timeout')
-            timeout_list = [value for key, value in timeout.items() if key in short_paths[nearest]]
-            dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist'] for d in range(len(short_paths[nearest])-1)]
+            timeout_list = [value for key, value in timeout.items()
+                            if key in short_paths[nearest]]
+            dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist']
+                         for d in range(len(short_paths[nearest])-1)]
             dist_list.insert(0, 0.0)
-            _out = self.list_of_tuples(short_paths[nearest], timeout_list, dist_list)
+            _out = self.list_of_tuples(short_paths[nearest],
+                                       timeout_list,
+                                       dist_list)
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_cost_history
@@ -333,18 +333,24 @@ class CostGraph:
                             self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
                         ].region_id_4.values[0],
                         'eol_pathway_type' : i,
-                        'eol_pathway_dist' : min([value for key,value in subdict.items() if i in key]),
-                        'bol_pathway_dist' : nx.shortest_path_length(self.supply_chain,
-                                                                     source='manufacturing_'
-                                                                            + str(
-                                                                         self.find_upstream_neighbor(
-                                                                             node_id=int(str(source).split('_')[1]),
-                                                                             crit='cost'
-                                                                         )
-                                                                     ),
-                                                                     target=str(source),
-                                                                     weight='cost',
-                                                                     method='bellman-ford')
+                        'eol_pathway_dist' : min(
+                            [value for key,value in subdict.items()
+                             if i in key]
+                        ),
+                        'bol_pathway_dist' :
+                            nx.shortest_path_length(
+                                self.supply_chain,
+                                source='manufacturing_' + str(
+                                    self.find_upstream_neighbor(
+                                        node_id=int(str(source).split('_')[1]
+                                                    ),
+                                        crit='cost'
+                                    )
+                                ),
+                                target=str(source),
+                                weight='cost',
+                                method='bellman-ford'
+                            )
                     }
                 )
 
@@ -382,7 +388,11 @@ class CostGraph:
 
         _type = facility_df['facility_type'].values[0]
 
-        _out = self.fac_edges[[u_edge,v_edge]].loc[self.fac_edges.facility_type == _type].dropna().to_records(index=False).tolist()
+        _out = self.fac_edges[
+            [u_edge,v_edge]
+        ].loc[
+            self.fac_edges.facility_type == _type
+        ].dropna().to_records(index=False).tolist()
 
         return _out
 
@@ -415,22 +425,28 @@ class CostGraph:
         _id = facility_df['facility_id'].values[0]
 
         # list of nodes (processing steps) within a facility
-        _node_names = self.step_costs['step'].loc[self.step_costs.facility_id == _id].tolist()
+        _node_names = self.step_costs['step'].loc[
+            self.step_costs.facility_id == _id
+        ].tolist()
 
         # data frame matching facility processing steps with methods for cost
         # calculation over time
         _step_cost = self.step_costs[['step',
                                       'step_cost_method',
                                       'facility_id',
-                                      'connects']].loc[self.step_costs.facility_id == _id]
+                                      'connects']].loc[
+            self.step_costs.facility_id == _id
+        ]
 
         _step_cost['timeout'] = 1
 
         # create list of dictionaries from data frame with processing steps,
         # cost calculation method, and facility-specific region identifiers
-        _attr_data = _step_cost.merge(facility_df,
-                                      how='outer',
-                                      on='facility_id').to_dict(orient='records')
+        _attr_data = _step_cost.merge(
+            facility_df,
+            how='outer',
+            on='facility_id'
+        ).to_dict(orient='records')
 
         # reformat data into a list of tuples as (str, dict)
         _nodes = self.list_of_tuples(self.get_node_names(_id, _node_names),
@@ -479,14 +495,23 @@ class CostGraph:
         _edges = self.get_edges(facility_df)
         _unique_edges = [tuple(map(lambda w: w+'_'+_id, x)) for x in _edges]
 
-        _methods = [{'cost_method': [getattr(CostMethods, _facility.nodes[edge[0]]['step_cost_method'])],
-                     'cost': 0.0,
-                     'dist': 0.0}
-                    for edge in _unique_edges]
+        _methods = [
+            {'cost_method':
+                [
+                    getattr(CostMethods,
+                            _facility.nodes[edge[0]]['step_cost_method']
+                            )
+                ],
+                'cost': 0.0,
+                'dist': 0.0}
+            for edge in _unique_edges
+        ]
 
-        _facility.add_edges_from(self.list_of_tuples([node[0] for node in _unique_edges],
-                                                     [node[1] for node in _unique_edges],
-                                                     _methods))
+        _facility.add_edges_from(
+            self.list_of_tuples([node[0] for node in _unique_edges],
+                                [node[1] for node in _unique_edges],
+                                _methods)
+        )
 
         return _facility
 
@@ -552,29 +577,40 @@ class CostGraph:
             # combinations of _u_nodes and _v_nodes
             _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
 
-            if not any([self.supply_chain.nodes[_v]['step'] in self.sc_end for _v in _v_nodes]):
-                _methods = [{'cost_method': [getattr(CostMethods,
-                                                    self.supply_chain.nodes[edge[0]]['step_cost_method']),
-                                             getattr(CostMethods,
-                                                     _transpo_cost)],
-                             'cost': 0.0,
-                             'dist': -1.0}
-                            for edge in _edge_list]
+            if not any([self.supply_chain.nodes[_v]['step']
+                        in self.sc_end for _v in _v_nodes]):
+                _methods = [
+                    {'cost_method': [
+                        getattr(CostMethods,
+                                self.supply_chain.nodes[edge[0]]['step_cost_method']),
+                        getattr(CostMethods,
+                                _transpo_cost)
+                    ],
+                        'cost': 0.0,
+                        'dist': -1.0}
+                    for edge in _edge_list
+                ]
             else:
-                _methods = [{'cost_method': [getattr(CostMethods,
-                                                    self.supply_chain.nodes[edge[0]]['step_cost_method']),
-                                             getattr(CostMethods,
-                                                     _transpo_cost),
-                                             getattr(CostMethods,
-                                                     self.supply_chain.nodes[edge[1]]['step_cost_method'])],
-                             'cost': 0.0,
-                             'dist': -1.0}
-                            for edge in _edge_list]
+                _methods = [
+                    {'cost_method': [
+                        getattr(CostMethods,
+                                self.supply_chain.nodes[edge[0]]['step_cost_method']),
+                        getattr(CostMethods,
+                                _transpo_cost),
+                        getattr(CostMethods,
+                                self.supply_chain.nodes[edge[1]]['step_cost_method'])
+                    ],
+                        'cost': 0.0,
+                        'dist': -1.0}
+                    for edge in _edge_list
+                ]
 
             # add these edges to the supply chain
-            self.supply_chain.add_edges_from(self.list_of_tuples([edge[0] for edge in _edge_list],
-                                                                 [edge[1] for edge in _edge_list],
-                                                                 _methods))
+            self.supply_chain.add_edges_from(
+                self.list_of_tuples([edge[0] for edge in _edge_list],
+                                    [edge[1] for edge in _edge_list],
+                                    _methods)
+            )
         if self.verbose > 0:
             print('Transport cost methods added at  %d s' % np.round(
                 time() - self.start_time, 0), flush=True)
@@ -602,9 +638,13 @@ class CostGraph:
                 _prev_line = _line
 
                 # find the source nodes for this route
-                _u = list(search_nodes(self.supply_chain,
-                                       {'and': [{"==": [("facility_id",), _line['source_facility_id'].values[0]]},
-                                                {"in": [("connects",), ["out","bid"]]}]}))
+                _u = list(
+                    search_nodes(
+                        self.supply_chain,
+                        {'and': [{"==": [("facility_id",),
+                                         _line['source_facility_id'].values[0]]},
+                                 {"in": [("connects",),
+                                         ["out","bid"]]}]}))
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
@@ -633,18 +673,20 @@ class CostGraph:
             if self.verbose > 1:
                 print('Calculating edge costs for ', edge)
 
-            self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
-                                                           year=self.year,
-                                                           blade_mass=self.blade_mass,
-                                                           finegrind_cumul_initial=self.finegrind_cumul_initial,
-                                                           coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
-                                                           finegrind_initial_cost=self.finegrind_initial_cost,
-                                                           coarsegrind_initial_cost=self.coarsegrind_initial_cost,
-                                                           finegrind_revenue=self.finegrind_revenue,
-                                                           finegrind_learnrate=self.finegrind_learnrate,
-                                                           coarsegrind_learnrate=self.coarsegrind_learnrate,
-                                                           finegrind_material_loss=self.finegrind_material_loss)
-                                                         for f in self.supply_chain.edges[edge]['cost_method']])
+            self.supply_chain.edges[edge]['cost'] = sum(
+                [f(vkmt=self.supply_chain.edges[edge]['dist'],
+                   year=self.year,
+                   blade_mass=self.blade_mass,
+                   finegrind_cumul_initial=self.finegrind_cumul_initial,
+                   coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
+                   finegrind_initial_cost=self.finegrind_initial_cost,
+                   coarsegrind_initial_cost=self.coarsegrind_initial_cost,
+                   finegrind_revenue=self.finegrind_revenue,
+                   finegrind_learnrate=self.finegrind_learnrate,
+                   coarsegrind_learnrate=self.coarsegrind_learnrate,
+                   finegrind_material_loss=self.finegrind_material_loss)
+                 for f in self.supply_chain.edges[edge]['cost_method']]
+            )
 
         if self.verbose > 0:
             print('Supply chain graph is built at   %d s' % np.round(
@@ -737,7 +779,8 @@ class CostGraph:
 
         # Get a list of all nodes with an outgoing edge that connects to this
         # node_id, with the specified facility type
-        _upstream_nodes = [n for n in self.supply_chain.predecessors(_node) if n.find(connect_to) != -1]
+        _upstream_nodes = [n for n in self.supply_chain.predecessors(_node)
+                           if n.find(connect_to) != -1]
         
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
@@ -750,8 +793,11 @@ class CostGraph:
         elif len(_upstream_nodes) > 1:
             # If there are multiple options, identify the nearest neighbor
             # according to the crit(eria) parameter
-            _upstream_dists = [self.supply_chain.edges[_up_n, _node][crit] for _up_n in _upstream_nodes]
-            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
+            _upstream_dists = [self.supply_chain.edges[_up_n, _node][crit]
+                               for _up_n in _upstream_nodes]
+            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(
+                min(_upstream_dists)
+            )]
             _nearest_facility_id = _nearest_upstream_node.split('_')[1]
 
         else:
@@ -772,6 +818,7 @@ class CostGraph:
         Parameters
         ----------
         node_name
+        facility_id
         node_id
         connect_to
         crit
@@ -830,7 +877,9 @@ class CostGraph:
 
             _upstream_dists = [self.supply_chain.edges[_node, _lnd_n][crit]
                                for _lnd_n in _downst_nodes]
-            _nearest_downst_node = _downst_nodes[_upstream_dists.index(min(_upstream_dists))]
+            _nearest_downst_node = _downst_nodes[_upstream_dists.index(
+                min(_upstream_dists)
+            )]
             _nearest_facility_id = _nearest_downst_node.split('_')[1]
 
         else:
@@ -873,20 +922,22 @@ class CostGraph:
                   flush=True)
         
         for edge in self.supply_chain.edges():
-            self.supply_chain.edges[edge]['cost'] = sum([f(vkmt=self.supply_chain.edges[edge]['dist'],
-                                                           year=kwargs['year'],
-                                                           blade_mass=kwargs['blade_mass'],
-                                                           finegrind_cumul=kwargs['finegrind_cumul'],
-                                                           coarsegrind_cumul=kwargs['coarsegrind_cumul'],
-                                                           finegrind_cumul_initial=self.finegrind_cumul_initial,
-                                                           coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
-                                                           finegrind_initial_cost=self.finegrind_initial_cost,
-                                                           finegrind_revenue=self.finegrind_revenue,
-                                                           coarsegrind_initial_cost=self.coarsegrind_initial_cost,
-                                                           finegrind_learnrate=self.finegrind_learnrate,
-                                                           coarsegrind_learnrate=self.coarsegrind_learnrate,
-                                                           finegrind_material_loss=self.finegrind_material_loss)
-                                                         for f in self.supply_chain.edges[edge]['cost_method']])
+            self.supply_chain.edges[edge]['cost'] = sum(
+                [f(vkmt=self.supply_chain.edges[edge]['dist'],
+                   year=kwargs['year'],
+                   blade_mass=kwargs['blade_mass'],
+                   finegrind_cumul=kwargs['finegrind_cumul'],
+                   coarsegrind_cumul=kwargs['coarsegrind_cumul'],
+                   finegrind_cumul_initial=self.finegrind_cumul_initial,
+                   coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
+                   finegrind_initial_cost=self.finegrind_initial_cost,
+                   finegrind_revenue=self.finegrind_revenue,
+                   coarsegrind_initial_cost=self.coarsegrind_initial_cost,
+                   finegrind_learnrate=self.finegrind_learnrate,
+                   coarsegrind_learnrate=self.coarsegrind_learnrate,
+                   finegrind_material_loss=self.finegrind_material_loss)
+                 for f in self.supply_chain.edges[edge]['cost_method']]
+            )
 
         if self.verbose > 0:
             print('Costs updated for  %d at         %d s' %
