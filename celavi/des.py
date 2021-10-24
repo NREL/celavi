@@ -399,7 +399,7 @@ class Context:
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             year = self.timesteps_to_years(env.now)
-            avg_blade_mass_kg = self.average_total_blade_mass_for_year(year) * 1000
+            avg_blade_mass = self.average_total_blade_mass_for_year(year)
 
             cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
                 component_kind='blade',
@@ -415,12 +415,12 @@ class Context:
 
             self.cost_graph.update_costs(
                 year=year,
-                blade_mass=avg_blade_mass_kg,
+                blade_mass=avg_blade_mass,
                 finegrind_cumul=cum_mass_fine_grinding,
                 coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
-            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass_kg {avg_blade_mass_kg}", flush=True)
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass {avg_blade_mass}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """
