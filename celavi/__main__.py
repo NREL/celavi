@@ -150,6 +150,12 @@ costgraph_csv_filename = os.path.join(args.data,
                                       data_dirs.get('outputs'),
                                       outputs.get('costgraph_csv'))
 
+pathway_cost_history_filename = os.path.join(
+    args.data,
+    data_dirs.get('outputs'),
+    outputs.get('pathway_cost_history')
+)
+
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
 # and write operations. Also, the Context must be imported down here after
@@ -258,6 +264,7 @@ if initialize_costgraph:
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
+        pathway_cost_history_filename = pathway_cost_history_filename,
         blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
                                 'Glass Fiber:Blade'].values[0],
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
@@ -267,7 +274,7 @@ if initialize_costgraph:
         coarsegrind_initial_cost=cg_params.get('coarsegrind_initial_cost'),
         finegrind_learnrate=cg_params.get('finegrind_learnrate'),
         coarsegrind_learnrate=cg_params.get('coarsegrind_learnrate'),
-        finegrind_material_loss=cg_params.get('finegrind_material_loss'),
+        finegrind_material_loss=cg_params.get('finegrind_material_loss')
     )
     print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -404,3 +411,6 @@ diagnostic_viz_mass.generate_plots()
 mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
 mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
 mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
+
+# Postprocess and save CostGraph outputs
+netw.save_costgraph_outputs()
