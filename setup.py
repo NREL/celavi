@@ -28,7 +28,7 @@ setuptools.setup(
         "graphviz",
         "simpy",
 	    "networkx-query",
-        "olca-ipc",
+        "olca-ipc==0.0.10",
         "pyutilib",
         "joblib",
         "plotly",
