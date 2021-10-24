@@ -292,10 +292,6 @@ class CostGraph:
                                                         source,
                                                         weight=crit)
 
-        costs = nx.single_source_bellman_ford_path_length(self.supply_chain,
-                                                          source,
-                                                          weight='cost')
-
         short_paths = nx.single_source_bellman_ford_path(self.supply_chain,
                                                      source)
 
@@ -319,28 +315,38 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_cost_history
-            self.pathway_cost_history.append(
-                {
-                    'year' : self.year,
-                    'facility_id' : self.supply_chain.nodes[source]['facility_id'],
-                    'region_id_1' : self.loc_df[
-                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                    ].region_id_1.values[0],
-                    'region_id_2' : self.loc_df[
-                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                    ].region_id_2.values[0],
-                    'region_id_3' : self.loc_df[
-                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                    ].region_id_3.values[0],
-                    'region_id_4' : self.loc_df[
-                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                    ].region_id_4.values[0],
-                    'eol_pathway_type' : self.supply_chain.nodes[nearest]['facility_type'],
-                    'eol_pathway_cost' : costs[nearest],
-                    'bol_pathway_cost' : None, # @TODO Add in manufacturing costs
-                    'eol_pathway_criterion' : lengths[nearest]
-                }
-            )
+            for i in self.sc_end:
+                self.pathway_cost_history.append(
+                    {
+                        'year' : self.year,
+                        'facility_id' : self.supply_chain.nodes[source]['facility_id'],
+                        'region_id_1' : self.loc_df[
+                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                        ].region_id_1.values[0],
+                        'region_id_2' : self.loc_df[
+                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                        ].region_id_2.values[0],
+                        'region_id_3' : self.loc_df[
+                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                        ].region_id_3.values[0],
+                        'region_id_4' : self.loc_df[
+                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                        ].region_id_4.values[0],
+                        'eol_pathway_type' : i,
+                        'eol_pathway_dist' : min([value for key,value in subdict.items() if i in key]),
+                        'bol_pathway_dist' : nx.shortest_path_length(self.supply_chain,
+                                                                     source='manufacturing_'
+                                                                            + str(
+                                                                         self.find_upstream_neighbor(
+                                                                             node_id=int(str(source).split('_')[1]),
+                                                                             crit='cost'
+                                                                         )
+                                                                     ),
+                                                                     target=str(source),
+                                                                     weight='cost',
+                                                                     method='bellman-ford')
+                    }
+                )
 
             return nearest, subdict[nearest], _out
         else:
@@ -886,6 +892,7 @@ class CostGraph:
             print('Costs updated for  %d at         %d s' %
                  (kwargs['year'], np.round(time() - self.start_time, 0)),
                  flush=True)
+
 
     def save_costgraph_outputs(self):
         """
