@@ -4,7 +4,7 @@ import numpy as np
 from itertools import product
 from time import time
 from networkx_query import search_nodes
-
+import pdb
 from celavi.costmethods import CostMethods
 
 class CostGraph:
@@ -20,6 +20,7 @@ class CostGraph:
                  transpo_edges_file : str,
                  locations_file : str,
                  routes_file : str,
+                 pathway_cost_history_filename: str,
                  sc_begin : str = 'manufacturing',
                  sc_end = ('landfilling', 'cement co-processing', 'next use'),
                  year : float = 2000.0,
@@ -110,8 +111,12 @@ class CostGraph:
         self.transpo_edges = pd.read_csv(transpo_edges_file)
 
         # these data sets are processed line by line
-        self.loc_df=locations_file
-        self.routes_df=routes_file
+        self.loc_file=locations_file
+        self.routes_file=routes_file
+
+        # also read in the locations as a dataframe for reference in
+        # find_nearest
+        self.loc_df = pd.read_csv(locations_file)
 
         self.sc_end=sc_end
         self.sc_begin=sc_begin
@@ -146,6 +151,11 @@ class CostGraph:
         self.max_dist = max_dist
 
         self.verbose = verbose
+
+        self.pathway_cost_history_filename = pathway_cost_history_filename
+
+        # create empty List to store the pathway cost output data
+        self.pathway_cost_history = list()
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -282,6 +292,10 @@ class CostGraph:
                                                         source,
                                                         weight=crit)
 
+        costs = nx.single_source_bellman_ford_path_length(self.supply_chain,
+                                                          source,
+                                                          weight='cost')
+
         short_paths = nx.single_source_bellman_ford_path(self.supply_chain,
                                                      source)
 
@@ -302,6 +316,31 @@ class CostGraph:
             dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist'] for d in range(len(short_paths[nearest])-1)]
             dist_list.insert(0, 0.0)
             _out = self.list_of_tuples(short_paths[nearest], timeout_list, dist_list)
+
+            # create dictionary for this preferred pathway cost and decision
+            # criterion and append to the pathway_cost_history
+            self.pathway_cost_history.append(
+                {
+                    'year' : self.year,
+                    'facility_id' : self.supply_chain.nodes[source]['facility_id'],
+                    'region_id_1' : self.loc_df[
+                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                    ].region_id_1.values[0],
+                    'region_id_2' : self.loc_df[
+                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                    ].region_id_2.values[0],
+                    'region_id_3' : self.loc_df[
+                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                    ].region_id_3.values[0],
+                    'region_id_4' : self.loc_df[
+                        self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
+                    ].region_id_4.values[0],
+                    'eol_pathway_type' : self.supply_chain.nodes[nearest]['facility_type'],
+                    'eol_pathway_cost' : costs[nearest],
+                    'bol_pathway_cost' : None, # @TODO Add in manufacturing costs
+                    'eol_pathway_criterion' : lengths[nearest]
+                }
+            )
 
             return nearest, subdict[nearest], _out
         else:
@@ -464,7 +503,7 @@ class CostGraph:
                 time() - self.start_time, 0), flush=True)
 
         # add all facilities and intra-facility edges to supply chain
-        with open(self.loc_df, 'r') as _loc_file:
+        with open(self.loc_file, 'r') as _loc_file:
 
             _reader = pd.read_csv(_loc_file, chunksize=1)
 
@@ -535,7 +574,7 @@ class CostGraph:
                 time() - self.start_time, 0), flush=True)
 
         # read in and process routes line by line
-        with open(self.routes_df, 'r') as _route_file:
+        with open(self.routes_file, 'r') as _route_file:
             if self.verbose > 0:
                 print('Adding route distances at        %d s' % np.round(
                     time() - self.start_time, 0), flush=True)
@@ -819,6 +858,9 @@ class CostGraph:
         -------
         None
         """
+        # update the year for CostGraph
+        self.year = kwargs['year']
+
         if self.verbose > 0:
             print('Updating costs for %d at         %d s' %
                   (kwargs['year'], np.round(time() - self.start_time, 0)),
@@ -844,3 +886,22 @@ class CostGraph:
             print('Costs updated for  %d at         %d s' %
                  (kwargs['year'], np.round(time() - self.start_time, 0)),
                  flush=True)
+
+    def save_costgraph_outputs(self):
+        """
+        Performs postprocessing on CostGraph outputs being saved to file and
+        saves to user-specified filenames and directories
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        None
+        """
+
+        pd.DataFrame(
+            self.pathway_cost_history
+        ).drop_duplicates(
+            ignore_index=True
+        ).to_csv(self.pathway_cost_history_filename,index=False)
