@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import os
 
@@ -19,7 +19,8 @@ class DiagnosticVizAndDataFrame:
     def __init__(self,
                  facility_inventories: Dict[str, FacilityInventory],
                  units: str,
-                 output_folder_path: str):
+                 output_folder_path: str,
+                 keep_cols: List[str]):
         """
         Parameters
         ----------
@@ -36,6 +37,7 @@ class DiagnosticVizAndDataFrame:
         self.cumulative_histories = None
         self.units = units
         self.output_folder_path = output_folder_path
+        self.keep_cols = keep_cols
 
     def gather_cumulative_histories(self) -> pd.DataFrame:
         """
@@ -62,54 +64,51 @@ class DiagnosticVizAndDataFrame:
             cumulative_history["year_ceil"] = np.ceil(cumulative_history["year"])
             cumulative_histories.append(cumulative_history)
 
-        gathered = pd.concat(cumulative_histories)
-
-        self.cumulative_histories = gathered.drop(columns=["nacelle", "tower", "foundation"])
-        self.cumulative_histories .rename(columns={"blade": self.units}, inplace=True)
+        self.cumulative_histories = pd.concat(cumulative_histories)
 
         return self.cumulative_histories
 
-    def generate_plots(self):
-        """
-        Generate the blade count history plots
-        """
-        cumulative_histories = self.gather_cumulative_histories()
-        blade_counts = (
-            cumulative_histories.loc[:, ["year", self.units, "facility_type"]]
-            .groupby(["year", "facility_type"])
-            .sum()
-            .reset_index()
-        )
-        fig = px.line(
-            blade_counts,
-            x="year",
-            y=self.units,
-            facet_col="facility_type",
-            title=self.units,
-            facet_col_wrap=2,
-            width=1000,
-            height=1500,
-        )
-        facet_plots_filename = os.path.join(
-            self.output_folder_path, f"{self.units}_facets.png"
-        )
-        fig.write_image(facet_plots_filename)
-        blade_counts = (
-            cumulative_histories.loc[:, ["year", self.units, "facility_type"]]
-            .groupby(["year", "facility_type"])
-            .sum()
-            .reset_index()
-        )
-        fig = px.line(
-            blade_counts,
-            x="year",
-            y=self.units,
-            color="facility_type",
-            title=self.units,
-            width=1000,
-            height=500,
-        )
-        one_plot_filename = os.path.join(
-            self.output_folder_path, f"{self.units}_single.png"
-        )
-        fig.write_image(one_plot_filename)
+    # def generate_plots(self):
+    #     """
+    #     Generate the blade count history plots
+    #     """
+    #     cumulative_histories = self.gather_cumulative_histories()
+    #     blade_counts = (
+    #         cumulative_histories.loc[:, ["year", self.units, "facility_type"]]
+    #         .groupby(["year", "facility_type"])
+    #         .sum()
+    #         .reset_index()
+    #     )
+    #     fig = px.line(
+    #         blade_counts,
+    #         x="year",
+    #         y=self.units,
+    #         facet_col="facility_type",
+    #         title=self.units,
+    #         facet_col_wrap=2,
+    #         width=1000,
+    #         height=1500,
+    #     )
+    #     facet_plots_filename = os.path.join(
+    #         self.output_folder_path, f"{self.units}_facets.png"
+    #     )
+    #     fig.write_image(facet_plots_filename)
+    #     blade_counts = (
+    #         cumulative_histories.loc[:, ["year", self.units, "facility_type"]]
+    #         .groupby(["year", "facility_type"])
+    #         .sum()
+    #         .reset_index()
+    #     )
+    #     fig = px.line(
+    #         blade_counts,
+    #         x="year",
+    #         y=self.units,
+    #         color="facility_type",
+    #         title=self.units,
+    #         width=1000,
+    #         height=500,
+    #     )
+    #     one_plot_filename = os.path.join(
+    #         self.output_folder_path, f"{self.units}_single.png"
+    #     )
+    #     fig.write_image(one_plot_filename)

@@ -1,4 +1,4 @@
-from typing import Deque, Tuple
+from typing import Deque, Tuple, Dict
 from collections import deque
 
 
@@ -21,7 +21,7 @@ class Component:
         lifespan_timesteps: float,
         manuf_facility_id: int,
         in_use_facility_id: int,
-        mass_tonnes: float = 0,
+        mass_tonnes: Dict[str, float] = 0,
     ):
         """
         This takes parameters named the same as the instance variables. See
@@ -53,9 +53,9 @@ class Component:
             more intuitive integration with random number generators defined
             outside this class which may return floating point values.
 
-        mass_tonnes: float
-            The total mass of the component, in tonnes. Can be None if the component
-            mass is not being used.
+        mass_tonnes: Dict[str, float]
+            The masses of the materials of the component, in tonnes. Keys are
+            material names. Values are material masses.
 
         manuf_facility_id: int
             The initial facility id (where the component begins life) used in
@@ -131,11 +131,17 @@ class Component:
         count_inventory = self.context.count_facility_inventories[self.current_location]
         mass_inventory = self.context.mass_facility_inventories[self.current_location]
         count_inventory.increment_quantity(self.kind, 1, env.now)
-        mass_inventory.increment_quantity(self.kind, self.mass_tonnes, env.now)
+
+        for material, mass in self.mass_tonnes.items():
+            mass_inventory.increment_quantity(material, mass, env.now)
+
         yield env.timeout(lifespan)
         # only inbound transportation is tracked
         count_inventory.increment_quantity(self.kind, -1, env.now)
-        mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
+
+        for material, mass in self.mass_tonnes.items():
+            mass_inventory.increment_quantity(material, -mass, env.now)
+
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
@@ -166,15 +172,17 @@ class Component:
                         1,
                         env.now
                     )
-                    fg_transport.increment_inbound_tonne_km(
-                        self.mass_tonnes * distance,
-                        env.now
-                    )
-                    fg_mass_inventory.increment_quantity(
-                        self.kind,
-                        self.mass_tonnes,
-                        env.now
-                    )
+
+                    # Assuming that all materials incur the same impacts
+                    # to transport. So whether you are transporting a tonne of
+                    # GFRP or a ton of steel, it is the same impact. Perhaps
+                    # not true?
+
+                    for _, mass in self.mass_tonnes.items():
+                        fg_transport.increment_inbound_tonne_km(mass * distance, env.now)
+
+                    for material, mass in self.mass_tonnes.items():
+                        fg_mass_inventory.increment_quantity(material, mass, env.now)
 
                     # locate the nearest landfill and increment for material loss
                     _loss_landfill = self.context.cost_graph.find_downstream(
@@ -213,19 +221,24 @@ class Component:
                         1 - self.context.cost_graph.finegrind_material_loss,
                         env.now
                     )
-                    # For mass self.mass_tonnes * self.context.cost_graph.finegrind_material_loss
-                    nu_mass_inventory.increment_quantity(
-                        self.kind,
-                        (1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes,
-                        env.now
-                    )
-                    nu_transport.increment_inbound_tonne_km(
-                        (1 - self.context.cost_graph.finegrind_material_loss) * self.mass_tonnes * distance,
-                        env.now
-                    )
+
+                    for material, mass in self.mass_tonnes.items():
+                        nu_mass_inventory.increment_quantity(
+                            material,
+                            (1 - self.context.cost_graph.finegrind_material_loss) * mass,
+                            env.now
+                        )
+
+                        nu_transport.increment_inbound_tonne_km(
+                            (1 - self.context.cost_graph.finegrind_material_loss) * mass * distance,
+                            env.now
+                        )
+
                     yield env.timeout(lifespan)
+
                     fg_count_inventory.increment_quantity(self.kind, -1, env.now)
-                    fg_mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
+                    for material, mass in self.mass_tonnes.items():
+                        fg_mass_inventory.increment_quantity(material, -mass, env.now)
 
                 elif 'next use' in location:
                     # the inventory and transportation was incremented when the
@@ -237,12 +250,23 @@ class Component:
                     mass_inventory = self.context.mass_facility_inventories[location]
                     transport = self.context.transportation_trackers[location]
                     count_inventory.increment_quantity(self.kind, 1, env.now)
-                    mass_inventory.increment_quantity(self.kind, self.mass_tonnes, env.now)
-                    transport.increment_inbound_tonne_km(self.mass_tonnes * distance, env.now)
+
+                    for material, mass in self.mass_tonnes.items():
+                        mass_inventory.increment_quantity(material, mass, env.now)
+
+                    # Again, assuming the transportation impacts are the same per unit
+                    # mass for all materials.
+                    for _, mass in self.mass_tonnes.items():
+                        transport.increment_inbound_tonne_km(mass * distance, env.now)
+
                     self.current_location = location
+
                     yield env.timeout(lifespan)
+
                     count_inventory.increment_quantity(self.kind, -1, env.now)
-                    mass_inventory.increment_quantity(self.kind, -self.mass_tonnes, env.now)
+
+                    for material, mass in self.mass_tonnes.items():
+                        mass_inventory.increment_quantity(material, -mass, env.now)
 
             else:
                 break
