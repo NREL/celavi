@@ -266,7 +266,8 @@ if initialize_costgraph:
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
         blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
-                                'Glass Fiber:Blade'].values[0],
+                                'glass fiber reinforced polymer'].values[0],
+
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
         coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
         finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
@@ -307,10 +308,11 @@ context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
     avg_blade_masses_filename=avg_blade_masses_filename,
-    possible_items=des_params.get('component_list'),
+    possible_components=des_params.get('component_list', []),
+    possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
-    min_year = scenario_params.get('start_year'),
+    min_year=scenario_params.get('start_year'),
     max_timesteps = des_timesteps,
     timesteps_per_year = scenario_params.get('timesteps_per_year')
 )
@@ -391,23 +393,25 @@ count_facility_inventories = context.run()
 diagnostic_viz_counts = DiagnosticVizAndDataFrame(
     context.count_facility_inventories,
     'count',
-    subfolder_dict['outputs_folder']
+    subfolder_dict['outputs_folder'],
+    keep_cols=des_params.get('component_list', [])
 )
-diagnostic_viz_counts.generate_plots()
+# diagnostic_viz_counts.generate_plots()
 count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
 count_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.csv')
-count_cumulative_histories.to_csv(count_cumulative_histories_filename, index_label='id')
+count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
 
 # Plot the mass levels of the mass inventories
 diagnostic_viz_mass = DiagnosticVizAndDataFrame(
-    context.mass_facility_inventories,
-    'tonnes',
-    subfolder_dict['outputs_folder']
+    facility_inventories=context.mass_facility_inventories,
+    units='tonnes',
+    output_folder_path=subfolder_dict['outputs_folder'],
+    keep_cols=des_params.get('material_list', [])
 )
-diagnostic_viz_mass.generate_plots()
+# diagnostic_viz_mass.generate_plots()
 mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
 mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
-mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index_label='id')
+mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
 
 
 # Postprocess and save CostGraph outputs
@@ -435,7 +439,11 @@ lcia_locations_df = lcia_df.merge(locations_select_df, how='inner', on='facility
 lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_locations_join.csv')
 lcia_locations_df.to_csv(lcia_locations_filename)
 
+# Write the data sent to the LCIA
+data_for_lci_df = pd.DataFrame(context.data_for_lci)
+data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
+data_for_lci_df.to_csv(data_for_lci_filename, index=False)
+
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
       flush=True)
-
