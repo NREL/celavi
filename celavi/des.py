@@ -257,6 +257,9 @@ class Context:
         through coarse grinding facilities at time step 100, this is your
         method!
 
+        Note: This uses the average blade mass for the year, not the sum
+        of facility inventories.
+
         Parameters
         ----------
         component_kind: str
@@ -296,9 +299,6 @@ class Context:
         When this process computes the blade mass, it divides the result by 3.0 because
         the mass input file assumes a mass for the entire rotor.
         TODO correct the mass input file to simply have single blade mass
-
-        Currently, the material is assumed to be "glass fiber reinforced polymer"
-        TODO Replace this hardcoding by reading from the Components.
 
         It only calls the LCA code for timesteps where the mass_kg > 0. Years with
         zero mass flows are not passed to the LCA.
