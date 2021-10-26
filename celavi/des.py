@@ -40,9 +40,6 @@ class Context:
         timesteps_per_year: int = 12
     ):
         """
-        For the average_blade_masses file, the columns are "p_year" and "Glass Fiber:Blade"
-        for the year and the average amount of glass fiber in each blade, respectively.
-
         Parameters
         ----------
         step_costs_filename: str
