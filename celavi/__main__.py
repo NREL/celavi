@@ -150,6 +150,12 @@ costgraph_csv_filename = os.path.join(args.data,
                                       data_dirs.get('outputs'),
                                       outputs.get('costgraph_csv'))
 
+pathway_cost_history_filename = os.path.join(
+    args.data,
+    data_dirs.get('outputs'),
+    outputs.get('pathway_cost_history')
+)
+
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
 # and write operations. Also, the Context must be imported down here after
@@ -258,8 +264,7 @@ if initialize_costgraph:
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
-
-        # TODO: Change this to take all materials into account
+        pathway_cost_history_filename = pathway_cost_history_filename,
         blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
                                 'glass fiber reinforced polymer'].values[0],
 
@@ -270,7 +275,7 @@ if initialize_costgraph:
         coarsegrind_initial_cost=cg_params.get('coarsegrind_initial_cost'),
         finegrind_learnrate=cg_params.get('finegrind_learnrate'),
         coarsegrind_learnrate=cg_params.get('coarsegrind_learnrate'),
-        finegrind_material_loss=cg_params.get('finegrind_material_loss'),
+        finegrind_material_loss=cg_params.get('finegrind_material_loss')
     )
     print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -408,6 +413,10 @@ mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
 mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
 mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
 
+
+# Postprocess and save CostGraph outputs
+netw.save_costgraph_outputs()
+
 # Join LCIA and locations computed and write the result to enable creation of maps
 lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact', 'impact_value']
 lcia_filename = os.path.join(subfolder_dict['lci_folder'], 'final_lcia_results_to_des.csv')
@@ -436,4 +445,5 @@ data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for
 data_for_lci_df.to_csv(data_for_lci_filename, index=False)
 
 # Print run finish message
-print(f'FINISHED RUN at {np.round(time.time() - time0)} s', flush=True)
+print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
+      flush=True)
