@@ -294,11 +294,7 @@ class Context:
         """
         pylca_interface_process() runs periodically to update the LCIA model with
         results from the DES model. It updates the LCA code with the latest distance
-        and mass flow calculation.
-
-        When this process computes the blade mass, it divides the result by 3.0 because
-        the mass input file assumes a mass for the entire rotor.
-        TODO correct the mass input file to simply have single blade mass
+        and mass flow calculations.
 
         It only calls the LCA code for timesteps where the mass_kg > 0. Years with
         zero mass flows are not passed to the LCA.
