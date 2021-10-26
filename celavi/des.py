@@ -387,7 +387,7 @@ class Context:
         """
         print('Updating cost graph')
         while True:
-            print(f'{datetime.now()}In While loop update cost graph',flush = True)
+            print(f'{datetime.now()} In While loop update cost graph',flush = True)
             time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
