@@ -334,13 +334,12 @@ for _, row in turbine_data.iterrows():
     n_turbine = int(row['n_turbine'])
 
     for _ in range(n_turbine):
-        for _ in range(3):
-            components.append({
-                'year': year,
-                'kind': 'blade',
-                'manuf_facility_id': manuf_facility_id,
-                'in_use_facility_id': in_use_facility_id
-            })
+        components.append({
+            'year': year,
+            'kind': 'blade',
+            'manuf_facility_id': manuf_facility_id,
+            'in_use_facility_id': in_use_facility_id
+        })
 
 print(f'Components created at {np.round(time.time() - time0, 1)} s',
       flush=True)
