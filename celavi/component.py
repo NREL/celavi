@@ -3,16 +3,6 @@ from collections import deque
 
 
 class Component:
-    """
-    This class models a component in the discrete event simulation (DES) model.
-
-    transitions_table: Dict[StateTransition, NextState]
-        The transition table for the state machine. E.g., when a component
-        begins life, it enters the "use" state. When a component is in the
-        "use" state, it can receive the transition "landfilling", which
-        transitions the component into the "landfill" state.
-    """
-
     def __init__(
         self,
         context,
