@@ -189,7 +189,7 @@ class Component:
                         env.now
                     )
 
-                    for material, mass in self.mass_tonnes:
+                    for material, mass in self.mass_tonnes.items():
                         lf_transport.increment_inbound_tonne_km(
                             self.context.cost_graph.finegrind_material_loss * mass * distance,
                             env.now
