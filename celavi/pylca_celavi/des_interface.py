@@ -2,6 +2,7 @@ import pandas as pd
 from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
 from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
 import sys
+import os
 from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 
 # Concrete lifecycle inventory updater
@@ -40,6 +41,14 @@ postprocessing() reads:
 postprocessing() writes:
     - nothing
 """
+
+
+try:
+    os.remove('final_lcia_results_to_des.csv')
+    print('old lcia results file deleted')
+except:
+    pass
+    
 
 
 def lca_performance_improvement(df):
