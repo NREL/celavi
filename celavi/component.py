@@ -3,16 +3,6 @@ from collections import deque
 
 
 class Component:
-    """
-    This class models a component in the discrete event simulation (DES) model.
-
-    transitions_table: Dict[StateTransition, NextState]
-        The transition table for the state machine. E.g., when a component
-        begins life, it enters the "use" state. When a component is in the
-        "use" state, it can receive the transition "landfilling", which
-        transitions the component into the "landfill" state.
-    """
-
     def __init__(
         self,
         context,
@@ -198,15 +188,17 @@ class Component:
                         self.context.cost_graph.finegrind_material_loss,
                         env.now
                     )
-                    lf_transport.increment_inbound_tonne_km(
-                        self.context.cost_graph.finegrind_material_loss * self.mass_tonnes * distance,
-                        env.now
-                    )
-                    lf_mass_inventory.increment_quantity(
-                        self.kind,
-                        self.context.cost_graph.finegrind_material_loss * self.mass_tonnes,
-                        env.now
-                    )
+
+                    for material, mass in self.mass_tonnes.items():
+                        lf_transport.increment_inbound_tonne_km(
+                            self.context.cost_graph.finegrind_material_loss * mass * distance,
+                            env.now
+                        )
+                        lf_mass_inventory.increment_quantity(
+                            material,
+                            self.context.cost_graph.finegrind_material_loss * mass,
+                            env.now
+                        )
 
                     # locate the nearest next use facility and increment the rest
                     _next_use = self.context.cost_graph.find_downstream(

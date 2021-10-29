@@ -43,7 +43,9 @@ class FacilityInventory:
 
         can_be_negative: bool
             True if the quantity in this inventory can be negative. If False,
-            the quantity must always be positive.
+            the quantity must always be positive, and the instance will
+            raise an exception if there is an attempt of a negative
+            transaction.
 
         Other instance variables
         ------------------------
@@ -88,9 +90,9 @@ class FacilityInventory:
         For landfill additions, the quantity should be positive to
         indicate a deposit of material.
 
-        For recycling, the quantity can either be positive or negative,
-        depending on if there is an increase in supply or a decrease in
-        supply through consumption.
+        For other lifecycle transitions, the quantity can either be
+        positive or negative, depending on if there is an increase in
+        supply or a decrease in supply at a particular facility inventory.
 
         Parameters
         ----------

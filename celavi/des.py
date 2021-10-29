@@ -40,9 +40,6 @@ class Context:
         timesteps_per_year: int = 12
     ):
         """
-        For the average_blade_masses file, the columns are "p_year" and "Glass Fiber:Blade"
-        for the year and the average amount of glass fiber in each blade, respectively.
-
         Parameters
         ----------
         step_costs_filename: str
@@ -260,6 +257,9 @@ class Context:
         through coarse grinding facilities at time step 100, this is your
         method!
 
+        Note: This uses the average blade mass for the year, not the sum
+        of facility inventories.
+
         Parameters
         ----------
         component_kind: str
@@ -294,14 +294,7 @@ class Context:
         """
         pylca_interface_process() runs periodically to update the LCIA model with
         results from the DES model. It updates the LCA code with the latest distance
-        and mass flow calculation.
-
-        When this process computes the blade mass, it divides the result by 3.0 because
-        the mass input file assumes a mass for the entire rotor.
-        TODO correct the mass input file to simply have single blade mass
-
-        Currently, the material is assumed to be "glass fiber reinforced polymer"
-        TODO Replace this hardcoding by reading from the Components.
+        and mass flow calculations.
 
         It only calls the LCA code for timesteps where the mass_kg > 0. Years with
         zero mass flows are not passed to the LCA.
@@ -394,7 +387,7 @@ class Context:
         """
         print('Updating cost graph')
         while True:
-            print(f'{datetime.now()}In While loop update cost graph',flush = True)
+            print(f'{datetime.now()} In While loop update cost graph',flush = True)
             time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')

@@ -266,8 +266,7 @@ if initialize_costgraph:
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
         blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
-                                'glass fiber reinforced polymer'].values[0],
-
+                                'total'].values[0],
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
         coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
         finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
