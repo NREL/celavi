@@ -16,11 +16,13 @@ class DiagnosticVizAndDataFrame:
     model run has been executed.
     """
 
-    def __init__(self,
-                 facility_inventories: Dict[str, FacilityInventory],
-                 units: str,
-                 output_folder_path: str,
-                 keep_cols: List[str]):
+    def __init__(
+        self,
+        facility_inventories: Dict[str, FacilityInventory],
+        units: str,
+        output_folder_path: str,
+        keep_cols: List[str],
+    ):
         """
         Parameters
         ----------
@@ -68,20 +70,31 @@ class DiagnosticVizAndDataFrame:
 
         return self.cumulative_histories
 
-    def generate_plots(self) -> pd.DataFrame:
+    def generate_plots(self, var_name: str, value_name: str) -> pd.DataFrame:
         """
         Generate history plots.
-        """
-        columns_to_drop = ['timestep', 'year_ceil', 'facility_id']
 
-        molten = self.gather_cumulative_histories().drop(columns_to_drop, axis=1).melt(
-            var_name='kind',
-            value_name='value',
-            id_vars=['year', 'facility_type']
-        ).groupby(
-            ['year', 'facility_type', 'kind']
-        ).sum().reset_index()
-        
+        Parameters
+        ----------
+        var_name: str
+            The name of the generalized var column, like 'material' or 'unit'.
+
+        value_name: str
+            The name of the generalized value column, like 'count' or 'tonnes'.
+        """
+        molten = (
+            self.gather_cumulative_histories()
+            .drop(["timestep", "year_ceil", "facility_id"], axis=1)
+            .melt(
+                var_name=var_name,
+                value_name=value_name,
+                id_vars=["year", "facility_type"],
+            )
+            .groupby(["year", "facility_type", var_name])
+            .sum()
+            .reset_index()
+        )
+
         return molten
 
     # def generate_plots(self):

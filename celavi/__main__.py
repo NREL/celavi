@@ -413,7 +413,7 @@ mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder
 mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
 
 molten_history_filename = os.path.join(subfolder_dict['outputs_folder'], 'molten_history.csv')
-molten_history = diagnostic_viz_mass.generate_plots()
+molten_history = diagnostic_viz_mass.generate_plots(var_name='material', value_name='tonnes')
 molten_history.to_csv(molten_history_filename, index=False)
 
 # Postprocess and save CostGraph outputs
