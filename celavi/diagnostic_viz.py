@@ -68,6 +68,22 @@ class DiagnosticVizAndDataFrame:
 
         return self.cumulative_histories
 
+    def generate_plots(self) -> pd.DataFrame:
+        """
+        Generate history plots.
+        """
+        columns_to_drop = ['timestep', 'year_ceil', 'facility_id']
+
+        molten = self.gather_cumulative_histories().drop(columns_to_drop, axis=1).melt(
+            var_name='kind',
+            value_name='value',
+            id_vars=['year', 'facility_type']
+        ).groupby(
+            ['year', 'facility_type', 'kind']
+        ).sum().reset_index()
+        
+        return molten
+
     # def generate_plots(self):
     #     """
     #     Generate the blade count history plots
