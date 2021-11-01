@@ -70,7 +70,7 @@ class DiagnosticVizAndDataFrame:
 
         return self.cumulative_histories
 
-    def generate_plots(self, var_name: str, value_name: str) -> pd.DataFrame:
+    def generate_plots(self, var_name: str, value_name: str):
         """
         This method generates the history plots.
 
@@ -84,7 +84,7 @@ class DiagnosticVizAndDataFrame:
         """
         # First, melt the dataframe so that its data structure is generalized
         # for either count or mass plots.
-        molten = (
+        melted_and_grouped = (
             self.gather_cumulative_histories()
             .drop(["timestep", "year_ceil", "facility_id"], axis=1)
             .melt(
@@ -99,7 +99,7 @@ class DiagnosticVizAndDataFrame:
 
         # Create the figure
         fig = px.line(
-            molten,
+            melted_and_grouped,
             x="year",
             y=value_name,
             facet_row=var_name,
@@ -116,5 +116,3 @@ class DiagnosticVizAndDataFrame:
 
         # Write the figure
         fig.write_image(facet_plots_filename)
-
-        return molten
