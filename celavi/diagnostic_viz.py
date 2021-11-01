@@ -95,6 +95,12 @@ class DiagnosticVizAndDataFrame:
             .reset_index()
         )
 
+        fig = px.line(molten, x="year", y=value_name, facet_col="facility_type", title=var_name, color=var_name,
+                      facet_col_wrap=2, width=1000)
+
+        facet_plots_filename = os.path.join(self.output_folder_path, f"{var_name}_facets.png")
+        fig.write_image(facet_plots_filename)
+
         return molten
 
     # def generate_plots(self):
