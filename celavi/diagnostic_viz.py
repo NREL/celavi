@@ -83,7 +83,7 @@ class DiagnosticVizAndDataFrame:
             The name of the generalized value column, like 'count' or 'tonnes'.
         """
         # First, melt the dataframe so that its data structure is generalized
-        # for either count or mass plots.
+        # for either mass or count plots, and sum over years and facility types.
         melted_and_grouped = (
             self.gather_cumulative_histories()
             .drop(["timestep", "year_ceil", "facility_id"], axis=1)
