@@ -315,44 +315,39 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_cost_history
+            _fac_id = self.supply_chain.nodes[source]['facility_id']
+            _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
+            _bol_dist = nx.shortest_path_length(
+                self.supply_chain,
+                source='manufacturing_' +
+                       str(
+                           self.find_upstream_neighbor(
+                           node_id=_fac_id,
+                           crit='cost'
+                           )
+                       ),
+                target=str(source),
+                weight='cost',
+                method='bellman-ford'
+            )
+
             for i in self.sc_end:
-                self.pathway_cost_history.append(
-                    {
-                        'year' : self.year,
-                        'facility_id' : self.supply_chain.nodes[source]['facility_id'],
-                        'region_id_1' : self.loc_df[
-                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                        ].region_id_1.values[0],
-                        'region_id_2' : self.loc_df[
-                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                        ].region_id_2.values[0],
-                        'region_id_3' : self.loc_df[
-                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                        ].region_id_3.values[0],
-                        'region_id_4' : self.loc_df[
-                            self.loc_df.facility_id == self.supply_chain.nodes[source]['facility_id']
-                        ].region_id_4.values[0],
-                        'eol_pathway_type' : i,
-                        'eol_pathway_dist' : min(
-                            [value for key,value in subdict.items()
-                             if i in key]
-                        ),
-                        'bol_pathway_dist' :
-                            nx.shortest_path_length(
-                                self.supply_chain,
-                                source='manufacturing_' + str(
-                                    self.find_upstream_neighbor(
-                                        node_id=int(str(source).split('_')[1]
-                                                    ),
-                                        crit='cost'
-                                    )
-                                ),
-                                target=str(source),
-                                weight='cost',
-                                method='bellman-ford'
-                            )
-                    }
-                )
+                _dist = [value for key, value in subdict.items() if i in key]
+                if len(_dist) > 0:
+                    self.pathway_cost_history.append(
+                        {
+                            'year'            : self.year,
+                            'facility_id'     : _fac_id,
+                            'region_id_1'     : _loc_line.region_id_1.values[0],
+                            'region_id_2'     : _loc_line.region_id_2.values[0],
+                            'region_id_3'     : _loc_line.region_id_3.values[0],
+                            'region_id_4'     : _loc_line.region_id_4.values[0],
+                            'eol_pathway_type': i,
+                            'eol_pathway_dist': min(_dist),
+                            'bol_pathway_dist': _bol_dist
+
+                        }
+                    )
 
             return nearest, subdict[nearest], _out
         else:
