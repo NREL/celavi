@@ -437,11 +437,6 @@ lcia_locations_df = lcia_df.merge(locations_select_df, how='inner', on='facility
 lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_locations_join.csv')
 lcia_locations_df.to_csv(lcia_locations_filename)
 
-# Write the data sent to the LCIA
-data_for_lci_df = pd.DataFrame(context.data_for_lci)
-data_for_lci_filename = os.path.join(subfolder_dict['outputs_folder'], 'data_for_lci.csv')
-data_for_lci_df.to_csv(data_for_lci_filename, index=False)
-
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
       flush=True)
