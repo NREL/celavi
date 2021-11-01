@@ -45,6 +45,7 @@ use_computed_routes = flags.get('use_computed_routes', True)
 # create cost graph fresh or use an imported version
 initialize_costgraph = flags.get('initialize_costgraph', False)
 enable_data_filtering = flags.get('enable_data_filtering', False)
+distance_filtering = flags.get('distance_filtering', False)
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = flags.get('pickle_costgraph', True)
 generate_step_costs = flags.get('generate_step_costs', True)
@@ -234,6 +235,7 @@ if run_routes:
     routes_computed = Router.get_all_routes(
         locations_file=locations_computed_filename,
         route_pair_file=route_pair_filename,
+        distance_filtering=distance_filtering,
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'],
