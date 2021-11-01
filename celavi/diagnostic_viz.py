@@ -72,7 +72,7 @@ class DiagnosticVizAndDataFrame:
 
     def generate_plots(self, var_name: str, value_name: str) -> pd.DataFrame:
         """
-        Generate history plots.
+        This method generates the history plots.
 
         Parameters
         ----------
@@ -82,6 +82,8 @@ class DiagnosticVizAndDataFrame:
         value_name: str
             The name of the generalized value column, like 'count' or 'tonnes'.
         """
+        # First, melt the dataframe so that its data structure is generalized
+        # for either count or mass plots.
         molten = (
             self.gather_cumulative_histories()
             .drop(["timestep", "year_ceil", "facility_id"], axis=1)
@@ -95,55 +97,24 @@ class DiagnosticVizAndDataFrame:
             .reset_index()
         )
 
-        fig = px.line(molten, x="year", y=value_name, facet_col="facility_type", title=var_name, color=var_name,
-                      facet_col_wrap=2, width=1000)
+        # Create the figure
+        fig = px.line(
+            molten,
+            x="year",
+            y=value_name,
+            facet_row=var_name,
+            title=var_name,
+            color="facility_type",
+            width=1000,
+            height=1000,
+        )
 
-        facet_plots_filename = os.path.join(self.output_folder_path, f"{var_name}_facets.png")
+        # Create the output filename
+        facet_plots_filename = os.path.join(
+            self.output_folder_path, f"{var_name}_facets.png"
+        )
+
+        # Write the figure
         fig.write_image(facet_plots_filename)
 
         return molten
-
-    # def generate_plots(self):
-    #     """
-    #     Generate the blade count history plots
-    #     """
-    #     cumulative_histories = self.gather_cumulative_histories()
-    #     blade_counts = (
-    #         cumulative_histories.loc[:, ["year", self.units, "facility_type"]]
-    #         .groupby(["year", "facility_type"])
-    #         .sum()
-    #         .reset_index()
-    #     )
-    #     fig = px.line(
-    #         blade_counts,
-    #         x="year",
-    #         y=self.units,
-    #         facet_col="facility_type",
-    #         title=self.units,
-    #         facet_col_wrap=2,
-    #         width=1000,
-    #         height=1500,
-    #     )
-    #     facet_plots_filename = os.path.join(
-    #         self.output_folder_path, f"{self.units}_facets.png"
-    #     )
-    #     fig.write_image(facet_plots_filename)
-    #     blade_counts = (
-    #         cumulative_histories.loc[:, ["year", self.units, "facility_type"]]
-    #         .groupby(["year", "facility_type"])
-    #         .sum()
-    #         .reset_index()
-    #     )
-    #     fig = px.line(
-    #         blade_counts,
-    #         x="year",
-    #         y=self.units,
-    #         color="facility_type",
-    #         title=self.units,
-    #         width=1000,
-    #         height=500,
-    #     )
-    #     one_plot_filename = os.path.join(
-    #         self.output_folder_path, f"{self.units}_single.png"
-    #     )
-    #     fig.write_image(one_plot_filename)
