@@ -19,8 +19,7 @@ class DiagnosticVizAndDataFrame:
     def __init__(
         self,
         facility_inventories: Dict[str, FacilityInventory],
-        units: str,
-        output_folder_path: str,
+        output_plot_filename: str,
         keep_cols: List[str],
     ):
         """
@@ -29,17 +28,25 @@ class DiagnosticVizAndDataFrame:
         facility_inventories: Dict[str, FacilityInventory]
             The dictionary of facility inventories from the Context
 
-        units: str
-            The units in the referenced facility inventories.
+        output_plot_filename: str
+            The absolute path to the filename that will hold the final
+            generated plot.
 
-        output_folder_path: str
-            The folder where the plots will show up.
+        keep_cols: List[str]
+            This is a list of the possible material names (for material
+            facility inventories) or a list of the possible component names
+            (for count facility inventories)
         """
         self.facility_inventories = facility_inventories
-        self.cumulative_histories = None
-        self.units = units
-        self.output_folder_path = output_folder_path
+        self.output_plot_filename = output_plot_filename
         self.keep_cols = keep_cols
+
+        # This instance attribute is not set by a parameter to the
+        # constructor. Rather, it is merely created to hold a cached
+        # result from the gather_cumulative_histories() method
+        # below
+
+        self.cumulative_histories = None
 
     def gather_cumulative_histories(self) -> pd.DataFrame:
         """
@@ -109,10 +116,5 @@ class DiagnosticVizAndDataFrame:
             height=1000,
         )
 
-        # Create the output filename
-        facet_plots_filename = os.path.join(
-            self.output_folder_path, f"{var_name}_facets.png"
-        )
-
         # Write the figure
-        fig.write_image(facet_plots_filename)
+        fig.write_image(self.output_plot_filename)

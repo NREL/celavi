@@ -156,6 +156,30 @@ pathway_cost_history_filename = os.path.join(
     outputs.get('pathway_cost_history')
 )
 
+component_counts_plot_filename = os.path.join(
+    args.data,
+    data_dirs.get('outputs'),
+    outputs.get('component_counts_plot')
+)
+
+material_mass_plot_filename = os.path.join(
+    args.data,
+    data_dirs.get('outputs'),
+    outputs.get('material_mass_plot')
+)
+
+count_cumulative_histories_filename = os.path.join(
+    args.data,
+    data_dirs.get('outputs'),
+    outputs.get('count_cumulative_histories')
+)
+
+mass_cumulative_histories_filename = os.path.join(
+    args.data,
+    data_dirs.get('outputs'),
+    outputs.get('mass_cumulative_histories')
+)
+
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
 # and write operations. Also, the Context must be imported down here after
@@ -389,23 +413,22 @@ print(f'Run starting for DES at {np.round(time.time() - time0)} s\n\n\n',
 count_facility_inventories = context.run()
 
 # Plot the cumulative count levels of the count inventories
+possible_component_list = des_params.get('component_list', [])
 diagnostic_viz_counts = DiagnosticVizAndDataFrame(
-    context.count_facility_inventories,
-    'count',
-    subfolder_dict['outputs_folder'],
-    keep_cols=des_params.get('component_list', [])
+    facility_inventories=context.count_facility_inventories,
+    output_plot_filename=component_counts_plot_filename,
+    keep_cols=possible_component_list
 )
 count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
-count_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_counts.csv')
 count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
 diagnostic_viz_counts.generate_plots(var_name='unit', value_name='count')
 
 # Plot the levels of the mass inventories
+possible_material_list = des_params.get('material_list', [])
 diagnostic_viz_mass = DiagnosticVizAndDataFrame(
     facility_inventories=context.mass_facility_inventories,
-    units='tonnes',
-    output_folder_path=subfolder_dict['outputs_folder'],
-    keep_cols=des_params.get('material_list', [])
+    output_plot_filename=material_mass_plot_filename,
+    keep_cols=possible_component_list,
 )
 mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
 mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
