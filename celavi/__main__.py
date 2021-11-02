@@ -326,6 +326,10 @@ des_timesteps = int(scenario_params.get('timesteps_per_year') * (
         scenario_params.get('end_year') - scenario_params.get('start_year')
 ) + scenario_params.get('timesteps_per_year'))
 
+# Get the start year and timesteps_per_year
+start_year = scenario_params.get('start_year')
+timesteps_per_year = scenario_params.get('timesteps_per_year')
+
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
@@ -335,9 +339,9 @@ context = Context(
     possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
-    min_year=scenario_params.get('start_year'),
-    max_timesteps = des_timesteps,
-    timesteps_per_year = scenario_params.get('timesteps_per_year')
+    min_year=start_year,
+    max_timesteps=des_timesteps,
+    timesteps_per_year=timesteps_per_year
 )
 
 # Create the turbine dataframe that will be used to populate
@@ -417,7 +421,9 @@ possible_component_list = des_params.get('component_list', [])
 diagnostic_viz_counts = DiagnosticVizAndDataFrame(
     facility_inventories=context.count_facility_inventories,
     output_plot_filename=component_counts_plot_filename,
-    keep_cols=possible_component_list
+    keep_cols=possible_component_list,
+    start_year=start_year,
+    timesteps_per_year=timesteps_per_year
 )
 count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
 count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
@@ -429,6 +435,8 @@ diagnostic_viz_mass = DiagnosticVizAndDataFrame(
     facility_inventories=context.mass_facility_inventories,
     output_plot_filename=material_mass_plot_filename,
     keep_cols=possible_component_list,
+    start_year=start_year,
+    timesteps_per_year=timesteps_per_year
 )
 mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
 mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
