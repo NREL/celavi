@@ -188,7 +188,7 @@ mass_cumulative_histories_filename = os.path.join(
 
 os.chdir(subfolder_dict['lci_folder'])
 from celavi.des import Context
-from celavi.diagnostic_viz import DiagnosticVizAndDataFrame
+from celavi.diagnostic_viz import DiagnosticViz
 
 
 # Note that the step_cost file must be updated (or programmatically generated)
@@ -418,7 +418,7 @@ count_facility_inventories = context.run()
 
 # Plot the cumulative count levels of the count inventories
 possible_component_list = des_params.get('component_list', [])
-diagnostic_viz_counts = DiagnosticVizAndDataFrame(
+diagnostic_viz_counts = DiagnosticViz(
     facility_inventories=context.count_facility_inventories,
     output_plot_filename=component_counts_plot_filename,
     keep_cols=possible_component_list,
@@ -431,7 +431,7 @@ diagnostic_viz_counts.generate_plots(var_name='unit', value_name='count')
 
 # Plot the levels of the mass inventories
 possible_material_list = des_params.get('material_list', [])
-diagnostic_viz_mass = DiagnosticVizAndDataFrame(
+diagnostic_viz_mass = DiagnosticViz(
     facility_inventories=context.mass_facility_inventories,
     output_plot_filename=material_mass_plot_filename,
     keep_cols=possible_component_list,

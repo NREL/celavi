@@ -10,7 +10,7 @@ import time
 from .inventory import FacilityInventory
 
 
-class DiagnosticVizAndDataFrame:
+class DiagnosticViz:
     """
     This class creates diagnostic visualizations from a context when after the
     model run has been executed.
