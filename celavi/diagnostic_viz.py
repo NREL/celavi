@@ -21,6 +21,8 @@ class DiagnosticVizAndDataFrame:
         facility_inventories: Dict[str, FacilityInventory],
         output_plot_filename: str,
         keep_cols: List[str],
+        start_year: int,
+        timesteps_per_year: int,
     ):
         """
         Parameters
@@ -36,10 +38,18 @@ class DiagnosticVizAndDataFrame:
             This is a list of the possible material names (for material
             facility inventories) or a list of the possible component names
             (for count facility inventories)
+
+        start_year: int
+            The start year for the DES model.
+
+        timesteps_per_year: int
+            The timesteps per year for the DES model.
         """
         self.facility_inventories = facility_inventories
         self.output_plot_filename = output_plot_filename
         self.keep_cols = keep_cols
+        self.start_year = start_year
+        self.timestep_per_year = timesteps_per_year
 
         # This instance attribute is not set by a parameter to the
         # constructor. Rather, it is merely created to hold a cached
@@ -69,7 +79,9 @@ class DiagnosticVizAndDataFrame:
             facility_type, facility_id = facility.split("_")
             cumulative_history["facility_type"] = facility_type
             cumulative_history["facility_id"] = facility_id
-            cumulative_history["year"] = (cumulative_history["timestep"] / 12) + 2000
+            cumulative_history["year"] = (
+                cumulative_history["timestep"] / self.timestep_per_year
+            ) + self.start_year
             cumulative_history["year_ceil"] = np.ceil(cumulative_history["year"])
             cumulative_histories.append(cumulative_history)
 
