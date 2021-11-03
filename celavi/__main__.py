@@ -443,7 +443,6 @@ diagnostic_viz_mass = DiagnosticViz(
     value_name='tonnes'
 )
 mass_cumulative_histories = diagnostic_viz_mass.gather_and_melt_cumulative_histories()
-mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
 mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
 diagnostic_viz_mass.generate_plots()
 
