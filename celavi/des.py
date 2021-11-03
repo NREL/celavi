@@ -305,7 +305,7 @@ class Context:
             The SimPy environment this process belongs to.
         """
         while True:
-            print(f'{datetime.now()}In While loop pylca interface',flush = True)
+            print(f'{datetime.now()} In While loop pylca interface', flush=True)
             time0 = time.time()
             yield env.timeout(self.timesteps_per_year)
             print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
