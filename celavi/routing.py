@@ -254,10 +254,15 @@ class Router(object):
 
                 # if the routes should be filtered based on distance,
                 if distance_filtering:
-                    # merge route_list with route_pairs to get a dataframe with
-                    # total_vmt and the max distance in separate columns
-                    # Then, delete rows where total_vmt > max distance
-                    pass
+                    # remove rows where total_vmt > max distance
+                    route_list = route_list[route_list.total_vmt <= route_list.vmt_max]
+
+                # remove columns used in distance filtering
+                route_list.drop(
+                    labels=['in_state_only', 'vmt_max'],
+                    axis=1,
+                    inplace=True
+                )
 
                 route_list.to_csv(file_output)
 
