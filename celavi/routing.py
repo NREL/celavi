@@ -133,7 +133,7 @@ class Router(object):
 
         # import locations data
         locations = pd.read_csv(locations_file)
-        route_pairs = pd.read_csv(route_pair_file)
+        route_pairs = Data.RoutePairs(fpath=route_pair_file,backfill=backfill)
         # Get a list of destination facility types that must be in-state
         # from route_pairs
         _instate_dest = route_pairs[route_pairs['in_state_only'] == True].destination_facility_type.drop_duplicates().values
