@@ -335,7 +335,7 @@ context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
     avg_blade_masses_filename=avg_blade_masses_filename,
-    possible_components=des_params.get('component_list', []),
+    possible_components=list(des_params.get('component_list', []).keys()),
     possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
@@ -416,7 +416,7 @@ print(f'Run starting for DES at {np.round(time.time() - time0)} s\n\n\n',
 count_facility_inventories = context.run()
 
 # Plot the cumulative count levels of the count inventories
-possible_component_list = des_params.get('component_list', [])
+possible_component_list = list(des_params.get('component_list', []).keys())
 diagnostic_viz_counts = DiagnosticViz(
     facility_inventories=context.count_facility_inventories,
     output_plot_filename=component_counts_plot_filename,
