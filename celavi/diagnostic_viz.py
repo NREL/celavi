@@ -107,7 +107,6 @@ class DiagnosticViz:
                 ] = cumulative_history.loc[
                     :,[key for key,value in self.component_count.items()]
                     ] * [value for key,value in self.component_count.items()]
-                print('Scaling component counts')
             except KeyError:
                 pass
             cumulative_histories.append(cumulative_history)

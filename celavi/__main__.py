@@ -423,7 +423,7 @@ diagnostic_viz_counts = DiagnosticViz(
     keep_cols=possible_component_list,
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
-    component_count=des_params.get('component_list')
+    component_count=des_params.get('component_list'),
     var_name='unit',
     value_name='count'
 )
@@ -439,7 +439,7 @@ diagnostic_viz_mass = DiagnosticViz(
     keep_cols=possible_component_list,
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
-    component_count=des_params.get('component_list')
+    component_count=des_params.get('component_list'),
     var_name='material',
     value_name='tonnes'
 )
