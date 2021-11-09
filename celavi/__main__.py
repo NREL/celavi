@@ -424,10 +424,12 @@ diagnostic_viz_counts = DiagnosticViz(
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
     component_count=des_params.get('component_list')
+    var_name='unit',
+    value_name='count'
 )
-count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
+count_cumulative_histories = diagnostic_viz_counts.gather_and_melt_cumulative_histories()
 count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
-diagnostic_viz_counts.generate_plots(var_name='unit', value_name='count')
+diagnostic_viz_counts.generate_plots()
 
 # Plot the levels of the mass inventories
 possible_material_list = des_params.get('material_list', [])
@@ -438,11 +440,12 @@ diagnostic_viz_mass = DiagnosticViz(
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
     component_count=des_params.get('component_list')
+    var_name='material',
+    value_name='tonnes'
 )
-mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
-mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
+mass_cumulative_histories = diagnostic_viz_mass.gather_and_melt_cumulative_histories()
 mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
-diagnostic_viz_mass.generate_plots(var_name='material', value_name='tonnes')
+diagnostic_viz_mass.generate_plots()
 
 # Postprocess and save CostGraph outputs
 netw.save_costgraph_outputs()
@@ -467,7 +470,7 @@ locations_columns = [
 locations_select_df = locations_df.loc[:, locations_columns]
 lcia_locations_df = lcia_df.merge(locations_select_df, how='inner', on='facility_id')
 lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_locations_join.csv')
-lcia_locations_df.to_csv(lcia_locations_filename)
+lcia_locations_df.to_csv(lcia_locations_filename, index=False)
 
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
