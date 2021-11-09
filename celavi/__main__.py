@@ -422,7 +422,8 @@ diagnostic_viz_counts = DiagnosticViz(
     output_plot_filename=component_counts_plot_filename,
     keep_cols=possible_component_list,
     start_year=start_year,
-    timesteps_per_year=timesteps_per_year
+    timesteps_per_year=timesteps_per_year,
+    component_count=des_params.get('component_list')
 )
 count_cumulative_histories = diagnostic_viz_counts.gather_cumulative_histories()
 count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
@@ -435,7 +436,8 @@ diagnostic_viz_mass = DiagnosticViz(
     output_plot_filename=material_mass_plot_filename,
     keep_cols=possible_component_list,
     start_year=start_year,
-    timesteps_per_year=timesteps_per_year
+    timesteps_per_year=timesteps_per_year,
+    component_count=des_params.get('component_list')
 )
 mass_cumulative_histories = diagnostic_viz_mass.gather_cumulative_histories()
 mass_cumulative_histories_filename = os.path.join(subfolder_dict['outputs_folder'], 'blade_mass.csv')
