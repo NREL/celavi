@@ -9,22 +9,22 @@ warnings.simplefilter('error', UserWarning)
 
 class ComputeLocations:
     def __init__(self,
-                 wind_turbine_locations,
+                 power_plant_locations,
                  landfill_locations,
                  other_facility_locations,
                  transportation_graph,
                  node_locations,
                  lookup_facility_type,
-                 turbine_data_filename,
+                 technology_data_filename,
                  standard_scenarios_filename):
 
         # file paths for raw data used to compute locations
-        self.wind_turbine_locations = wind_turbine_locations
+        self.power_plant_locations = power_plant_locations
         self.landfill_locations = landfill_locations
         self.other_facility_locations = other_facility_locations
         self.transportation_graph = transportation_graph
         self.node_locations = node_locations
-        self.turbine_data_filename = turbine_data_filename
+        self.technology_data_filename = technology_data_filename
         self.standard_scenarios_filename = standard_scenarios_filename
 
         self.lookup_facility_type_file=lookup_facility_type
@@ -48,7 +48,7 @@ class ComputeLocations:
     def wind_power_plant(self):
 
         """Process data for wind power plants - from USWTDB"""
-        turbine_locations = Data.TurbineLocations(fpath=self.wind_turbine_locations, backfill=self.backfill)
+        turbine_locations = Data.TurbineLocations(fpath=self.power_plant_locations, backfill=self.backfill)
         
         # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
         turbine_locations_with_eia = turbine_locations[(turbine_locations['eia_id'] != '-1') &
@@ -324,7 +324,7 @@ class ComputeLocations:
             ignore_index=True,
             sort=True
         ).to_csv(
-            self.turbine_data_filename,
+            self.technology_data_filename,
             index=False
         )
 
