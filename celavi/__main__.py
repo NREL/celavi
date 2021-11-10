@@ -91,9 +91,9 @@ transpo_edges_filename = os.path.join(args.data,
 route_pair_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('route_pairs'))
-avg_blade_masses_filename = os.path.join(args.data,
+avg_masses_filename = os.path.join(args.data,
                                          data_dirs.get('inputs'),
-                                         inputs.get('avg_blade_masses'))
+                                         inputs.get('avg_masses'))
 routes_custom_filename = os.path.join(args.data,
                                       data_dirs.get('inputs'),
                                       inputs.get('routes_custom'))
@@ -263,7 +263,7 @@ if run_routes:
         routing_output_folder=subfolder_dict['routing_output_folder'],
         preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
 
-avgblade = pd.read_csv(avg_blade_masses_filename)
+avg_mass = pd.read_csv(avg_masses_filename)
 
 print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
         flush=True)
@@ -289,7 +289,7 @@ if initialize_costgraph:
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
-        blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
+        component_mass=avg_mass.loc[avg_mass.year == scenario_params.get('start_year'),
                                 'total'].values[0],
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
         coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
@@ -334,7 +334,7 @@ timesteps_per_year = scenario_params.get('timesteps_per_year')
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
-    avg_blade_masses_filename=avg_blade_masses_filename,
+    avg_masses_filename=avg_masses_filename,
     possible_components=des_params.get('component_list', []),
     possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
