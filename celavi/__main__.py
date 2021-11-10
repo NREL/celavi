@@ -334,7 +334,7 @@ timesteps_per_year = scenario_params.get('timesteps_per_year')
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
-    avg_blade_masses_filename=avg_blade_masses_filename,
+    avg_component_masses_filename=avg_masses_filename,
     possible_components=list(des_params.get('component_list', []).keys()),
     possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
@@ -344,9 +344,8 @@ context = Context(
     timesteps_per_year=timesteps_per_year
 )
 
-# Create the turbine dataframe that will be used to populate
-# the context with components. Repeat the creation of blades
-# 3 times for each turbine.
+# Create the technology dataframe that will be used to populate
+# the context with components.
 
 print(f'Creating components at {np.round(time.time() - time0, 1)} s',
       flush=True)
@@ -363,6 +362,7 @@ for _, row in turbine_data.iterrows():
     for _ in range(n_turbine):
         components.append({
             'year': year,
+            # @TODO parameterize 'blade']
             'kind': 'blade',
             'manuf_facility_id': manuf_facility_id,
             'in_use_facility_id': in_use_facility_id
@@ -387,7 +387,8 @@ lifespan_fns = {
         'component_fixed_lifetimes'
     )['tower'] * timesteps_per_year,
 }
-
+# @TODO parameterize ['blade']
+# @TODO refactor the weibull constants in config
 if use_fixed_lifetime:
     lifespan_fns['blade'] = lambda: des_params.get(
         'component_fixed_lifetimes'
