@@ -113,7 +113,7 @@ node_locations_filename = os.path.join(args.data,
                                        inputs.get('node_locs'))
 
 # file paths for raw data used to compute locations
-wind_turbine_locations_filename = os.path.join(args.data,
+power_plant_locations_filename = os.path.join(args.data,
                                                data_dirs.get('raw_locations'),
                                                inputs.get('power_plant_locs'))
 # LMOP data for landfill locations
@@ -129,10 +129,10 @@ lookup_facility_type_filename = os.path.join(args.data,
                                              data_dirs.get('lookup_tables'),
                                              inputs.get('lookup_facility_type'))
 
-# file where the turbine data will be saved after generating from raw inputs
-turbine_data_filename = os.path.join(args.data,
+# file where the technology data will be saved after generating from raw inputs
+technology_data_filename = os.path.join(args.data,
                                      data_dirs.get('inputs'),
-                                     inputs.get('turbine_data'))
+                                     inputs.get('technology_data'))
 
 standard_scenarios_filename = os.path.join(args.data,
                                            data_dirs.get('raw_locations'),
@@ -196,13 +196,13 @@ from celavi.diagnostic_viz import DiagnosticViz
 # computed data set.
 if compute_locations:
     loc = ComputeLocations(
-        wind_turbine_locations=wind_turbine_locations_filename,
+        power_plant_locations=power_plant_locations_filename,
         landfill_locations=landfill_locations_filename,
         other_facility_locations=other_facility_locations_filename,
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
         lookup_facility_type=lookup_facility_type_filename,
-        turbine_data_filename=turbine_data_filename,
+        technology_data_filename=technology_data_filename,
         standard_scenarios_filename=standard_scenarios_filename)
 
     loc.join_facilities(locations_output_file=locations_computed_filename)
@@ -239,7 +239,7 @@ if enable_data_filtering:
         print(f'Filtering locations: {states_to_filter}',
               flush=True)
         filter_locations(locations_computed_filename,
-                         turbine_data_filename,
+                         technology_data_filename,
                          states_to_filter)
     # if the data is being filtered and a new routes file is NOT being
     # generated, then the existing routes file must also be filtered
@@ -350,16 +350,16 @@ context = Context(
 print(f'Creating components at {np.round(time.time() - time0, 1)} s',
       flush=True)
 
-turbine_data = pd.read_csv(turbine_data_filename)
+technology_data = pd.read_csv(technology_data_filename)
 
 components = []
-for _, row in turbine_data.iterrows():
+for _, row in technology_data.iterrows():
     year = row['year']
     in_use_facility_id = int(row['facility_id'])
     manuf_facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
-    n_turbine = int(row['n_turbine'])
+    n_technology = int(row['n_technology'])
 
-    for _ in range(n_turbine):
+    for _ in range(n_technology):
         components.append({
             'year': year,
             # @TODO parameterize 'blade']
