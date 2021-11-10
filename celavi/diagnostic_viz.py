@@ -23,7 +23,7 @@ class DiagnosticViz:
         keep_cols: List[str],
         start_year: int,
         timesteps_per_year: int,
-        component_count : Dict[str, int],
+        component_count: Dict[str, int],
         var_name: str,
         value_name: str,
     ):
@@ -103,12 +103,14 @@ class DiagnosticViz:
             # columns are present
             try:
                 cumulative_history.loc[
-                :,[key for key,value in self.component_count.items()]
+                    :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
-                    :,[key for key,value in self.component_count.items()]
-                    ] * [value for key,value in self.component_count.items()]
-            except KeyError:
-                pass
+                    :, [key for key, value in self.component_count.items()]
+                ] * [
+                    value for key, value in self.component_count.items()
+                ]
+            except KeyError as e:
+                print(f'Skipping component count scaling because {e}')
             cumulative_histories.append(cumulative_history)
 
         cumulative_histories = pd.concat(cumulative_histories)
