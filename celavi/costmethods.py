@@ -82,7 +82,7 @@ class CostMethods:
         year
             Model year obtained from DES model (timestep converted to year)
 
-        blade_mass
+        component_mass
             Average blade mass obtained from DES model
 
         Returns
@@ -93,7 +93,7 @@ class CostMethods:
             by the blade mass.
         """
         _year = kwargs['year']
-        _mass = kwargs['blade_mass']
+        _mass = kwargs['component_mass']
         _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
                 169851728.663209
         return _cost / _mass
@@ -309,7 +309,7 @@ class CostMethods:
         vkmt
             Distance traveled by blade segment. Unit: vehicle-kilometer
 
-        blade_mass
+        component_mass
             Average blade mass in the current model year. Unit: metric tons
 
         year
@@ -321,7 +321,7 @@ class CostMethods:
             USD/blade
         """
         _vkmt = kwargs['vkmt']
-        _mass = kwargs['blade_mass']
+        _mass = kwargs['component_mass']
         _year = kwargs['year']
 
         if np.isnan(_vkmt) or np.isnan(_mass):
@@ -459,7 +459,7 @@ class CostMethods:
         vkmt
             Distance traveled by blade segment. Unit: vehicle-kilometer
 
-        blade_mass
+        component_mass
             Average blade mass in the current model year. Unit: metric tons
 
         year
@@ -471,7 +471,7 @@ class CostMethods:
             USD/blade
         """
         _vkmt = kwargs['vkmt']
-        _mass = kwargs['blade_mass']
+        _mass = kwargs['component_mass']
         _year = kwargs['year']
 
         if np.isnan(_vkmt) or np.isnan(_mass):
