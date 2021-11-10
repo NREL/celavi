@@ -27,5 +27,13 @@ setuptools.setup(
         "networkx",
         "graphviz",
         "simpy",
+	    "networkx-query",
+        "olca-ipc==0.0.10",
+        "pyutilib",
+        "joblib",
+        "plotly",
+        "kaleido",
+        "scikit-learn",
+        "PyYAML"
     ]
 )

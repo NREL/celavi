@@ -4,7 +4,7 @@ from random import randint, seed
 import numpy as np
 from scipy.stats import weibull_min
 
-from celavi.simple_model import Context
+from celavi.des import Context
 
 np.random.seed(0)
 lifespan_fns = {
@@ -72,14 +72,14 @@ def context():
 
 
 def test_years_to_timestep(context):
-    expected = 160
+    expected = 480
     actual = context.years_to_timesteps(40)
     assert expected == actual
 
 
 def test_timesteps_to_years(context):
-    expected = 2000
-    actual = context.timesteps_to_years(80)
+    expected = 2020.0
+    actual = round(context.timesteps_to_years(240))
     assert expected == actual
 
 

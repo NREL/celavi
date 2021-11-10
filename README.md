@@ -9,8 +9,9 @@ On macOS, use Terminal to type the commands. On Windows, use the Anaconda Prompt
 
 ## Installation
 
-This installation assumes you are using `conda` to create virtual environments.
+This installation assumes you are using `conda` to create virtual environments. CELAVI requires packages from `pip` and `conda`, so there are two steps to the installation. These installation commands only need to be executed once before CELAAVI can be executed.
 
+### Installation step 1: pip install
 From the command prompt with the folder of your cloned repository, execute the following commands (these only need to be ran once at installation time):
 
 ```
@@ -19,18 +20,24 @@ conda activate celavi
 pip install -e .
 ```
 
+### Installation step 2: conda install
+
+Now you need to install some pakages with `conda`. Run the following commands:
+
+```
+conda config --add channels conda-forge
+conda install glpk
+conda install ipopt
+conda install pyomo
+```
+
 ## Running the package
 
-First, change directory to the `tinysd` folder. In that folder there is the `celavi_sample_10_turbines.csv` file which contains anonymized data for ten turbines with a location at the NREL NWTC (they really aren't at the NWTC).
-
-From the root of the repo:
+From the root of the repo, type a command similar to the following. This will execute the costgraph. Note that the paths to the files will need to be changed for your particular folder structure.
 
 ```
-cd tinysd
-python -m celavi
+python -m celavi --data [your path to the CELAVI data folder] --config [your path to the config file(yaml) in the CELAVI data folder]
 ```
-
-An output file called `material_component_log.csv` which is the output log.
 
 ## Guide for development
 

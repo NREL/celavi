@@ -3,10 +3,12 @@ import numpy as np
 import pandas as pd
 
 
-class Inventory:
+class FacilityInventory:
     def __init__(
         self,
-        name: str,
+        facility_id: int,
+        facility_type: str,
+        step: str,
         possible_items: List[str],
         timesteps: int,
         quantity_unit: str = "tonne",
@@ -19,6 +21,15 @@ class Inventory:
 
         Parameters
         ----------
+        facility_id: int
+            The id of the facility in the locations table
+
+        facility_type: str
+            The type of the facility from the locations table.
+
+        step: str
+            The step that is held by this inventory.
+
         quantity_unit: str
             The unit in which the quantity is recorded.
 
@@ -32,7 +43,9 @@ class Inventory:
 
         can_be_negative: bool
             True if the quantity in this inventory can be negative. If False,
-            the quantity must always be positive.
+            the quantity must always be positive, and the instance will
+            raise an exception if there is an attempt of a negative
+            transaction.
 
         Other instance variables
         ------------------------
@@ -41,10 +54,12 @@ class Inventory:
             lifetime of the simulation.
 
         self.component_materials_deposits: List[Dict[str, float]]
-            The HISTORY of the deposits and withdrawals from this
+            The history of the deposits and withdrawals from this
             inventory. These are instantaneous, not cumulative, values.
         """
-        self.name = name
+        self.step = step
+        self.facility_id = facility_id
+        self.facility_type = facility_type
         self.can_be_negative = can_be_negative
         self.quantity_unit = quantity_unit
         self.component_materials: Dict[str, float] = {}
@@ -56,6 +71,12 @@ class Inventory:
         self.transactions: List[Dict[str, float]] = []
         for _ in range(timesteps):
             self.transactions.append(self.component_materials.copy())
+
+        # Populate the deposit-only history with copies of the
+        # initialized dictionary from above that has all values set to 0.0
+        self.input_transactions: List[Dict[str, float]] = []
+        for _ in range(timesteps):
+            self.input_transactions.append(self.component_materials.copy())
 
     def increment_quantity(
         self, item_name: str, quantity: float, timestep: int
@@ -69,9 +90,9 @@ class Inventory:
         For landfill additions, the quantity should be positive to
         indicate a deposit of material.
 
-        For recycling, the quantity can either be positive or negative,
-        depending on if there is an increase in supply or a decrease in
-        supply through consumption.
+        For other lifecycle transitions, the quantity can either be
+        positive or negative, depending on if there is an increase in
+        supply or a decrease in supply at a particular facility inventory.
 
         Parameters
         ----------
@@ -94,6 +115,11 @@ class Inventory:
         timestep = int(timestep)
         self.transactions[timestep][item_name] += quantity
 
+        # Only if the quantity is an input, attach the transaction to the
+        # input transactions table
+        if quantity > 0:
+            self.input_transactions[timestep][item_name] += quantity
+
         # Now increment the inventory
         self.component_materials[item_name] += quantity
 
@@ -111,8 +137,8 @@ class Inventory:
     @property
     def cumulative_history(self) -> pd.DataFrame:
         """
-        Because this method instantiates a DataFrame, it should be celled
-        sparingly, as this is a resource consuming procedure.
+        Calculate the cumulative level of a facility inventory over all its
+        transactions.
 
         Returns
         -------
@@ -129,9 +155,29 @@ class Inventory:
         return cumulative_history
 
     @property
+    def cumulative_input_history(self) -> pd.DataFrame:
+        """
+        Calculate the cumulative input quantities of a facility inventory over
+        all its input transactions.
+
+        Returns
+        -------
+        pd.DataFrame
+            The cumulative history of all the transactions of the component
+            materials.
+        """
+        component_materials_history_df = pd.DataFrame(self.input_transactions)
+        cumulative_history = pd.DataFrame()
+        for column in component_materials_history_df.columns:
+            cumulative_history[column] = np.cumsum(
+                component_materials_history_df[column].values
+            )
+        return cumulative_history
+
+    @property
     def transaction_history(self) -> pd.DataFrame:
         """
-        Because this method instantiates a DataFrame, it should be celled
+        Because this method instantiates a DataFrame, it should be called
         sparingly, as this is a resource consuming procedure.
 
         Returns
@@ -141,3 +187,14 @@ class Inventory:
         """
         transactions_df = pd.DataFrame(self.transactions)
         return transactions_df
+
+    @property
+    def input_transaction_history(self) -> pd.DataFrame:
+        """
+
+        Returns
+        -------
+
+        """
+        input_transactions_df = pd.DataFrame(self.input_transactions)
+        return input_transactions_df
