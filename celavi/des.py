@@ -29,7 +29,7 @@ class Context:
         self,
         locations_filename: str,
         step_costs_filename: str,
-        avg_blade_masses_filename: str,
+        avg_component_masses_filename: str,
         possible_components: List[str],
         possible_materials: List[str],
         cost_graph: CostGraph,
@@ -46,8 +46,8 @@ class Context:
             The pathname to the step_costs file that will determine the steps in
             each facility.
 
-        avg_blade_masses_filename: str
-            The pathname to the file that contains the average blade masses.
+        avg_component_masses_filename: str
+            The pathname to the file that contains the average component masses.
 
         possible_components: List[str]
             The list of possible items (like "blade", "turbine", "foundation")
@@ -87,19 +87,19 @@ class Context:
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
-        # Read the average blade masses as an array. Then turn it into a dictionary
-        # that maps integer years to glass fiber blade masses.
-        # File data is mass per turbine. Divide by 3 to get mass per blade.
-        self.avg_blade_mass_tonnes_dict: Dict[str, Dict[int, float]] = {}
-        avg_blade_masses_df = pd.read_csv(avg_blade_masses_filename)
+        # Read the average component masses as an array. Then turn it into a
+        # dictionary that maps integer years to component masses.
+        # File data is total component mass per technology unit
+        self.avg_component_mass_tonnes_dict: Dict[str, Dict[int, float]] = {}
+        avg_component_masses_df = pd.read_csv(avg_component_masses_filename)
 
         for material in possible_materials:
-            self.avg_blade_mass_tonnes_dict[material] = {}
+            self.avg_component_mass_tonnes_dict[material] = {}
 
-        for _, row in avg_blade_masses_df.iterrows():
+        for _, row in avg_component_masses_df.iterrows():
             year = row['year']
             for material in possible_materials:
-                self.avg_blade_mass_tonnes_dict[material][year] = row[material]
+                self.avg_component_mass_tonnes_dict[material][year] = row[material]
 
         self.possible_materials = possible_materials
 
@@ -224,12 +224,12 @@ class Context:
         """
 
         for _, row in df.iterrows():
-            # avg_blade_mass_tonnes_for_year = self.avg_blade_mass_tonnes_dict[row["year"]]
-            # mass_tonnes = {'gfrp': avg_blade_mass_tonnes_for_year}
+            # avg_component_mass_tonnes_for_year = self.avg_component_mass_tonnes_dict[row["year"]]
+            # mass_tonnes = {'gfrp': avg_component_mass_tonnes_for_year}
 
             year = row["year"]
             mass_tonnes = {
-                material: self.avg_blade_mass_tonnes_dict[material][year]
+                material: self.avg_component_mass_tonnes_dict[material][year]
                 for material in self.possible_materials
             }
 
@@ -253,11 +253,11 @@ class Context:
         Calculate the cumulative mass at a certain time of a given component
         passed through processes that contain the given name.
 
-        For example, if you want to find cumulative masses of blades passed
+        For example, if you want to find cumulative component mass passed
         through coarse grinding facilities at time step 100, this is your
         method!
 
-        Note: This uses the average blade mass for the year, not the sum
+        Note: This uses the average component mass for the year, not the sum
         of facility inventories.
 
         Parameters
@@ -279,14 +279,15 @@ class Context:
             timestep.
         """
         year = int(ceil(self.timesteps_to_years(timestep)))
-        avg_blade_mass = self.average_total_blade_mass_for_year(year)
+        avg_component_mass = self.average_total_component_mass_for_year(year)
         cumulative_counts = [
+            # @TODO replace ['blade'] with [component_kind]
             facility.cumulative_input_history['blade'][timestep]
             for name, facility in self.count_facility_inventories.items()
             if any(pname in name for pname in process_name)
         ]
         total_count = sum(cumulative_counts)
-        total_mass = total_count * avg_blade_mass
+        total_mass = total_count * avg_component_mass
         print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass} tonnes')
         return total_mass
 
@@ -360,9 +361,9 @@ class Context:
             else:
                 print(f'{datetime.now()} DES interface: All Masses are 0')
 
-    def average_total_blade_mass_for_year(self, year):
+    def average_total_component_mass_for_year(self, year):
         """
-        Totals the masses of all materials in a blade for a given year.
+        Totals the masses of all materials in a component for a given year.
 
         Parameters
         ----------
@@ -373,12 +374,12 @@ class Context:
         Returns
         -------
         float
-            Average total blade mass for a year.
+            Average total component mass for a year.
         """
         year_int = int(ceil(year))
         total_mass = 0.0
         for material in self.possible_materials:
-            total_mass += self.avg_blade_mass_tonnes_dict[material][year_int]
+            total_mass += self.avg_component_mass_tonnes_dict[material][year_int]
         return total_mass
 
     def update_cost_graph_process(self, env):
@@ -392,7 +393,7 @@ class Context:
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             year = self.timesteps_to_years(env.now)
-            avg_blade_mass = self.average_total_blade_mass_for_year(year)
+            avg_component_mass = self.average_total_component_mass_for_year(year)
 
             cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
                 component_kind='blade',
@@ -408,12 +409,12 @@ class Context:
 
             self.cost_graph.update_costs(
                 year=year,
-                blade_mass=avg_blade_mass,
+                component_mass=avg_component_mass,
                 finegrind_cumul=cum_mass_fine_grinding,
                 coarsegrind_cumul=cum_mass_coarse_grinding
             )
 
-            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_blade_mass {avg_blade_mass}", flush=True)
+            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_component_mass {avg_component_mass}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """
