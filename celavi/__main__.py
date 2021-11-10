@@ -335,7 +335,7 @@ context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
     avg_blade_masses_filename=avg_blade_masses_filename,
-    possible_components=des_params.get('component_list', []),
+    possible_components=list(des_params.get('component_list', []).keys()),
     possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
@@ -361,13 +361,12 @@ for _, row in turbine_data.iterrows():
     n_turbine = int(row['n_turbine'])
 
     for _ in range(n_turbine):
-        for _ in range(3):
-            components.append({
-                'year': year,
-                'kind': 'blade',
-                'manuf_facility_id': manuf_facility_id,
-                'in_use_facility_id': in_use_facility_id
-            })
+        components.append({
+            'year': year,
+            'kind': 'blade',
+            'manuf_facility_id': manuf_facility_id,
+            'in_use_facility_id': in_use_facility_id
+        })
 
 print(f'Components created at {np.round(time.time() - time0, 1)} s',
       flush=True)
@@ -417,13 +416,14 @@ print(f'Run starting for DES at {np.round(time.time() - time0)} s\n\n\n',
 count_facility_inventories = context.run()
 
 # Plot the cumulative count levels of the count inventories
-possible_component_list = des_params.get('component_list', [])
+possible_component_list = list(des_params.get('component_list', []).keys())
 diagnostic_viz_counts = DiagnosticViz(
     facility_inventories=context.count_facility_inventories,
     output_plot_filename=component_counts_plot_filename,
     keep_cols=possible_component_list,
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
+    component_count=des_params.get('component_list'),
     var_name='unit',
     value_name='count'
 )
@@ -439,6 +439,7 @@ diagnostic_viz_mass = DiagnosticViz(
     keep_cols=possible_component_list,
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
+    component_count=des_params.get('component_list'),
     var_name='material',
     value_name='tonnes'
 )
