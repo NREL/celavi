@@ -23,6 +23,7 @@ class DiagnosticViz:
         keep_cols: List[str],
         start_year: int,
         timesteps_per_year: int,
+        component_count: Dict[str, int],
         var_name: str,
         value_name: str,
     ):
@@ -47,6 +48,10 @@ class DiagnosticViz:
         timesteps_per_year: int
             The timesteps per year for the DES model.
 
+        component_count : Dict[str, int]
+            Dictionary where the keys are component names and the values are
+            the number of components in one technology unit.
+
         var_name: str
             The name of the generalized var column, like 'material' or 'unit'.
 
@@ -58,6 +63,7 @@ class DiagnosticViz:
         self.keep_cols = keep_cols
         self.start_year = start_year
         self.timestep_per_year = timesteps_per_year
+        self.component_count = component_count
         self.var_name = var_name
         self.value_name = value_name
 
@@ -93,6 +99,18 @@ class DiagnosticViz:
                 cumulative_history["timestep"] / self.timestep_per_year
             ) + self.start_year
             cumulative_history["year_ceil"] = np.ceil(cumulative_history["year"])
+            # scale component counts with dictionary from config, if component
+            # columns are present
+            try:
+                cumulative_history.loc[
+                    :, [key for key, value in self.component_count.items()]
+                ] = cumulative_history.loc[
+                    :, [key for key, value in self.component_count.items()]
+                ] * [
+                    value for key, value in self.component_count.items()
+                ]
+            except KeyError as e:
+                print(f'Skipping component count scaling because {e}')
             cumulative_histories.append(cumulative_history)
 
         cumulative_histories = pd.concat(cumulative_histories)
