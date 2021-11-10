@@ -67,9 +67,9 @@ class CostGraph:
 
         Keyword Arguments
         -----------------
-        blade_mass : float
-            Average mass of a single turbine blade at the beginning of the
-            model run. Units: metric tons (tonnes)
+        component_mass : float
+            Average mass of a single technology component at the beginning of
+            the model run. Units: metric tons (tonnes)
 
         finegrind_cumul_initial : float
             Cumulative production of fine grinding at the beginning of the
@@ -91,8 +91,7 @@ class CostGraph:
             model run.
 
         finegrind_revenue : float
-            Revenue in USD/metric ton from sales of finely ground blade
-            material.
+            Revenue in USD/metric ton from sales of finely ground material.
 
         finegrind_learnrate : float
             Industrial learning-by-doing rate for fine grinding. Unitless.
@@ -101,8 +100,8 @@ class CostGraph:
             Industrial learning-by-doing rate for coarse grinding. Unitless.
 
         finegrind_material_loss : float
-            Fraction of total blade material lost during fine grinding.
-            Unitless. This is the amount of finely ground blade material that
+            Fraction of total material lost during fine grinding.
+            Unitless. This is the amount of finely ground material that
             must be landfilled.
         """
         self.start_time = time()
@@ -123,7 +122,7 @@ class CostGraph:
 
         self.year=year
 
-        self.blade_mass=kwargs['blade_mass']
+        self.component_mass=kwargs['component_mass']
 
         # The cumulative production numbers must not be zero to prevent
         # mathematical errors in the learning-by-doing equation.
@@ -671,7 +670,7 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = sum(
                 [f(vkmt=self.supply_chain.edges[edge]['dist'],
                    year=self.year,
-                   blade_mass=self.blade_mass,
+                   component_mass=self.component_mass,
                    finegrind_cumul_initial=self.finegrind_cumul_initial,
                    coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
                    finegrind_initial_cost=self.finegrind_initial_cost,
@@ -893,15 +892,15 @@ class CostGraph:
         year : float
             Model year provided by DES.
 
-        blade_mass : float
-            Average turbine blade mass provided by DES.
+        component_mass : float
+            Average technology component mass provided by DES.
 
         finegrind_cumul : float
-            Cumulative mass of blades that have been finely ground,
+            Cumulative mass of components that have been finely ground,
             provided by DES.
 
         coarsegrind_cumul : float
-            Cumulative mass of blades that have been coarsely ground,
+            Cumulative mass of components that have been coarsely ground,
             provided by DES.
 
         Returns
@@ -920,7 +919,7 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = sum(
                 [f(vkmt=self.supply_chain.edges[edge]['dist'],
                    year=kwargs['year'],
-                   blade_mass=kwargs['blade_mass'],
+                   component_mass=kwargs['component_mass'],
                    finegrind_cumul=kwargs['finegrind_cumul'],
                    coarsegrind_cumul=kwargs['coarsegrind_cumul'],
                    finegrind_cumul_initial=self.finegrind_cumul_initial,
