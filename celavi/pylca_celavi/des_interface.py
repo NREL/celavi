@@ -12,6 +12,31 @@ from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_li
 from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing,impact_calculations
 
 
+
+
+class pylca_celavi():
+    
+    
+    def __init__(self,
+                 lca_results_filename,
+                 shortcutlca_filename,
+                 dynamic_lci_filename,
+                 static_lci_filename,
+                 uslci_filename,
+                 stock_filename,
+                 emissions_lci_filename,
+                 ):
+        
+        #filepaths for files used in the pylca calculations
+        self.lca_results_filename = lca_results_filename
+        self.shortcutlca_filename = shortcutlca_filename
+        self.dynamic_lci_filename = dynamic_lci_filename
+        self.static_lci_filename = static_lci_filename
+        self.uslci_filename = uslci_filename
+        self.stock_filename = stock_filename
+        self.emissions_lci_filename = emissions_lci_filename
+        
+
 """
 concrete_life_cycle_inventory_updater() reads:
     - foreground_process_inventory.csv (needs only to be read once)
@@ -52,6 +77,28 @@ except:
 
 
 def lca_performance_improvement(df):
+    
+    """This function is used to bypass optimization based pylca celavi calculations
+    It reads emission factor data from previous runs stored in a file
+    and performs lca rapidly"""
+    
+    
+    """Needs to be reset after any significant update to data"""
+    
+    """
+    Parameters
+    ----------
+    shortcut lca db filename
+    
+    Returns
+    -------
+    Based on availability of stored file, returns
+    1.dataframe with lca calculations performed along with missing activities and processes not performed
+    2.complete dataframe without any results if file doesn't exist
+    
+    """
+    
+    
     try:
         db= pd.read_csv('lca_db.csv')
         db.columns = ['year','stage','material','flow name','emission factor kg/kg']
@@ -74,12 +121,29 @@ def lca_performance_improvement(df):
 
 
 def pylca_run_main(df):
+    
+    """this function runs the individual pylca celavi functions for performing various calculations"""
+
+    """
+    Parameters
+    __________
+    dataframe of material flows from DES
+    
+    Returns
+    _______
+    dataframe of LCIA results
+    appends dataframe to csv file
+    
+    """
+    
+    
     df = df[df['flow quantity'] != 0]    
 
     res_df = pd.DataFrame()
     df=df.reset_index()
     lcia_mass_flow = pd.DataFrame()
 
+    #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
     for index,row in df.iterrows():
         
         year = row['year']
@@ -87,10 +151,11 @@ def pylca_run_main(df):
         material = row['material']
         facility_id = row['facility_id']
         new_df = df[df['index'] == index]
+        
+        #Calling the lca performance improvement function to do shortcut calculations. 
         df_with_no_lca_entry,result_shortcut = lca_performance_improvement(new_df)
 
         if not df_with_no_lca_entry.empty:
-            # Correcting life cycle inventory with material is concrete
             # Calculates the concrete lifecycle flow and emissions inventory
             df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage)
 

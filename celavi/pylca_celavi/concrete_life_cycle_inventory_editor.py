@@ -1,15 +1,30 @@
 import pandas as pd
 
-"""
-This module models a stock variable for concrete.
-
-I do not need to create a concrete stock variable in the DES.
-
-The only file that this creates is the pickle file between years.
-"""
-
 
 def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
+    
+    """Modifies static LCI based on availability of GFRP at the cement processing stage 
+    and demand of concrete in the system"""
+    
+    """GFRP may or may not be available in the system every year. If GFRP is available when 
+    concrete required a stock variable is ceated to store GFRP and used in later years 
+    for cement co processing"""
+    
+    """
+    Parameters
+    __________
+    df row from DES model with material, quantity, year, stage etc. 
+    substitution rate of sand, coal and emissions change due to use of GFRP in cement co processing. 
+    
+    Returns
+    _______
+    updated static inventory with changes due to concrete demand and GFRP availability.
+    emissions inventory
+    """
+    
+    
+    
+    
     sand_substitution_rate = 0.15
     coal_substitution_rate = 0.30
 
