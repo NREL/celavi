@@ -10,7 +10,7 @@ Unmodified FPEAM code is available at https://github.com/NREL/fpeam.
 
 @author: aeberle
 """
-
+# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
 import pandas as pd
 
 
@@ -24,7 +24,10 @@ class Data(pd.DataFrame):
     INDEX_COLUMNS = []
 
     def __init__(self, df=None, fpath=None, columns=None, backfill=True):
-
+        # TODO: consider having docstrings here explaining Data class
+        #  parameters (in addition or instead of in the load method below).
+        #  It would be better to understand straightaway what is fpath for
+        #  instance.
         _df = pd.DataFrame({}) if df is None and fpath is None else self.load(fpath=fpath,
                                                                               columns=columns)
 
@@ -155,6 +158,7 @@ class TransportationGraph(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # TODO: consider replacing super(X, self).init(...) by super().init(...)
         super(TransportationGraph, self).__init__(df=df, fpath=fpath, columns=columns,
                                                   backfill=backfill)
 
@@ -168,6 +172,7 @@ class TransportationNodeLocations(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # TODO: consider replacing super(X, self).init(...) by super().init(...)
         super(TransportationNodeLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
@@ -186,6 +191,7 @@ class Locations(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # TODO: consider replacing super(X, self).init(...) by super().init(...)
         super(Locations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
@@ -208,6 +214,7 @@ class TurbineLocations(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # TODO: consider replacing super(X, self).init(...) by super().init(...)
         super(TurbineLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
@@ -225,6 +232,7 @@ class OtherFacilityLocations(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # TODO: consider replacing super(X, self).init(...) by super().init(...)
         super(OtherFacilityLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
@@ -242,6 +250,7 @@ class LandfillLocations(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # TODO: consider replacing super(X, self).init(...) by super().init(...)
         super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
@@ -254,5 +263,6 @@ class StandardScenarios(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
+        # TODO: consider replacing super(X, self).init(...) by super().init(...)
         super(StandardScenarios,self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)

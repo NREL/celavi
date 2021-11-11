@@ -1,3 +1,8 @@
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
+
 import argparse
 import os
 import pickle
@@ -29,7 +34,8 @@ try:
         cg_params = config.get('costgraph_parameters', {})
         des_params = config.get('discrete_event_parameters', {})
 except IOError as err:
-    print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
+    print(f'Could not open {config_yaml_filename} for configuration. '
+          f'Exiting with status code 1.')
     exit(1)
 
 
@@ -83,8 +89,8 @@ step_costs_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('step_costs'))
 fac_edges_filename = os.path.join(args.data,
-                                   data_dirs.get('inputs'),
-                                   inputs.get('fac_edges'))
+                                  data_dirs.get('inputs'),
+                                  inputs.get('fac_edges'))
 transpo_edges_filename = os.path.join(args.data,
                                       data_dirs.get('inputs'),
                                       inputs.get('transpo_edges'))
@@ -105,7 +111,8 @@ routes_computed_filename = os.path.join(args.data,
 # transport graph (pre computed; don't change)
 transportation_graph_filename = os.path.join(args.data,
                                              data_dirs.get('us_roads'),
-                                             inputs.get('transportation_graph'))
+                                             inputs.get('transportation_graph')
+                                             )
 
 # node locations for transport graph (pre computed; don't change)
 node_locations_filename = os.path.join(args.data,
@@ -122,12 +129,15 @@ landfill_locations_filename = os.path.join(args.data,
                                            inputs.get('landfill_locs'))
 # other facility locations (e.g., cement)
 other_facility_locations_filename = os.path.join(args.data,
-                                                 data_dirs.get('raw_locations'),
-                                                 inputs.get('other_facility_locs'))
+                                                 data_dirs.get(
+                                                     'raw_locations'),
+                                                 inputs.get(
+                                                     'other_facility_locs'))
 
 lookup_facility_type_filename = os.path.join(args.data,
                                              data_dirs.get('lookup_tables'),
-                                             inputs.get('lookup_facility_type'))
+                                             inputs.get('lookup_facility_type')
+                                             )
 
 # file where the turbine data will be saved after generating from raw inputs
 turbine_data_filename = os.path.join(args.data,
@@ -187,8 +197,8 @@ mass_cumulative_histories_filename = os.path.join(
 # files immediately.
 
 os.chdir(subfolder_dict['lci_folder'])
-from celavi.des import Context
-from celavi.diagnostic_viz import DiagnosticViz
+from celavi.des import Context  # TODO: is there no way this could be moved up?
+from celavi.diagnostic_viz import DiagnosticViz  # TODO: ditto above
 
 
 # Note that the step_cost file must be updated (or programmatically generated)
@@ -233,7 +243,7 @@ time0 = time.time()
 # Data filtering for states
 states_to_filter = scenario_params.get('states_to_filter', [])
 if enable_data_filtering:
-    if len(states_to_filter) == 0:
+    if len(states_to_filter) == 0:  # TODO: consider "if not states_to_filter:"
         print('Cannot filter data; no state list provided', flush=True)
     else:
         print(f'Filtering locations: {states_to_filter}',
@@ -250,7 +260,7 @@ if enable_data_filtering:
                       routes)
 
 print('State filtering completed in %d s' % np.round(time.time() - time0, 1),
-        flush=True)
+      flush=True)
 
 time0 = time.time()
 
@@ -261,12 +271,16 @@ if run_routes:
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'],
-        preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
+        preprocessing_output_folder=subfolder_dict[
+            'preprocessing_output_folder'])
 
+# TODO: provide explanation: why is the avg_blade_masses_filename file read
+#  now? where and how is it going to be used? could it be read later in a block
+#  of code? (e.g., right before "if initialize_costgraph" below).
 avgblade = pd.read_csv(avg_blade_masses_filename)
 
 print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
-        flush=True)
+      flush=True)
 
 
 time0 = time.time()
@@ -288,9 +302,9 @@ if initialize_costgraph:
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
-        pathway_cost_history_filename = pathway_cost_history_filename,
-        blade_mass=avgblade.loc[avgblade.year==scenario_params.get('start_year'),
-                                'total'].values[0],
+        pathway_cost_history_filename=pathway_cost_history_filename,
+        blade_mass=avgblade.loc[avgblade.year == scenario_params.get(
+            'start_year'), 'total'].values[0],
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
         coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
         finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
@@ -306,7 +320,7 @@ if initialize_costgraph:
     if pickle_costgraph:
         # Save the CostGraph object using pickle
         pickle.dump(netw, open(costgraph_pickle_filename, 'wb'))
-        print('Cost graph pickled and saved',flush = True)
+        print('Cost graph pickled and saved', flush=True)
 
 else:
     # Read in a previously generated CostGraph object
@@ -377,6 +391,12 @@ components = pd.DataFrame(components)
 # Create the lifespan functions for the components.
 np.random.seed(des_params.get('seed', 13))
 timesteps_per_year = scenario_params.get('timesteps_per_year')
+# TODO: consider looping through des_params.get('component_fixed_lifetimes')
+#  instead, e.g., with a dict comprehension. That would also make it more
+#  general as key don't have to be specified {key: value * timesteps_per_year
+#  for key, value in des_params.get('component_fixed_lifetimes').items()}
+#  (and having the lines below change blade lifetime depending on
+#  use_fixed_lifetime condition)
 lifespan_fns = {
     "nacelle": lambda: des_params.get(
         'component_fixed_lifetimes'
@@ -397,7 +417,8 @@ else:
     lifespan_fns['blade'] = lambda: weibull_min.rvs(
         des_params.get('blade_weibull_K'),
         loc=des_params.get('min_lifespan'),
-        scale=des_params.get('blade_weibull_L') - des_params.get('min_lifespan'),
+        scale=des_params.get('blade_weibull_L') - des_params.get(
+            'min_lifespan'),
         size=1
     )[0]
 
@@ -427,8 +448,10 @@ diagnostic_viz_counts = DiagnosticViz(
     var_name='unit',
     value_name='count'
 )
-count_cumulative_histories = diagnostic_viz_counts.gather_and_melt_cumulative_histories()
-count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
+count_cumulative_histories = \
+    diagnostic_viz_counts.gather_and_melt_cumulative_histories()
+count_cumulative_histories.to_csv(count_cumulative_histories_filename,
+                                  index=False)
 diagnostic_viz_counts.generate_plots()
 
 # Plot the levels of the mass inventories
@@ -442,16 +465,21 @@ diagnostic_viz_mass = DiagnosticViz(
     var_name='material',
     value_name='tonnes'
 )
-mass_cumulative_histories = diagnostic_viz_mass.gather_and_melt_cumulative_histories()
-mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
+mass_cumulative_histories = \
+    diagnostic_viz_mass.gather_and_melt_cumulative_histories()
+mass_cumulative_histories.to_csv(mass_cumulative_histories_filename,
+                                 index=False)
 diagnostic_viz_mass.generate_plots()
 
 # Postprocess and save CostGraph outputs
 netw.save_costgraph_outputs()
 
-# Join LCIA and locations computed and write the result to enable creation of maps
-lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact', 'impact_value']
-lcia_filename = os.path.join(subfolder_dict['lci_folder'], 'final_lcia_results_to_des.csv')
+# Join LCIA and locations computed and write the result to enable creation of
+# maps
+lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact',
+              'impact_value']
+lcia_filename = os.path.join(subfolder_dict['lci_folder'],
+                             'final_lcia_results_to_des.csv')
 lcia_df = pd.read_csv(lcia_filename, names=lcia_names)
 locations_df = pd.read_csv(locations_computed_filename)
 
@@ -467,8 +495,10 @@ locations_columns = [
 ]
 
 locations_select_df = locations_df.loc[:, locations_columns]
-lcia_locations_df = lcia_df.merge(locations_select_df, how='inner', on='facility_id')
-lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_locations_join.csv')
+lcia_locations_df = lcia_df.merge(locations_select_df, how='inner',
+                                  on='facility_id')
+lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'],
+                                       'lcia_locations_join.csv')
 lcia_locations_df.to_csv(lcia_locations_filename, index=False)
 
 # Print run finish message
