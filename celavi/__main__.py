@@ -10,7 +10,7 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
 import yaml
-
+import pdb
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 parser.add_argument('--config', help='Name of config file in data folder.')
@@ -91,9 +91,9 @@ transpo_edges_filename = os.path.join(args.data,
 route_pair_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('route_pairs'))
-avg_masses_filename = os.path.join(args.data,
+component_material_masses_filename = os.path.join(args.data,
                                          data_dirs.get('inputs'),
-                                         inputs.get('avg_masses'))
+                                         inputs.get('component_material_mass'))
 routes_custom_filename = os.path.join(args.data,
                                       data_dirs.get('inputs'),
                                       inputs.get('routes_custom'))
@@ -263,11 +263,15 @@ if run_routes:
         routing_output_folder=subfolder_dict['routing_output_folder'],
         preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
 
-avg_mass = pd.read_csv(avg_masses_filename)
-
 print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
         flush=True)
 
+component_material_mass = pd.read_csv(component_material_masses_filename)
+component_total_mass = component_material_mass.groupby(
+    by=['year','technology','component']
+).sum(
+    'mass_tonnes'
+).reset_index()
 
 time0 = time.time()
 
@@ -289,8 +293,10 @@ if initialize_costgraph:
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
-        component_mass=avg_mass.loc[avg_mass.year == scenario_params.get('start_year'),
-                                'total'].values[0],
+        component_mass=component_total_mass.loc[
+            component_total_mass.year == scenario_params.get('start_year'),
+            'mass_tonnes'
+        ].values[0],
         finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
         coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
         finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
@@ -334,7 +340,7 @@ timesteps_per_year = scenario_params.get('timesteps_per_year')
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
-    avg_component_masses_filename=avg_masses_filename,
+    avg_component_masses_filename=component_material_masses_filename,
     possible_components=list(des_params.get('component_list', []).keys()),
     possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
