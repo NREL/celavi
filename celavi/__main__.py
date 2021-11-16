@@ -293,6 +293,7 @@ if initialize_costgraph:
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
+        # @TODO need parameter "cost graph component" or similar
         component_mass=component_total_mass.loc[
             component_total_mass.year == scenario_params.get('start_year'),
             'mass_tonnes'
@@ -368,7 +369,7 @@ for _, row in technology_data.iterrows():
     for _ in range(n_technology):
         components.append({
             'year': year,
-            # @TODO parameterize 'blade']
+            # @TODO Need parameter "des component" or similar - same as cost graph component
             'kind': 'blade',
             'manuf_facility_id': manuf_facility_id,
             'in_use_facility_id': in_use_facility_id
