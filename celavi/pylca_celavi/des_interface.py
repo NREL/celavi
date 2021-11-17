@@ -16,7 +16,40 @@ from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessi
 
 class PylcaCelavi:
     """    
-    Explain to class - TJ
+    The PylcaCelavi class 
+    - Provides an object which stores the files names required for performing LCA calculations
+    - Calls the main functions required for performing LCIA calculations
+    - 
+    
+    Parameters
+    ___________
+    
+    lca_results_filename: dataframe
+        final_lcia_results.csv Stores final results. 
+    
+    shortcutlca_filename: dataframe
+        lca_db.csv Stores emission factors for short cut calculations
+    
+    dynamic_lci_filename: dataframe
+        elec_gen_dynamic_final.csv Inventory for dynamic electricity grid mix
+    
+    static_lci_filename: dataframe
+        foreground_process_inventory.csv Process inventory for foreground activities
+    
+    uslci_filename: dataframe
+        usnrellci_processesv2017_loc_debugged.p Background LCI inventory from USLCI
+    
+    stock_filename: dataframe
+        stock_filename.p Stock file to store GFRP at cement co processing plant for one year
+    
+    emissions_lci_filename: dataframe
+        emissions_inventory.csv Emissions LCI inventory file. 
+    
+    traci_lci_filename: dataframe
+        traci21.csv TRACI2.1 characterization factor file. 
+    
+    
+    
     """
     def __init__(self,
                  lca_results_filename,
@@ -28,9 +61,15 @@ class PylcaCelavi:
                  emissions_lci_filename,
                  traci_lci_filename,
                  ):
+        
         """
-        Explain the init method
-        Use numpy docstring style
+        This function stores the filenames required for LCIA calculations as properties of an object. 
+        
+        Parameters
+        _________
+        
+        Names of files for different LCIA operations
+        
         """
         
         #filepaths for files used in the pylca calculations
@@ -100,7 +139,8 @@ class PylcaCelavi:
 
     def pylca_run_main(self,df):
        
-        """this function runs the individual pylca celavi functions for performing various calculations
+        """
+        This function runs the individual pylca celavi functions for performing various calculations
     
         
         Parameters
@@ -200,35 +240,3 @@ class PylcaCelavi:
         # This is the result that needs to be analyzed every timestep.
         return res_df
            
-
-        
-
-"""
-concrete_life_cycle_inventory_updater() reads:
-    - foreground_process_inventory.csv (needs only to be read once)
-    - emissions_inventory.csv  (needs only to be read once)
-    
-concrete_life_cycle_inventory_updater() writes:
-    - gfrp_cement_coprocess_stock.pickle (for the stock variable, may be overwritten at every timestep)
-    
-model_celavi_lci() reads:
-    - dynamic_secondary_lci_foreground.csv (needs only to be read once)
-    
-model_celavi_lci() writes:
-    - intermediate_demand.csv (for debugging, overwritten at every timestep)
-    
-model_celavi_lci_insitu() uses no files.
-
-model_celavi_lci_background() reads:
-    - usnrellci_processesv2017_loc_debugged.pickle (needs only to be read once)
-    - location.csv (needs only to be read once)
-    
-model_celavi_lci_background() writes:
-    - something for debugging purposes.
-    
-postprocessing() reads:
-    - traci21.csv (needs only to be read once)
-    
-postprocessing() writes:
-    - nothing
-"""
