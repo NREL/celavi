@@ -27,11 +27,11 @@ def postprocessing(final_res,insitu):
     return final_res
 
 
-def impact_calculations(final_res):    
+def impact_calculations(final_res,traci_lci_filename):    
    
      
    
-    traci = pd.read_csv('traci21.csv')
+    traci = pd.read_csv(traci_lci_filename)
     traci = traci.fillna(0)
     impacts = list(traci.columns)
     valuevars = ['Global Warming Air (kg CO2 eq / kg substance)',
@@ -69,14 +69,3 @@ def impact_calculations(final_res):
     df_lcia = df_lcia.groupby(['year','facility_id', 'material','stage','impacts'])['impact'].agg('sum').reset_index()
     
     return df_lcia                      
-    #impacts = ['Global Warming Air (kg CO2 eq / kg substance)']   
-    '''                                
-    for im in valuevars:
-       df =  traci_df[traci_df['impacts'] == im] 
-       graph_df_lcia = final_lci_result.merge(df, left_on = ['flow name'], right_on = ['Substance Name'])
-       
-       graph_df_lcia = graph_df_lcia.groupby(['year', 'material','stage','scenario', 'coarse grinding location',
-           'distance to recycling facility', 'distance to cement plant',
-           'flow unit', 'impacts'])['impact'].agg('sum').reset_index()
-
-    '''

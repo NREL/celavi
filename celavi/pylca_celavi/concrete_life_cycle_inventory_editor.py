@@ -1,16 +1,16 @@
 import pandas as pd
 
 
-def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
+def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage,static_filename,stock_filename,emissions_filename):
     
     """Modifies static LCI based on availability of GFRP at the cement processing stage 
-    and demand of concrete in the system"""
+    and demand of concrete in the system
     
-    """GFRP may or may not be available in the system every year. If GFRP is available when 
+    GFRP may or may not be available in the system every year. If GFRP is available when 
     concrete required a stock variable is ceated to store GFRP and used in later years 
-    for cement co processing"""
+    for cement co processing
     
-    """
+    
     Parameters
     __________
     df row from DES model with material, quantity, year, stage etc. 
@@ -30,17 +30,17 @@ def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
 
     if k == 'glass fiber reinforced polymer' and stage == 'cement co-processing':
         fd_cur2 = fd_cur2.reset_index()
-        fd_cur2.to_pickle('gfrp_cement_coprocess_stock.pickle',compression = None)
+        fd_cur2.to_pickle(stock_filename,compression = None)
         return pd.DataFrame(), pd.DataFrame()
 
 
     #The problem of concrete emission where emission is dependant upon the value of glass fiber availalbe in the system'
     elif k == 'concrete':
-        df_static = pd.read_csv('foreground_process_inventory.csv')
+        df_static = pd.read_csv(static_filename)
         year_of_concrete_demand = yr
 
         # Reading gfrp storage variable in pickle from previous runs
-        gfrp_storage = pd.read_pickle('gfrp_cement_coprocess_stock.pickle')
+        gfrp_storage = pd.read_pickle(stock_filename)
         year_of_storage = gfrp_storage['year'][0]
 
         # Subtracting the year of demand and storage
@@ -96,12 +96,12 @@ def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
         new_co2_emission_factor = 0.00092699/0.0096291 * new_coal_inventory_factor
         # These numbers are all obtained from the inventory which says that the use of 0.0096291 kg coal will cause 0.000926 kg Co2 emission
         # This co2 emission only includes the coal combustion impact factor. Other fuels need to be added separately
-        df_emissions = pd.read_csv('emissions_inventory.csv')
+        df_emissions = pd.read_csv(emissions_filename)
         df_emissions.loc[((df_emissions['product'] == 'carbon dioxide') & (df_emissions['process'] == 'concrete, in use')),'value'] = new_co2_emission_factor
         return df_static,df_emissions
 
     else:
 
-        df_static = pd.read_csv('foreground_process_inventory.csv')
-        df_emissions = pd.read_csv('emissions_inventory.csv')
+        df_static = pd.read_csv(static_filename)
+        df_emissions = pd.read_csv(emissions_filename)
         return df_static,df_emissions

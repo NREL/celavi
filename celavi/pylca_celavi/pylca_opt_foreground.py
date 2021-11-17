@@ -26,12 +26,13 @@ except FileNotFoundError:
 
     
 #Reading in static and dynamics lca databases
-print('>>>', os.getcwd())
-df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
+
 
 #We are integrating static lca with dynamics lca over here. 
-def preprocessing(year,df_static):
+def preprocessing(year,df_static,dynamic_lci_filename):
     
+    #Reading in dynamics LCA databases
+    df_dynamic = pd.read_csv(dynamic_lci_filename)
     df_dynamic_year = df_dynamic[df_dynamic['year'] == year]
     frames = [df_static,df_dynamic_year]
     df = pd.concat(frames)
@@ -150,7 +151,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     return res
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename):
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
@@ -158,7 +159,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
     #Running LCA for all years as obtained from CELAVI
 
     #Incorporating dynamics lci database
-    process_df,df_with_all_other_flows = preprocessing(int(yr),df_static)
+    process_df,df_with_all_other_flows = preprocessing(int(yr),df_static,dynamic_lci_filename)
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'product', columns = 'process', values = 'value' )
     tech_matrix = tech_matrix.fillna(0)
