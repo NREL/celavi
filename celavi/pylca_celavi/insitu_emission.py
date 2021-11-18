@@ -100,21 +100,76 @@ def electricity_corrector_before20(df):
     return df
 
 def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
+
+    """
+    Runs the optimization function and creates final data frame in proper format
+
+    Parameters
+    ----------
+    tech matrix
+    F
+    yr
+    i
+    j
+    k
+    final_demand_scaler
+    process,
+    df_with_all_other_flows
     
-            res = pd.DataFrame()
-            res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
-            res['value'] = res['value']*final_demand_scaler
-            if res.empty == False:
-               res.loc[:,'year'] =  yr
-               res.loc[:,'facility_id'] = i
-               res.loc[:,'stage'] = j
-               res.loc[:,'material'] = k
-            
-            res = electricity_corrector_before20(res)
-            return res
+
+    Returns
+    -------
+    Dataframe with LCA results
+    """
+
+    
+    res = pd.DataFrame()
+    res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
+    res['value'] = res['value']*final_demand_scaler
+    if res.empty == False:
+       res.loc[:,'year'] =  yr
+       res.loc[:,'facility_id'] = i
+       res.loc[:,'stage'] = j
+       res.loc[:,'material'] = k
+    
+    res = electricity_corrector_before20(res)
+    return res
 
 
 def model_celavi_lci_insitu(f_d,yr,fac_id,stage,material,df_emissions):
+
+
+    """
+    This is used for calculating insitu emissions
+    Creates technology matrix and final demand vector from inventory data
+    Runs the PyLCA optimizer to perform LCA calculations
+    Conforms results to a dataframe 
+
+    Parameters
+    ----------
+    f_d: Dataframe 
+    Dataframe from DES 
+    
+    yr: int
+    Year of calculation
+
+    fac_id: int
+    Facility ID of facility being evaluated
+
+    stage: str 
+    Stage of facility being evaluated
+
+    material: str
+    material being evaluated
+
+    df_emission: df
+    Emissons inventory
+
+    Returns
+    -------
+    Insitu emissions within a Dataframe after LCA calculations
+    """
+
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
