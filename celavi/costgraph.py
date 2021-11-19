@@ -1,3 +1,9 @@
+# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
+#  Use develop branch and not master branch
+#  TODO: @jwalzber = Check if other classes from data manager module than
+#   TransportationGraph and TransportationNodeLocations are used elsewhere
+#   (if not: indicate to remove them).
+
 import networkx as nx
 import pandas as pd
 import numpy as np

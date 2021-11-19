@@ -10,8 +10,7 @@ Unmodified FPEAM code is available at https://github.com/NREL/fpeam.
 
 @author: aeberle
 """
-# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
-#  Use develop branch and not master branch
+
 import pandas as pd
 
 
@@ -31,7 +30,8 @@ class Data(pd.DataFrame):
         #  instance.
         _df = pd.DataFrame({}) if df is None and fpath is None else self.load(fpath=fpath,
                                                                               columns=columns)
-
+        # TODO: consider replacing super(X, self).init(...) by
+        #  super().init(...)
         super(Data, self).__init__(data=_df)
 
         self.source = fpath or 'DataFrame'
@@ -81,6 +81,8 @@ class Data(pd.DataFrame):
             return _df
 
     def backfill(self, column, value=0):
+        # TODO: consider adding what data type and a short description of what
+        #  the method return and remove extra blank line
         """
         Replace NaNs in <column> with <value>.
 
@@ -100,7 +102,7 @@ class Data(pd.DataFrame):
             # count the total values
             _count_total = self[column].__len__()
 
-            # fill the missing values with zeros
+            # fill the missing values with zeros  # TODO: rather "with value"
             self[column].fillna(value, inplace=True)
 
             # log a warning with the number of missing values
@@ -115,6 +117,8 @@ class Data(pd.DataFrame):
         return _backfilled
 
     def validate(self):
+        # TODO: consider adding what data type and a short description of what
+        #  the method return and remove extra blank line
         """
         Check that data are not empty
 
@@ -147,7 +151,15 @@ class Data(pd.DataFrame):
 
 
 class TransportationGraph(Data):
-
+    # TODO: consider having a short description of the class in place of the
+    #  blank line. While it's pretty self-explanatory for TransportationGraph,
+    #  TransportationNodeLocations, Locations, TurbineLocations,
+    #  OtherFacilityLocations, and LandfillLocations, it is unclear what the
+    #  StandardScenarios class is for. Moreover, wouldn't it be simpler to
+    #  always call the Data class but with different columns input whenever it
+    #  is used for Locations, TurbineLocations etc.? Otherwise maybe justify
+    #  why several sub Data classes are needed in the short description of
+    #  the class.
     COLUMNS = ({'name': 'edge_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'statefp', 'type': str, 'index': False, 'backfill': None},
                {'name': 'countyfp', 'type': str, 'index': False, 'backfill': None},
@@ -157,6 +169,7 @@ class TransportationGraph(Data):
                {'name': 'fclass', 'type': int, 'index': False, 'backfill': None})
 
     def __init__(self, df=None, fpath=None,
+                 # TODO: how is "for k in d.keys()" used? should it be removed?
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
@@ -166,12 +179,13 @@ class TransportationGraph(Data):
 
 
 class TransportationNodeLocations(Data):
-
+    # TODO: ditto comment made for the TransportationGraph class
     COLUMNS = ({'name': 'node_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None})
 
     def __init__(self, df=None, fpath=None,
+                 # TODO: how is "for k in d.keys()" used? should it be removed?
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
@@ -181,6 +195,7 @@ class TransportationNodeLocations(Data):
 
 
 class Locations(Data):
+    # TODO: ditto comment made for the TransportationGraph class
     COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
@@ -192,6 +207,7 @@ class Locations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
+                 # TODO: how is "for k in d.keys()" used? should it be removed?
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
@@ -201,6 +217,7 @@ class Locations(Data):
 
 
 class TurbineLocations(Data):
+    # TODO: ditto comment made for the TransportationGraph class
     COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
                {'name': 't_county', 'type': str, 'index': False, 'backfill': None},
@@ -216,6 +233,7 @@ class TurbineLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
+                 # TODO: how is "for k in d.keys()" used? should it be removed?
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
@@ -223,7 +241,9 @@ class TurbineLocations(Data):
         super(TurbineLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
+
 class OtherFacilityLocations(Data):
+    # TODO: ditto comment made for the TransportationGraph class
     COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
@@ -235,6 +255,7 @@ class OtherFacilityLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
+                 # TODO: how is "for k in d.keys()" used? should it be removed?
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
@@ -242,7 +263,9 @@ class OtherFacilityLocations(Data):
         super(OtherFacilityLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
+
 class LandfillLocations(Data):
+    # TODO: ditto comment made for the TransportationGraph class
     COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
                {'name': 'State', 'type': str, 'index': False, 'backfill': None},
                {'name': 'Latitude', 'type': float, 'index': False, 'backfill': None},
@@ -254,6 +277,7 @@ class LandfillLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
+                 # TODO: how is "for k in d.keys()" used? should it be removed?
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
@@ -261,13 +285,16 @@ class LandfillLocations(Data):
         super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
+
 class StandardScenarios(Data):
+    # TODO: ditto comment made for the TransportationGraph class
     COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},
                {'name': 't', 'type': int, 'index': False, 'backfill': None},
                {'name': 'wind-ons_MW', 'type': float, 'index': False, 'backfill': '-1'}
                )
 
     def __init__(self, df=None, fpath=None,
+                 # TODO: how is "for k in d.keys()" used? should it be removed?
                  columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
