@@ -136,8 +136,7 @@ class PylcaCelavi:
             print(self.shortcutlca_filename+' file not found')        
             return df,pd.DataFrame()
 
-
-    def pylca_run_main(self,df):
+    def pylca_run_main(self, df):
        
         """
         This function runs the individual pylca celavi functions for performing various calculations
