@@ -299,5 +299,5 @@ class StandardScenarios(Data):
                  backfill=True):
         # TODO: consider replacing super(X, self).init(...) by
         #  super().init(...)
-        super(StandardScenarios,self).__init__(df=df, fpath=fpath, columns=columns,
+        super(StandardScenarios, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)

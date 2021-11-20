@@ -407,7 +407,6 @@ class ComputeLocations:
             ignore_index=True,
             sort=True)
 
-
     def join_facilities(self, locations_output_file):
         # TODO: consider adding what data type and a short description of the
         #  method's input.
