@@ -95,11 +95,10 @@ class Context:
 
         for material in possible_materials:
             self.component_material_mass_tonne_dict[material] = {}
-
         for _, row in component_material_masses_df.iterrows():
             year = row['year']
-            for material in possible_materials:
-                self.component_material_mass_tonne_dict[material][year] = row[material]
+            material = row['material']
+            self.component_material_mass_tonne_dict[material][year] = row['mass_tonnes']
 
         self.possible_materials = possible_materials
 

@@ -21,6 +21,7 @@ class CostGraph:
                  locations_file : str,
                  routes_file : str,
                  pathway_cost_history_filename: str,
+                 circular_component : str,
                  sc_begin : str = 'manufacturing',
                  sc_end = ('landfilling', 'cement co-processing', 'next use'),
                  year : float = 2000.0,
@@ -47,6 +48,10 @@ class CostGraph:
             path to dataset of facility locations
         routes_file
             path to dataset of routes between facilities
+        pathway_cost_history_filename
+            Name of file where pathway cost histories are saved
+        circular_component
+            Name of component for which this CostGraph is built
         sc_begin
             processing step(s) where supply chain paths begin. String or list
             of strings.
