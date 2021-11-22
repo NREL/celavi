@@ -181,6 +181,8 @@ mass_cumulative_histories_filename = os.path.join(
     outputs.get('mass_cumulative_histories')
 )
 
+circular_component = scenario_params.get('circular_component')
+
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
 # and write operations. Also, the Context must be imported down here after
@@ -295,7 +297,7 @@ if initialize_costgraph:
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
-        # @TODO need parameter "cost graph component" or similar
+        circular_component = circular_component,
         component_mass=component_total_mass.loc[
             component_total_mass.year == scenario_params.get('start_year'),
             'mass_tonnes'
@@ -371,8 +373,7 @@ for _, row in technology_data.iterrows():
     for _ in range(n_technology):
         components.append({
             'year': year,
-            # @TODO Need parameter "des component" or similar - same as cost graph component
-            'kind': 'blade',
+            'kind': circular_component,
             'manuf_facility_id': manuf_facility_id,
             'in_use_facility_id': in_use_facility_id
         })
