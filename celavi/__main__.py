@@ -10,7 +10,7 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
 import yaml
-import pdb
+
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 parser.add_argument('--config', help='Name of config file in data folder.')
@@ -341,7 +341,7 @@ timesteps_per_year = scenario_params.get('timesteps_per_year')
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
-    avg_component_masses_filename=component_material_masses_filename,
+    component_material_masses_filename=component_material_masses_filename,
     possible_components=list(des_params.get('component_list', []).keys()),
     possible_materials=des_params.get('material_list', []),
     cost_graph=netw,
