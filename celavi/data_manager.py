@@ -256,3 +256,17 @@ class StandardScenarios(Data):
                  backfill=True):
         super(StandardScenarios,self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
+
+
+class RoutePairs(Data):
+    COLUMNS = ({'name': 'source_facility_type', 'type': str, 'index': True, 'backfill': None},
+               {'name': 'destination_facility_type', 'type': str, 'index': True,'backfill': None},
+               {'name': 'in_state_only', 'type': bool, 'index': False, 'backfill': None},
+               {'name': 'vmt_max', 'type': float, 'index': False, 'backfill': 1.0e9}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 backfill=True):
+        super(RoutePairs,self).__init__(df=df, fpath=fpath, columns=columns,
+                                        backfill=backfill)
