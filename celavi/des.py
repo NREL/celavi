@@ -29,7 +29,7 @@ class Context:
         self,
         locations_filename: str,
         step_costs_filename: str,
-        avg_component_masses_filename: str,
+        component_material_masses_filename: str,
         possible_components: List[str],
         possible_materials: List[str],
         cost_graph: CostGraph,
@@ -46,7 +46,7 @@ class Context:
             The pathname to the step_costs file that will determine the steps in
             each facility.
 
-        avg_component_masses_filename: str
+        component_material_masses_filename: str
             The pathname to the file that contains the average component masses.
 
         possible_components: List[str]
@@ -90,16 +90,16 @@ class Context:
         # Read the average component masses as an array. Then turn it into a
         # dictionary that maps integer years to component masses.
         # File data is total component mass per technology unit
-        self.avg_component_mass_tonnes_dict: Dict[str, Dict[int, float]] = {}
-        avg_component_masses_df = pd.read_csv(avg_component_masses_filename)
+        self.component_material_mass_tonne_dict: Dict[str, Dict[int, float]] = {}
+        component_material_masses_df = pd.read_csv(component_material_masses_filename)
 
         for material in possible_materials:
-            self.avg_component_mass_tonnes_dict[material] = {}
+            self.component_material_mass_tonne_dict[material] = {}
 
-        for _, row in avg_component_masses_df.iterrows():
+        for _, row in component_material_masses_df.iterrows():
             year = row['year']
             for material in possible_materials:
-                self.avg_component_mass_tonnes_dict[material][year] = row[material]
+                self.component_material_mass_tonne_dict[material][year] = row[material]
 
         self.possible_materials = possible_materials
 
@@ -224,12 +224,12 @@ class Context:
         """
 
         for _, row in df.iterrows():
-            # avg_component_mass_tonnes_for_year = self.avg_component_mass_tonnes_dict[row["year"]]
+            # avg_component_mass_tonnes_for_year = self.component_material_mass_tonne_dict[row["year"]]
             # mass_tonnes = {'gfrp': avg_component_mass_tonnes_for_year}
 
             year = row["year"]
             mass_tonnes = {
-                material: self.avg_component_mass_tonnes_dict[material][year]
+                material: self.component_material_mass_tonne_dict[material][year]
                 for material in self.possible_materials
             }
 
@@ -379,7 +379,7 @@ class Context:
         year_int = int(ceil(year))
         total_mass = 0.0
         for material in self.possible_materials:
-            total_mass += self.avg_component_mass_tonnes_dict[material][year_int]
+            total_mass += self.component_material_mass_tonne_dict[material][year_int]
         return total_mass
 
     def update_cost_graph_process(self, env):
