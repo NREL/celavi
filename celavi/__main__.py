@@ -16,7 +16,6 @@ parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 parser.add_argument('--config', help='Name of config file in data folder.')
 args = parser.parse_args()
-
 # YAML filename
 config_yaml_filename = os.path.join(args.data, args.config)
 try:
@@ -158,7 +157,7 @@ lca_results_filename = os.path.join(args.data,
 
 shortcutlca_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('dynamic_lci_filename'))
+                                    inputs.get('shortcutlca_filename'))
 
 static_lci_filename = os.path.join(args.data,
                                    data_dirs.get('lci'),

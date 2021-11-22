@@ -113,7 +113,6 @@ class PylcaCelavi:
       
         
         try:
-            
             db= pd.read_csv(self.shortcutlca_filename)
             db.columns = ['year','stage','material','flow name','emission factor kg/kg']
             db = db.drop_duplicates()
@@ -127,7 +126,7 @@ class PylcaCelavi:
             
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
             df_with_lca_entry = df_with_lca_entry[['flow name','flow unit','flow quantity','year','facility_id','stage','material']]
-            result_shortcut = impact_calculations(df_with_lca_entry)
+            result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
             
             return df_with_no_lca_entry,result_shortcut
         
@@ -168,7 +167,7 @@ class PylcaCelavi:
             material = row['material']
             facility_id = row['facility_id']
             new_df = df[df['index'] == index]
-            
+
             #Calling the lca performance improvement function to do shortcut calculations. 
             df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
     
