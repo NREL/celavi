@@ -323,6 +323,8 @@ class ComputeLocations:
             capacity_future,
             ignore_index=True,
             sort=True
+        ).rename(
+            columns={'n_turbine': 'n_technology'}
         ).to_csv(
             self.technology_data_filename,
             index=False
