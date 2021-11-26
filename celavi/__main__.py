@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 parser.add_argument('--config', help='Name of config file in data folder.')
 args = parser.parse_args()
+
 # YAML filename
 config_yaml_filename = os.path.join(args.data, args.config)
 try:
@@ -49,6 +50,7 @@ enable_data_filtering = flags.get('enable_data_filtering', False)
 pickle_costgraph = flags.get('pickle_costgraph', True)
 generate_step_costs = flags.get('generate_step_costs', True)
 use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
+use_shortcut_lca_calculations = flags.get('use_shortcut_lca_calculation', False)
 
 
 # SUB FOLDERS
@@ -353,7 +355,7 @@ else:
           flush=True)
 
 print('CostGraph exists\n\n\n')
-
+print(use_shortcut_lca_calculations)
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   shortcutlca_filename=shortcutlca_filename,
@@ -362,7 +364,8 @@ lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   uslci_filename=uslci_filename,
                   stock_filename=stock_filename,
                   emissions_lci_filename=emissions_lci_filename,
-                  traci_lci_filename=traci_lci_filename)
+                  traci_lci_filename=traci_lci_filename,
+                  use_shortcut_lca_calculations=use_shortcut_lca_calculations)
 
 # calculate des timesteps such that the model runs through the end of the
 # end year rather than stopping at the beginning of the end year

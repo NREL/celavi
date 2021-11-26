@@ -60,6 +60,7 @@ class PylcaCelavi:
                  stock_filename,
                  emissions_lci_filename,
                  traci_lci_filename,
+                 use_shortcut_lca_calculations
                  ):
         
         """
@@ -81,6 +82,7 @@ class PylcaCelavi:
         self.stock_filename = stock_filename
         self.emissions_lci_filename = emissions_lci_filename
         self.traci_lci_filename = traci_lci_filename
+        self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         
         """TJ - Move to Main.py if necessary"""
         try:
@@ -168,9 +170,15 @@ class PylcaCelavi:
             facility_id = row['facility_id']
             new_df = df[df['index'] == index]
 
-            #Calling the lca performance improvement function to do shortcut calculations. 
-            df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
+            if self.use_shortcut_lca_calculations:
+                #Calling the lca performance improvement function to do shortcut calculations. 
+                df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
     
+            else:
+                
+                df_with_no_lca_entry = new_df
+                result_shortcut = pd.DataFrame()
+
             if not df_with_no_lca_entry.empty:
                 # Calculates the concrete lifecycle flow and emissions inventory
                 df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename)
