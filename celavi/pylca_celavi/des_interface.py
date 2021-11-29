@@ -12,44 +12,37 @@ from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_li
 from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing,impact_calculations
 
 
-
-
 class PylcaCelavi:
     """    
     The PylcaCelavi class 
     - Provides an object which stores the files names required for performing LCA calculations
     - Calls the main functions required for performing LCIA calculations
-    - 
-    
+
     Parameters
-    ___________
-    
-    lca_results_filename: dataframe
+    ----------
+    lca_results_filename: str
         final_lcia_results.csv Stores final results. 
     
-    shortcutlca_filename: dataframe
+    shortcutlca_filename: str
         lca_db.csv Stores emission factors for short cut calculations
     
-    dynamic_lci_filename: dataframe
+    dynamic_lci_filename: str
         elec_gen_dynamic_final.csv Inventory for dynamic electricity grid mix
     
-    static_lci_filename: dataframe
+    static_lci_filename: str
         foreground_process_inventory.csv Process inventory for foreground activities
     
-    uslci_filename: dataframe
+    uslci_filename: str
         usnrellci_processesv2017_loc_debugged.p Background LCI inventory from USLCI
     
-    stock_filename: dataframe
+    stock_filename: str
         stock_filename.p Stock file to store GFRP at cement co processing plant for one year
     
-    emissions_lci_filename: dataframe
+    emissions_lci_filename: str
         emissions_inventory.csv Emissions LCI inventory file. 
     
-    traci_lci_filename: dataframe
-        traci21.csv TRACI2.1 characterization factor file. 
-    
-    
-    
+    traci_lci_filename: str
+        traci21.csv TRACI2.1 characterization factor file.
     """
     def __init__(self,
                  lca_results_filename,
@@ -67,13 +60,35 @@ class PylcaCelavi:
         This function stores the filenames required for LCIA calculations as properties of an object. 
         
         Parameters
-        _________
-        
-        Names of files for different LCIA operations
-        
+        ----------
+        lca_results_filename: str
+            Description
+
+        shortcutlca_filename: str
+            Description
+
+        dynamic_lci_filename: str
+            Description
+
+        static_lci_filename: str
+            Description
+
+        uslci_filename: str
+            Description
+
+        stock_filename: str
+            Description
+
+        emissions_lci_filename: str
+            Description
+
+        traci_lci_filename: str
+            Description
+
+        use_shortcut_lca_calculations: str
+            Description
         """
-        
-        #filepaths for files used in the pylca calculations
+        # filepaths for files used in the pylca calculations
         self.lca_results_filename = lca_results_filename
         self.shortcutlca_filename = shortcutlca_filename
         self.dynamic_lci_filename = dynamic_lci_filename
@@ -91,29 +106,25 @@ class PylcaCelavi:
         except FileNotFoundError:
             print(self.lca_results_filename+' does not exist')
 
-    def lca_performance_improvement(self,df):
-        
-        """This function is used to bypass optimization based pylca celavi calculations
+    def lca_performance_improvement(self, df):
+        """
+        This function is used to bypass optimization based pylca celavi calculations
         It reads emission factor data from previous runs stored in a file
         and performs lca rapidly
-        
-        
+
         Needs to be reset after any significant update to data
-        
-        
+
         Parameters
         ----------
-        shortcut lca db filename
+        df
+            shortcut lca db filename
         
         Returns
         -------
         Based on availability of stored file, returns
-        1.dataframe with lca calculations performed along with missing activities and processes not performed
-        2.complete dataframe without any results if file doesn't exist
-        
+        1.pd.DataFrame with lca calculations performed along with missing activities and processes not performed
+        2.complete pd.DataFrame without any results if file doesn't exist
         """
-      
-        
         try:
             db= pd.read_csv(self.shortcutlca_filename)
             db.columns = ['year','stage','material','flow name','emission factor kg/kg']
@@ -138,24 +149,20 @@ class PylcaCelavi:
             return df,pd.DataFrame()
 
     def pylca_run_main(self, df):
-       
         """
         This function runs the individual pylca celavi functions for performing various calculations
-    
         
         Parameters
-        __________
-        dataframe of material flows from DES
+        ----------
+        df: pd.DataFrame
+             Material flows from DES
         
         Returns
-        _______
-        dataframe of LCIA results
-        appends dataframe to csv file
-        
+        -------
+        pd.DataFrame
+            LCIA results (also appends to csv file)
         """
-        
-        
-        df = df[df['flow quantity'] != 0]    
+        df = df[df['flow quantity'] != 0]
     
         res_df = pd.DataFrame()
         df=df.reset_index()
@@ -216,12 +223,9 @@ class PylcaCelavi:
         
             else:
                 print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
-                    
-                    
+
             res_df = pd.concat([res_df,result_shortcut])
-    
-        
-    
+
         #Correcting the units for LCIA results. 
         for index,row in res_df.iterrows():
     
