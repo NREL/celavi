@@ -223,9 +223,6 @@ class Context:
         """
 
         for _, row in df.iterrows():
-            # avg_component_mass_tonnes_for_year = self.component_material_mass_tonne_dict[row["year"]]
-            # mass_tonnes = {'gfrp': avg_component_mass_tonnes_for_year}
-
             year = row["year"]
             mass_tonnes = {
                 material: self.component_material_mass_tonne_dict[material][year]
