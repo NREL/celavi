@@ -10,7 +10,7 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
 import yaml
-
+import pdb
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
 parser.add_argument('--config', help='Name of config file in data folder.')
@@ -28,6 +28,7 @@ try:
         outputs = config.get('output_filenames', {})
         cg_params = config.get('costgraph_parameters', {})
         des_params = config.get('discrete_event_parameters', {})
+        case_params = config.get('case_study_parameters', {})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -292,24 +293,16 @@ if initialize_costgraph:
         sc_begin=cg_params.get('sc_begin'),
         sc_end=cg_params.get('sc_end'),
         year=scenario_params.get('start_year'),
-        max_dist=scenario_params.get('max_dist'),
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
         circular_component = circular_component,
-        component_mass=component_total_mass.loc[
+        component_initial_mass=component_total_mass.loc[
             component_total_mass.year == scenario_params.get('start_year'),
             'mass_tonnes'
         ].values[0],
-        finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
-        coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
-        finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
-        finegrind_revenue=cg_params.get('finegrind_revenue'),
-        coarsegrind_initial_cost=cg_params.get('coarsegrind_initial_cost'),
-        finegrind_learnrate=cg_params.get('finegrind_learnrate'),
-        coarsegrind_learnrate=cg_params.get('coarsegrind_learnrate'),
-        finegrind_material_loss=cg_params.get('finegrind_material_loss')
+        case_dict=case_params
     )
     print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -331,15 +324,18 @@ else:
 
 print('CostGraph exists\n\n\n')
 
-# calculate des timesteps such that the model runs through the end of the
-# end year rather than stopping at the beginning of the end year
-des_timesteps = int(scenario_params.get('timesteps_per_year') * (
-        scenario_params.get('end_year') - scenario_params.get('start_year')
-) + scenario_params.get('timesteps_per_year'))
-
 # Get the start year and timesteps_per_year
 start_year = scenario_params.get('start_year')
 timesteps_per_year = scenario_params.get('timesteps_per_year')
+
+# calculate des timesteps such that the model runs through the end of the
+# end year rather than stopping at the beginning of the end year
+des_timesteps = int(
+    timesteps_per_year * (scenario_params.get('end_year') - start_year) + timesteps_per_year
+)
+
+# Get list of unique materials involved in the case study
+material_list=des_params.get('component_materials')[circular_component]
 
 # Create the DES context and tie it to the CostGraph
 context = Context(
@@ -347,7 +343,7 @@ context = Context(
     step_costs_filename=step_costs_filename,
     component_material_masses_filename=component_material_masses_filename,
     possible_components=list(des_params.get('component_list', []).keys()),
-    possible_materials=des_params.get('material_list', []),
+    possible_materials=material_list,
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
     min_year=start_year,
@@ -386,28 +382,25 @@ components = pd.DataFrame(components)
 # Create the lifespan functions for the components.
 np.random.seed(des_params.get('seed', 13))
 timesteps_per_year = scenario_params.get('timesteps_per_year')
-lifespan_fns = {
-    "nacelle": lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )['nacelle'] * timesteps_per_year,
-    "foundation": lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )['foundation'] * timesteps_per_year,
-    "tower": lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )['tower'] * timesteps_per_year,
-}
-# @TODO parameterize ['blade']
-# @TODO refactor the weibull constants in config
+
+lifespan_fns = {}
+for component in des_params.get('component_fixed_lifetimes').keys():
+    if component != circular_component:
+        lifespan_fns[component] = \
+            des_params.get('component_fixed_lifetimes')[component] * \
+            timesteps_per_year
+
 if use_fixed_lifetime:
-    lifespan_fns['blade'] = lambda: des_params.get(
+    lifespan_fns[circular_component] = lambda: des_params.get(
         'component_fixed_lifetimes'
-    )['blade'] * timesteps_per_year
+    )[circular_component] * timesteps_per_year
 else:
-    lifespan_fns['blade'] = lambda: weibull_min.rvs(
-        des_params.get('blade_weibull_K'),
+    weibull_K = des_params.get('component_weibull_K')
+    weibull_L = des_params.get('component_weibull_L')
+    lifespan_fns[circular_component] = lambda: weibull_min.rvs(
+        weibull_K[circular_component],
         loc=des_params.get('min_lifespan'),
-        scale=des_params.get('blade_weibull_L') - des_params.get('min_lifespan'),
+        scale=weibull_L[circular_component] - des_params.get('min_lifespan'),
         size=1
     )[0]
 
