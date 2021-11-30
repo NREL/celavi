@@ -449,8 +449,6 @@ class CostMethods:
     @staticmethod
     def blade_transpo(case_dict):
         """
-        @TODO Check for updated blade transportation costs.
-
         Cost of transporting 1 metric ton of complete wind blade by 1 km.
         Currently the segment transportation cost is used as proxy.
 
