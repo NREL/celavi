@@ -277,8 +277,7 @@ class Context:
         year = int(ceil(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
         cumulative_counts = [
-            # @TODO replace ['blade'] with [component_kind]
-            facility.cumulative_input_history['blade'][timestep]
+            facility.cumulative_input_history[component_kind][timestep]
             for name, facility in self.count_facility_inventories.items()
             if any(pname in name for pname in process_name)
         ]
@@ -392,12 +391,14 @@ class Context:
             avg_component_mass = self.average_total_component_mass_for_year(year)
 
             cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
+                # @TODO remove hardcoded 'blade'
                 component_kind='blade',
                 process_name=['coarse grinding','coarse grinding onsite'],
                 timestep=env.now
             )
 
             cum_mass_fine_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
+                # @TODO remove hardcoded 'blade'
                 component_kind='blade',
                 process_name=['fine grinding'],
                 timestep=env.now
