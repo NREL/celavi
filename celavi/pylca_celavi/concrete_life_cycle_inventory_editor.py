@@ -1,29 +1,52 @@
 import pandas as pd
 
 
-def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage,static_filename,stock_filename,emissions_filename):
-    
-    """Modifies static LCI based on availability of GFRP at the cement processing stage 
+def concrete_life_cycle_inventory_updater(fd_cur2,
+                                          yr,
+                                          k,
+                                          stage,
+                                          static_filename,
+                                          stock_filename,
+                                          emissions_filename):    
+    """
+    This function modifies static LCI based on availability of GFRP at the cement processing stage 
     and demand of concrete in the system
     
     GFRP may or may not be available in the system every year. If GFRP is available when 
     concrete required a stock variable is ceated to store GFRP and used in later years 
-    for cement co processing
-    
+    for cement co processing    
     
     Parameters
-    __________
-    df row from DES model with material, quantity, year, stage etc. 
-    substitution rate of sand, coal and emissions change due to use of GFRP in cement co processing. 
+    ----------
+    fd_cur2: pd.Dataframe
+
+    yr: int
+
+    k: str
+        current material under study
+
+    stage: str
+            current stage under study
+
+    static_filename: str
+           filename for the lca fixed inventory 
+
+    stock_filename: str
+           filename for storage pickle variable
+
+    emissons_filename: str
+           filename for emissions inventory
+
     
     Returns
-    _______
-    updated static inventory with changes due to concrete demand and GFRP availability.
-    emissions inventory
+    -------
+    
+    1. updated static inventory with changes due to concrete demand and GFRP availability.
+    2. emissions inventory
+
     """
     
-    
-    
+      
     
     sand_substitution_rate = 0.15
     coal_substitution_rate = 0.30

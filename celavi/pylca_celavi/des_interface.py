@@ -62,31 +62,31 @@ class PylcaCelavi:
         Parameters
         ----------
         lca_results_filename: str
-            Description
+            filename for the lca results file
 
         shortcutlca_filename: str
-            Description
+            filename for the shortcut file for improving LCA calculations
 
         dynamic_lci_filename: str
-            Description
+            filename for the lca inventory dependent upon time
 
         static_lci_filename: str
-            Description
+            filename for the lca fixed inventory 
 
         uslci_filename: str
-            Description
+            filename of the USLCI background pickle file
 
         stock_filename: str
-            Description
+            filename for storage pickle variable
 
         emissions_lci_filename: str
-            Description
+            filename for emissions inventory
 
         traci_lci_filename: str
-            Description
+            filename for traci CF file
 
         use_shortcut_lca_calculations: str
-            Description
+            boolean flag for using lca shortcut performance improvement method
         """
         # filepaths for files used in the pylca calculations
         self.lca_results_filename = lca_results_filename
