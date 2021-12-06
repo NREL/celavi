@@ -21,9 +21,9 @@ class CostGraph:
                  locations_file : str,
                  routes_file : str,
                  pathway_cost_history_filename: str,
-                 circular_component : str,
+                 circular_components : list,
                  component_initial_mass : float,
-                 case_dict: dict,
+                 path_dict: dict,
                  sc_begin : str = 'manufacturing',
                  sc_end = ('landfilling', 'cement co-processing', 'next use'),
                  year : float = 2000.0,
@@ -51,12 +51,12 @@ class CostGraph:
             path to dataset of routes between facilities
         pathway_cost_history_filename
             Name of file where pathway cost histories are saved
-        circular_component
-            Name of component for which this CostGraph is built
+        circular_components
+            Names of components for which this CostGraph is built
         component_initial_mass
             Average mass of a single technology component at the beginning of
             the model run. Units: metric tons (tonnes)
-        case_dict
+        path_dict
             Dictionary of case-study-specific parameters to be passed into
             the cost methods.
         sc_begin
@@ -95,16 +95,18 @@ class CostGraph:
 
         self.sc_end=sc_end
         self.sc_begin=sc_begin
+        if len(circular_components) == 1:
+            self.circular_components=circular_components[0]
+        else:
+            self.circular_components=circular_components
 
-        self.circular_component=circular_component
-
-        self.case_dict=case_dict
+        self.path_dict=path_dict
 
         self.year=year
 
-        self.case_dict['component_mass'] = component_initial_mass
-        self.case_dict['year'] = self.year
-        self.case_dict['vkmt'] = None
+        self.path_dict['component mass'] = component_initial_mass
+        self.path_dict['year'] = self.year
+        self.path_dict['vkmt'] = None
 
         self.verbose = verbose
 
@@ -624,11 +626,14 @@ class CostGraph:
             if self.verbose > 1:
                 print('Calculating edge costs for ', edge)
 
-            _edge_case_dict = self.case_dict.copy()
-            _edge_case_dict['vkmt']=self.supply_chain.edges[edge]['dist']
+            _edge_dict = self.path_dict.copy()
+            _edge_dict['vkmt']=self.supply_chain.edges[edge]['dist']
+
+            # Year and component mass are defined when CostGraph is instantiated
+            # and do not need to be updated during supply chain generation
 
             self.supply_chain.edges[edge]['cost'] = sum(
-                [f(_edge_case_dict)
+                [f(_edge_dict)
                  for f in self.supply_chain.edges[edge]['cost_method']]
             )
 
@@ -833,51 +838,40 @@ class CostGraph:
         return _nearest_downst_node
 
 
-    def update_costs(self, **kwargs):
+    def update_costs(self, path_dict):
         """
         Re-calculates all edge costs based on arguments passed to cost methods.
 
-        Keyword Arguments
-        -----------------
-        year : float
-            Model year provided by DES.
-
-        component_mass : float
-            Average technology component mass provided by DES.
-
-        finegrind_cumul : float
-            Cumulative mass of components that have been finely ground,
-            provided by DES.
-
-        coarsegrind_cumul : float
-            Cumulative mass of components that have been coarsely ground,
-            provided by DES.
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
         None
         """
         # update the year for CostGraph
-        self.year = kwargs['year']
+        self.year = path_dict['year']
 
         if self.verbose > 0:
             print('Updating costs for %d at         %d s' %
-                  (kwargs['year'], np.round(time() - self.start_time, 0)),
+                  (path_dict['year'], np.round(time() - self.start_time, 0)),
                   flush=True)
 
         for edge in self.supply_chain.edges():
-            _edge_case_dict = self.case_dict.copy()
-            _edge_case_dict['vkmt']=self.supply_chain.edges[edge]['dist']
-            _edge_case_dict['year']=self.year
-            _edge_case_dict['component_mass']=kwargs['component_mass']
+            _edge_dict = path_dict.copy()
+            _edge_dict['vkmt']=self.supply_chain.edges[edge]['dist']
             self.supply_chain.edges[edge]['cost'] = sum(
-                [f(_edge_case_dict)
+                [f(_edge_dict)
                  for f in self.supply_chain.edges[edge]['cost_method']]
             )
 
         if self.verbose > 0:
             print('Costs updated for  %d at         %d s' %
-                 (kwargs['year'], np.round(time() - self.start_time, 0)),
+                 (path_dict['year'], np.round(time() - self.start_time, 0)),
                  flush=True)
 
 
