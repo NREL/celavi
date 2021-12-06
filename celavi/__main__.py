@@ -28,7 +28,7 @@ try:
         outputs = config.get('output_filenames', {})
         cg_params = config.get('costgraph_parameters', {})
         des_params = config.get('discrete_event_parameters', {})
-        case_params = config.get('case_study_parameters', {})
+        pathway_params = config.get('pathway_parameters', {})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -302,7 +302,7 @@ if initialize_costgraph:
             component_total_mass.year == scenario_params.get('start_year'),
             'mass_tonnes'
         ].values[0],
-        case_dict=case_params
+        path_dict=pathway_params
     )
     print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -346,6 +346,7 @@ context = Context(
     possible_materials=material_list,
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
+    path_dict=pathway_params,
     min_year=start_year,
     max_timesteps=des_timesteps,
     timesteps_per_year=timesteps_per_year
