@@ -152,10 +152,10 @@ costgraph_csv_filename = os.path.join(args.data,
                                       data_dirs.get('outputs'),
                                       outputs.get('costgraph_csv'))
 
-pathway_cost_history_filename = os.path.join(
+pathway_crit_history_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
-    outputs.get('pathway_cost_history')
+    outputs.get('pathway_criterion_history')
 )
 
 component_counts_plot_filename = os.path.join(
@@ -296,7 +296,7 @@ if initialize_costgraph:
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
-        pathway_cost_history_filename = pathway_cost_history_filename,
+        pathway_crit_history_filename = pathway_crit_history_filename,
         circular_components = circular_components,
         component_initial_mass=component_total_mass.loc[
             component_total_mass.year == scenario_params.get('start_year'),

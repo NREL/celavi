@@ -20,7 +20,7 @@ class CostGraph:
                  transpo_edges_file : str,
                  locations_file : str,
                  routes_file : str,
-                 pathway_cost_history_filename: str,
+                 pathway_crit_history_filename: str,
                  circular_components : list,
                  component_initial_mass : float,
                  path_dict: dict,
@@ -49,8 +49,9 @@ class CostGraph:
             path to dataset of facility locations
         routes_file
             path to dataset of routes between facilities
-        pathway_cost_history_filename
-            Name of file where pathway cost histories are saved
+        pathway_crit_history_filename
+            Name of file where the history of whatever criterion is used to
+            decide between circularity pathways is saved.
         circular_components
             Names of components for which this CostGraph is built
         component_initial_mass
@@ -110,10 +111,10 @@ class CostGraph:
 
         self.verbose = verbose
 
-        self.pathway_cost_history_filename = pathway_cost_history_filename
+        self.pathway_crit_history_filename = pathway_crit_history_filename
 
         # create empty List to store the pathway cost output data
-        self.pathway_cost_history = list()
+        self.pathway_crit_history = list()
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -272,10 +273,10 @@ class CostGraph:
                                        dist_list)
 
             # create dictionary for this preferred pathway cost and decision
-            # criterion and append to the pathway_cost_history
+            # criterion and append to the pathway_crit_history
             _fac_id = self.supply_chain.nodes[source]['facility_id']
             _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            _bol_dist = nx.shortest_path_length(
+            _bol_crit = nx.shortest_path_length(
                 self.supply_chain,
                 source='manufacturing_' +
                        str(
@@ -285,14 +286,14 @@ class CostGraph:
                            )
                        ),
                 target=str(source),
-                weight='cost',
+                weight=crit,
                 method='bellman-ford'
             )
 
             for i in self.sc_end:
-                _dist = [value for key, value in subdict.items() if i in key]
-                if len(_dist) > 0:
-                    self.pathway_cost_history.append(
+                _crit = [value for key, value in subdict.items() if i in key]
+                if len(_crit) > 0:
+                    self.pathway_crit_history.append(
                         {
                             'year'            : self.year,
                             'facility_id'     : _fac_id,
@@ -301,8 +302,8 @@ class CostGraph:
                             'region_id_3'     : _loc_line.region_id_3.values[0],
                             'region_id_4'     : _loc_line.region_id_4.values[0],
                             'eol_pathway_type': i,
-                            'eol_pathway_dist': min(_dist),
-                            'bol_pathway_dist': _bol_dist
+                            'eol_pathway_criterion': min(_crit),
+                            'bol_pathway_criterion': _bol_crit
 
                         }
                     )
@@ -889,7 +890,7 @@ class CostGraph:
         """
 
         pd.DataFrame(
-            self.pathway_cost_history
+            self.pathway_crit_history
         ).drop_duplicates(
             ignore_index=True
-        ).to_csv(self.pathway_cost_history_filename,index=False)
+        ).to_csv(self.pathway_crit_history_filename, index=False)
