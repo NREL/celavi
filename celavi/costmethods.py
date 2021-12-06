@@ -302,7 +302,7 @@ class CostMethods:
         _mass = path_dict['component mass']
         _year = path_dict['year']
 
-        if np.isnan(_vkmt) or np.isnan(_mass):
+        if _vkmt is None or _mass is None:
             return 0.0
         else:
             if _year < 2001.0 or 2002.0 <= _year < 2003.0:
@@ -342,7 +342,7 @@ class CostMethods:
             one kilometer. Units: USD/metric ton.
         """
         _vkmt = path_dict['vkmt']
-        if np.isnan(_vkmt):
+        if _vkmt is None:
             return 0.0
         else:
             return 0.08 * _vkmt
@@ -444,7 +444,7 @@ class CostMethods:
         _mass = path_dict['component mass']
         _year = path_dict['year']
 
-        if np.isnan(_vkmt) or np.isnan(_mass):
+        if _vkmt is None or _mass is None:
             return 0.0
         else:
             if _year < 2001.0 or 2002.0 <= _year < 2003.0:
