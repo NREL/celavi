@@ -182,7 +182,7 @@ mass_cumulative_histories_filename = os.path.join(
     outputs.get('mass_cumulative_histories')
 )
 
-circular_component = scenario_params.get('circular_component')
+circular_components = scenario_params.get('circular_components')
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
@@ -297,7 +297,7 @@ if initialize_costgraph:
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
         pathway_cost_history_filename = pathway_cost_history_filename,
-        circular_component = circular_component,
+        circular_components = circular_components,
         component_initial_mass=component_total_mass.loc[
             component_total_mass.year == scenario_params.get('start_year'),
             'mass_tonnes'
@@ -335,7 +335,8 @@ des_timesteps = int(
 )
 
 # Get list of unique materials involved in the case study
-material_list=des_params.get('component_materials')[circular_component]
+materials = [des_params.get('component_materials')[c] for c in circular_components]
+material_list=[item for sublist in materials for item in sublist]
 
 # Create the DES context and tie it to the CostGraph
 context = Context(
@@ -368,12 +369,13 @@ for _, row in technology_data.iterrows():
     n_technology = int(row['n_technology'])
 
     for _ in range(n_technology):
-        components.append({
-            'year': year,
-            'kind': circular_component,
-            'manuf_facility_id': manuf_facility_id,
-            'in_use_facility_id': in_use_facility_id
-        })
+        for c in circular_components:
+            components.append({
+                'year': year,
+                'kind': c,
+                'manuf_facility_id': manuf_facility_id,
+                'in_use_facility_id': in_use_facility_id
+            })
 
 print(f'Components created at {np.round(time.time() - time0, 1)} s',
       flush=True)
@@ -385,25 +387,25 @@ np.random.seed(des_params.get('seed', 13))
 timesteps_per_year = scenario_params.get('timesteps_per_year')
 
 lifespan_fns = {}
-for component in des_params.get('component_fixed_lifetimes').keys():
-    if component != circular_component:
-        lifespan_fns[component] = \
+
+# By default, all components are assigned fixed lifetimes
+for component in des_params.get('component_list').keys():
+        lifespan_fns[component] = lambda : \
             des_params.get('component_fixed_lifetimes')[component] * \
             timesteps_per_year
 
-if use_fixed_lifetime:
-    lifespan_fns[circular_component] = lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )[circular_component] * timesteps_per_year
-else:
-    weibull_K = des_params.get('component_weibull_K')
-    weibull_L = des_params.get('component_weibull_L')
-    lifespan_fns[circular_component] = lambda: weibull_min.rvs(
-        weibull_K[circular_component],
-        loc=des_params.get('min_lifespan'),
-        scale=weibull_L[circular_component] - des_params.get('min_lifespan'),
-        size=1
-    )[0]
+# If fixed lifetimes are not being used, then apply the Weibull parameters
+# to the circular component(s) only. All non-circular components keep their
+# fixed lifetimes.
+if not use_fixed_lifetime:
+    for c in circular_components:
+        lifespan_fns[c] = lambda : weibull_min.rvs(
+            des_params.get('component_weibull_params')[c]['K'],
+            loc=des_params.get('min_lifespan'),
+            scale=des_params.get('component_weibull_params')[c]['L'] -
+                  des_params.get('min_lifespan'),
+            size=1
+        )[0]
 
 print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)
