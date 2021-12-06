@@ -34,7 +34,7 @@ class Context:
         possible_materials: List[str],
         cost_graph: CostGraph,
         cost_graph_update_interval_timesteps: int,
-        cost_params: Dict = None,
+        path_dict: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
         timesteps_per_year: int = 12
@@ -62,7 +62,7 @@ class Context:
         cost_graph_update_interval_timesteps: int
             Update the cost graph every n timesteps.
 
-        cost_params: Dict
+        path_dict: Dict
             Dictionary of parameters for the learning-by-doing models and all
             other pathway cost models
 
@@ -79,7 +79,7 @@ class Context:
             per year, corresponding to a monthly model resolution.
         """
 
-        self.cost_params = cost_params
+        self.path_dict = path_dict
         self.max_timesteps = max_timesteps
         self.min_year = min_year
         self.timesteps_per_year = timesteps_per_year
@@ -388,30 +388,21 @@ class Context:
             yield env.timeout(self.cost_graph_update_interval_timesteps)
             print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             year = self.timesteps_to_years(env.now)
-            avg_component_mass = self.average_total_component_mass_for_year(year)
 
-            cum_mass_coarse_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
-                # @TODO remove hardcoded 'blade'
-                component_kind='blade',
-                process_name=['coarse grinding','coarse grinding onsite'],
-                timestep=env.now
-            )
+            _path_dict = self.path_dict.copy()
+            _path_dict['year'] = year
+            _path_dict['component mass'] = self.average_total_component_mass_for_year(year)
 
-            cum_mass_fine_grinding = self.cumulative_mass_for_component_in_process_at_timestep(
-                # @TODO remove hardcoded 'blade'
-                component_kind='blade',
-                process_name=['fine grinding'],
-                timestep=env.now
-            )
+            for key in self.path_dict['learning'].keys():
+                _path_dict['learning'][key]['cumul'] = \
+                    self.cumulative_mass_for_component_in_process_at_timestep(
+                        component_kind=_path_dict['learning'][key]['component'],
+                        process_name=_path_dict['learning'][key]['steps'],
+                        timestep=env.now
+                    )
+            self.cost_graph.update_costs(_path_dict)
 
-            self.cost_graph.update_costs(
-                year=year,
-                component_mass=avg_component_mass,
-                finegrind_cumul=cum_mass_fine_grinding,
-                coarsegrind_cumul=cum_mass_coarse_grinding
-            )
-
-            print(f"{datetime.now()} Updated cost graph {year}: cum_mass_fine_grinding {cum_mass_fine_grinding}, cum_mass_coarse_grinding {cum_mass_coarse_grinding}, avg_component_mass {avg_component_mass}", flush=True)
+            print(f"{datetime.now()} Updated cost graph {year}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """
