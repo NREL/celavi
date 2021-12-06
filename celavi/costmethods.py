@@ -31,13 +31,16 @@ class CostMethods:
 
 
     @staticmethod
-    def zero_method(case_dict):
+    def zero_method(path_dict):
         """
         Cost method that returns a cost of zero under all circumstances.
 
-        Keyword Arguments
-        -----------------
-        None
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
@@ -49,41 +52,42 @@ class CostMethods:
 
 
     @staticmethod
-    def landfilling(case_dict):
+    def landfilling(path_dict):
         """
         Tipping fee model based on national average tipping fees and year-over-
         year percent increase of 3.5%.
 
-        Keyword Arguments
-        -----------------
-        year
-            Model year obtained from DES model (timestep converted to year)
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
         _fee
             Landfill tipping fee in USD/metric ton
         """
-        _year = case_dict['year']
+        _year = path_dict['year']
         _fee = 8.0E-30 * np.exp(0.0352 * _year)
         return _fee
 
 
     @staticmethod
-    def rotor_teardown(case_dict):
+    def rotor_teardown(path_dict):
         """
         Cost (USD/metric ton) of removing one metric ton of blade from the
         turbine. The cost of removing a single blade is calculated as one-third
         the rotor teardown cost, and this cost is divided by blade mass to
         calculate rotor teardown per metric ton of blade material.
 
-        Keyword Arguments
-        -----------------
-        year
-            Model year obtained from DES model (timestep converted to year)
-
-        component_mass
-            Average blade mass obtained from DES model
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
@@ -92,22 +96,25 @@ class CostMethods:
             in-use turbine. Equivalent to 1/3 the rotor teardown cost divided
             by the blade mass.
         """
-        _year = case_dict['year']
-        _mass = case_dict['component_mass']
+        _year = path_dict['year']
+        _mass = path_dict['component mass']
         _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
                 169851728.663209
         return _cost / _mass
 
 
     @staticmethod
-    def segmenting(case_dict):
+    def segmenting(path_dict):
         """
         Cost method for blade segmenting into 30m sections performed on-site at
         the wind power plant.
 
-        Keyword Arguments
-        -----------------
-        None
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
@@ -117,133 +124,98 @@ class CostMethods:
 
 
     @staticmethod
-    def coarse_grinding_onsite(case_dict):
+    def coarse_grinding_onsite(path_dict):
         """
         Cost method for coarsely grinding turbine blades onsite at a wind
         power plant. This calculation uses industrial learning-by-doing
         to gradually reduce costs over time.
 
-        Keyword Arguments
-        -----------------
-        coarsegrind_cumul
-            Current cumulative production (blade mass processed through coarse
-            grinding)
-
-        coarsegrind_cumul_initial
-            Cumulative production when the model run begins. Value is provided
-            on CostGraph instantiation and cannot be zero.
-
-        coarsegrind_initial_cost
-            Cost in USD/metric ton of coarse grinding when the model run
-            begins.
-
-        coarsegrind_learnrate
-            Rate of cost reduction via learning-by-doing for coarse grinding.
-            Must be negative. Unitless.
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
             Current cost of coarse grinding one metric ton of segmented blade
             material onsite at a wind power plant.
         """
-        # If no updated cumulative production value is passed in, use the
-        # initial value from CostGraph instantiation
+        _dict = path_dict['learning']['coarse grinding']
 
-        if 'coarsegrind_cumul' in case_dict:
-            coarsegrind_cumul = max(1, case_dict['coarsegrind_cumul'])
+        # If the "cumul" value is None, then there has been no processing
+        # through coarse grinding and the initial cumul value from the config
+        # file is used
+
+        if _dict['cumul'] is not None:
+            coarsegrind_cumul = max(
+                1,
+                _dict['cumul']
+            )
         else:
-            coarsegrind_cumul = case_dict['coarsegrind_cumul_initial']
+            coarsegrind_cumul = _dict['initial cumul']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        coarsegrind_learning = coarsegrind_cumul ** case_dict['coarsegrind_learnrate']
+        coarsegrind_learning = coarsegrind_cumul ** _dict['learn rate']
 
-        return case_dict['coarsegrind_initial_cost'] * coarsegrind_learning
+        return _dict['initial cost'] * coarsegrind_learning
 
 
     @staticmethod
-    def coarse_grinding(case_dict):
+    def coarse_grinding(path_dict):
         """
         Cost method for coarsely grinding turbine blades at a mechanical
         recycling facility. This calculation uses industrial learning-by-doing
         to gradually reduce costs over time.
 
-        Keyword Arguments
-        -----------------
-        coarsegrind_cumul
-            Current cumulative production (blade mass processed through coarse
-            grinding)
-
-        coarsegrind_cumul_initial
-            Cumulative production when the model run begins. Value is provided
-            on CostGraph instantiation and cannot be zero.
-
-        coarsegrind_initial_cost
-            Cost in USD/metric ton of coarse grinding when the model run
-            begins.
-
-        coarsegrind_learnrate
-            Rate of cost reduction via learning-by-doing for coarse grinding.
-            Must be negative. Unitless.
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
             Current cost of coarse grinding one metric ton of segmented blade
             material in a mechanical recycling facility.
         """
+        _dict = path_dict['learning']['coarse grinding']
 
-        # If no updated cumulative production value is passed in, use the
-        # initial value from CostGraph instantiation
+        # If the "cumul" value is None, then there has been no processing
+        # through coarse grinding and the initial cumul value from the config
+        # file is used
 
-        if 'coarsegrind_cumul' in case_dict:
-            coarsegrind_cumul = max(1, case_dict['coarsegrind_cumul'])
+        if _dict['cumul'] is not None:
+            coarsegrind_cumul = max(
+                1,
+                _dict['cumul']
+            )
         else:
-            coarsegrind_cumul = case_dict['coarsegrind_cumul_initial']
+            coarsegrind_cumul = _dict['initial cumul']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        coarsegrind_learning = coarsegrind_cumul ** case_dict['coarsegrind_learnrate']
+        coarsegrind_learning = coarsegrind_cumul ** _dict['learn rate']
 
-        return case_dict['coarsegrind_initial_cost'] * coarsegrind_learning
+        return _dict['initial cost'] * coarsegrind_learning
 
 
     @staticmethod
-    def fine_grinding(case_dict):
+    def fine_grinding(path_dict):
         """
         Cost method for finely grinding turbine blades at a mechanical
         recycling facility. This calculation uses industrial learning-by-doing
         to gradually reduce costs over time.
 
-        Keyword Arguments
-        -----------------
-        finegrind_cumul
-            Current cumulative production (blade mass processed through fine
-            grinding)
-
-        finegrind_cumul_initial
-            Cumulative production when the model run begins. Value is provided
-            on CostGraph instantiation and cannot be zero.
-
-        finegrind_initial_cost
-            Cost in USD/metric ton of fine grinding when the model run
-            begins.
-
-        finegrind_revenue
-            Revenue in USD/metric ton from sales of finely ground blade
-            material. Further use of material is outside the scope of this
-            study.
-
-        finegrind_material_loss
-            Fraction of total blade material lost during fine grinding.
-            Unitless. This is the amount of finely ground blade material that
-            must be landfilled.
-
-        finegrind_learnrate
-            Rate of cost reduction via learning-by-doing for fine grinding.
-            Must be negative. Unitless.
-
-        year
-            Model year provided by DES
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
@@ -251,33 +223,36 @@ class CostMethods:
             grinding one metric ton of blade material at a mechanical recycling
             facility and disposing of material losses in a landfill.
         """
+        _dict = path_dict['learning']['fine grinding']
+        _loss = path_dict['material loss']['fine grinding']
 
-        # If no updated cumulative production value is passed in, use the
-        # initial value from CostGraph instantiation
-        if 'finegrind_cumul' in case_dict:
-            _finegrind_cumul = max(1, case_dict['finegrind_cumul'])
+        # If the "cumul" value is None, then there has been no processing
+        # through fine grinding and the initial cumul value from the config
+        # file is used
+        if _dict['cumul'] is not None:
+            _finegrind_cumul = max(
+                1,
+                _dict['cumul']
+            )
         else:
-            _finegrind_cumul = case_dict['finegrind_cumul_initial']
+            _finegrind_cumul = _dict['initial cumul']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        _finegrind_learning = _finegrind_cumul ** case_dict['finegrind_learnrate']
-
-        # get fine grinding material loss
-        _loss = case_dict['material_loss']['finegrind']
+        _finegrind_learning = _finegrind_cumul ** _dict['learn rate']
 
         # calculate process cost based on total input mass (no material loss
         # yet) (USD/metric ton)
-        _cost = case_dict['finegrind_initial_cost'] * _finegrind_learning
+        _cost = _dict['initial cost'] * _finegrind_learning
 
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
-        _revenue = (1 - _loss) * case_dict['finegrind_revenue']
+        _revenue = (1 - _loss) * _dict['revenue']
 
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         # see the landfilling method - this cost model is identical
-        _landfill = _loss * 3.0E-29 * np.exp(0.0344 * case_dict['year'])
+        _landfill = _loss * 3.0E-29 * np.exp(0.0344 * path_dict['year'])
 
         # returns processing cost, reduced by learning, minus revenue which
         # stays constant over time (USD/metric ton)
@@ -286,10 +261,17 @@ class CostMethods:
 
 
     @staticmethod
-    def coprocessing(case_dict):
+    def coprocessing(path_dict):
         """
         Cost method that calculates revenue from sale of coarsely-ground blade
         material to cement co-processing plant.
+
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
@@ -300,29 +282,25 @@ class CostMethods:
 
 
     @staticmethod
-    def segment_transpo(case_dict):
+    def segment_transpo(path_dict):
         """
         Calculate segment transportation cost in USD/metric ton
 
-        Keyword Arguments
-        -----------------
-        vkmt
-            Distance traveled by blade segment. Unit: vehicle-kilometer
-
-        component_mass
-            Average blade mass in the current model year. Unit: metric tons
-
-        year
-            Current model year.
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
             Cost of transporting one segmented blade one kilometer. Units:
             USD/blade
         """
-        _vkmt = case_dict['vkmt']
-        _mass = case_dict['component_mass']
-        _year = case_dict['year']
+        _vkmt = path_dict['vkmt']
+        _mass = path_dict['component mass']
+        _year = path_dict['year']
 
         if np.isnan(_vkmt) or np.isnan(_mass):
             return 0.0
@@ -346,22 +324,24 @@ class CostMethods:
 
 
     @staticmethod
-    def shred_transpo(case_dict):
+    def shred_transpo(path_dict):
         """
         Cost method for calculating shredded blade transportation costs (truck)
         in USD/metric ton.
 
-        Keyword Arguments
-        -----------------
-        vkmt
-            Distance traveled in kilometers
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
             Cost of transporting 1 metric ton of shredded blade material by
             one kilometer. Units: USD/metric ton.
         """
-        _vkmt = case_dict['vkmt']
+        _vkmt = path_dict['vkmt']
         if np.isnan(_vkmt):
             return 0.0
         else:
@@ -369,51 +349,48 @@ class CostMethods:
 
 
     @staticmethod
-    def finegrind_shred_transpo(case_dict):
+    def finegrind_shred_transpo(path_dict):
         """
         Cost method for calculating lost material transportation costs (truck)
         in USD/metric ton by accounting for the fraction of material lost from
-        the fine grinding step. @note Assume that the transportation to
-        landfill is one-tenth the distance to the next use facility.
+        the fine grinding step.
 
-        Keyword Arguments
-        -----------------
-        vkmt
-            Distance traveled in kilometers
-
-        finegrind_material_loss
-            Fraction of material lost. Used to scale down the distance.
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
-            Cost of transporting material_loss metric ton of shredded blade
+            Cost of transporting material loss metric ton of shredded blade
             material by one kilometer. Units: USD/metric ton.
         """
-        _vkmt = case_dict['vkmt']
-        _loss = case_dict['finegrind_material_loss']
+        _vkmt = path_dict['vkmt']
+        _loss = path_dict['material loss']['fine grinding']
         if np.isnan(_vkmt):
             return 0.0
         else:
             return 0.08 * (1 - _loss) * _vkmt
 
     @staticmethod
-    def finegrind_loss_transpo(case_dict):
+    def finegrind_loss_transpo(path_dict):
         """
 
-        Keyword Arguments
+        Parameters
         ----------
-        vkmt
-            Distance traveled in kilometers
-
-        finegrind_material_loss
-            Fraction of material lost. Used to scale down the distance.
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
 
         """
-        _vkmt = case_dict['vkmt']
-        _loss = case_dict['finegrind_material_loss']
+        _vkmt = path_dict['vkmt']
+        _loss = path_dict['material loss']['fine grinding']
         if np.isnan(_vkmt):
             return 0.0
         else:
@@ -421,7 +398,7 @@ class CostMethods:
 
 
     @staticmethod
-    def manufacturing(case_dict):
+    def manufacturing(path_dict):
         """
         Cost method for calculating blade manufacturing costs in USD/metric
         ton. Data sourced from Murray et al. (2019), a techno-economic analysis
@@ -430,13 +407,12 @@ class CostMethods:
         ($11.44/kg) is used here, converted to USD / metric ton.
 
 
-        Keyword Arguments
-        -----------------
-        None
-
         Parameters
         ----------
-        None
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
@@ -447,30 +423,26 @@ class CostMethods:
 
 
     @staticmethod
-    def blade_transpo(case_dict):
+    def blade_transpo(path_dict):
         """
         Cost of transporting 1 metric ton of complete wind blade by 1 km.
         Currently the segment transportation cost is used as proxy.
 
-        Keyword Arguments
-        -----------------
-        vkmt
-            Distance traveled by blade segment. Unit: vehicle-kilometer
-
-        component_mass
-            Average blade mass in the current model year. Unit: metric tons
-
-        year
-            Current model year.
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
             Cost of transporting one segmented blade one kilometer. Units:
             USD/blade
         """
-        _vkmt = case_dict['vkmt']
-        _mass = case_dict['component_mass']
-        _year = case_dict['year']
+        _vkmt = path_dict['vkmt']
+        _mass = path_dict['component mass']
+        _year = path_dict['year']
 
         if np.isnan(_vkmt) or np.isnan(_mass):
             return 0.0
