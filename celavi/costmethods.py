@@ -1,9 +1,3 @@
-# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
-#  Use develop branch and not master branch
-#  TODO: @jwalzber = Check if other classes from data manager module than
-#   StandardScenarios, TransportationGraph and TransportationNodeLocations
-#   are used elsewhere (if not: indicate to remove them).
-
 # TODO: Add a short module docstring above the code to:
 #  1) provide authors, date of creation
 #  2) give a high level description (2-3 lines) of what the module does
@@ -12,6 +6,7 @@
 import pandas as pd
 import numpy as np
 import warnings
+
 
 class CostMethods:
     """
@@ -36,13 +31,17 @@ class CostMethods:
         -------
         None
         """
-
+        # TODO: it seems that the two variables below are not used anywhere
+        #  (whenever the data from those two csv files are needed (e.g., in
+        #  the costgraph module) they are directly read into Pandas DataFrames
+        #  using the file locations provided in the config file. Consider
+        #  removing the two lines below and the few lines above.
         self.step_costs = pd.read_csv(step_costs_file)
         self.transpo_edges = pd.read_csv(transpo_edges_file)
 
 
     @staticmethod
-    def zero_method(**kwargs):
+    def zero_method(**kwargs):  # TODO: should "**kwargs" be kept?
         """
         Cost method that returns a cost of zero under all circumstances.
 
@@ -76,6 +75,12 @@ class CostMethods:
             Landfill tipping fee in USD/metric ton
         """
         _year = kwargs['year']
+        # TODO: Input parameters should be used instead of 8E-30 and 0.0352 or
+        #  at least those numbers should be stored in variables such as
+        #  landfill_cost_model_intercept and landfill_cost_model_coefficient.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized).
         _fee = 8.0E-30 * np.exp(0.0352 * _year)
         return _fee
 
@@ -105,6 +110,13 @@ class CostMethods:
         """
         _year = kwargs['year']
         _mass = kwargs['blade_mass']
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized). Moreover, an explanation of the
+        #  equation would be welcomed (e.g., regression model based on
+        #  xx et al.)
         _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
                 169851728.663209
         return _cost / _mass
@@ -124,9 +136,20 @@ class CostMethods:
         -------
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
         """
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized).
         return 27.56
 
 
+    # TODO: Consider having one general method that would compute learning by
+    #  doing based on 4 inputs: cumul_initial, cumul, learning_rate, and
+    #  init_cost. And  based on three steps i) determine cumul_blade,
+    #  ii) compute learning, iii) update costs. The general method could then
+    #  be called in the coarse_grinding_onsite, coarse_grinding, and
+    #  fine_grinding methods with different inputs.
     @staticmethod
     def coarse_grinding_onsite(**kwargs):
         """
@@ -288,6 +311,7 @@ class CostMethods:
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         # see the landfilling method - this cost model is identical
+        # TODO: consider calling the landfilling method instead
         _landfill = _loss * 3.0E-29 * np.exp(0.0344 * kwargs['year'])
 
         # returns processing cost, reduced by learning, minus revenue which
@@ -307,10 +331,18 @@ class CostMethods:
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
              to cement co-processing plant
         """
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized).
         return -10.37
 
 
     @staticmethod
+    # TODO: in the docstrings below, shouldn't it be "Cost of transporting one
+    #  segmented blade one kilometer. Units: USD/metric ton"  since we use
+    #  cost inputs in $/blade but divide by average blade mass (kg/blade)?
     def segment_transpo(**kwargs):
         """
         Calculate segment transportation cost in USD/metric ton
@@ -335,6 +367,13 @@ class CostMethods:
         _mass = kwargs['blade_mass']
         _year = kwargs['year']
 
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized). Moreover, a quick explanation on
+        #  the cost model used would be welcomed (e.g., give units, is 8.70 a
+        #  datum from Cooperman et al.: $8.70/km?)
         if np.isnan(_vkmt) or np.isnan(_mass):
             return 0.0
         else:
@@ -356,6 +395,12 @@ class CostMethods:
             return _cost * _vkmt / _mass
 
 
+    # TODO: Consider having one general method that would compute transport
+    #  costs based on 3 inputs: modifier, distance (_vkmt), and costs (0.08).
+    #  And  based on the current code with "return costs * modifier * _vkmt"
+    #  The general method could then be called in the shred_transpo,
+    #  finegrind_shred_transpo, and finegrind_loss_transpo, and methods with
+    #  different inputs.
     @staticmethod
     def shred_transpo(**kwargs):
         """
@@ -373,6 +418,11 @@ class CostMethods:
             one kilometer. Units: USD/metric ton.
         """
         _vkmt = kwargs['vkmt']
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized).
         if np.isnan(_vkmt):
             return 0.0
         else:
@@ -402,6 +452,11 @@ class CostMethods:
         """
         _vkmt = kwargs['vkmt']
         _loss = kwargs['finegrind_material_loss']
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized).
         if np.isnan(_vkmt):
             return 0.0
         else:
@@ -425,6 +480,11 @@ class CostMethods:
         """
         _vkmt = kwargs['vkmt']
         _loss = kwargs['finegrind_material_loss']
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized).
         if np.isnan(_vkmt):
             return 0.0
         else:
@@ -454,6 +514,11 @@ class CostMethods:
             Cost of manufacturing 1 metric ton of new turbine blade.
 
         """
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized).
         return 11440.0
 
 
@@ -485,6 +550,13 @@ class CostMethods:
         _mass = kwargs['blade_mass']
         _year = kwargs['year']
 
+        # TODO: Input parameters should be used instead of magic numbers or
+        #  at least those numbers should be stored in variables.
+        #  Those variables could have default values set up in the init method
+        #  of the CostMethods class (this way they may not be modified by users
+        #  but the code is better organized). Moreover, a quick explanation on
+        #  the cost model used would be welcomed (e.g., give units, is 8.70 a
+        #  datum from Cooperman et al.: $8.70/km?)
         if np.isnan(_vkmt) or np.isnan(_mass):
             return 0.0
         else:

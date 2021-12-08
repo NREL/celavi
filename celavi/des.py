@@ -1,3 +1,14 @@
+# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
+#  Use develop branch and not master branch
+#  TODO: @jwalzber = Check if other classes from data manager module than
+#   StandardScenarios, TransportationGraph and TransportationNodeLocations
+#   are used elsewhere (if not: indicate to remove them).
+
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
+
 from typing import Dict, List, Callable, Union, Tuple
 from math import floor, ceil
 from datetime import datetime
