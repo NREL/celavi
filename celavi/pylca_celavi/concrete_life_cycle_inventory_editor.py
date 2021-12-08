@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def concrete_life_cycle_inventory_updater(fd_cur2,
+def concrete_life_cycle_inventory_updater(d_f,
                                           yr,
                                           k,
                                           stage,
@@ -13,14 +13,16 @@ def concrete_life_cycle_inventory_updater(fd_cur2,
     and demand of concrete in the system
     
     GFRP may or may not be available in the system every year. If GFRP is available when 
-    concrete required a stock variable is ceated to store GFRP and used in later years 
+    concrete is not required or does not have a final demand, a stock variable is ceated to store GFRP and used in later years 
     for cement co processing    
     
     Parameters
     ----------
-    fd_cur2: pd.Dataframe
+    d_f: pd.Dataframe
+        dataframe with material flow, stage and facility information from DES
 
     yr: int
+        year
 
     k: str
         current material under study
@@ -52,8 +54,8 @@ def concrete_life_cycle_inventory_updater(fd_cur2,
     coal_substitution_rate = 0.30
 
     if k == 'glass fiber reinforced polymer' and stage == 'cement co-processing':
-        fd_cur2 = fd_cur2.reset_index()
-        fd_cur2.to_pickle(stock_filename,compression = None)
+        d_f = d_f.reset_index()
+        d_f.to_pickle(stock_filename,compression = None)
         return pd.DataFrame(), pd.DataFrame()
 
 
@@ -74,7 +76,7 @@ def concrete_life_cycle_inventory_updater(fd_cur2,
         else:
             available_gfrp = 0
 
-        req_conc_df = fd_cur2[fd_cur2['material'] == k].reset_index()
+        req_conc_df = d_f[d_f['material'] == k].reset_index()
         required_concrete = req_conc_df['flow quantity'][0]
 
         # sand update

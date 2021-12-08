@@ -10,18 +10,52 @@ pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename):
 
+    """
+    Main function of this module which receives information from DES interface and runs the suppoeting optimization functions. 
+    Creates the technology matrix and the final demand vector based on input data. 
+    Performs necessary checks before and after the LCA optimization calculation. 
+    
+    Parameters
+    ----------
+    f_d: pd.Dataframe
+      Dataframe from DES interface containing material flow information
+    yr: int
+      year of analysis
+    fac_id: int
+      facility id
+    stage: str
+      stage of analysis
+    material: str
+      material of LCA analysis
+    uslci_filename: str
+      filename for the USLCI inventory
+    
+    Returns
+    -------
+    Final LCA results in the form of a dataframe after performing after calculation checks
+
+    """
+
     processes = {}
     processes = pickle.load( open( uslci_filename, "rb" ))
-    '''
-    This function is used to create a dataframe that lists the processes in the US NREL LCI along with their reference products
-    as well as other byproducts. The occurance of byproducts makes the problem difficult. Allocation needs to be
-    modeled in the future. Byproducts in USNREL LCI do not have a good indicator. 
-    '''
+
     
     def process_product_func():
-        #This function is creating a dataframe of processes and all their products from the USLCI database. 
-        #The dataframe considers the name of the process as well as the location and the names of the product flows.
-        #This ensures that when networks are created, the locations of the netwrorks are also matched. 
+
+        """
+        This function is creating a dataframe of processes and all their products from the USLCI database. 
+        The dataframe considers the name of the process as well as the location and the names of the product flows.
+        This ensures that when networks are created, the locations of the networks are also matched.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
+        Dataframe from USLCI listing process and products along with other supplemental information
+         
+        """
         p_list = []
         pr_list = []
         unit_list = []
@@ -51,9 +85,20 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     
     
     def process_input_func():
-        # This function creates a dataframe for only the inputs of the different processes
-        # here also the flows are matched with the locations saw that when the network is created
-        # the location of the exchanges are also matched.
+
+        """
+        This function creates a dataframe for only the inputs of the different processes
+        There also the flows are matched with the locations saw that when the network is created
+        the location of the exchanges are also matched.
+        
+        Parameters:
+        -----------
+
+        Returns:
+        --------
+        Dataframe with processes along with their flow inputs. 
+
+        """
     
         p_list = []
         pr_list = []
@@ -75,10 +120,25 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         process_input= process_input.drop_duplicates()
         return process_input
     
-    '''Need to add air water and soil separation later. This is still wrong. '''
+    
+
     def process_emission_func():
-        #These function is used for creating a dataframe that extracts out the emission flows
-        #from the USLCI database and creates a dataframe
+        
+        """
+        These function is used for creating a dataframe that extracts out the emission flows
+        from the USLCI database and creates a dataframe
+        Need to add air water and soil separation later
+
+        Parameters:
+        -----------
+
+
+        Returns:
+        --------
+        Dataframe with processes and their respective emissions. 
+
+        """
+
         p_list = []
         pr_list = []
         unit_list = []
@@ -248,6 +308,29 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     
     
     def solver_optimization(tech_matrix,F):
+        
+        """
+        This function houses the optimizer for solve Xs = F. 
+        Solves the Xs=F equation. 
+        Solves the scaling vector.  
+
+        Parameters
+        ----------
+        tech_matrix : numpy matrix
+             technology matrix from the process inventory
+        F : vector
+             Final demand vector 
+        process: str
+             filename for the dynamic inventory   
+        df_with_all_other_flows: pd.DataFrame
+             lca inventory with no product flows
+
+        
+        Returns
+        -------
+        LCA results
+        """
+
         # Creation of a Concrete Model
         model = ConcreteModel()
         
@@ -319,6 +402,33 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
             
     
     def runner(tech_matrix, F,i,l,j,k,final_demand_scaler):
+
+        """
+        Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
+        
+        Parameters
+        ----------
+        tech matrix: pd.Dataframe
+             technology matrix built from the process inventory. 
+        F: final demand series vector
+             final demand of the LCA problem
+        yr: int
+             year of analysis
+        i: int
+             facility ID
+        j: str
+            stage
+        k: str
+            material
+        final_demand_scaler: int
+            scaling variable number to ease optimization
+
+
+        Returns
+        -------
+        Returns the final LCA reults in a properly arranged dataframe with all supplemental information
+
+        """
         tim0 = time.time()
         res = pd.DataFrame()
         res2 = pd.DataFrame()

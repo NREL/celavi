@@ -99,7 +99,7 @@ class PylcaCelavi:
         self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         
-        """TJ - Move to Main.py if necessary"""
+
         try:
             os.remove(self.lca_results_filename)
             print('old lcia results file deleted')

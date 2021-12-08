@@ -355,7 +355,7 @@ else:
           flush=True)
 
 print('CostGraph exists\n\n\n')
-print(use_shortcut_lca_calculations)
+
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   shortcutlca_filename=shortcutlca_filename,
