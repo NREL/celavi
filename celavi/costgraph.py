@@ -627,7 +627,6 @@ class CostGraph:
         if self.verbose > 0:
             print('Transport cost methods added at  %d s' % np.round(
                 time() - self.start_time, 0), flush=True)
-
         # read in and process routes line by line
         with open(self.routes_file, 'r') as _route_file:
             if self.verbose > 0:
@@ -681,6 +680,16 @@ class CostGraph:
                         # Additional factor converts miles to km
                         data['dist'] = 1.60934 * _line['total_vmt'].values[0]
 
+        # After all of the route distances have been added, any edges that
+        # have a distance of -1 km are deleted from the network.
+        _all_edges = self.supply_chain.edges.data()
+        _remove_edges = []
+        for u, v, data in _all_edges:
+            if data['dist'] == -1.0:
+                if self.verbose > 1:
+                    print(f'Removing edge between {u} and {v}')
+                _remove_edges.append((u,v))
+        self.supply_chain.remove_edges_from(_remove_edges)
         if self.verbose > 0:
             print('Route distances added at         %d s' % np.round(
                 time() - self.start_time, 0), flush=True)
