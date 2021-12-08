@@ -11,12 +11,7 @@ from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective,
 from pyomo.opt import SolverFactory
 import pyomo.environ
 # pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-warnings.filterwarnings("ignore")
 
-try:
-    os.remove('intermediate_demand.csv')
-except FileNotFoundError:
-    pass
 
     
 #Reading in static and dynamics lca databases

@@ -99,12 +99,13 @@ class PylcaCelavi:
         self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         
-
+        #This is the final LCIA results file. Its created using the append function as CELAVI runs. 
+        #Thus if there is a chance it exists we need to delete it
         try:
             os.remove(self.lca_results_filename)
             print('old lcia results file deleted')
         except FileNotFoundError:
-            print(self.lca_results_filename+' does not exist')
+            print('No existing results file:'+self.lca_results_filename)
 
     def lca_performance_improvement(self, df):
         """
@@ -145,7 +146,7 @@ class PylcaCelavi:
         
         except FileNotFoundError:
             
-            print(self.shortcutlca_filename+' file not found')        
+            print('No existing results file:'+self.shortcutlca_filename)        
             return df,pd.DataFrame()
 
     def pylca_run_main(self, df):
@@ -234,15 +235,11 @@ class PylcaCelavi:
             try:
                 split_string = a.split("/kg", 1)
                 res_df = res_df.replace(a,split_string[0] + split_string[1])
-                #res_df.iloc[index,[4]] = split_string[0] + split_string[1]
-                #print(split_string)
+
             except:
                 split_string = a.split("/ kg", 1)
                 res_df = res_df.replace(a,split_string[0] + split_string[1])
-                #res_df.iloc[index,[4]] = split_string[0] + split_string[1]
-    
-    
-        #res_df.to_csv('final_lcia_results_to_des.csv', header=False, index=False)
+
            
         # The line below is just for debugging if needed
         res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
