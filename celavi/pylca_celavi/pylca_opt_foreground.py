@@ -16,6 +16,9 @@ import time
 import os
 # import pyutilib.subprocess.GlobalData
 from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
+        # This emulates what the pyomo command-line tools does
+from pyomo.opt import SolverFactory
+import pyomo.environ
 # pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 warnings.filterwarnings("ignore")
 
@@ -30,6 +33,27 @@ except FileNotFoundError:
 
 #We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,df_static,dynamic_lci_filename):
+
+    """
+    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
+    inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
+
+    Parameters
+    ----------
+    year : str
+         year of LCA calculation
+    df_static : pd.DataFrame
+         lca inventory static 
+    dynamic_lci_filename: str
+         filename for the dynamic inventory   
+    
+    Returns
+    -------
+
+    cleaned process inventory merged with dynamic data
+    inventory with no product flows
+
+    """
     
     #Reading in dynamics LCA databases
     df_dynamic = pd.read_csv(dynamic_lci_filename)
@@ -103,9 +127,7 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
 
     # This is an optional code path that allows the script to be run outside of
     # pyomo command-line.  For example:  python transport.py
-        # This emulates what the pyomo command-line tools does
-    from pyomo.opt import SolverFactory
-    import pyomo.environ
+
     opt = SolverFactory("glpk")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
