@@ -1,14 +1,9 @@
-# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
-#  Use develop branch and not master branch
-#  TODO: @jwalzber = Check if other classes from data manager module than
-#   StandardScenarios, TransportationGraph and TransportationNodeLocations
-#   are used elsewhere (if not: indicate to remove them).
-
 # TODO: Add a short module docstring above the code to:
 #  1) provide authors, date of creation
 #  2) give a high level description (2-3 lines) of what the module does
 #  3) write any other relevant information
 
+# TODO: remove Union, Tuple and floor if they are not used
 from typing import Dict, List, Callable, Union, Tuple
 from math import floor, ceil
 from datetime import datetime
@@ -91,6 +86,11 @@ class Context:
         """
 
         self.cost_params = cost_params
+        print(' ')
+        print(' ')
+        print(cost_params)
+        print(' ')
+        print(' ')
         self.max_timesteps = max_timesteps
         self.min_year = min_year
         self.timesteps_per_year = timesteps_per_year
@@ -114,6 +114,10 @@ class Context:
 
         self.possible_materials = possible_materials
 
+        # TODO: what are the comment lines below referring to?
+        #  self.count_facility_inventories, self.mass_facility_inventories?
+        #  There are no variables related to material or component inventories
+        #  near those comment lines.
         # Inventories hold the simple counts of materials at stages of
         # their lifecycle. The "component" inventories hold the counts
         # of whole components. The "material" inventories hold the mass
@@ -225,7 +229,7 @@ class Context:
             The DataFrame which has components specified in the columns
             listed above.
 
-        lifespan_fns: lifespan_fns: Dict[str, Callable[[], float]]
+        lifespan_fns: Dict[str, Callable[[], float]]
             A dictionary with the kind of component as the key and a Callable
             (probably a lambda function) that takes no arguments and returns
             a float as the value. When called, the value should return a value
@@ -235,6 +239,7 @@ class Context:
         """
 
         for _, row in df.iterrows():
+            # TODO: remove the two lines commented below if they are outdated
             # avg_blade_mass_tonnes_for_year = self.avg_blade_mass_tonnes_dict[row["year"]]
             # mass_tonnes = {'gfrp': avg_blade_mass_tonnes_for_year}
 
@@ -291,6 +296,10 @@ class Context:
         """
         year = int(ceil(self.timesteps_to_years(timestep)))
         avg_blade_mass = self.average_total_blade_mass_for_year(year)
+        # TODO: shouldn't "blade" in
+        #  facility.cumulative_input_history['blade'][timestep] be replaced by
+        #  the method input "component_kind" to generalize and have the
+        #  method work for any component?
         cumulative_counts = [
             facility.cumulative_input_history['blade'][timestep]
             for name, facility in self.count_facility_inventories.items()
@@ -364,6 +373,8 @@ class Context:
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
             print(str(time.time() - time0)+' For loop of pylca took these many seconds')
+            # TODO: consider replacing the line below by
+            #  "if annual_data_for_lci:"
             if len(annual_data_for_lci) > 0:
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
