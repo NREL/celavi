@@ -40,6 +40,11 @@ class Context:
         possible_materials: List[str],
         cost_graph: CostGraph,
         cost_graph_update_interval_timesteps: int,
+        # TODO: cost_params is None by default, but in main.py no cost_params
+        #  is provided. This results into cost_params being None?
+        #  self.cost_params is also not used in this module. Does it get used
+        #  somewhere else? Consider adding a few comment lines to explain
+        #  self.cost_params below.
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
@@ -86,11 +91,6 @@ class Context:
         """
 
         self.cost_params = cost_params
-        print(' ')
-        print(' ')
-        print(cost_params)
-        print(' ')
-        print(' ')
         self.max_timesteps = max_timesteps
         self.min_year = min_year
         self.timesteps_per_year = timesteps_per_year
@@ -98,6 +98,9 @@ class Context:
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
+        # TODO: the comment lines below are not very clear. What array? Why
+        #  just glass fiber and not epoxy? Consider modifying/adding to the
+        #  lines below.
         # Read the average blade masses as an array. Then turn it into a dictionary
         # that maps integer years to glass fiber blade masses.
         # File data is mass per turbine. Divide by 3 to get mass per blade.

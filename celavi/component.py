@@ -1,3 +1,8 @@
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
+
 from typing import Deque, Tuple, Dict
 from collections import deque
 
@@ -149,6 +154,8 @@ class Component:
                 # Query cost graph
                 self.create_pathway_queue(self.in_use_facility_id)
 
+            # TODO: consider replacing "if len(self.pathway) > 0:" by
+            #  "if self.pathway:"
             if len(self.pathway) > 0:
                 location, lifespan, distance = self.pathway.popleft()
 
@@ -168,6 +175,10 @@ class Component:
                     # GFRP or a ton of steel, it is the same impact. Perhaps
                     # not true?
 
+                    # TODO: consider adding a comment to explain why it is
+                    #  better to have the increment_inbound_tonne_km method in
+                    #  a separate python module rather than within this module
+                    #  or the inventory or des modules
                     for _, mass in self.mass_tonnes.items():
                         fg_transport.increment_inbound_tonne_km(mass * distance, env.now)
 
@@ -180,6 +191,18 @@ class Component:
                         connect_to = 'landfill'
                     )
 
+                    # TODO: the contex.count_facility_inventorie,
+                    #  context.transportation_trackers,
+                    #  context.mass_facility_inventories,
+                    #  .increment_quantity(...) and
+                    #  for material, mass in self.mass_tonnes.items():
+                    #    .increment_inbound_tonne_km(...), and
+                    #    .increment_quantity()
+                    #  are used three times with different inputs. Consider
+                    #  writing one general method that takes necessary inputs
+                    #  and do the steps that are repeated three times
+                    #  (and call the method three times). Other repeated parts
+                    #  of the code below may also be included if that works.
                     lf_count_inventory = self.context.count_facility_inventories[_loss_landfill]
                     lf_transport = self.context.transportation_trackers[_loss_landfill]
                     lf_mass_inventory = self.context.mass_facility_inventories[_loss_landfill]
@@ -232,6 +255,7 @@ class Component:
                     for material, mass in self.mass_tonnes.items():
                         fg_mass_inventory.increment_quantity(material, -mass, env.now)
 
+                # TODO: Consider explaining why keeping the code below
                 elif 'next use' in location:
                     # the inventory and transportation was incremented when the
                     # blade hit the fine grinding step

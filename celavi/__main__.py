@@ -347,6 +347,7 @@ start_year = scenario_params.get('start_year')
 timesteps_per_year = scenario_params.get('timesteps_per_year')
 
 # Create the DES context and tie it to the CostGraph
+# TODO: no cost_params is provided, is this normal?
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
