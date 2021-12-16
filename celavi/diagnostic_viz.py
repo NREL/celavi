@@ -1,15 +1,9 @@
-# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
-#  i) Use develop branch and not master branch
-#  ii) Review status: 10/19 files were reviewed
-#  TODO: @jwalzber = Check if other classes from data manager module than
-#   StandardScenarios, TransportationGraph and TransportationNodeLocations
-#   are used elsewhere (if not: indicate to remove them).
-
 # TODO: Add a short module docstring above the code to:
 #  1) provide authors, date of creation
 #  2) give a high level description (2-3 lines) of what the module does
 #  3) write any other relevant information
 
+# TODO: remove os and time if they are not used
 from typing import Dict, List
 
 import os
@@ -24,7 +18,7 @@ from .inventory import FacilityInventory
 
 class DiagnosticViz:
     """
-    This class creates diagnostic visualizations from a context when after the
+    This class creates diagnostic visualizations from a context after the
     model run has been executed.
     """
 
@@ -115,6 +109,10 @@ class DiagnosticViz:
             # columns are present
             try:
                 print('Gathering and scaling component count inventories')
+                # TODO: Consider adding a comment to explain what's in
+                #  cumulative_history.loc[...] after the operation below
+                #  (I think a list of strings of the lenght equal to the
+                #  number of component?)
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
@@ -122,6 +120,7 @@ class DiagnosticViz:
                 ] * [
                     value for key, value in self.component_count.items()
                 ]
+            # TODO: is "e" used? If not, consider removing.
             except KeyError as e:
                 print('Gathering component mass histories')
             cumulative_histories.append(cumulative_history)

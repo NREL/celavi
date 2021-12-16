@@ -1,3 +1,10 @@
+# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
+#  i) Use develop branch and not master branch
+#  ii) Review status: 14/19 files were reviewed
+#  TODO: @jwalzber = Check if other classes from data manager module than
+#   StandardScenarios, TransportationGraph and TransportationNodeLocations
+#   are used elsewhere (if not: indicate to remove them).
+
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
