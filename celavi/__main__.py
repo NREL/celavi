@@ -390,9 +390,9 @@ lifespan_fns = {}
 
 # By default, all components are assigned fixed lifetimes
 for component in des_params.get('component_list').keys():
-        lifespan_fns[component] = lambda : \
-            des_params.get('component_fixed_lifetimes')[component] * \
-            timesteps_per_year
+    lifespan_fns[component] = \
+        lambda steps=des_params.get('component_fixed_lifetimes')[component],\
+               convert=timesteps_per_year: steps * convert
 
 # If fixed lifetimes are not being used, then apply the Weibull parameters
 # to the circular component(s) only. All non-circular components keep their
