@@ -224,7 +224,7 @@ class CostMethods:
             facility and disposing of material losses in a landfill.
         """
         _dict = path_dict['learning']['fine grinding']
-        _loss = path_dict['material loss']['fine grinding']
+        _loss = path_dict['path_split']['fine grinding']['fraction']
 
         # If the "cumul" value is None, then there has been no processing
         # through fine grinding and the initial cumul value from the config
@@ -368,7 +368,7 @@ class CostMethods:
             material by one kilometer. Units: USD/metric ton.
         """
         _vkmt = path_dict['vkmt']
-        _loss = path_dict['material loss']['fine grinding']
+        _loss = path_dict['path_split']['fine grinding']['fraction']
         if np.isnan(_vkmt):
             return 0.0
         else:
@@ -390,7 +390,7 @@ class CostMethods:
 
         """
         _vkmt = path_dict['vkmt']
-        _loss = path_dict['material loss']['fine grinding']
+        _loss = path_dict['path_split']['fine grinding']['fraction']
         if np.isnan(_vkmt):
             return 0.0
         else:
