@@ -147,7 +147,7 @@ def pylca_run_main(df):
 
     
 
-    #Correcting the units for LCIA results. 
+    # Correcting the units for LCIA results.
     for index, row in res_df.iterrows():
 
         # TODO: Consider adding a comment line. Why row[4]? Why not row[3] or
@@ -171,7 +171,7 @@ def pylca_run_main(df):
 
 
     # TODO: consider removing commented lines below
-    #res_df.to_csv('final_lcia_results_to_des.csv', header=False, index=False)
+    # res_df.to_csv('final_lcia_results_to_des.csv', header=False, index=False)
        
     # The line below is just for debugging if needed
     res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)

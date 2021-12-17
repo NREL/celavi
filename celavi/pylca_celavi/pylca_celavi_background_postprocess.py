@@ -1,3 +1,9 @@
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
+
+# TODO: if sys, pickle, and os are not used, consider removing
 import pickle
 import sys
 import pandas as pd
@@ -6,33 +12,38 @@ warnings.filterwarnings("ignore")
 import os
 
 
-def postprocessing(final_res,insitu):
-    #Giving names to the columns for the final result file
-    column_names = ['flow name','flow unit','flow quantity','year','facility_id','stage','material']
+def postprocessing(final_res, insitu):
+    # TODO: add docstrings to explain input variables and what the function
+    #  does.
+    # Giving names to the columns for the final result file
+    column_names = ['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']
     final_res.columns = list(column_names)
     
    
     
     if insitu.empty == False:
         insitu.columns = list(column_names)
-        #Adding up the insitu emission primariy for the cement manufacturing process
+        # Adding up the insitu emission primarily for the cement manufacturing process
         final_res['flow name'] = final_res['flow name'].str.lower()
         
-        column_names = ['flow name','flow unit','year','facility_id','stage','material']
-        total_em = insitu.merge(final_res,on = column_names,how = 'outer')
+        column_names = ['flow name', 'flow unit', 'year', 'facility_id', 'stage', 'material']
+        total_em = insitu.merge(final_res, on=column_names, how='outer')
         total_em = total_em.fillna(0)
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
-        final_res = total_em.drop(columns = ['flow quantity_x','flow quantity_y'])
+        final_res = total_em.drop(columns=['flow quantity_x', 'flow quantity_y'])
         
     return final_res
 
 
 def impact_calculations(final_res):    
-   
-     
-   
+    # TODO: add docstrings to explain input variables and what the function
+    #  does. (Remove extra blank lines).
+
+
+
     traci = pd.read_csv('traci21.csv')
     traci = traci.fillna(0)
+    # TODO: consider removing impacts if not used.
     impacts = list(traci.columns)
     valuevars = ['Global Warming Air (kg CO2 eq / kg substance)',
      'Acidification Air (kg SO2 eq / kg substance)',
@@ -61,15 +72,16 @@ def impact_calculations(final_res):
      'Human health CF  [CTUnoncancer/kg], Emission to cont. agric. Soil, non-canc.']
     
     
-    traci_df = pd.melt(traci, id_vars=['CAS #','Formatted CAS #','Substance Name'], value_vars=valuevars, var_name='impacts', value_name='value')
+    traci_df = pd.melt(traci, id_vars=['CAS #', 'Formatted CAS #', 'Substance Name'], value_vars=valuevars, var_name='impacts', value_name='value')
     
-    final_res['flow name'] =   final_res['flow name'].str.upper()                                 
-    df_lcia = final_res.merge(traci_df, left_on = ['flow name'], right_on = ['Substance Name'])
+    final_res['flow name'] = final_res['flow name'].str.upper()
+    df_lcia = final_res.merge(traci_df, left_on=['flow name'], right_on=['Substance Name'])
     df_lcia['impact'] = df_lcia['flow quantity'] * df_lcia['value']
-    df_lcia = df_lcia.groupby(['year','facility_id', 'material','stage','impacts'])['impact'].agg('sum').reset_index()
+    df_lcia = df_lcia.groupby(['year', 'facility_id', 'material', 'stage', 'impacts'])['impact'].agg('sum').reset_index()
     
-    return df_lcia                      
-    #impacts = ['Global Warming Air (kg CO2 eq / kg substance)']   
+    return df_lcia
+    # TODO: remove lines below if not used
+    # impacts = ['Global Warming Air (kg CO2 eq / kg substance)']
     '''                                
     for im in valuevars:
        df =  traci_df[traci_df['impacts'] == im] 

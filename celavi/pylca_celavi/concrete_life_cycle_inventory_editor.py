@@ -17,6 +17,7 @@ The only file that this creates is the pickle file between years.
 def concrete_life_cycle_inventory_updater(fd_cur2, yr, k, stage):
     # TODO: add docstrings to explain input variables and what the function
     #  does.
+
     # TODO: consider having sand_substitution_rate and coal_substitution_rate
     #  as inputs of the function (and assign default values). Also consider
     #  adding those two rates as user inputs (with defaults values) and place
@@ -33,7 +34,7 @@ def concrete_life_cycle_inventory_updater(fd_cur2, yr, k, stage):
     # The problem of concrete emission where emission is dependant upon the value of glass fiber available in the system'
     elif k == 'concrete':
         # TODO: consider explaining how "foreground_process_inventory.csv" is
-        #  loaded since it seems to be in another directory as this module
+        #  loaded since it seems to be in another directory than this module
         #  (../celavi-data/pylca_celavi_data instead of
         #  ../celavi/celavi/pylca_celavi)
         df_static = pd.read_csv('foreground_process_inventory.csv')

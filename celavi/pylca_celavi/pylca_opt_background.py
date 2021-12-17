@@ -1,15 +1,48 @@
+# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
+#  i) Use develop branch and not master branch
+#  ii) Review status: 18/19 files were reviewed
+#  TODO: @jwalzber = Check if other classes from data manager module than
+#   StandardScenarios, TransportationGraph and TransportationNodeLocations
+#   are used elsewhere (if not: indicate to remove them).
+
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
+
+# TODO: Consider using a class to organize the code below. Some variables
+#  currently defined outside functions (at places that may feel random to
+#  the reader) could then be defined in the __init__ function of the class.
+
+# TODO: Consider generalizing "pylca_opt_foreground.py",
+#  "pylca_opt_background.py", and "insitu_emission.py": a lot of code in
+#  those two modules are similar. For instance creating the tech_matrix,
+#  products and process lists, most of the pre-processing function etc. A
+#  class with more general function could be created and an instance of the
+#  class could be created when needed for the functions that compute the insitu
+#  emissions and foreground (part that are not similar between the two cases
+#  would be defined in those functions). A boolean, such as "insitu_emission",
+#  could be used for the code to differentiate inputs manipulations when needed
+#  (e.g., for the line "res.to_csv('intermediate_demand.csv', mode='a',
+#  header=False, index=False)" which is in pylca_opt_foreground.py, but not in
+#  insitu_emission.py or pylca_opt_background.py.
+
 import pickle
 import pandas as pd
 import numpy as np
 import time
-from pyomo.environ import ConcreteModel,Set,Param,Var,Constraint,Objective,minimize, SolverFactory
+from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize, SolverFactory
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+# TODO: Consider removing commented line
 # from pylca_celavi_background_postprocess import postprocessing
 
 
+# TODO: consider removing "processes = {}" if redefined right after in
+#  "processes = pickle.load(open("usnrellci_processesv2017_loc_debugged.p",
+#  "rb"))"
 processes = {}
-processes = pickle.load( open( "usnrellci_processesv2017_loc_debugged.p", "rb" ) )
+processes = pickle.load(open("usnrellci_processesv2017_loc_debugged.p", "rb"))
 '''
 This function is used to create a dataframe that lists the processes in the US NREL LCI along with their reference products
 as well as other byproducts. The occurance of byproducts makes the problem difficult. Allocation needs to be
@@ -17,28 +50,35 @@ modeled in the future. Byproducts in USNREL LCI do not have a good indicator.
 '''
 
 def process_product_func():
-    #This function is creating a dataframe of processes and all their products from the USLCI database. 
-    #The dataframe considers the name of the process as well as the location and the names of the product flows.
-    #This ensures that when networks are created, the locations of the netwrorks are also matched. 
+    # TODO: add docstrings to explain input variables and what the function
+    #  does.
+    # This function is creating a dataframe of processes and all their products from the USLCI database.
+    # The dataframe considers the name of the process as well as the location and the names of the product flows.
+    # This ensures that when networks are created, the locations of the networks are also matched.
     p_list = []
     pr_list = []
     unit_list = []
     value_list = []
-    loc_list =[]
+    loc_list = []
 
     for i in processes:
         for j in processes[i].exchanges:
-            if j.flow.category_path[0]  == "Technosphere Flows" and j.input == False:
-                p_list.append(processes[i].name+'@'+ processes[i].location.name)
-                #pr_list.append(processes[i].name+'@'+ processes[i].location.name+'@'+exch[k].flow.name)
+            # TODO: consider adding a few command lines. It's a bit more
+            #  difficult to follow here because reader can't readily open the
+            #  "usnrellci_processesv2017_loc_debugged.p" file
+            if j.flow.category_path[0] == "Technosphere Flows" and j.input == False:
+                p_list.append(processes[i].name+'@' + processes[i].location.name)
+                # TODO: Consider removing commented line
+                # pr_list.append(processes[i].name+'@'+ processes[i].location.name+'@'+exch[k].flow.name)
                 pr_list.append(j.flow.name)
                 unit_list.append(j.unit.name)
                 value_list.append(j.amount)
                 loc_list.append(processes[i].location.name)
+        # TODO: Consider removing commented lines
         #if c>1:
             #print(processes[i].name+' has more than one reference output and is an OpenLCA error')
    
-    process_product = pd.DataFrame({'process':p_list,'product':pr_list,'location':loc_list,'unit':unit_list,'value':value_list})
+    process_product = pd.DataFrame({'process': p_list, 'product': pr_list, 'location': loc_list, 'unit': unit_list, 'value': value_list})
     process_product['input'] = False
     process_product = process_product.drop_duplicates()
     
@@ -49,34 +89,49 @@ flows_without_location = []
 
 
 def process_input_func():
+    # TODO: add docstrings to explain input variables and what the function
+    #  does.
+
+    # TODO: In this module as well as others, consider explaining what is
+    #  meant by network. I did not see any network being built in the pylca
+    #  module (and any import of a library such as NetworkX). Is a network
+    #  built by gplk or ipopt to solve the matrix inversion? If it is used as a
+    #  synonym of technology matrix, then consider replacing network by
+    #  technology matrix everywhere it is mentioned to avoid confusion.
     # This function creates a dataframe for only the inputs of the different processes
-    # here also the flows are matched with the locations saw that when the network is created
+    # here also the flows are matched with the locations so that when the network is created
     # the location of the exchanges are also matched.
 
+    # TODO: The lines below are duplicated a lot throughout this module,
+    #  consider generalizing by using a function to define those empty lists.
+    #  (There are other parts of the code that are duplicates, consider
+    #  improving code efficiency).
     p_list = []
     pr_list = []
     unit_list = []
     value_list = []
-    loc_list =[]
+    loc_list = []
     
     for i in processes:
         for j in processes[i].exchanges:
             if j.input == True:
-                p_list.append(processes[i].name  + '@' + str(processes[i].location.name))
+                p_list.append(processes[i].name + '@' + str(processes[i].location.name))
                 pr_list.append(j.flow.name)
-                unit_list.append( j.unit.name)
+                unit_list.append(j.unit.name)
                 value_list.append(j.amount)
                 loc_list.append(processes[i].location.name)
 
-    process_input = pd.DataFrame({'process':p_list,'inputs':pr_list,'location':loc_list,'unit':unit_list,'value':value_list})
+    process_input = pd.DataFrame({'process': p_list, 'inputs': pr_list, 'location': loc_list, 'unit': unit_list, 'value': value_list})
     process_input['input'] = True
-    process_input= process_input.drop_duplicates()
+    process_input = process_input.drop_duplicates()
     return process_input
 
 '''Need to add air water and soil separation later. This is still wrong. '''
 def process_emission_func():
-    #These function is used for creating a dataframe that extracts out the emission flows
-    #from the USLCI database and creates a dataframe
+    # TODO: add docstrings to explain input variables and what the function
+    #  does.
+    # These function is used for creating a dataframe that extracts out the emission flows
+    # from the USLCI database and creates a dataframe
     p_list = []
     pr_list = []
     unit_list = []
@@ -85,12 +140,12 @@ def process_emission_func():
     for i in processes:
         for j in processes[i].exchanges:
             if j.flow.category_path[0] == 'Elementary flows' and j.input == False:
-                p_list.append(processes[i].name  + '@' + str(processes[i].location.name))
+                p_list.append(processes[i].name + '@' + str(processes[i].location.name))
                 pr_list.append(j.flow.name)
-                unit_list.append( j.unit.name)
+                unit_list.append(j.unit.name)
                 value_list.append(j.amount)
 
-    process_emission = pd.DataFrame({'process':p_list,'product':pr_list,'unit':unit_list,'value':value_list})
+    process_emission = pd.DataFrame({'process': p_list, 'product': pr_list, 'unit': unit_list, 'value': value_list})
     process_emission['input'] = False
     process_emission = process_emission.drop_duplicates()
     return process_emission
@@ -99,31 +154,32 @@ process_product = process_product_func()
 process_input = process_input_func()
 process_emission = process_emission_func()
 
-#Removing flows without source
-#For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
-#Dummy flows need to be removed.
+# Removing flows without source
+# For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
+# Dummy flows need to be removed.
  
-#This part removes the dummy flows and flows without any production processes from the X matrix. 
+# This part removes the dummy flows and flows without any production processes from the X matrix.
 def process_input_refine():
-    #This function creates a dataframe for only the inputs of the different processes
-    #here also the flows are matched with the locations saw that when the network is created
-    #the location of the exchanges are also matched.
+    # This function creates a dataframe for only the inputs of the different processes
+    # here also the flows are matched with the locations so that when the network is created
+    # the location of the exchanges are also matched.
     p_list = []
     pr_list = []
     from_p_list = []
     unit_list = []
     value_list = []
-    loc_list =[]
+    loc_list = []
     
     for i in processes:
         for j in processes[i].exchanges:
             if j.input == True:
-                #if exch[k].flow.location == None:
-                #    flows_without_location.append(exch[k].flow.name)
-                #else:
+                # TODO: Consider removing commented lines
+                # if exch[k].flow.location == None:
+                #     flows_without_location.append(exch[k].flow.name)
+                # else:
                 try:
                     from_p_list.append(j.default_provider.name)
-                    p_list.append(processes[i].name  + '@' + str(processes[i].location.name))
+                    p_list.append(processes[i].name + '@' + str(processes[i].location.name))
                     pr_list.append(j.flow.name)                    
                     unit_list.append(j.unit.name)
                     value_list.append(j.amount)
@@ -131,30 +187,30 @@ def process_input_refine():
                 except:
                     pass
 
-    process_input = pd.DataFrame({'process':p_list,'inputs':pr_list,'from_process':from_p_list,'location':loc_list,'unit':unit_list,'value':value_list})
+    process_input = pd.DataFrame({'process': p_list, 'inputs': pr_list, 'from_process': from_p_list, 'location': loc_list, 'unit': unit_list, 'value': value_list})
     process_input['input'] = True
     process_input = process_input.drop_duplicates()
     return process_input
 
 process_input_with_process = process_input_refine()
 
-#process_input_with_process  =  list(pd.unique(process_product['inputs']))
-#process_input['indicator'] = process_input['product'].isin(process_input_with_process)
-#process_input_corr = process_input[process_input['indicator'] == True]
-removed_flows = process_input.merge(process_input_with_process,on = ['process', 'inputs', 'unit', 'value', 'input'], how = 'left',indicator = True)
+# process_input_with_process  =  list(pd.unique(process_product['inputs']))
+# process_input['indicator'] = process_input['product'].isin(process_input_with_process)
+# process_input_corr = process_input[process_input['indicator'] == True]
+removed_flows = process_input.merge(process_input_with_process, on=['process', 'inputs', 'unit', 'value', 'input'], how='left', indicator=True)
 removed_flows = removed_flows[removed_flows['_merge'] == 'left_only']
 del removed_flows['_merge']
 
-#use this to display the list of flows that are removed from the technology matrix and thus not considered in the analysis.
-#for i in list(pd.unique(removed_flows['product'])):
+# use this to display the list of flows that are removed from the technology matrix and thus not considered in the analysis.
+# for i in list(pd.unique(removed_flows['product'])):
 #    print(i)
  
 
-#We would like to account for sequestration of emissions (input of flows) in the processes. For that reason, we are updating
-#the process emissions database with emission flows that are consumed in the processes. 
+# We would like to account for sequestration of emissions (input of flows) in the processes. For that reason, we are updating
+# the process emissions database with emission flows that are consumed in the processes.
 def process_emission_input_func():
-    #These function is used for creating a dataframe that extracts out the emission flows
-    #from the USLCI database and creates a dataframe
+    # These function is used for creating a dataframe that extracts out the emission flows
+    # from the USLCI database and creates a dataframe
     p_list = []
     pr_list = []
     unit_list = []
@@ -163,23 +219,24 @@ def process_emission_input_func():
     for i in processes:
         for j in processes[i].exchanges:
             if j.flow.category_path[0] == 'Elementary flows' and j.input == True:
-                p_list.append(processes[i].name  + '@' + str(processes[i].location.name))
+                p_list.append(processes[i].name + '@' + str(processes[i].location.name))
                 pr_list.append(j.flow.name)
-                unit_list.append( j.unit.name)
+                unit_list.append(j.unit.name)
                 value_list.append(j.amount)
 
 
-    process_emission = pd.DataFrame({'process':p_list,'product':pr_list,'unit':unit_list,'value':value_list})
+    process_emission = pd.DataFrame({'process':p_list, 'product':pr_list, 'unit':unit_list, 'value':value_list})
     process_emission['input'] = True
     process_emission['value'] = process_emission['value'] * -1
     process_emission = process_emission.drop_duplicates()
     return process_emission
 
+
 process_emission_input = process_emission_input_func()
-frames = [process_emission_input,process_emission]
+frames = [process_emission_input, process_emission]
 process_emissions = pd.concat(frames)
-process_emissions = process_emissions.groupby(by = ['process','product','unit'])['value'].agg('sum').reset_index()
-del process_emission, process_emission_input,process_input,processes
+process_emissions = process_emissions.groupby(by=['process', 'product', 'unit'])['value'].agg('sum').reset_index()
+del process_emission, process_emission_input, process_input, processes
    
 '''
 In the new version of the database, there are some challenges. 
@@ -194,93 +251,121 @@ The way to solve this problem is
 2. In the process input database, join the input flow name and from process name. 
 3. These new columns created should be used to create the technology matrix. 
 4. The new input as well as product flows will be unique because process names are added to them. 
-5. Check the unique ness
+5. Check the uniqueness
 '''
 
-process_product['conjoined_flownames'] = process_product['product'] + '@'+ process_product['process']
-#uniquechk = list(pd.unique(process_product['conjoined_flownames']))
-#Unique check passed
-process_product = process_product[['process','conjoined_flownames','location', 'unit', 'value', 'input']]
-#Removing negative product flows
+process_product['conjoined_flownames'] = process_product['product'] + '@' + process_product['process']
+# TODO: If not used, consider removing commented lines below
+# uniquechk = list(pd.unique(process_product['conjoined_flownames']))
+# Unique check passed
+process_product = process_product[['process', 'conjoined_flownames', 'location', 'unit', 'value', 'input']]
+# Removing negative product flows
 process_product = process_product[process_product['value'] > 0]
 
 
+# TODO: consider explaining how "location.csv" is loaded since it seems to be
+#  in another directory than this module
+#  (../celavi-data/pylca_celavi_data instead of
+#  ../celavi/celavi/pylca_celavi)
 location = pd.read_csv('location.csv')
-process_input_with_process = process_input_with_process.merge(location, left_on = 'location', right_on = 'old_name')
+process_input_with_process = process_input_with_process.merge(location, left_on='location', right_on='old_name')
 process_input_with_process['location'] = process_input_with_process['new_name']
-process_input_with_process['conjoined_flownames'] = process_input_with_process['inputs']+ '@' + process_input_with_process['from_process'] + '@' + process_input_with_process['location'] 
-#uniquechk = list(pd.unique(process_input_with_process['conjoined_flownames']))
-process_input_with_process = process_input_with_process[['process','conjoined_flownames','location', 'unit', 'value', 'input']]
+process_input_with_process['conjoined_flownames'] = process_input_with_process['inputs'] + '@' + process_input_with_process['from_process'] + '@' + process_input_with_process['location']
+# TODO: If not used, consider removing commented lines below
+# uniquechk = list(pd.unique(process_input_with_process['conjoined_flownames']))
+process_input_with_process = process_input_with_process[['process', 'conjoined_flownames', 'location', 'unit', 'value', 'input']]
 process_input_with_process['value'] = process_input_with_process['value'] * -1
 
-#joining the two databases
-process_df = pd.concat([process_input_with_process,process_product])
+# joining the two databases
+process_df = pd.concat([process_input_with_process, process_product])
 process_df['value'] = process_df['value'].astype(np.float64)
 
-#This is due to an error in USLCI for the Paper fines uncoated flow which exists both in the input and output
+# This is due to an error in USLCI for the Paper fines uncoated flow which exists both in the input and output
 process_df = process_df[process_df['value'] != -7.6657]
 process_df = process_df[process_df['value'] != -0.7901]
 
-#Removing byproducts but it is not required. 
-#process_df = process_df.drop_duplicates ( subset = cols, keep = 'first')
+# TODO: Consider having a function that would let the choice open regarding
+#  byproducts removal.
+# Removing byproducts but it is not required.
+# process_df = process_df.drop_duplicates ( subset = cols, keep = 'first')
 
-#Creating the technoology matrix for performing LCA caluclations
-tech_matrix = process_df.pivot(index = 'conjoined_flownames', columns = 'process', values = 'value')
+# Creating the technology matrix for performing LCA calculations
+tech_matrix = process_df.pivot(index='conjoined_flownames', columns='process', values='value')
 
-#tech_matrix.to_csv('tech_matrix.csv')
+# TODO: If not used, consider removing commented line below
+# tech_matrix.to_csv('tech_matrix.csv')
 tech_matrix = tech_matrix.fillna(0)
 
-#This list of products and processes essentially help to determine the indexes and the products and processes
-#to which they belong. 
+# This list of products and processes essentially help to determine the indexes and the products and processes
+# to which they belong.
 uslci_products = list(tech_matrix.index)
 uslci_process = list(tech_matrix.columns)
 X_matrix = tech_matrix.to_numpy()
 
 splitted_names1 = []
 for i in uslci_products:
-    splitted_names1.append(i.split("@", 1)[0] + '@'+ i.split("@", 1)[1].split("@", 1)[0])
-#This database is used to match the names of the flows in the celavi results
-#with the uslci flows
+    splitted_names1.append(i.split("@", 1)[0] + '@' + i.split("@", 1)[1].split("@", 1)[0])
+# This database is used to match the names of the flows in the celavi results
+# with the uslci flows
 uslci_product_df = pd.DataFrame(list(splitted_names1))
-#All unique flows. Need to match this wtih the final demand. 
+# All unique flows. Need to match this with the final demand.
 
 
-def solver_optimization(tech_matrix,F):
+# TODO: Consider removing tech_matrix if not used. Or better define X_matrix
+#  from tech_matrix within the function like in insitu_emission.py and
+#  py_lca_opt_foreground.py (X_matrix = tech_matrix.to_numpy()).
+def solver_optimization(tech_matrix, F):
+    # TODO: add docstrings to explain input variables and what the function
+    #  does.
     # Creation of a Concrete Model
     model = ConcreteModel()
     
-    def set_create(a,b):
+    def set_create(a, b):
+        # TODO: add docstrings to explain input variables and what the function
+        #  does.
         i_list = []
-        for i in range(a,b):
+        for i in range(a, b):
             i_list.append(i)
         return i_list
 
-    model.i = Set(initialize=set_create(0,X_matrix.shape[0]), doc='indices')
-    model.j = Set(initialize=set_create(0,X_matrix.shape[1]), doc='indices')
+    model.i = Set(initialize=set_create(0, X_matrix.shape[0]), doc='indices')
+    model.j = Set(initialize=set_create(0, X_matrix.shape[1]), doc='indices')
 
-    def x_init(model,i,j):
-        return X_matrix[i,j]
+    def x_init(model, i, j):
+        # TODO: add docstrings to explain input variables and what the function
+        #  does.
+        return X_matrix[i, j]
     model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
 
-    def f_init(model,i):
+    def f_init(model, i):
+        # TODO: add docstrings to explain input variables and what the function
+        #  does.
         return F[i]
     
     model.f = Param(model.i, initialize=f_init, doc='Final demand')
-    model.s = Var(model.j, bounds=(0,None), doc='Scaling Factor')
+    model.s = Var(model.j, bounds=(0, None), doc='Scaling Factor')
     
-    #This is the BOTTLENECK of the code. 
+    # This is the BOTTLENECK of the code.
     def supply_rule(model, i):
-      return sum(model.x[i,j]*model.s[j] for j in model.j) >= model.f[i]    
+      # TODO: add docstrings to explain input variables and what the function
+      #  does.
+      # TODO: consider correcting indentation of the line below
+      return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
     model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')    
 
     def objective_rule(model):
+      # TODO: consider correcting indentation of the line below
       return sum(model.s[j] for j in model.j)
     model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
 
     def pyomo_postprocess(options=None, instance=None, results=None):
+        # TODO: add docstrings to explain input variables and what the function
+        #  does.
         df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
         return df
-      
+
+    # TODO: what is the optional code path? The code below solve the
+    #  optimization problem so I don't think is optional?
     # This is an optional code path that allows the script to be run outside of
     # pyomo command-line.  For example:  python transport.py
 
@@ -290,73 +375,103 @@ def solver_optimization(tech_matrix,F):
     results = opt.solve(model)        
     solution = pyomo_postprocess(None, model, results)   
     scaling_vector = pd.DataFrame()
-    #The process emissions do not have any location. That is the reason we have to remove the location information
-    #and then merge with the processes. 
+    # The process emissions do not have any location. That is the reason we have to remove the location information
+    # and then merge with the processes.
+    # TODO: Consider creating a class with an __init__ function that would
+    #  define variables such as uslci_process. Right now it is difficult to
+    #  understand where tech_matrix is coming from (and therefore what it is).
     scaling_vector['process'] = uslci_process
     scaling_vector['scaling_factor'] = solution['s']         
    
-    #Calculations for total emissions
-    emissions_results_df = process_emissions.merge(scaling_vector, on = ['process'], how = 'left')
+    # Calculations for total emissions
+    # TODO: Consider creating a class with an __init__ function that would
+    #  define variables such as process_emissions. Right now it is difficult to
+    #  understand where tech_matrix is coming from (and therefore what it is).
+    emissions_results_df = process_emissions.merge(scaling_vector, on=['process'], how='left')
     emissions_results_df['value'] = emissions_results_df['value'] * emissions_results_df['scaling_factor']
     emissions_results_df = emissions_results_df[emissions_results_df['value'] > 0]
     emissions_results_df = emissions_results_df.fillna(0)
-    #All emission are grouped and summed up together in this dataframe
-    emissions_results_total = emissions_results_df.groupby(by = ['product','unit'])['value'].agg(sum).reset_index()
+    # All emission are grouped and summed up together in this dataframe
+    emissions_results_total = emissions_results_df.groupby(by=['product', 'unit'])['value'].agg(sum).reset_index()
 
-    #Calculations for total product flows only
-    #For this calculation we need the locations names as processes are tied to locations
+    # Calculations for total product flows only
+    # For this calculation we need the locations names as processes are tied to locations
     scaling_vector['process'] = uslci_process
-    product_results_df = process_product.merge(scaling_vector, on = ['process'], how = 'left')
+    product_results_df = process_product.merge(scaling_vector, on=['process'], how='left')
     product_results_df['value'] = product_results_df['value'] * product_results_df['scaling_factor']
     product_results_df = product_results_df[product_results_df['value'] > 0]
     product_results_df = product_results_df.fillna(0)
-    #All emission are grouped and summed up together in this dataframe
-    product_results_total = product_results_df.groupby(by = ['conjoined_flownames','unit'])['value'].agg(sum).reset_index()
+    # All emission are grouped and summed up together in this dataframe
+    product_results_total = product_results_df.groupby(by=['conjoined_flownames', 'unit'])['value'].agg(sum).reset_index()
 
-    return emissions_results_total,product_results_total
+    return emissions_results_total, product_results_total
         
 
-def runner(tech_matrix, F,i,l,j,k,final_demand_scaler):
+def runner(tech_matrix, F, i, l, j, k, final_demand_scaler):
+    # TODO: add docstrings to explain input variables and what the function
+    #  does.
     tim0 = time.time()
+    # TODO: consider removing res = pd.DataFrame() and res2 = pd.DataFrame()
+    #  if they are not used (they are defined again through the outputs of the
+    #  solver_optimization function without being used before)
     res = pd.DataFrame()
     res2 = pd.DataFrame()
-    res,res2 = solver_optimization(tech_matrix, F)
+    res, res2 = solver_optimization(tech_matrix, F)
     res['value'] = res['value']*final_demand_scaler
     if res.empty == False:
-      res.loc[:,'year'] =  i
-      res.loc[:,'facility_id'] =  l
-      res.loc[:,'stage'] = j
-      res.loc[:,'material'] = k
+      # TODO: consider correcting indentation of the four lines below
+      res.loc[:, 'year'] = i
+      res.loc[:, 'facility_id'] = l
+      res.loc[:, 'stage'] = j
+      res.loc[:, 'material'] = k
 
-      print(str(i) +' - '+j + ' - ' + k)
+      print(str(i) + ' - ' + j + ' - ' + k)
 
     else:
+       # TODO: consider correcting indentation of the line below
        pass
     if res2.empty == False:
-      res2.loc[:,'year'] =  i
-      res.loc[:,'facility_id'] =  l
-      res2.loc[:,'stage'] = j
-      res2.loc[:,'material'] = k
+      # TODO: consider correcting indentation of the four lines below
+      res2.loc[:, 'year'] = i
+      res.loc[:, 'facility_id'] = l
+      res2.loc[:, 'stage'] = j
+      res2.loc[:, 'material'] = k
 
     else:
+       # TODO: consider correcting indentation of the line below
        pass
 
-    print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)
+    print(str(time.time() - tim0) + ' ' + 'taken to do this run', flush=True)
 
+    # TODO: Consider explaining what is the utility of "res2" if it is not
+    #  returned and used outside this function (and does not seem to serve a
+    #  purpose in this function either).
     return res
 
-#To make the optimization easier
+# To make the optimization easier
+# TODO: consider having final_demand_scaler as a function input
+#  and assign 10000 as the default value.
 final_demand_scaler = 10000
 
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material):
-    #Have to edit this final demand to match the results from CELAVI
+
+def model_celavi_lci_background(f_d, yr, fac_id, stage, material):
+    # TODO: add docstrings to explain input variables and what the function
+    #  does.
+    # Have to edit this final demand to match the results from CELAVI
     f_d['flow name'] = f_d['flow name'] +'@' + f_d['flow name']
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
-    final_dem = uslci_product_df.merge(f_d, left_on = 0, right_on = 'flow name', how = 'left')
+    # TODO: consider adding comments to explain where uslci_product_df is
+    #  coming from or if possible defining uslci_product_df within this
+    #  function.
+    final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
-    #To make the optimization easier
-    F = final_dem['flow quantity']/final_demand_scaler
-    res = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
+    # TODO: consider explaining why it makes the optimization easier
+    # To make the optimization easier
+    F = final_dem['flow quantity'] / final_demand_scaler
+    # TODO: Consider creating a class with an __init__ function that would
+    #  define variables such as tech_matrix. Right now it is difficult to
+    #  understand where tech_matrix is coming from (and therefore what it is).
+    res = runner(tech_matrix, F, yr, fac_id, stage, material, final_demand_scaler)
     return res
