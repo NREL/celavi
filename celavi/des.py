@@ -238,7 +238,7 @@ class Context:
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
                 mass_tonnes=mass_tonnes
             )
-            self.env.process(component.manufacturing(self.env))
+            self.env.process(component.bol_process(self.env))
             self.components.append(component)
 
     def cumulative_mass_for_component_in_process_at_timestep(self,
