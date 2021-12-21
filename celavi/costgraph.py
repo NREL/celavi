@@ -1,7 +1,3 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
 
 import networkx as nx
 import pandas as pd
@@ -35,9 +31,6 @@ class CostGraph:
                  save_copy=False,
                  save_name='netw.csv',
                  **kwargs):
-        # TODO: in docstrings below, clarify or correct what is
-        #  "cumul_finegrind_initial" as it does not appear anywhere else in
-        #  this python module.
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -227,9 +220,8 @@ class CostGraph:
 
         return list(_out)
 
-    # TODO: consider making this method static since self is not used.
-    def list_of_tuples(self,
-                       list1: list,
+    @staticmethod
+    def list_of_tuples(list1: list,
                        list2: list,
                        list3: list = None):
         """
@@ -313,12 +305,10 @@ class CostGraph:
             # dict of shortest paths to all targets
             nearest = min(subdict, key=subdict.get)
             timeout = nx.get_node_attributes(self.supply_chain, 'timeout')
-            # TODO: consider adding a comment to explain why timeout_list is
-            #  computed
+            # Get list of component timeouts for facilities in the path
             timeout_list = [value for key, value in timeout.items()
                             if key in short_paths[nearest]]
-            # TODO: consider adding a comment how dist_list is computed (e.g.,
-            #  it is not clear to what [d:d+2] points to.
+            # Get the distances between adjacent facilities from the network
             dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist']
                          for d in range(len(short_paths[nearest])-1)]
             dist_list.insert(0, 0.0)
