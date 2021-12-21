@@ -139,9 +139,7 @@ class ComputeLocations:
 
         n_turb2 = n_turb[n_turb['year'] > 1999]
 
-        # TODO: This is not clear what .rename() renames. Is it p_tnum?
-        #  Consider adding a comment or rename using a more self.explanatory
-        #  pandas function.
+        # Rename the p_tnum column to n_turbine
         data3 = n_turb2.groupby(['year', 'facility_id', 'p_name', 't_cap']).size().reset_index().rename(columns={0: 'n_turbine'})
         data4 = data3.groupby(['year', 'facility_id']).apply(lambda x: np.average(x.t_cap, weights=x.n_turbine)).reset_index().rename(columns={0: 't_cap'})
         data5 = data3.groupby(['year', 'facility_id'])['n_turbine'].agg('sum').reset_index()
