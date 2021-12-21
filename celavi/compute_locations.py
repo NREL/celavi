@@ -412,8 +412,9 @@ class ComputeLocations:
             index=False
         )
 
-        #  TODO: clarify what are 'ig1' and 'ig2'
-        # get state column back
+
+        # get state column back by splitting p_name
+        # ig1 and ig2 are dummy columns not used further
         _new_facility_id[
             ['region_id_2', 'ig1', 'ig2']
         ] = _new_facility_id.p_name.str.split('_',
