@@ -244,7 +244,7 @@ time0 = time.time()
 # Data filtering for states
 states_to_filter = scenario_params.get('states_to_filter', [])
 if enable_data_filtering:
-    if len(states_to_filter) == 0:  # TODO: consider "if not states_to_filter:"
+    if not states_to_filter:
         print('Cannot filter data; no state list provided', flush=True)
     else:
         print(f'Filtering locations: {states_to_filter}',
