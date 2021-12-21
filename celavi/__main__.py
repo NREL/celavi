@@ -1,7 +1,11 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
+"""
+Circular Economy Lifecycle Analysis and VIsualization, CELAVI
+
+This file performs data I/O, preprocessing, and calls modules to perform a
+complete CELAVI model run and save results.
+
+Authors: Rebecca Hanes, Alicia Key, Tapajyoti (TJ) Ghosh, Annika Eberle
+"""
 
 import argparse
 import os
