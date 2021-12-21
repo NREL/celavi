@@ -577,7 +577,9 @@ class CostGraph:
             # combinations of _u_nodes and _v_nodes
             _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
 
-            # TODO: consider adding a short comment to explain the code below
+            # assign edge attributes including cost methods
+            # attributes will be different if the destination node is at the
+            # end of the supply chain
             if not any([self.supply_chain.nodes[_v]['step']
                         in self.sc_end for _v in _v_nodes]):
                 _methods = [
@@ -660,11 +662,6 @@ class CostGraph:
                                   u_node,
                                   ' and ',
                                   v_node)
-                        # TODO: distance is converted back and forth between
-                        #  routing.py and costgraph.py. If there is no obvious
-                        #  reason for this extra step, consider removing the
-                        #  conversion of distance in km to miles in routing.py
-                        #  and removing the step below.
                         # Additional factor converts miles to km
                         data['dist'] = 1.60934 * _line['total_vmt'].values[0]
 
