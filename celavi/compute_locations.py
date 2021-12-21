@@ -190,10 +190,10 @@ class ComputeLocations:
         wind_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if wind_plant_type_lookup:
             wind_plant_facility_type_convention = wind_plant_type_lookup
+            wind_plant_locations["facility_type"] = wind_plant_facility_type_convention
         else:
             warnings.warn('Wind plant facility type missing from facility_type lookup table.')
 
-        wind_plant_locations["facility_type"] = wind_plant_facility_type_convention
         wind_plant_locations["region_id_1"] = 'USA'
         wind_plant_locations["region_id_4"] = ''
         wind_plant_locations = wind_plant_locations.astype({'facility_id': 'int'})
@@ -202,9 +202,9 @@ class ComputeLocations:
 
 
     def landfill(self):
-        # TODO: consider adding what data type and a short description of what
-        #  the method return.
-        """Process data for landfills - from EPA LMOP"""
+        """
+        Process data for landfills - from EPA LMOP
+        """
 
         # load landfill facility data
         landfill_locations_all = Data.LandfillLocations(fpath=self.landfill_locations, backfill=self.backfill)
@@ -246,9 +246,9 @@ class ComputeLocations:
         return landfill_locations_no_nulls
 
     def other_facility(self):
-        # TODO: consider adding what data type and a short description of what
-        #  the method return.
-        """Process other facility data"""
+        """
+        Process other facility data
+        """
 
         facility_locations = Data.OtherFacilityLocations(fpath=self.other_facility_locations, backfill=self.backfill)
 
@@ -452,9 +452,9 @@ class ComputeLocations:
             sort=True)
 
     def join_facilities(self, locations_output_file):
-        # TODO: consider adding what data type and a short description of the
-        #  method's input.
-        """Join all facility data into single file"""
+        """
+        Join all facility data into single file
+        """
 
         wind_plant_locations = ComputeLocations.wind_power_plant(self)
         landfill_locations_no_nulls = ComputeLocations.landfill(self)
