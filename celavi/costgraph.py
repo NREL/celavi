@@ -320,9 +320,6 @@ class CostGraph:
             # criterion and append to the pathway_cost_history
             _fac_id = self.supply_chain.nodes[source]['facility_id']
             _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            # TODO: consider explaining why nx.shortest_path_length is used in
-            #  addition to upstream_neighbor (which already find the "nearest"
-            #  upstream neighbor
             _bol_dist = nx.shortest_path_length(
                 self.supply_chain,
                 source='manufacturing_' +
@@ -439,7 +436,8 @@ class CostGraph:
             self.step_costs.facility_id == _id
         ]
 
-        # TODO: consider adding a comment to explain what the line below does
+        # assign dummy timeout value - will be overwritten in the Context,
+        # if necessary
         _step_cost['timeout'] = 1
 
         # create list of dictionaries from data frame with processing steps,
