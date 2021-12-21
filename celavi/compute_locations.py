@@ -137,10 +137,6 @@ class ComputeLocations:
             ['facility_id', 'p_name', 'year', 'p_tnum', 't_model', 't_cap']
         ].drop_duplicates().dropna()
 
-        # TODO: Consider generalizing below, this should be >=
-        #  scenario_params.get('start_year'). (Or alternatively create another
-        #  config parameter (e.g., pre-simulation) if you wish to include
-        #  turbines older than the start of the simulation.)
         n_turb2 = n_turb[n_turb['year'] > 1999]
 
         # TODO: This is not clear what .rename() renames. Is it p_tnum?
@@ -157,8 +153,6 @@ class ComputeLocations:
         # this file created the number of turbines file.
         self.capacity_data = data6
 
-        # TODO: same comment as above. 1999 should be replaced by a config
-        #  input
         turbine_locations_filtered = turbine_locations_with_eia[
             turbine_locations_with_eia.year > 1999
         ]
