@@ -1,7 +1,3 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
 
 import celavi.data_manager as Data
 import warnings
@@ -13,6 +9,18 @@ warnings.simplefilter('error', UserWarning)
 
 
 class ComputeLocations:
+    """
+    The ComputeLocations class performs preprocessing that ingests raw facility
+     location data and returns a formatted, aggregated dataset of all
+     facilities involved in a circular supply chain.
+
+     The specific preprocessing steps will need to be adjusted for different
+     raw data sources to allow for variations in column names, data types, and
+     the number of files ingested. The output format of the processed dataset
+     must remain as it is defined in this code for the remainder of the CELAVI
+     code base to function.
+    """
+
     def __init__(self,
                  wind_turbine_locations,
                  landfill_locations,
@@ -22,6 +30,39 @@ class ComputeLocations:
                  lookup_facility_type,
                  turbine_data_filename,
                  standard_scenarios_filename):
+        """
+        Parameters
+        ----------
+        power_plant_locations
+            Data set of renewable energy power plant locations including lat,
+            long, region identifier columns, and other power-plant-specific
+            information as needed.
+
+        landfill_locations
+            Data set of landfills in the contiguous US.
+
+        other_facility_locations
+            Data set of all other facility types involved in the case study.
+
+        transportation_graph
+            Network of all roads in the contiguous US.
+
+        node_locations
+
+
+        lookup_facility_type
+            File defining the allowable set of facility types in the case study.
+
+        technology_data_filename
+            File with technology-specific installation data, including year
+            installed, location (lat, long, and region identifiers), and any
+            technology-specific data required to model material flows into
+            power plants.
+
+        standard_scenarios_filename
+            File of output from NREL's REEDS model, used for capacity expansion
+            projections past the current year.
+        """
 
         # file paths for raw data used to compute locations
         self.wind_turbine_locations = wind_turbine_locations
@@ -51,10 +92,13 @@ class ComputeLocations:
 
 
     def wind_power_plant(self):
+        """
+        Ingests raw data from the U.S. Wind Turbine database, filters down to
+        the contiguous U.S. and creates a data frame that can be combined with
+        other sets of facility location data.
+        """
 
-        # TODO: consider adding what data type and a short description of what
-        #  the method return and remove extra blank line.
-        """Process data for wind power plants - from USWTDB"""
+        # Process data for wind power plants - from USWTDB
         turbine_locations = Data.TurbineLocations(fpath=self.wind_turbine_locations, backfill=self.backfill)
         
         # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
