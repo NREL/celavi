@@ -4,12 +4,19 @@ import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 import os
-
+import pdb
 
 def postprocessing(final_res,insitu):
     #Giving names to the columns for the final result file
     column_names = ['flow name','flow unit','flow quantity','year','facility_id','stage','material']
-    final_res.columns = list(column_names)
+
+    if final_res.empty:
+        print('pylca_celavi_background_postprocess: final_res is empty')
+        final_res = pd.DataFrame(columns=column_names)
+    else:
+        final_res.columns = list(column_names)
+
+
     
    
     
@@ -23,6 +30,8 @@ def postprocessing(final_res,insitu):
         total_em = total_em.fillna(0)
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
         final_res = total_em.drop(columns = ['flow quantity_x','flow quantity_y'])
+    else:
+        print('pylca_celavi_background_postprocess: insitu is empty')
         
     return final_res
 
