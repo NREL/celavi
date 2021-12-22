@@ -9,6 +9,7 @@ warnings.simplefilter('error', UserWarning)
 
 class ComputeLocations:
     def __init__(self,
+                 start_year : int,
                  power_plant_locations,
                  landfill_locations,
                  other_facility_locations,
@@ -17,6 +18,8 @@ class ComputeLocations:
                  lookup_facility_type,
                  technology_data_filename,
                  standard_scenarios_filename):
+
+        self.start_year = start_year
 
         # file paths for raw data used to compute locations
         self.power_plant_locations = power_plant_locations
@@ -80,7 +83,7 @@ class ComputeLocations:
             ['facility_id','p_name', 'year', 'p_tnum','t_model','t_cap']
         ].drop_duplicates().dropna()
 
-        n_turb2 = n_turb[n_turb['year'] > 1999]
+        n_turb2 = n_turb[n_turb['year'] >= self.start_year]
         
         data3 = n_turb2.groupby(['year','facility_id','p_name','t_cap']).size().reset_index().rename(columns={0:'n_turbine'})        
         data4 = data3.groupby(['year','facility_id']).apply(lambda x: np.average(x.t_cap, weights=x.n_turbine)).reset_index().rename(columns={0:'t_cap'})
@@ -94,7 +97,7 @@ class ComputeLocations:
         self.capacity_data = data6
 
         turbine_locations_filtered = turbine_locations_with_eia[
-            turbine_locations_with_eia.year > 1999
+            turbine_locations_with_eia.year >= self.start_year
         ]
 
 

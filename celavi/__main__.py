@@ -200,6 +200,7 @@ from celavi.diagnostic_viz import DiagnosticViz
 # computed data set.
 if compute_locations:
     loc = ComputeLocations(
+        start_year=scenario_params.get('start_year'),
         power_plant_locations=power_plant_locations_filename,
         landfill_locations=landfill_locations_filename,
         other_facility_locations=other_facility_locations_filename,
