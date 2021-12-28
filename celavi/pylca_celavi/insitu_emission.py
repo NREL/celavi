@@ -1,15 +1,3 @@
-# TODO: @jwalzber = continue vet & comment task by reviewing this file HERE
-#  i) Use develop branch and not master branch
-#  ii) Review status: 15/19 files were reviewed
-#  TODO: @jwalzber = Check if other classes from data manager module than
-#   StandardScenarios, TransportationGraph and TransportationNodeLocations
-#   are used elsewhere (if not: indicate to remove them).
-
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
 # TODO: Consider generalizing "pylca_opt_foreground.py",
 #  "pylca_opt_background.py", and "insitu_emission.py": a lot of code in
 #  those two modules are similar. For instance creating the tech_matrix,
