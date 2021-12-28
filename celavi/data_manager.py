@@ -24,10 +24,21 @@ class Data(pd.DataFrame):
     INDEX_COLUMNS = []
 
     def __init__(self, df=None, fpath=None, columns=None, backfill=True):
-        # TODO: consider having docstrings here explaining Data class
-        #  parameters (in addition or instead of in the load method below).
-        #  It would be better to understand straightaway what is fpath for
-        #  instance.
+        """
+        Parameters
+        ----------
+        df
+            Initial data frame
+
+        fpath
+            Filepath location of data to be read in
+
+        columns
+            List of columns to backfill
+
+        backfill
+            Boolean flag: perform backfilling with datatype-specific value
+        """
         _df = pd.DataFrame({}) if df is None and fpath is None else self.load(fpath=fpath,
                                                                               columns=columns)
         # TODO: consider replacing super(X, self).init(...) by
@@ -57,11 +68,23 @@ class Data(pd.DataFrame):
 
         See pandas.read_table() help for additional arguments.
 
-        :param fpath: [string] file path to budget file or SQLite database file
-        :param columns: [dict] {name: type, ...}
-        :param memory_map: [bool] load directly to memory for improved performance
-        :param header: [int] 0-based row index containing column names
-        :return: [DataFrame]
+        Parameters
+        ----------
+        fpath: [string]
+            file path to CSV file or SQLite database file
+
+        columns: [dict]
+            {name: type, ...}
+
+        memory_map: [bool]
+            load directly to memory for improved performance
+
+        header: [int]
+            0-based row index containing column names
+
+        Returns
+        -------
+        DataFrame
         """
 
         try:
@@ -81,14 +104,21 @@ class Data(pd.DataFrame):
             return _df
 
     def backfill(self, column, value=0):
-        # TODO: consider adding what data type and a short description of what
-        #  the method return and remove extra blank line
+
         """
         Replace NaNs in <column> with <value>.
 
-        :param column: [string]
-        :param value: [any]
-        :return:
+        Parameters
+        ----------
+        column: [string]
+            Name of column with NaNs to be backfilled
+
+        value: [any]
+            Value for backfill
+
+        Returns
+        -------
+        DataFrame with [column] backfilled with [value]
         """
 
         _dataset = str(type(self)).split("'")[1]
@@ -117,12 +147,14 @@ class Data(pd.DataFrame):
         return _backfilled
 
     def validate(self):
-        # TODO: consider adding what data type and a short description of what
-        #  the method return and remove extra blank line
         """
-        Check that data are not empty
+        Check that data are not empty.
 
-        :return:
+        Return False if empty and True otherwise.
+
+        Returns
+        -------
+        Boolean flag
         """
         _name = type(self).__name__
 
@@ -151,11 +183,11 @@ class Data(pd.DataFrame):
 
 
 class TransportationGraph(Data):
-    # TODO: consider having a short description of the class in place of the
-    #  blank line. While it's pretty self-explanatory for TransportationGraph,
-    #  TransportationNodeLocations, Locations, TurbineLocations,
-    #  OtherFacilityLocations, and LandfillLocations, it is unclear what the
-    #  StandardScenarios class is for. Moreover, wouldn't it be simpler to
+    """
+    Read in and process the underlying transportation network for the Router
+    module.
+    """
+    # TODO Moreover, wouldn't it be simpler to
     #  always call the Data class but with different columns input whenever it
     #  is used for Locations, TurbineLocations etc.? Otherwise maybe justify
     #  why several sub Data classes are needed in the short description of
@@ -179,7 +211,9 @@ class TransportationGraph(Data):
 
 
 class TransportationNodeLocations(Data):
-    # TODO: ditto comment made for the TransportationGraph class
+    """
+    Read in and process tranportation node locations.
+    """
     COLUMNS = ({'name': 'node_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None})
@@ -195,7 +229,10 @@ class TransportationNodeLocations(Data):
 
 
 class Locations(Data):
-    # TODO: ditto comment made for the TransportationGraph class
+    """
+    Read in and process raw facility locations (other than power plants)
+    datasets.
+    """
     COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
@@ -217,7 +254,9 @@ class Locations(Data):
 
 
 class TurbineLocations(Data):
-    # TODO: ditto comment made for the TransportationGraph class
+    """
+    Read in and process raw power plant locations dataset.
+    """
     COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
                {'name': 't_county', 'type': str, 'index': False, 'backfill': None},
@@ -243,7 +282,9 @@ class TurbineLocations(Data):
 
 
 class OtherFacilityLocations(Data):
-    # TODO: ditto comment made for the TransportationGraph class
+    """
+    Read in and process additional, miscellaneous facility location datasets.
+    """
     COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
@@ -265,7 +306,9 @@ class OtherFacilityLocations(Data):
 
 
 class LandfillLocations(Data):
-    # TODO: ditto comment made for the TransportationGraph class
+    """
+    Read in and process landfill facility locations dataset.
+    """
     COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
                {'name': 'State', 'type': str, 'index': False, 'backfill': None},
                {'name': 'Latitude', 'type': float, 'index': False, 'backfill': None},
@@ -287,7 +330,11 @@ class LandfillLocations(Data):
 
 
 class StandardScenarios(Data):
-    # TODO: ditto comment made for the TransportationGraph class
+    """
+    Read in and process capacity expansion projection dataset.
+    NOTE: Delete the first line of the raw Standard Scenarios file before
+    reading in to CELAVI.
+    """
     COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},
                {'name': 't', 'type': int, 'index': False, 'backfill': None},
                {'name': 'wind-ons_MW', 'type': float, 'index': False, 'backfill': '-1'}
@@ -304,6 +351,10 @@ class StandardScenarios(Data):
 
 
 class RoutePairs(Data):
+    """
+    Read in and process the dataset defining allowable facility pairs for the
+    Router.
+    """
     COLUMNS = ({'name': 'source_facility_type', 'type': str, 'index': True, 'backfill': None},
                {'name': 'destination_facility_type', 'type': str, 'index': True,'backfill': None},
                {'name': 'in_state_only', 'type': bool, 'index': False, 'backfill': None},
