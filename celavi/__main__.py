@@ -37,6 +37,7 @@ try:
         outputs = config.get('output_filenames', {})
         cg_params = config.get('costgraph_parameters', {})
         des_params = config.get('discrete_event_parameters', {})
+        pathway_params = config.get('pathway_parameters', {})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. '
           f'Exiting with status code 1.')
@@ -102,9 +103,9 @@ transpo_edges_filename = os.path.join(args.data,
 route_pair_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('route_pairs'))
-avg_blade_masses_filename = os.path.join(args.data,
+component_material_masses_filename = os.path.join(args.data,
                                          data_dirs.get('inputs'),
-                                         inputs.get('avg_blade_masses'))
+                                         inputs.get('component_material_mass'))
 routes_custom_filename = os.path.join(args.data,
                                       data_dirs.get('inputs'),
                                       inputs.get('routes_custom'))
@@ -125,7 +126,7 @@ node_locations_filename = os.path.join(args.data,
                                        inputs.get('node_locs'))
 
 # file paths for raw data used to compute locations
-wind_turbine_locations_filename = os.path.join(args.data,
+power_plant_locations_filename = os.path.join(args.data,
                                                data_dirs.get('raw_locations'),
                                                inputs.get('power_plant_locs'))
 # LMOP data for landfill locations
@@ -144,10 +145,10 @@ lookup_facility_type_filename = os.path.join(args.data,
                                              inputs.get('lookup_facility_type')
                                              )
 
-# file where the turbine data will be saved after generating from raw inputs
-turbine_data_filename = os.path.join(args.data,
+# file where the technology data will be saved after generating from raw inputs
+technology_data_filename = os.path.join(args.data,
                                      data_dirs.get('inputs'),
-                                     inputs.get('turbine_data'))
+                                     inputs.get('technology_data'))
 
 standard_scenarios_filename = os.path.join(args.data,
                                            data_dirs.get('raw_locations'),
@@ -165,10 +166,10 @@ costgraph_csv_filename = os.path.join(args.data,
                                       data_dirs.get('outputs'),
                                       outputs.get('costgraph_csv'))
 
-pathway_cost_history_filename = os.path.join(
+pathway_crit_history_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
-    outputs.get('pathway_cost_history')
+    outputs.get('pathway_criterion_history')
 )
 
 component_counts_plot_filename = os.path.join(
@@ -195,6 +196,8 @@ mass_cumulative_histories_filename = os.path.join(
     outputs.get('mass_cumulative_histories')
 )
 
+circular_components = scenario_params.get('circular_components')
+
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
 # and write operations. Also, the Context must be imported down here after
@@ -211,13 +214,14 @@ from celavi.diagnostic_viz import DiagnosticViz  # TODO: ditto above
 # computed data set.
 if compute_locations:
     loc = ComputeLocations(
-        wind_turbine_locations=wind_turbine_locations_filename,
+        start_year=scenario_params.get('start_year'),
+        power_plant_locations=power_plant_locations_filename,
         landfill_locations=landfill_locations_filename,
         other_facility_locations=other_facility_locations_filename,
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
         lookup_facility_type=lookup_facility_type_filename,
-        turbine_data_filename=turbine_data_filename,
+        technology_data_filename=technology_data_filename,
         standard_scenarios_filename=standard_scenarios_filename)
 
     loc.join_facilities(locations_output_file=locations_computed_filename)
@@ -254,7 +258,7 @@ if enable_data_filtering:
         print(f'Filtering locations: {states_to_filter}',
               flush=True)
         filter_locations(locations_computed_filename,
-                         turbine_data_filename,
+                         technology_data_filename,
                          states_to_filter)
     # if the data is being filtered and a new routes file is NOT being
     # generated, then the existing routes file must also be filtered
@@ -280,14 +284,15 @@ if run_routes:
         preprocessing_output_folder=subfolder_dict[
             'preprocessing_output_folder'])
 
-# TODO: provide explanation: why is the avg_blade_masses_filename file read
-#  now? where and how is it going to be used? could it be read later in a block
-#  of code? (e.g., right before "if initialize_costgraph" below).
-avgblade = pd.read_csv(avg_blade_masses_filename)
-
 print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
       flush=True)
 
+component_material_mass = pd.read_csv(component_material_masses_filename)
+component_total_mass = component_material_mass.groupby(
+    by=['year','technology','component']
+).sum(
+    'mass_tonnes'
+).reset_index()
 
 time0 = time.time()
 
@@ -304,21 +309,16 @@ if initialize_costgraph:
         sc_begin=cg_params.get('sc_begin'),
         sc_end=cg_params.get('sc_end'),
         year=scenario_params.get('start_year'),
-        max_dist=scenario_params.get('max_dist'),
         verbose=cg_params.get('cg_verbose'),
         save_copy=cg_params.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
-        pathway_cost_history_filename=pathway_cost_history_filename,
-        blade_mass=avgblade.loc[avgblade.year == scenario_params.get(
-            'start_year'), 'total'].values[0],
-        finegrind_cumul_initial=cg_params.get('finegrind_cumul_initial'),
-        coarsegrind_cumul_initial=cg_params.get('coarsegrind_cumul_initial'),
-        finegrind_initial_cost=cg_params.get('finegrind_initial_cost'),
-        finegrind_revenue=cg_params.get('finegrind_revenue'),
-        coarsegrind_initial_cost=cg_params.get('coarsegrind_initial_cost'),
-        finegrind_learnrate=cg_params.get('finegrind_learnrate'),
-        coarsegrind_learnrate=cg_params.get('coarsegrind_learnrate'),
-        finegrind_material_loss=cg_params.get('finegrind_material_loss')
+        pathway_crit_history_filename = pathway_crit_history_filename,
+        circular_components = circular_components,
+        component_initial_mass=component_total_mass.loc[
+            component_total_mass.year == scenario_params.get('start_year'),
+            'mass_tonnes'
+        ].values[0],
+        path_dict=pathway_params
     )
     print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -340,54 +340,59 @@ else:
 
 print('CostGraph exists\n\n\n')
 
-# calculate des timesteps such that the model runs through the end of the
-# end year rather than stopping at the beginning of the end year
-des_timesteps = int(scenario_params.get('timesteps_per_year') * (
-        scenario_params.get('end_year') - scenario_params.get('start_year')
-) + scenario_params.get('timesteps_per_year'))
-
 # Get the start year and timesteps_per_year
 start_year = scenario_params.get('start_year')
 timesteps_per_year = scenario_params.get('timesteps_per_year')
+
+# calculate des timesteps such that the model runs through the end of the
+# end year rather than stopping at the beginning of the end year
+des_timesteps = int(
+    timesteps_per_year * (scenario_params.get('end_year') - start_year) + timesteps_per_year
+)
+
+# Get list of unique materials involved in the case study
+materials = [des_params.get('component_materials')[c] for c in circular_components]
+material_list=[item for sublist in materials for item in sublist]
 
 # Create the DES context and tie it to the CostGraph
 # TODO: no cost_params is provided, is this normal?
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
-    avg_blade_masses_filename=avg_blade_masses_filename,
+    component_material_masses_filename=component_material_masses_filename,
     possible_components=list(des_params.get('component_list', []).keys()),
-    possible_materials=des_params.get('material_list', []),
+    possible_materials=material_list,
     cost_graph=netw,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
+    path_dict=pathway_params,
     min_year=start_year,
     max_timesteps=des_timesteps,
     timesteps_per_year=timesteps_per_year
 )
 
-# Create the turbine dataframe that will be used to populate
-# the context with components. Repeat the creation of blades
-# 3 times for each turbine.
+# Create the technology dataframe that will be used to populate
+# the context with components.
 
 print(f'Creating components at {np.round(time.time() - time0, 1)} s',
       flush=True)
 
-turbine_data = pd.read_csv(turbine_data_filename)
+technology_data = pd.read_csv(technology_data_filename)
 
 components = []
-for _, row in turbine_data.iterrows():
+for _, row in technology_data.iterrows():
     year = row['year']
     in_use_facility_id = int(row['facility_id'])
     manuf_facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
-    n_turbine = int(row['n_turbine'])
+    n_technology = int(row['n_technology'])
 
-    for _ in range(n_turbine):
-        components.append({
-            'year': year,
-            'kind': 'blade',
-            'manuf_facility_id': manuf_facility_id,
-            'in_use_facility_id': in_use_facility_id
-        })
+    for _ in range(n_technology):
+        for c in circular_components:
+            components.append({
+                'year': year,
+                'kind': c,
+                'manuf_facility_id': manuf_facility_id,
+                'in_use_facility_id': in_use_facility_id
+            })
 
 print(f'Components created at {np.round(time.time() - time0, 1)} s',
       flush=True)
@@ -397,36 +402,27 @@ components = pd.DataFrame(components)
 # Create the lifespan functions for the components.
 np.random.seed(des_params.get('seed', 13))
 timesteps_per_year = scenario_params.get('timesteps_per_year')
-# TODO: consider looping through des_params.get('component_fixed_lifetimes')
-#  instead, e.g., with a dict comprehension. That would also make it more
-#  general as key don't have to be specified {key: value * timesteps_per_year
-#  for key, value in des_params.get('component_fixed_lifetimes').items()}
-#  (and having the lines below change blade lifetime depending on
-#  use_fixed_lifetime condition)
-lifespan_fns = {
-    "nacelle": lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )['nacelle'] * timesteps_per_year,
-    "foundation": lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )['foundation'] * timesteps_per_year,
-    "tower": lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )['tower'] * timesteps_per_year,
-}
 
-if use_fixed_lifetime:
-    lifespan_fns['blade'] = lambda: des_params.get(
-        'component_fixed_lifetimes'
-    )['blade'] * timesteps_per_year
-else:
-    lifespan_fns['blade'] = lambda: weibull_min.rvs(
-        des_params.get('blade_weibull_K'),
-        loc=des_params.get('min_lifespan'),
-        scale=des_params.get('blade_weibull_L') - des_params.get(
-            'min_lifespan'),
-        size=1
-    )[0]
+lifespan_fns = {}
+
+# By default, all components are assigned fixed lifetimes
+for component in des_params.get('component_list').keys():
+    lifespan_fns[component] = \
+        lambda steps=des_params.get('component_fixed_lifetimes')[component],\
+               convert=timesteps_per_year: steps * convert
+
+# If fixed lifetimes are not being used, then apply the Weibull parameters
+# to the circular component(s) only. All non-circular components keep their
+# fixed lifetimes.
+if not use_fixed_lifetime:
+    for c in circular_components:
+        lifespan_fns[c] = lambda : weibull_min.rvs(
+            des_params.get('component_weibull_params')[c]['K'],
+            loc=des_params.get('min_lifespan'),
+            scale=des_params.get('component_weibull_params')[c]['L'] -
+                  des_params.get('min_lifespan'),
+            size=1
+        )[0]
 
 print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
       flush=True)

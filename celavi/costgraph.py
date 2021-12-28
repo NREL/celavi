@@ -31,6 +31,22 @@ class CostGraph:
                  save_copy=False,
                  save_name='netw.csv',
                  **kwargs):
+                 step_costs_file : str,
+                 fac_edges_file : str,
+                 transpo_edges_file : str,
+                 locations_file : str,
+                 routes_file : str,
+                 pathway_crit_history_filename: str,
+                 circular_components : list,
+                 component_initial_mass : float,
+                 path_dict: dict,
+                 sc_begin : str = 'manufacturing',
+                 sc_end = ('landfilling', 'cement co-processing', 'next use'),
+                 year : float = 2000.0,
+                 verbose : int = 0,
+                 save_copy = False,
+                 save_name = 'netw.csv',
+                 ):
         """
         Reads in small datasets to DataFrames and stores the path to the large
         locations dataset for later use.
@@ -49,6 +65,17 @@ class CostGraph:
             path to dataset of facility locations
         routes_file
             path to dataset of routes between facilities
+        pathway_crit_history_filename
+            Name of file where the history of whatever criterion is used to
+            decide between circularity pathways is saved.
+        circular_components
+            Names of components for which this CostGraph is built
+        component_initial_mass
+            Average mass of a single technology component at the beginning of
+            the model run. Units: metric tons (tonnes)
+        path_dict
+            Dictionary of case-study-specific parameters to be passed into
+            the cost methods.
         sc_begin
             processing step(s) where supply chain paths begin. String or list
             of strings.
@@ -57,55 +84,18 @@ class CostGraph:
             list of strings.
         year
             DES model year at which cost graph is instantiated.
-        max_dist
-            Maximum allowable transportation distance for a single supply chain
-            pathway.
         verbose
             Integer specifying how much info CostGraph should provide as it
             works.
             0 = No information other than return values
             1 = Info on when key methods start and stop
             >1 = Detailed info on facilities, nodes, and edges
-
-        Keyword Arguments
-        -----------------
-        blade_mass : float
-            Average mass of a single turbine blade at the beginning of the
-            model run. Units: metric tons (tonnes)
-
-        finegrind_cumul_initial : float
-            Cumulative production of fine grinding at the beginning of the
-            model run.
-            Units: metric tons (tonnes)
-
-        coarsegrind_cumul_initial : float
-            Cumulative production of coarse grinding at the beginning of the
-            model run. NOTE: This value may be greater than
-            cumul_finegrind_initial.
-            Units: metric tons (tonnes)
-
-        finegrind_initial_cost : float
-            Cost in USD/metric ton of fine grinding at the beginning of the
-            model run.
-
-        coarsegrind_initial_cost : float
-            Cost in USD/metric ton of coarse grinding at the beginning of the
-            model run.
-
-        finegrind_revenue : float
-            Revenue in USD/metric ton from sales of finely ground blade
-            material.
-
-        finegrind_learnrate : float
-            Industrial learning-by-doing rate for fine grinding. Unitless.
-
-        coarsegrind_learnrate : float
-            Industrial learning-by-doing rate for coarse grinding. Unitless.
-
-        finegrind_material_loss : float
-            Fraction of total blade material lost during fine grinding.
-            Unitless. This is the amount of finely ground blade material that
-            must be landfilled.
+        save_copy
+            Whether or not to save the initial Cost Graph network structure
+            as a CSV file (edge list).
+        save_name
+            CSV file name where the initial Cost Graph network structure is
+            saved (edge list).
         """
         self.start_time = time()
         self.step_costs = pd.read_csv(step_costs_file)
@@ -120,44 +110,27 @@ class CostGraph:
         # find_nearest
         self.loc_df = pd.read_csv(locations_file)
 
-        self.sc_end = sc_end
-        self.sc_begin = sc_begin
-
-        self.year = year
-
-        self.blade_mass = kwargs['blade_mass']
-
-        # The cumulative production numbers must not be zero to prevent
-        # mathematical errors in the learning-by-doing equation.
-        # Here, if the cumulative production value provided at instantiation is
-        # zero, it is replaced with 1; otherwise, the provided value is used.
-        if kwargs['finegrind_cumul_initial'] == 0:
-            self.finegrind_cumul_initial = 1.0
+        self.sc_end=sc_end
+        self.sc_begin=sc_begin
+        if len(circular_components) == 1:
+            self.circular_components=circular_components[0]
         else:
-            self.finegrind_cumul_initial = kwargs['finegrind_cumul_initial']
-        if kwargs['coarsegrind_cumul_initial'] == 0:
-            self.coarsegrind_cumul_initial = 1.0
-        else:
-            self.coarsegrind_cumul_initial = kwargs['coarsegrind_cumul_initial']
+            self.circular_components=circular_components
+        
+        self.path_dict=path_dict
 
-        self.finegrind_initial_cost = kwargs['finegrind_initial_cost']
-        self.coarsegrind_initial_cost = kwargs['coarsegrind_initial_cost']
+        self.year=year
 
-        self.finegrind_revenue = kwargs['finegrind_revenue']
-
-        self.finegrind_learnrate = kwargs['finegrind_learnrate']
-        self.coarsegrind_learnrate = kwargs['finegrind_learnrate']
-
-        self.finegrind_material_loss = kwargs['finegrind_material_loss']
-
-        self.max_dist = max_dist
+        self.path_dict['component mass'] = component_initial_mass
+        self.path_dict['year'] = self.year
+        self.path_dict['vkmt'] = None
 
         self.verbose = verbose
 
-        self.pathway_cost_history_filename = pathway_cost_history_filename
+        self.pathway_crit_history_filename = pathway_crit_history_filename
 
         # create empty List to store the pathway cost output data
-        self.pathway_cost_history = list()
+        self.pathway_crit_history = list()
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -317,10 +290,10 @@ class CostGraph:
                                        dist_list)
 
             # create dictionary for this preferred pathway cost and decision
-            # criterion and append to the pathway_cost_history
+            # criterion and append to the pathway_crit_history
             _fac_id = self.supply_chain.nodes[source]['facility_id']
             _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            _bol_dist = nx.shortest_path_length(
+            _bol_crit = nx.shortest_path_length(
                 self.supply_chain,
                 source='manufacturing_' +
                        str(
@@ -330,14 +303,14 @@ class CostGraph:
                            )
                        ),
                 target=str(source),
-                weight='cost',
+                weight=crit,
                 method='bellman-ford'
             )
 
             for i in self.sc_end:
-                _dist = [value for key, value in subdict.items() if i in key]
-                if len(_dist) > 0:
-                    self.pathway_cost_history.append(
+                _crit = [value for key, value in subdict.items() if i in key]
+                if len(_crit) > 0:
+                    self.pathway_crit_history.append(
                         {
                             'year'            : self.year,
                             'facility_id'     : _fac_id,
@@ -346,8 +319,8 @@ class CostGraph:
                             'region_id_3'     : _loc_line.region_id_3.values[0],
                             'region_id_4'     : _loc_line.region_id_4.values[0],
                             'eol_pathway_type': i,
-                            'eol_pathway_dist': min(_dist),
-                            'bol_pathway_dist': _bol_dist
+                            'eol_pathway_criterion': min(_crit),
+                            'bol_pathway_criterion': _bol_crit
 
                         }
                     )
@@ -685,18 +658,14 @@ class CostGraph:
             if self.verbose > 1:
                 print('Calculating edge costs for ', edge)
 
+            _edge_dict = self.path_dict.copy()
+            _edge_dict['vkmt']=self.supply_chain.edges[edge]['dist']
+
+            # Year and component mass are defined when CostGraph is instantiated
+            # and do not need to be updated during supply chain generation
+
             self.supply_chain.edges[edge]['cost'] = sum(
-                [f(vkmt=self.supply_chain.edges[edge]['dist'],
-                   year=self.year,
-                   blade_mass=self.blade_mass,
-                   finegrind_cumul_initial=self.finegrind_cumul_initial,
-                   coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
-                   finegrind_initial_cost=self.finegrind_initial_cost,
-                   coarsegrind_initial_cost=self.coarsegrind_initial_cost,
-                   finegrind_revenue=self.finegrind_revenue,
-                   finegrind_learnrate=self.finegrind_learnrate,
-                   coarsegrind_learnrate=self.coarsegrind_learnrate,
-                   finegrind_material_loss=self.finegrind_material_loss)
+                [f(_edge_dict)
                  for f in self.supply_chain.edges[edge]['cost_method']]
             )
 
@@ -909,60 +878,41 @@ class CostGraph:
         return _nearest_downst_node
 
 
-    def update_costs(self, **kwargs):
+    def update_costs(self, path_dict):
         """
         Re-calculates all edge costs based on arguments passed to cost methods.
 
-        Keyword Arguments
-        -----------------
-        year : float
-            Model year provided by DES.
-
-        blade_mass : float
-            Average turbine blade mass provided by DES.
-
-        finegrind_cumul : float
-            Cumulative mass of blades that have been finely ground,
-            provided by DES.
-
-        coarsegrind_cumul : float
-            Cumulative mass of blades that have been coarsely ground,
-            provided by DES.
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
         Returns
         -------
         None
         """
         # update the year for CostGraph
-        self.year = kwargs['year']
+        self.year = path_dict['year']
 
         if self.verbose > 0:
             print('Updating costs for %d at         %d s' %
-                  (kwargs['year'], np.round(time() - self.start_time, 0)),
+                  (path_dict['year'], np.round(time() - self.start_time, 0)),
                   flush=True)
-        
+
         for edge in self.supply_chain.edges():
+            _edge_dict = path_dict.copy()
+            _edge_dict['vkmt']=self.supply_chain.edges[edge]['dist']
             self.supply_chain.edges[edge]['cost'] = sum(
-                [f(vkmt=self.supply_chain.edges[edge]['dist'],
-                   year=kwargs['year'],
-                   blade_mass=kwargs['blade_mass'],
-                   finegrind_cumul=kwargs['finegrind_cumul'],
-                   coarsegrind_cumul=kwargs['coarsegrind_cumul'],
-                   finegrind_cumul_initial=self.finegrind_cumul_initial,
-                   coarsegrind_cumul_initial=self.coarsegrind_cumul_initial,
-                   finegrind_initial_cost=self.finegrind_initial_cost,
-                   finegrind_revenue=self.finegrind_revenue,
-                   coarsegrind_initial_cost=self.coarsegrind_initial_cost,
-                   finegrind_learnrate=self.finegrind_learnrate,
-                   coarsegrind_learnrate=self.coarsegrind_learnrate,
-                   finegrind_material_loss=self.finegrind_material_loss)
+                [f(_edge_dict)
                  for f in self.supply_chain.edges[edge]['cost_method']]
             )
 
         if self.verbose > 0:
             print('Costs updated for  %d at         %d s' %
-                  (kwargs['year'], np.round(time() - self.start_time, 0)),
-                  flush=True)
+                 (path_dict['year'], np.round(time() - self.start_time, 0)),
+                 flush=True)
 
 
     def save_costgraph_outputs(self):
@@ -979,7 +929,7 @@ class CostGraph:
         """
 
         pd.DataFrame(
-            self.pathway_cost_history
+            self.pathway_crit_history
         ).drop_duplicates(
             ignore_index=True
-        ).to_csv(self.pathway_cost_history_filename, index=False)
+        ).to_csv(self.pathway_crit_history_filename, index=False)
