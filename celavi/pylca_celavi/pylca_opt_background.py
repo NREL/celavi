@@ -43,8 +43,6 @@ modeled in the future. Byproducts in USNREL LCI do not have a good indicator.
 '''
 
 def process_product_func():
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     # This function is creating a dataframe of processes and all their products from the USLCI database.
     # The dataframe considers the name of the process as well as the location and the names of the product flows.
     # This ensures that when networks are created, the locations of the networks are also matched.
@@ -82,8 +80,6 @@ flows_without_location = []
 
 
 def process_input_func():
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
 
     # TODO: In this module as well as others, consider explaining what is
     #  meant by network. I did not see any network being built in the pylca
@@ -121,8 +117,6 @@ def process_input_func():
 
 '''Need to add air water and soil separation later. This is still wrong. '''
 def process_emission_func():
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     # These function is used for creating a dataframe that extracts out the emission flows
     # from the USLCI database and creates a dataframe
     p_list = []
@@ -308,8 +302,6 @@ uslci_product_df = pd.DataFrame(list(splitted_names1))
 #  from tech_matrix within the function like in insitu_emission.py and
 #  py_lca_opt_foreground.py (X_matrix = tech_matrix.to_numpy()).
 def solver_optimization(tech_matrix, F):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     # Creation of a Concrete Model
     model = ConcreteModel()
     
@@ -401,8 +393,6 @@ def solver_optimization(tech_matrix, F):
         
 
 def runner(tech_matrix, F, i, l, j, k, final_demand_scaler):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     tim0 = time.time()
     # TODO: consider removing res = pd.DataFrame() and res2 = pd.DataFrame()
     #  if they are not used (they are defined again through the outputs of the
@@ -448,8 +438,6 @@ final_demand_scaler = 10000
 
 
 def model_celavi_lci_background(f_d, yr, fac_id, stage, material):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     # Have to edit this final demand to match the results from CELAVI
     f_d['flow name'] = f_d['flow name'] +'@' + f_d['flow name']
     f_d = f_d.drop_duplicates()
