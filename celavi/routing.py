@@ -23,10 +23,10 @@ import tempfile
 import celavi.data_manager as Data
 
 
-# TODO: consider removing 'object' (since it is not needed in python 3 and
-#  celavi requires python 3.8.)
-class Router(object):
-    """Discover routing between nodes"""
+class Router:
+    """
+    Discover routing between nodes
+    """
 
     def __init__(self,
                  edges,
@@ -34,11 +34,17 @@ class Router(object):
                  memory=None, algorithm=bidirectional_dijkstra,
                  ):
         """
-        :param edges: [DataFrame]
-        :param node_map: [DataFrame]
-        :param memory [joblib.Memory]
-        :param algorithm: [function]
-        :return:
+
+        Parameters
+        ----------
+        edges: [DataFrame]
+        node_map: [DataFrame]
+        memory [joblib.Memory]
+        algorithm: [function]
+
+        Returns
+        -------
+        None
         """
 
         self.node_map = node_map
@@ -63,9 +69,16 @@ class Router(object):
 
         """
         Find route from <start> to <end>, if exists.
-        :param start: [list] [long, lat]
-        :param end: [list] [long, lat]
-        :return: [DataFrame]
+
+        Parameters
+        ----------
+        start: [list] [long, lat]
+
+        end: [list] [long, lat]
+
+        Returns
+        -------
+        [DataFrame]
         """
 
         _start_point = np.array(start)
@@ -123,7 +136,31 @@ class Router(object):
         Calculates distances traveled between all locations in the locations_file.
         Includes distance traveled through each transportation region (e.g., county FIPS) and road class.
 
-        :return:
+        Parameters
+        ----------
+        locations_file
+            Dataset of facility locations
+
+        route_pair_file
+            Dataset of allowable facility pairs to connect with routes
+
+        distance_filtering
+            Dataset of distance-based router filtering
+
+        transportation_graph
+            Transportation network data
+
+        node_locations
+
+        routing_output_folder
+            Path to directory for routing outputs
+
+        preprocessing_output_folder
+            Path to directory for preprocessing outputs
+
+        Returns
+        -------
+        DataFrame
         """
         backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
 
@@ -200,11 +237,10 @@ class Router(object):
 
                 route_list.to_csv(routing_output_folder + 'route_list.csv')
 
-                # TODO: remove "# .drop_duplicates()" if not used
                 _routes = route_list[['source_long',
                                       'source_lat',
                                       'destination_long',
-                                      'destination_lat']]  # .drop_duplicates()
+                                      'destination_lat']]
 
                 _routes.to_csv(routing_output_folder + 'latlongs.csv')
 
