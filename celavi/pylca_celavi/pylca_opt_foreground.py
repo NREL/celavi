@@ -51,8 +51,6 @@ df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
 
 # We are integrating static lca with dynamics lca over here.
 def preprocessing(year, df_static):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
 
     df_dynamic_year = df_dynamic[df_dynamic['year'] == year]
     frames = [df_static, df_dynamic_year]
@@ -82,8 +80,6 @@ def preprocessing(year, df_static):
 
 
 def solver_optimization(tech_matrix, F, process, df_with_all_other_flows):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     X_matrix = tech_matrix.to_numpy()
     # Creation of a Concrete Model
     model = ConcreteModel()
@@ -174,8 +170,6 @@ def solver_optimization(tech_matrix, F, process, df_with_all_other_flows):
 
 
 def electricity_corrector_before20(df):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     # This part is used to replace pre 2020 electricity flows with US'Electricity, at Grid, US, 2010'
     
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
@@ -183,8 +177,6 @@ def electricity_corrector_before20(df):
 
 
 def runner(tech_matrix, F, yr, i, j, k, final_demand_scaler, process, df_with_all_other_flows):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     res = pd.DataFrame()
     res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)
     res['value'] = res['value'] * final_demand_scaler
@@ -210,8 +202,6 @@ def runner(tech_matrix, F, yr, i, j, k, final_demand_scaler, process, df_with_al
 
 
 def model_celavi_lci(f_d, yr, fac_id, stage, material, df_static):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
