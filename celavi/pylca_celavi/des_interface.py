@@ -1,13 +1,6 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
-# TODO: if sys is not used, consider removing
 import pandas as pd
 from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
 from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
-import sys
 import os
 from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 
@@ -18,8 +11,7 @@ from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_li
 from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing, impact_calculations
 
 
-# TODO: Consider detailing what "something" is in "something for debugging
-#  purposes"
+
 """
 concrete_life_cycle_inventory_updater() reads:
     - foreground_process_inventory.csv (needs only to be read once)
@@ -60,8 +52,6 @@ except:
 
 
 def lca_performance_improvement(df):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     try:
         db = pd.read_csv('lca_db.csv')
         db.columns = ['year', 'stage', 'material', 'flow name', 'emission factor kg/kg']
@@ -86,8 +76,6 @@ def lca_performance_improvement(df):
 
 
 def pylca_run_main(df):
-    # TODO: add docstrings to explain input variables and what the function
-    #  does.
     df = df[df['flow quantity'] != 0]    
 
     res_df = pd.DataFrame()
@@ -157,21 +145,14 @@ def pylca_run_main(df):
         try:
             split_string = a.split("/kg", 1)
             res_df = res_df.replace(a, split_string[0] + split_string[1])
-            # TODO: consider removing commented lines below
-            #res_df.iloc[index,[4]] = split_string[0] + split_string[1]
-            #print(split_string)
         except:
             split_string = a.split("/ kg", 1)
             res_df = res_df.replace(a, split_string[0] + split_string[1])
-            # TODO: consider removing commented lines below
-            #res_df.iloc[index,[4]] = split_string[0] + split_string[1]
 
 
 
 
 
-    # TODO: consider removing commented lines below
-    # res_df.to_csv('final_lcia_results_to_des.csv', header=False, index=False)
        
     # The line below is just for debugging if needed
     res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
