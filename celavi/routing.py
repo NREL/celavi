@@ -116,10 +116,7 @@ class Router:
             .sum().reset_index()
 
         _summary['region_transportation'] = _summary['statefp'] + _summary['countyfp']
-        # TODO: Consider generalizing below. An input parameter should be used.
-        #  At least 0.621371 should be stored in a variable such as
-        #  mile_per_km (I suppose it's the conversion factor mile-km).
-        #  A comment should also specify why weight is divided by 1000.
+        # TODO:  A comment should also specify why weight is divided by 1000.
         _summary['vmt'] = _summary['weight'] / 1000.0 * 0.621371
 
         return _summary[['region_transportation', 'fclass', 'vmt']]
