@@ -88,8 +88,8 @@ class Context:
         self.components: List[Component] = []
         self.env = simpy.Environment()
 
-        # TODO: the comment lines below are not very clear. What array? Why
-        #  just glass fiber and not epoxy? Consider modifying/adding to the
+        # TODO: the comment lines below are not very clear. What array?
+        # Consider modifying/adding to the
         #  lines below.
         # Read the average blade masses as an array. Then turn it into a dictionary
         # that maps integer years to glass fiber blade masses.
