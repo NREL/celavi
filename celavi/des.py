@@ -35,11 +35,6 @@ class Context:
         possible_materials: List[str],
         cost_graph: CostGraph,
         cost_graph_update_interval_timesteps: int,
-        # TODO: cost_params is None by default, but in main.py no cost_params
-        #  is provided. This results into cost_params being None?
-        #  self.cost_params is also not used in this module. Does it get used
-        #  somewhere else? Consider adding a few comment lines to explain
-        #  self.cost_params below.
         cost_params: Dict = None,
         min_year: int = 2000,
         max_timesteps: int = 600,
