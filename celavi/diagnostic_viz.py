@@ -1,18 +1,8 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
-# TODO: remove os and time if they are not used
 from typing import Dict, List
-
-import os
 
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import time
-
 from .inventory import FacilityInventory
 
 
@@ -109,10 +99,8 @@ class DiagnosticViz:
             # columns are present
             try:
                 print('Gathering and scaling component count inventories')
-                # TODO: Consider adding a comment to explain what's in
-                #  cumulative_history.loc[...] after the operation below
-                #  (I think a list of strings of the lenght equal to the
-                #  number of component?)
+                # Multiply component counts in the inventory by the number of
+                # components in each technology unit
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
@@ -120,7 +108,6 @@ class DiagnosticViz:
                 ] * [
                     value for key, value in self.component_count.items()
                 ]
-            # TODO: is "e" used? If not, consider removing.
             except KeyError as e:
                 print('Gathering component mass histories')
             cumulative_histories.append(cumulative_history)
