@@ -267,8 +267,6 @@ if location_filtering:
         filter_routes(locations_computed_filename,
                       routes)
 
-time_router = time.time()
-
 if run_routes:
     routes_computed = Router.get_all_routes(
         locations_file=locations_computed_filename,
@@ -280,7 +278,7 @@ if run_routes:
         preprocessing_output_folder=subfolder_dict['preprocessing_output_folder']
     )
 
-print('Run routes completed in %d s' % np.round(time.time() - time_router, 1),
+print('Run routes completed at %d s' % np.round(time.time() - time0, 1),
         flush=True)
 
 component_material_mass = pd.read_csv(component_material_masses_filename)
@@ -290,11 +288,9 @@ component_total_mass = component_material_mass.groupby(
     'mass_tonnes'
 ).reset_index()
 
-time_cg = time.time()
-
 if initialize_costgraph:
     # Initialize the CostGraph using these parameter settings
-    print('Cost Graph Starts at %d s' % np.round(time.time() - time_cg, 1),
+    print('CostGraph starts at %d s' % np.round(time.time() - time0, 1),
           flush=True)
     netw = CostGraph(
         step_costs_file=step_costs_filename,
@@ -316,7 +312,7 @@ if initialize_costgraph:
         ].values[0],
         path_dict=pathways
     )
-    print('CostGraph completed at %d s' % np.round(time.time() - time_cg, 1),
+    print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
 
     if pickle_costgraph:
@@ -326,15 +322,13 @@ if initialize_costgraph:
 
 else:
     # Read in a previously generated CostGraph object
-    print(f'Reading in CostGraph object at {np.round(time.time() - time_cg, 1)}',
+    print(f'Reading in CostGraph object at {np.round(time.time() - time0, 1)}',
           flush=True)
 
     netw = pickle.load(open(costgraph_pickle_filename, 'rb'))
 
-    print(f'CostGraph object read in at {np.round(time.time() - time_cg, 1)}',
+    print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
-
-print('CostGraph exists\n\n\n')
 
 # Get the start year and timesteps_per_year
 start_year = model_run.get('start_year')
@@ -349,8 +343,6 @@ des_timesteps = int(
 # Get list of unique materials involved in the case study
 materials = [tech.get('component_materials')[c] for c in circular_components]
 material_list=[item for sublist in materials for item in sublist]
-
-time_context = time.time()
 
 # Create the DES context and tie it to the CostGraph
 context = Context(
@@ -367,11 +359,10 @@ context = Context(
     timesteps_per_year=timesteps_per_year
 )
 
+print(f'Context initialized at {np.round(time.time() - time0, 1)} s', flush=True)
+
 # Create the technology dataframe that will be used to populate
 # the context with components.
-
-print(f'Creating components at {np.round(time.time() - time_context, 1)} s',
-      flush=True)
 
 technology_data = pd.read_csv(technology_data_filename)
 
@@ -390,9 +381,6 @@ for _, row in technology_data.iterrows():
                 'manuf_facility_id': manuf_facility_id,
                 'in_use_facility_id': in_use_facility_id
             })
-
-print(f'Components created at {np.round(time.time() - time0, 1)} s',
-      flush=True)
 
 components = pd.DataFrame(components)
 
@@ -421,20 +409,21 @@ if not use_fixed_lifetime:
             size=1
         )[0]
 
-print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
-      flush=True)
+print(f'Components initialized at {np.round(time.time() - time0, 1)} s',flush=True)
 
 # Populate the context with components.
 context.populate(components, lifespan_fns)
 
-print(f'Context created  at {np.round(time.time() - time0)} s\n\n\n',
+print(f'Context populated with components at {np.round(time.time() - time0, 1)} s',
       flush=True)
 
-print(f'Run starting for DES at {np.round(time.time() - time0)} s\n\n\n',
-      flush=True)
+print(f'Model run starting at {np.round(time.time() - time0, 1)} s',flush=True)
 
 # Run the context
 count_facility_inventories = context.run()
+
+print(f'Creating diagnostic visualizations at '
+      f'{np.round(time.time() - time0, 1)} s', flush=True)
 
 # Plot the cumulative count levels of the count inventories
 possible_component_list = list(tech.get('component_list', []).keys())
