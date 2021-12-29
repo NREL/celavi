@@ -96,7 +96,7 @@ for folder in subfolder_dict.values():
 # general inputs
 locations_computed_filename = os.path.join(args.data,
                                            data_dirs.get('inputs'),
-                                           inputs.get('locs'))
+                                           generated.get('locs'))
 step_costs_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('step_costs'))
@@ -117,7 +117,7 @@ routes_custom_filename = os.path.join(args.data,
                                       inputs.get('routes_custom'))
 routes_computed_filename = os.path.join(args.data,
                                         data_dirs.get('preprocessing_output'),
-                                        inputs.get('routes_computed'))
+                                        generated.get('routes_computed'))
 
 # input file paths for precomputed US road network data
 # transport graph (pre computed; don't change)
@@ -150,7 +150,7 @@ lookup_facility_type_filename = os.path.join(args.data,
 # file where the technology data will be saved after generating from raw inputs
 technology_data_filename = os.path.join(args.data,
                                      data_dirs.get('inputs'),
-                                     inputs.get('technology_data'))
+                                     generated.get('technology_data'))
 
 # dataset of capacity expansion projections
 capacity_proj_filename = os.path.join(args.data,
@@ -359,7 +359,7 @@ context = Context(
     possible_components=list(tech.get('component_list', []).keys()),
     possible_materials=material_list,
     cost_graph=netw,
-    cost_graph_update_interval_timesteps=model_run.get('cg_update_timesteps'),
+    cost_graph_update_interval_timesteps=model_run.get('cg_update'),
     path_dict=pathways,
     min_year=start_year,
     max_timesteps=des_timesteps,
