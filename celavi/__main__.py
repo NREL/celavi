@@ -44,7 +44,7 @@ except IOError as err:
     print(f'Could not open {scen_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
 
-
+## Flags
 # if compute_locations is enabled (True), compute locations from raw input
 # files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = flags.get('compute_locations', False)  # default to False
@@ -56,7 +56,9 @@ run_routes = flags.get('run_routes', False)
 use_computed_routes = flags.get('use_computed_routes', True)
 # create cost graph fresh or use an imported version
 initialize_costgraph = flags.get('initialize_costgraph', False)
+# filter down locations dataset by state
 location_filtering = flags.get('location_filtering', False)
+# filter down routes by maximum allowable distance between facility types
 distance_filtering = flags.get('distance_filtering', False)
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = flags.get('pickle_costgraph', True)
@@ -67,7 +69,7 @@ use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
 # use previously generated LCIA results instead of re-calculating
 use_lcia_shortcut = flags.get('use_lcia_shortcut', True)
 
-# SUB FOLDERS
+## SUB FOLDERS
 subfolder_dict = {
     'preprocessing_output_folder':
         os.path.join(args.data,
@@ -89,8 +91,8 @@ for folder in subfolder_dict.values():
     if not isdir:
         os.makedirs(folder)
 
-# FILE NAMES FOR INPUT DATA
-# @TODO: add check to ensure files exist
+## FILE NAMES FOR INPUT DATA
+
 # general inputs
 locations_computed_filename = os.path.join(args.data,
                                            data_dirs.get('inputs'),
@@ -167,37 +169,70 @@ costgraph_csv_filename = os.path.join(args.data,
                                       data_dirs.get('outputs'),
                                       outputs.get('costgraph_csv'))
 
+# File where pathway choice criterion history is saved
 pathway_crit_history_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('pathway_criterion_history')
 )
 
+# Raw DES output filenames
 component_counts_plot_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('component_counts_plot')
 )
-
 material_mass_plot_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('material_mass_plot')
 )
-
 count_cumulative_histories_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('count_cumulative_histories')
 )
-
 mass_cumulative_histories_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('mass_cumulative_histories')
 )
 
+## Read in datasets that are passed around as DataFrames or similar
+component_material_mass = pd.read_csv(component_material_masses_filename)
+technology_data = pd.read_csv(technology_data_filename)
+
+## Define general model and scenario parameters
+if use_computed_routes:
+    routes = routes_computed_filename
+else:
+    routes = routes_custom_filename
+
+states_to_filter = scenario.get('states_included', [])
+
+component_total_mass = component_material_mass.groupby(
+    by=['year','technology','component']
+).sum(
+    'mass_tonnes'
+).reset_index()
+
 circular_components = tech.get('circular_components')
+
+start_year = model_run.get('start_year')
+
+timesteps_per_year = model_run.get('timesteps_per_year')
+
+# calculate des timesteps such that the model runs through the end of the
+# end year rather than stopping at the beginning of the end year
+des_timesteps = int(
+    timesteps_per_year * (model_run.get('end_year') - start_year) + timesteps_per_year
+)
+
+# Get list of unique materials involved in the case study
+materials = [tech.get('component_materials')[c] for c in circular_components]
+material_list=[item for sublist in materials for item in sublist]
+
+np.random.seed(scenario.get('seed', 13))
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
@@ -224,7 +259,6 @@ if compute_locations:
         lookup_facility_type=lookup_facility_type_filename,
         technology_data_filename=technology_data_filename,
         standard_scenarios_filename=capacity_proj_filename)
-
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 # if the step_costs file is being generated, then all facilities of the same
@@ -243,13 +277,7 @@ if generate_step_costs:
         index=False
     )
 
-if use_computed_routes:
-    routes = routes_computed_filename
-else:
-    routes = routes_custom_filename
-
 # Data filtering for states
-states_to_filter = scenario.get('states_included', [])
 if location_filtering:
     if len(states_to_filter) == 0:
         print('Cannot filter data; no state list provided', flush=True)
@@ -280,13 +308,6 @@ if run_routes:
 
 print('Run routes completed at %d s' % np.round(time.time() - time0, 1),
         flush=True)
-
-component_material_mass = pd.read_csv(component_material_masses_filename)
-component_total_mass = component_material_mass.groupby(
-    by=['year','technology','component']
-).sum(
-    'mass_tonnes'
-).reset_index()
 
 if initialize_costgraph:
     # Initialize the CostGraph using these parameter settings
@@ -330,20 +351,6 @@ else:
     print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
 
-# Get the start year and timesteps_per_year
-start_year = model_run.get('start_year')
-timesteps_per_year = model_run.get('timesteps_per_year')
-
-# calculate des timesteps such that the model runs through the end of the
-# end year rather than stopping at the beginning of the end year
-des_timesteps = int(
-    timesteps_per_year * (model_run.get('end_year') - start_year) + timesteps_per_year
-)
-
-# Get list of unique materials involved in the case study
-materials = [tech.get('component_materials')[c] for c in circular_components]
-material_list=[item for sublist in materials for item in sublist]
-
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
@@ -363,9 +370,6 @@ print(f'Context initialized at {np.round(time.time() - time0, 1)} s', flush=True
 
 # Create the technology dataframe that will be used to populate
 # the context with components.
-
-technology_data = pd.read_csv(technology_data_filename)
-
 components = []
 for _, row in technology_data.iterrows():
     year = row['year']
@@ -385,9 +389,6 @@ for _, row in technology_data.iterrows():
 components = pd.DataFrame(components)
 
 # Create the lifespan functions for the components.
-np.random.seed(scenario.get('seed', 13))
-timesteps_per_year = model_run.get('timesteps_per_year')
-
 lifespan_fns = {}
 
 # By default, all components are assigned fixed lifetimes
