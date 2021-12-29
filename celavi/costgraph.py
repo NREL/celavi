@@ -580,7 +580,7 @@ class CostGraph:
                                            'source_facility_type',
                                            'destination_facility_id',
                                            'destination_facility_type',
-                                           'total_vmt'],
+                                           'total_vkmt'],
                                   chunksize=1)
             _prev_line = None
 
@@ -608,13 +608,12 @@ class CostGraph:
                             _line['destination_facility_id'].values[0]:
                         if self.verbose > 1:
                             print('Adding ',
-                                  str(_line['total_vmt'].values[0]),
+                                  str(_line['total_vkmt'].values[0]),
                                   ' km between ',
                                   u_node,
                                   ' and ',
                                   v_node)
-                        # Additional factor converts miles to km
-                        data['dist'] = 1.60934 * _line['total_vmt'].values[0]
+                        data['dist'] = _line['total_vkmt'].values[0]
 
         # After all of the route distances have been added, any edges that
         # have a distance of -1 km are deleted from the network.
