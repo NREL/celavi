@@ -7,6 +7,25 @@ import os
 import pdb
 
 def postprocessing(final_res,insitu):
+    """
+    This function is used for post processing of final results dataframe
+    It adds the insitu emissions with the background emissions. 
+
+    Parameters
+    ----------
+    final_res: Dataframe
+    dataframe with background LCA results
+    
+    insitu: Dataframe
+    dataframe with insitu emissions
+    
+    
+    
+    Returns
+    -------
+    final combined total emissions dataframe   
+
+    """
     #Giving names to the columns for the final result file
     column_names = ['flow name','flow unit','flow quantity','year','facility_id','stage','material']
 
@@ -38,7 +57,26 @@ def postprocessing(final_res,insitu):
 
 def impact_calculations(final_res,traci_lci_filename):    
    
-     
+    """
+    This function is used for LCIA post processing of final results dataframe
+    It converts mass flow of pollutants to Environmental impacts based on TRACI 2.1
+    characterization method
+
+    Parameters
+    ----------
+    final_res: Dataframe
+    dataframe with total LCA results
+    
+    traci_lci_filename: str
+    name of the traci characerization file
+    
+    
+    
+    Returns
+    -------
+    df_lcia: Dataframe
+    dataframe wih LCIA impact results    
+    """     
    
     traci = pd.read_csv(traci_lci_filename)
     traci = traci.fillna(0)
