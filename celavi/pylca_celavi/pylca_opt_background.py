@@ -5,7 +5,7 @@ import time
 from pyomo.environ import ConcreteModel,Set,Param,Var,Constraint,Objective,minimize, SolverFactory
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-# from pylca_celavi_background_postprocess import postprocessing
+
 
 
 def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename):

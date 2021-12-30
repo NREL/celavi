@@ -5,12 +5,13 @@ import sys
 import multiprocessing
 import time
 import os
-# import pyutilib.subprocess.GlobalData
+import pyutilib.subprocess.GlobalData
+pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
 # This emulates what the pyomo command-line tools does
 from pyomo.opt import SolverFactory
-import pyomo.environ
-# pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+
+
 
 
     
