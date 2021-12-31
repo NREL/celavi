@@ -161,10 +161,10 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     process_input = process_input_func()
     process_emission = process_emission_func()
     
+    #Removing flows without source because optimization problem becomes infeasible
     #Removing flows without source
     #For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
-    #Dummy flows need to be removed.
-     
+    #Dummy flows need to be removed. 
     #This part removes the dummy flows and flows without any production processes from the X matrix. 
     def process_input_refine():
         #This function creates a dataframe for only the inputs of the different processes

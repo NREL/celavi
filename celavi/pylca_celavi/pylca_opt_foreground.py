@@ -54,11 +54,7 @@ def preprocessing(year,df_static,dynamic_lci_filename):
     df_input.loc[:,'value'] = df_input.loc[:,'value']  * (-1)
     df = pd.concat([df_input,df_output])
 
-    #Removing flows without source because optimization problem becomes infeasible
-    #Removing flows without source
-    #For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
-    #Dummy flows need to be removed. 
-    #This part removes the dummy flows and flows without any production processes from the X matrix. 
+
     process_input_with_process  =  pd.unique(df_output['product'])
     df['indicator'] = df['product'].isin(process_input_with_process)
     process_df = df[df['indicator'] == True]
@@ -68,6 +64,7 @@ def preprocessing(year,df_static,dynamic_lci_filename):
     del df_with_all_other_flows['indicator']
     
     process_df.loc[:,'value'] = process_df.loc[:,'value'].astype(np.float64)
+
     return process_df,df_with_all_other_flows
 
 
