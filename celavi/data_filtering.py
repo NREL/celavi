@@ -3,6 +3,30 @@ import pandas as pd
 
 
 def filter_locations(loc_file_name,num_of_turbines_filename,states):
+        
+        """
+        This function is used to filter the locations file and number of turbines file
+        based on the states selected for filtering.
+        After filtering the location and number of turbines file it rewrites and
+        saves the csv files
+
+
+        Parameters
+        ----------
+        loc_file_name: str
+            file name for the location file
+        
+        num_of_turbines_filename: str
+            file name for the number of turbines file based on facility id. 
+        
+        states: list
+            list for the states for filtering
+
+        
+        Returns
+        -------
+        None
+        """
 
         locations = pd.read_csv(loc_file_name)
         
@@ -20,8 +44,25 @@ def filter_locations(loc_file_name,num_of_turbines_filename,states):
 
 
 def filter_routes(locations_filename, routes_filename):
+       
         """
+        This function is used to filter the routes file.        
+        After filtering the routes file it rewrites and
+        saves as csv files
 
+
+        Parameters
+        ----------
+        locations_fil_name: str
+            file name for the location file
+        
+        routes_filename: str
+            file name for the routes file. 
+
+        
+        Returns
+        -------
+        None
         """
 
         facility_id_included = list(
