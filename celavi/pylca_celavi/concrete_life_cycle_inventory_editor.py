@@ -58,7 +58,7 @@ def concrete_life_cycle_inventory_updater(d_f,
         return pd.DataFrame(), pd.DataFrame()
 
 
-    #The problem of concrete emission where emission is dependant upon the value of glass fiber availalbe in the system'
+    #The problem of concrete emission where emission is dependant upon the value of glass fiber available in the system'
     elif k == 'concrete':
         df_static = pd.read_csv(static_filename)
         year_of_concrete_demand = yr
