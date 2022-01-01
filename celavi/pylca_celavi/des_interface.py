@@ -9,7 +9,7 @@ from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_life_cycle_inventory_updater
 
 # Background LCA runs on the USLCI after the foreground process
-from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing,impact_calculations
+from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing, impact_calculations
 
 
 class PylcaCelavi:
@@ -138,9 +138,9 @@ class PylcaCelavi:
         """
         try:
             db= pd.read_csv(self.shortcutlca_filename)
-            db.columns = ['year','stage','material','flow name','emission factor kg/kg']
+            db.columns = ['year', 'stage', 'material', 'flow name', 'emission factor kg/kg']
             db = db.drop_duplicates()
-            df2 = df.merge(db, on = ['year','stage','material'], how = 'outer',indicator = True)
+            df2 = df.merge(db, on = ['year', 'stage', 'material'], how = 'outer',indicator = True)
             df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
             
             
@@ -149,10 +149,10 @@ class PylcaCelavi:
             
             
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
-            df_with_lca_entry = df_with_lca_entry[['flow name','flow unit','flow quantity','year','facility_id','stage','material']]
+            df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']]
             result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
             
-            return df_with_no_lca_entry,result_shortcut
+            return df_with_no_lca_entry, result_shortcut
         
         except FileNotFoundError:
             
