@@ -30,6 +30,7 @@ try:
         cg_params = config.get('costgraph_parameters', {})
         des_params = config.get('discrete_event_parameters', {})
         pathway_params = config.get('pathway_parameters', {})
+        pylca_inventory_parameters = config.get('pylca_inventory_parameters',{})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -361,6 +362,9 @@ else:
 
 print('CostGraph exists\n\n\n')
 
+
+sand_substitution_rate = pylca_inventory_parameters.get('circular_components')
+coal_substitution_rate = pylca_inventory_parameters.get('circular_components')
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   shortcutlca_filename=shortcutlca_filename,
@@ -370,7 +374,9 @@ lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   stock_filename=stock_filename,
                   emissions_lci_filename=emissions_lci_filename,
                   traci_lci_filename=traci_lci_filename,
-                  use_shortcut_lca_calculations=use_shortcut_lca_calculations)
+                  use_shortcut_lca_calculations=use_shortcut_lca_calculations,
+                  sand_substitution_rate=sand_substitution_rate,
+                  coal_substitution_rate=coal_substitution_rate)
 
 # Get the start year and timesteps_per_year
 start_year = scenario_params.get('start_year')

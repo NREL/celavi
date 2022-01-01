@@ -7,7 +7,9 @@ def concrete_life_cycle_inventory_updater(d_f,
                                           stage,
                                           static_filename,
                                           stock_filename,
-                                          emissions_filename):    
+                                          emissions_filename,
+                                          sand_substitution_rate,
+                                          coal_substitution_rate):    
     """
     This function modifies static LCI based on availability of GFRP at the cement processing stage 
     and demand of concrete in the system
@@ -50,9 +52,6 @@ def concrete_life_cycle_inventory_updater(d_f,
     
       
     
-    sand_substitution_rate = 0.15
-    coal_substitution_rate = 0.30
-
     if k == 'glass fiber reinforced polymer' and stage == 'cement co-processing':
         d_f = d_f.reset_index()
         d_f.to_pickle(stock_filename,compression = None)
