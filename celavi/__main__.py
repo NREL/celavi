@@ -97,9 +97,6 @@ for folder in subfolder_dict.values():
 locations_computed_filename = os.path.join(args.data,
                                            data_dirs.get('inputs'),
                                            generated.get('locs'))
-step_costs_filename = os.path.join(args.data,
-                                   data_dirs.get('inputs'),
-                                   inputs.get('step_costs'))
 fac_edges_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('fac_edges'))
@@ -264,6 +261,9 @@ if compute_locations:
 # if the step_costs file is being generated, then all facilities of the same
 # type will have the same cost models.
 if generate_step_costs:
+    step_costs_filename = os.path.join(args.data,
+                                       data_dirs.get('inputs'),
+                                       generated.get('step_costs'))
     pd.read_csv(
         step_costs_default_filename
     ).merge(
@@ -276,6 +276,13 @@ if generate_step_costs:
         step_costs_filename,
         index=False
     )
+else:
+    # If step_costs is not generated programatically, then the user must
+    # supply a custom file.
+    step_costs_filename = os.path.join(args.data,
+                                       data_dirs.get('inputs'),
+                                       inputs.get('step_costs'))
+
 
 # Data filtering for states
 if location_filtering:
