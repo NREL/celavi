@@ -109,7 +109,20 @@ class ComputeLocations:
 
         Returns
         -------
+        wind_plant_locations: pd.DataFrame
+            Dataset of power plant locations including unique facility ID, the
+            facility type identifier, a lat/long pair, and four generic region
+            identifiers (country, state, county, etc.)
 
+            Columns:
+                facility_id : int
+                facility_type : str
+                lat : float
+                long : float
+                region_id_1 : str
+                region_id_2 : str
+                region_id_3 : str
+                region_id_4 : str
         """
 
         # Process data for wind power plants - from USWTDB
@@ -194,7 +207,8 @@ class ComputeLocations:
 
     def landfill(self):
         """
-        Process data for landfills - from EPA LMOP
+        Process raw data from U.S. EPA (LMOP) to create a dataset of  landfill
+        locations in the contiguous U.S.
         """
 
         # load landfill facility data
