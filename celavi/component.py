@@ -1,13 +1,16 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
 from typing import Deque, Tuple, Dict
 from collections import deque
 
 
 class Component:
+    """
+    The Component class works with the Context class to run the discrete
+    event simulation. There is one instance of Component per physical
+    component in the simulation. This class models each step in the
+    lifecycle of the component, from begining of life (BOL) to end of
+    life (EOL).
+    """
+
     def __init__(
         self,
         context,
@@ -193,14 +196,11 @@ class Component:
             The environment in which this process is running.
         """
         while True:
-
-            # TODO: consider replacing "if len(self.pathway) > 0:" by
-            #  "if self.pathway:"
-            if len(self.pathway) > 0:
+            if self.pathway:
                 location, lifespan, distance = self.pathway.popleft()
                 factype = location.split('_')[0]
                 if factype in self.split_dict.keys():
-                    # increment the facility inventory and transpo tracker
+                    # increment the facility inventory and transportation tracker
                     fac_count_inventory = self.context.count_facility_inventories[location]
                     fac_transport = self.context.transportation_trackers[location]
                     fac_mass_inventory = self.context.mass_facility_inventories[location]
@@ -209,11 +209,6 @@ class Component:
                         1,
                         env.now
                     )
-
-                    # TODO: consider adding a comment to explain why it is
-                    #  better to have the increment_inbound_tonne_km method in
-                    #  a separate python module rather than within this module
-                    #  or the inventory or des modules
 
                     for _, mass in self.mass_tonnes.items():
                         fac_transport.increment_inbound_tonne_km(mass * distance, env.now)
