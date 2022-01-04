@@ -14,49 +14,65 @@ import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
 parser.add_argument('--data', help='Path to the input and output data folder.')
-parser.add_argument('--config', help='Name of config file in data folder.')
+parser.add_argument('--casestudy', help='Name of case study config file in data folder.')
+parser.add_argument('--scenario', help='Name of scenario-specific config file in the data folder.')
 args = parser.parse_args()
 
-# YAML filename
-config_yaml_filename = os.path.join(args.data, args.config)
+time0 = time.time()
+
+# YAML filenames
+case_yaml_filename = os.path.join(args.data, args.casestudy)
+scen_yaml_filename = os.path.join(args.data, args.scenario)
 try:
-    with open(config_yaml_filename, 'r') as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-        flags = config.get('flags', {})
-        scenario_params = config.get('scenario_parameters', {})
-        data_dirs = config.get('data_directories', {})
-        inputs = config.get('input_filenames', {})
-        outputs = config.get('output_filenames', {})
-        cg_params = config.get('costgraph_parameters', {})
-        des_params = config.get('discrete_event_parameters', {})
-        pathway_params = config.get('pathway_parameters', {})
+    with open(case_yaml_filename, 'r') as f:
+        case = yaml.load(f, Loader=yaml.FullLoader)
+        model_run = case.get('model_run', {})
+        data_dirs = case.get('data_directories', {})
+        inputs = case.get('input_files', {})
+        generated = case.get('generated_files', {})
+        outputs = case.get('output_files', {})
         pylca_inventory_parameters = config.get('pylca_inventory_parameters',{})
 except IOError as err:
-    print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
+    print(f'Could not open {case_yaml_filename} for configuration. Exiting with status code 1.')
+    exit(1)
+try:
+    with open(scen_yaml_filename, 'r') as f:
+        scen = yaml.load(f, Loader=yaml.FullLoader)
+        flags = scen.get('flags', {})
+        scenario = scen.get('scenario', {})
+        pathways = scen.get('circular_pathways', {})
+        tech = scen.get('technology_components', {})
+except IOError as err:
+    print(f'Could not open {scen_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
 
-
+## Flags
 # if compute_locations is enabled (True), compute locations from raw input
 # files (e.g., LMOP, US Wind Turbine Database)
 compute_locations = flags.get('compute_locations', False)  # default to False
 # if run_routes is enabled (True), compute routing distances between all
-# input locations
+# input location pairs
 run_routes = flags.get('run_routes', False)
 # if use_computed_routes is enabled, read in a pre-assembled routes file
 # instead of generating a new one
 use_computed_routes = flags.get('use_computed_routes', True)
 # create cost graph fresh or use an imported version
 initialize_costgraph = flags.get('initialize_costgraph', False)
-enable_data_filtering = flags.get('enable_data_filtering', False)
+# filter down locations dataset by state
+location_filtering = flags.get('location_filtering', False)
+# filter down routes by maximum allowable distance between facility types
 distance_filtering = flags.get('distance_filtering', False)
 # save the newly initialized costgraph as a pickle file
 pickle_costgraph = flags.get('pickle_costgraph', True)
+# automatically generate step_costs dataset, if costs do not vary by region
 generate_step_costs = flags.get('generate_step_costs', True)
+# use fixed (or random Weibull) lifetimes for technology components
 use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
+# use previously generated LCIA results instead of re-calculating
 use_shortcut_lca_calculations = flags.get('use_shortcut_lca_calculation', False)
 
 
-# SUB FOLDERS
+## SUB FOLDERS
 subfolder_dict = {
     'preprocessing_output_folder':
         os.path.join(args.data,
@@ -78,15 +94,12 @@ for folder in subfolder_dict.values():
     if not isdir:
         os.makedirs(folder)
 
-# FILE NAMES FOR INPUT DATA
-# TODO: add check to ensure files exist
+## FILE NAMES FOR INPUT DATA
+
 # general inputs
 locations_computed_filename = os.path.join(args.data,
                                            data_dirs.get('inputs'),
-                                           inputs.get('locs'))
-step_costs_filename = os.path.join(args.data,
-                                   data_dirs.get('inputs'),
-                                   inputs.get('step_costs'))
+                                           generated.get('locs'))
 fac_edges_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('fac_edges'))
@@ -104,7 +117,7 @@ routes_custom_filename = os.path.join(args.data,
                                       inputs.get('routes_custom'))
 routes_computed_filename = os.path.join(args.data,
                                         data_dirs.get('preprocessing_output'),
-                                        inputs.get('routes_computed'))
+                                        generated.get('routes_computed'))
 
 # input file paths for precomputed US road network data
 # transport graph (pre computed; don't change)
@@ -137,11 +150,12 @@ lookup_facility_type_filename = os.path.join(args.data,
 # file where the technology data will be saved after generating from raw inputs
 technology_data_filename = os.path.join(args.data,
                                      data_dirs.get('inputs'),
-                                     inputs.get('technology_data'))
+                                     generated.get('technology_data'))
 
-standard_scenarios_filename = os.path.join(args.data,
-                                           data_dirs.get('raw_locations'),
-                                           inputs.get('standard_scenario'))
+# dataset of capacity expansion projections
+capacity_proj_filename = os.path.join(args.data,
+                                      data_dirs.get('raw_locations'),
+                                      scenario.get('capacity_proj_file'))
 
 step_costs_default_filename = os.path.join(args.data,
                                            data_dirs.get('lookup_tables'),
@@ -195,31 +209,63 @@ pathway_crit_history_filename = os.path.join(
     outputs.get('pathway_criterion_history')
 )
 
+# Raw DES output filenames
 component_counts_plot_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('component_counts_plot')
 )
-
 material_mass_plot_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('material_mass_plot')
 )
-
 count_cumulative_histories_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('count_cumulative_histories')
 )
-
 mass_cumulative_histories_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
     outputs.get('mass_cumulative_histories')
 )
 
-circular_components = scenario_params.get('circular_components')
+## Read in datasets that are passed around as DataFrames or similar
+component_material_mass = pd.read_csv(component_material_masses_filename)
+technology_data = pd.read_csv(technology_data_filename)
+
+## Define general model and scenario parameters
+if use_computed_routes:
+    routes = routes_computed_filename
+else:
+    routes = routes_custom_filename
+
+states_to_filter = scenario.get('states_included', [])
+
+component_total_mass = component_material_mass.groupby(
+    by=['year','technology','component']
+).sum(
+    'mass_tonnes'
+).reset_index()
+
+circular_components = tech.get('circular_components')
+
+start_year = model_run.get('start_year')
+
+timesteps_per_year = model_run.get('timesteps_per_year')
+
+# calculate des timesteps such that the model runs through the end of the
+# end year rather than stopping at the beginning of the end year
+des_timesteps = int(
+    timesteps_per_year * (model_run.get('end_year') - start_year) + timesteps_per_year
+)
+
+# Get list of unique materials involved in the case study
+materials = [tech.get('component_materials')[c] for c in circular_components]
+material_list=[item for sublist in materials for item in sublist]
+
+np.random.seed(scenario.get('seed', 13))
 
 # Because the LCIA code has filenames hardcoded and cannot be reconfigured,
 # change the working directory to the lci_folder to accommodate those read
@@ -237,7 +283,7 @@ from celavi.diagnostic_viz import DiagnosticViz
 # computed data set.
 if compute_locations:
     loc = ComputeLocations(
-        start_year=scenario_params.get('start_year'),
+        start_year=model_run.get('start_year'),
         power_plant_locations=power_plant_locations_filename,
         landfill_locations=landfill_locations_filename,
         other_facility_locations=other_facility_locations_filename,
@@ -245,13 +291,15 @@ if compute_locations:
         node_locations=node_locations_filename,
         lookup_facility_type=lookup_facility_type_filename,
         technology_data_filename=technology_data_filename,
-        standard_scenarios_filename=standard_scenarios_filename)
-
+        standard_scenarios_filename=capacity_proj_filename)
     loc.join_facilities(locations_output_file=locations_computed_filename)
 
 # if the step_costs file is being generated, then all facilities of the same
 # type will have the same cost models.
 if generate_step_costs:
+    step_costs_filename = os.path.join(args.data,
+                                       data_dirs.get('inputs'),
+                                       generated.get('step_costs'))
     pd.read_csv(
         step_costs_default_filename
     ).merge(
@@ -264,17 +312,16 @@ if generate_step_costs:
         step_costs_filename,
         index=False
     )
-
-if use_computed_routes:
-    routes = routes_computed_filename
 else:
-    routes = routes_custom_filename
+    # If step_costs is not generated programatically, then the user must
+    # supply a custom file.
+    step_costs_filename = os.path.join(args.data,
+                                       data_dirs.get('inputs'),
+                                       inputs.get('step_costs'))
 
-time0 = time.time()
 
 # Data filtering for states
-states_to_filter = scenario_params.get('states_to_filter', [])
-if enable_data_filtering:
+if location_filtering:
     if len(states_to_filter) == 0:
         print('Cannot filter data; no state list provided', flush=True)
     else:
@@ -291,11 +338,6 @@ if enable_data_filtering:
         filter_routes(locations_computed_filename,
                       routes)
 
-print('State filtering completed in %d s' % np.round(time.time() - time0, 1),
-        flush=True)
-
-time0 = time.time()
-
 if run_routes:
     routes_computed = Router.get_all_routes(
         locations_file=locations_computed_filename,
@@ -304,23 +346,15 @@ if run_routes:
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'],
-        preprocessing_output_folder=subfolder_dict['preprocessing_output_folder'])
+        preprocessing_output_folder=subfolder_dict['preprocessing_output_folder']
+    )
 
-print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
+print('Run routes completed at %d s' % np.round(time.time() - time0, 1),
         flush=True)
-
-component_material_mass = pd.read_csv(component_material_masses_filename)
-component_total_mass = component_material_mass.groupby(
-    by=['year','technology','component']
-).sum(
-    'mass_tonnes'
-).reset_index()
-
-time0 = time.time()
 
 if initialize_costgraph:
     # Initialize the CostGraph using these parameter settings
-    print('Cost Graph Starts at %d s' % np.round(time.time() - time0, 1),
+    print('CostGraph starts at %d s' % np.round(time.time() - time0, 1),
           flush=True)
     netw = CostGraph(
         step_costs_file=step_costs_filename,
@@ -328,19 +362,19 @@ if initialize_costgraph:
         transpo_edges_file=transpo_edges_filename,
         locations_file=locations_computed_filename,
         routes_file=routes,
-        sc_begin=cg_params.get('sc_begin'),
-        sc_end=cg_params.get('sc_end'),
-        year=scenario_params.get('start_year'),
-        verbose=cg_params.get('cg_verbose'),
-        save_copy=cg_params.get('save_cg_csv'),
+        sc_begin=pathways.get('sc_begin'),
+        sc_end=pathways.get('sc_end'),
+        year=model_run.get('start_year'),
+        verbose=model_run.get('cg_verbose'),
+        save_copy=model_run.get('save_cg_csv'),
         save_name=costgraph_csv_filename,
         pathway_crit_history_filename = pathway_crit_history_filename,
         circular_components = circular_components,
         component_initial_mass=component_total_mass.loc[
-            component_total_mass.year == scenario_params.get('start_year'),
+            component_total_mass.year == model_run.get('start_year'),
             'mass_tonnes'
         ].values[0],
-        path_dict=pathway_params
+        path_dict=pathways
     )
     print('CostGraph completed at %d s' % np.round(time.time() - time0, 1),
           flush=True)
@@ -359,9 +393,6 @@ else:
 
     print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
-
-print('CostGraph exists\n\n\n')
-
 
 sand_substitution_rate = pylca_inventory_parameters.get('circular_components')
 coal_substitution_rate = pylca_inventory_parameters.get('circular_components')
@@ -397,25 +428,22 @@ context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
     component_material_masses_filename=component_material_masses_filename,
-    possible_components=list(des_params.get('component_list', []).keys()),
+    possible_components=list(tech.get('component_list', []).keys()),
     possible_materials=material_list,
     cost_graph=netw,
+    cost_graph_update_interval_timesteps=model_run.get('cg_update'),
     lca=lca,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
-    path_dict=pathway_params,
+    path_dict=pathways,
     min_year=start_year,
     max_timesteps=des_timesteps,
     timesteps_per_year=timesteps_per_year
 )
 
+print(f'Context initialized at {np.round(time.time() - time0, 1)} s', flush=True)
+
 # Create the technology dataframe that will be used to populate
 # the context with components.
-
-print(f'Creating components at {np.round(time.time() - time0, 1)} s',
-      flush=True)
-
-technology_data = pd.read_csv(technology_data_filename)
-
 components = []
 for _, row in technology_data.iterrows():
     year = row['year']
@@ -432,21 +460,15 @@ for _, row in technology_data.iterrows():
                 'in_use_facility_id': in_use_facility_id
             })
 
-print(f'Components created at {np.round(time.time() - time0, 1)} s',
-      flush=True)
-
 components = pd.DataFrame(components)
 
 # Create the lifespan functions for the components.
-np.random.seed(des_params.get('seed', 13))
-timesteps_per_year = scenario_params.get('timesteps_per_year')
-
 lifespan_fns = {}
 
 # By default, all components are assigned fixed lifetimes
-for component in des_params.get('component_list').keys():
+for component in tech.get('component_list').keys():
     lifespan_fns[component] = \
-        lambda steps=des_params.get('component_fixed_lifetimes')[component],\
+        lambda steps = tech.get('component_fixed_lifetimes')[component],\
                convert=timesteps_per_year: steps * convert
 
 # If fixed lifetimes are not being used, then apply the Weibull parameters
@@ -455,37 +477,38 @@ for component in des_params.get('component_list').keys():
 if not use_fixed_lifetime:
     for c in circular_components:
         lifespan_fns[c] = lambda : weibull_min.rvs(
-            des_params.get('component_weibull_params')[c]['K'],
-            loc=des_params.get('min_lifespan'),
-            scale=des_params.get('component_weibull_params')[c]['L'] -
-                  des_params.get('min_lifespan'),
+            tech.get('component_weibull_params')[c]['K'],
+            loc=tech.get('min_lifespan'),
+            scale=tech.get('component_weibull_params')[c]['L'] -
+                  tech.get('min_lifespan'),
             size=1
         )[0]
 
-print('Components created at %d s\n\n\n' % np.round(time.time() - time0),
-      flush=True)
+print(f'Components initialized at {np.round(time.time() - time0, 1)} s',flush=True)
 
 # Populate the context with components.
 context.populate(components, lifespan_fns)
 
-print(f'Context created  at {np.round(time.time() - time0)} s\n\n\n',
+print(f'Context populated with components at {np.round(time.time() - time0, 1)} s',
       flush=True)
 
-print(f'Run starting for DES at {np.round(time.time() - time0)} s\n\n\n',
-      flush=True)
+print(f'Model run starting at {np.round(time.time() - time0, 1)} s',flush=True)
 
 # Run the context
 count_facility_inventories = context.run()
 
+print(f'Creating diagnostic visualizations at '
+      f'{np.round(time.time() - time0, 1)} s', flush=True)
+
 # Plot the cumulative count levels of the count inventories
-possible_component_list = list(des_params.get('component_list', []).keys())
+possible_component_list = list(tech.get('component_list', []).keys())
 diagnostic_viz_counts = DiagnosticViz(
     facility_inventories=context.count_facility_inventories,
     output_plot_filename=component_counts_plot_filename,
     keep_cols=possible_component_list,
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
-    component_count=des_params.get('component_list'),
+    component_count=tech.get('component_list'),
     var_name='unit',
     value_name='count'
 )
@@ -494,14 +517,13 @@ count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=Fal
 diagnostic_viz_counts.generate_plots()
 
 # Plot the levels of the mass inventories
-possible_material_list = des_params.get('material_list', [])
 diagnostic_viz_mass = DiagnosticViz(
     facility_inventories=context.mass_facility_inventories,
     output_plot_filename=material_mass_plot_filename,
     keep_cols=possible_component_list,
     start_year=start_year,
     timesteps_per_year=timesteps_per_year,
-    component_count=des_params.get('component_list'),
+    component_count=tech.get('component_list'),
     var_name='material',
     value_name='tonnes'
 )
