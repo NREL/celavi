@@ -223,20 +223,9 @@ class Component:
                     )
                     _split_facility_2 = self.context.cost_graph.find_downstream(
                         node_name = location,
-                        connect_to = self.split_dict[factype]['facility_2'])
-
-                    # TODO: the contex.count_facility_inventorie,
-                    #  context.transportation_trackers,
-                    #  context.mass_facility_inventories,
-                    #  .increment_quantity(...) and
-                    #  for material, mass in self.mass_tonnes.items():
-                    #    .increment_inbound_tonne_km(...), and
-                    #    .increment_quantity()
-                    #  are used three times with different inputs. Consider
-                    #  writing one general method that takes necessary inputs
-                    #  and do the steps that are repeated three times
-                    #  (and call the method three times). Other repeated parts
-                    #  of the code below may also be included if that works.
+                        connect_to = self.split_dict[factype]['facility_2']
+                    )
+                    
                     fac1_count_inventory = self.context.count_facility_inventories[_split_facility_1]
                     fac1_transport = self.context.transportation_trackers[_split_facility_1]
                     fac1_mass_inventory = self.context.mass_facility_inventories[_split_facility_1]
