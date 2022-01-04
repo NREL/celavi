@@ -31,7 +31,6 @@ try:
         inputs = case.get('input_files', {})
         generated = case.get('generated_files', {})
         outputs = case.get('output_files', {})
-        pylca_inventory_parameters = config.get('pylca_inventory_parameters',{})
 except IOError as err:
     print(f'Could not open {case_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -69,7 +68,7 @@ generate_step_costs = flags.get('generate_step_costs', True)
 # use fixed (or random Weibull) lifetimes for technology components
 use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
 # use previously generated LCIA results instead of re-calculating
-use_shortcut_lca_calculations = flags.get('use_shortcut_lca_calculation', False)
+use_lcia_shortcut = flags.get('use_lcia_shortcut', False)
 
 
 ## SUB FOLDERS
@@ -171,12 +170,12 @@ costgraph_csv_filename = os.path.join(args.data,
 
 # LCI input filenames
 lca_results_filename = os.path.join(args.data,
-                                    data_dirs.get('lci'),
-                                    inputs.get('lca_results_filename'))
+                                    data_dirs.get('outputs'),
+                                    outputs.get('lca_results_filename'))
 
 shortcutlca_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('shortcutlca_filename'))
+                                    generated.get('shortcutlca_filename'))
 
 static_lci_filename = os.path.join(args.data,
                                    data_dirs.get('lci'),
@@ -264,6 +263,8 @@ des_timesteps = int(
 # Get list of unique materials involved in the case study
 materials = [tech.get('component_materials')[c] for c in circular_components]
 material_list=[item for sublist in materials for item in sublist]
+
+substitution_rate = tech.get('substitution_rates')
 
 np.random.seed(scenario.get('seed', 13))
 
@@ -394,8 +395,6 @@ else:
     print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
 
-sand_substitution_rate = pylca_inventory_parameters.get('circular_components')
-coal_substitution_rate = pylca_inventory_parameters.get('circular_components')
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   shortcutlca_filename=shortcutlca_filename,
@@ -405,22 +404,21 @@ lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   stock_filename=stock_filename,
                   emissions_lci_filename=emissions_lci_filename,
                   traci_lci_filename=traci_lci_filename,
-                  use_shortcut_lca_calculations=use_shortcut_lca_calculations,
-                  sand_substitution_rate=sand_substitution_rate,
-                  coal_substitution_rate=coal_substitution_rate)
+                  use_shortcut_lca_calculations=use_lcia_shortcut,
+                  substitution_rate=substitution_rate)
 
 # Get the start year and timesteps_per_year
-start_year = scenario_params.get('start_year')
-timesteps_per_year = scenario_params.get('timesteps_per_year')
+start_year = model_run.get('start_year')
+timesteps_per_year = model_run.get('timesteps_per_year')
 
 # calculate des timesteps such that the model runs through the end of the
 # end year rather than stopping at the beginning of the end year
 des_timesteps = int(
-    timesteps_per_year * (scenario_params.get('end_year') - start_year) + timesteps_per_year
+    timesteps_per_year * (model_run.get('end_year') - start_year) + timesteps_per_year
 )
 
 # Get list of unique materials involved in the case study
-materials = [des_params.get('component_materials')[c] for c in circular_components]
+materials = [tech.get('component_materials')[c] for c in circular_components]
 material_list=[item for sublist in materials for item in sublist]
 
 # Create the DES context and tie it to the CostGraph
@@ -433,7 +431,6 @@ context = Context(
     cost_graph=netw,
     cost_graph_update_interval_timesteps=model_run.get('cg_update'),
     lca=lca,
-    cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
     path_dict=pathways,
     min_year=start_year,
     max_timesteps=des_timesteps,
