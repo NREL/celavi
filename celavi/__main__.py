@@ -31,7 +31,7 @@ try:
         inputs = case.get('input_files', {})
         generated = case.get('generated_files', {})
         outputs = case.get('output_files', {})
-        pylca_inventory_parameters = config.get('pylca_inventory_parameters',{})
+        pylca_inventory_parameters = case.get('pylca_inventory_parameters',{})
 except IOError as err:
     print(f'Could not open {case_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -410,17 +410,17 @@ lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   coal_substitution_rate=coal_substitution_rate)
 
 # Get the start year and timesteps_per_year
-start_year = scenario_params.get('start_year')
-timesteps_per_year = scenario_params.get('timesteps_per_year')
+start_year = model_run.get('start_year')
+timesteps_per_year = model_run.get('timesteps_per_year')
 
 # calculate des timesteps such that the model runs through the end of the
 # end year rather than stopping at the beginning of the end year
 des_timesteps = int(
-    timesteps_per_year * (scenario_params.get('end_year') - start_year) + timesteps_per_year
+    timesteps_per_year * (model_run.get('end_year') - start_year) + timesteps_per_year
 )
 
 # Get list of unique materials involved in the case study
-materials = [des_params.get('component_materials')[c] for c in circular_components]
+materials = [tech.get('component_materials')[c] for c in circular_components]
 material_list=[item for sublist in materials for item in sublist]
 
 # Create the DES context and tie it to the CostGraph
@@ -433,7 +433,6 @@ context = Context(
     cost_graph=netw,
     cost_graph_update_interval_timesteps=model_run.get('cg_update'),
     lca=lca,
-    cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
     path_dict=pathways,
     min_year=start_year,
     max_timesteps=des_timesteps,
