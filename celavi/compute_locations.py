@@ -327,12 +327,17 @@ class ComputeLocations:
 
     def capacity_projections(self):
         """
+        Use NREL's Standard Scenarios for electricity grid mix projections to
+        calculate future technology unit installations. See the
+        StandardScenarios child class of the Data parent class for additional
+        information on obtaining and formatting the input dataset.
+
         Parameters
         ----------
 
         Returns
         -------
-        None
+        
         """
 
         # Read in the standard scenario data
@@ -447,15 +452,6 @@ class ComputeLocations:
             how='outer'
         )
 
-        # TODO: it seems that the "turbine_data_filename.csv" is an
-        #  intermediary output that is used as an input later. In the config
-        #  file it is listed as an input. Consider clarifying the role of
-        #  "turbine_data_filename.csv" (is it a file that the user will need
-        #  to provide?). Make sure to clarify for the user that some files
-        #  written under inputs in the config file are actually intermediary
-        #  output and that they don't need to be provided.
-        # combine the historical data with the capacity expansion projections
-        # then save to CSV to create the turbine data file (number_of_turbines)
         self.capacity_data.append(
             capacity_future,
             ignore_index=True,

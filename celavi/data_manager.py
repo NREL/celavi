@@ -336,8 +336,17 @@ class LandfillLocations(Data):
 
 class StandardScenarios(Data):
     """
-    Read in and process capacity expansion projection dataset.
-    NOTE: Delete the first line of the raw Standard Scenarios file before
+    Read in and process Standard Scenarios electricity grid mix datasets,
+    viewable and downloadable at
+     https://cambium.nrel.gov/?project=c3fec8d8-6243-4a8a-9bff-66af71889958 .
+    More information on the Standard Scenarios project is available from
+    https://www.nrel.gov/analysis/standard-scenarios.html .
+
+    This class is set up to use the annual, state-level datasets, with file
+    names that end in: "_annual_state.csv". Using any other type of dataset
+    will produce an error.
+
+    USER NOTE: Delete the first line of the raw Standard Scenarios file before
     reading in to CELAVI.
     """
     COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},
