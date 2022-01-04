@@ -395,6 +395,7 @@ else:
     print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
 
+
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   shortcutlca_filename=shortcutlca_filename,
