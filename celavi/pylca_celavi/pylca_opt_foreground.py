@@ -36,9 +36,10 @@ def preprocessing(year,df_static,dynamic_lci_filename):
     
     Returns
     -------
-
-    cleaned process inventory merged with dynamic data
-    inventory with no product flows
+    pd.DataFrame
+        cleaned process inventory merged with dynamic data
+    pd.DataFrame    
+        inventory with no product flows
 
     """
     
@@ -89,7 +90,8 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     
     Returns
     -------
-    LCA results
+    pd.DataFrame
+        LCA results
     """
 
 
@@ -169,8 +171,9 @@ def electricity_corrector_before20(df):
 
     Returns
     -------
-    process inventory with electricity flows before 2020 converted to the base electricity
-    mix flow in USLCI. 
+    pd.DataFrame
+        process inventory with electricity flows before 2020 converted to the base electricity
+        mix flow in USLCI. 
     """
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
@@ -204,7 +207,8 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
 
     Returns
     -------
-    Returns the final LCA reults in a properly arranged dataframe with all supplemental information
+    pd.DataFrame
+        Returns the final LCA reults in a properly arranged dataframe with all supplemental information
 
     """
 
@@ -252,7 +256,8 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename
     
     Returns
     -------
-    Final LCA results in the form of a dataframe after performing after calculation checks
+    pd.DataFrame
+        Final LCA results in the form of a dataframe after performing after calculation checks
 
     """
 

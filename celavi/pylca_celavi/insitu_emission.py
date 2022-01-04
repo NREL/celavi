@@ -20,16 +20,17 @@ def preprocessing(year,df_static):
     Parameters
     ----------
     year : str
-         year of LCA calculation
+        year of LCA calculation
     df_static : pd.DataFrame
-         lca inventory static 
+        lca inventory static 
 
     
     Returns
     -------
-
-    cleaned process inventory merged with dynamic data
-    inventory with no product flows
+    pd.DataFrame
+       cleaned process inventory merged with dynamic data
+    pd.DataFrame   
+       inventory with no product flows
 
     """
     df = df_static
@@ -76,7 +77,8 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     
     Returns
     -------
-    LCA results
+    pd.DataFrame
+       LCA results
     """
 
     X_matrix = tech_matrix.to_numpy()
@@ -149,8 +151,9 @@ def electricity_corrector_before20(df):
 
     Returns
     -------
-    process inventory with electricity flows before 2020 converted to the base electricity
-    mix flow in USLCI. 
+    pd.DataFrame
+       process inventory with electricity flows before 2020 converted to the base electricity
+       mix flow in USLCI. 
     """
 
     
@@ -186,7 +189,8 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
 
     Returns
     -------
-    Dataframe with LCA results
+    pd.DataFrame
+       Dataframe with LCA results
     """
 
     
@@ -234,7 +238,8 @@ def model_celavi_lci_insitu(f_d,yr,fac_id,stage,material,df_emissions):
 
     Returns
     -------
-    Insitu emissions within a Dataframe after LCA calculations
+    pd.DataFrame
+         Insitu emissions within a Dataframe after LCA calculations
     """
 
 

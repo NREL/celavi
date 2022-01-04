@@ -132,9 +132,12 @@ class PylcaCelavi:
         
         Returns
         -------
-        Based on availability of stored file, returns
-        1.pd.DataFrame with lca calculations performed along with missing activities and processes not performed
-        2.complete pd.DataFrame without any results if file doesn't exist
+
+        pd.DataFrame
+            DataFrame with lca calculations performed along with missing activities and processes not performed
+        
+        pd.DataFrame
+            DataFrame without any results if file doesn't exist
         """
         try:
             db= pd.read_csv(self.shortcutlca_filename)

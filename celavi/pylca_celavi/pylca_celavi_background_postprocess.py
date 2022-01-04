@@ -14,16 +14,17 @@ def postprocessing(final_res,insitu):
     Parameters
     ----------
     final_res: Dataframe
-    dataframe with background LCA results
+       dataframe with background LCA results
     
     insitu: Dataframe
-    dataframe with insitu emissions
+       dataframe with insitu emissions
     
     
     
     Returns
     -------
-    final combined total emissions dataframe   
+    pd.DataFrame
+       final combined total emissions dataframe   
 
     """
     #Giving names to the columns for the final result file
@@ -65,17 +66,17 @@ def impact_calculations(final_res,traci_lci_filename):
     Parameters
     ----------
     final_res: Dataframe
-    dataframe with total LCA results
+       dataframe with total LCA results
     
     traci_lci_filename: str
-    name of the traci characerization file
+       name of the traci characerization file
     
     
     
     Returns
     -------
-    df_lcia: Dataframe
-    dataframe wih LCIA impact results    
+    pd.DataFrame
+        dataframe wih LCIA impact results    
     """     
    
     traci = pd.read_csv(traci_lci_filename)

@@ -32,7 +32,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     
     Returns
     -------
-    Final LCA results in the form of a dataframe after performing after calculation checks
+    pd.DataFrame
+       Final LCA results in the form of a dataframe after performing after calculation checks
 
     """
 
@@ -52,8 +53,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
 
         Returns
         -------
-
-        Dataframe from USLCI listing process and products along with other supplemental information
+        pd.DataFrame
+            Dataframe from USLCI listing process and products along with other supplemental information
          
         """
         p_list = []
@@ -96,7 +97,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
 
         Returns:
         --------
-        Dataframe with processes along with their flow inputs. 
+        pd.DataFrame
+           Dataframe with processes along with their flow inputs. 
 
         """
     
@@ -125,7 +127,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     def process_emission_func():
         
         """
-        These function is used for creating a dataframe that extracts out the emission flows
+        This function is used for creating a dataframe that extracts out the emission flows
         from the USLCI database and creates a dataframe
         Need to add air water and soil separation later
 
@@ -135,7 +137,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
 
         Returns:
         --------
-        Dataframe with processes and their respective emissions. 
+        pd.DataFrame
+            Dataframe with processes and their respective emissions. 
 
         """
 
@@ -167,9 +170,22 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     #Dummy flows need to be removed. 
     #This part removes the dummy flows and flows without any production processes from the X matrix. 
     def process_input_refine():
-        #This function creates a dataframe for only the inputs of the different processes
+        """
+        This function creates a dataframe for only the inputs of the different processes
         #here also the flows are matched with the locations saw that when the network is created
         #the location of the exchanges are also matched.
+        
+        Parameters:
+        -----------
+
+
+        Returns:
+        --------
+        pd.DataFrame
+            refined Dataframe with processes and their respective inputs.         
+        
+        
+        """
         p_list = []
         pr_list = []
         from_p_list = []
@@ -328,7 +344,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         
         Returns
         -------
-        LCA results
+        pd.DataFrame
+            LCA results
         """
 
         # Creation of a Concrete Model
@@ -426,7 +443,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
 
         Returns
         -------
-        Returns the final LCA reults in a properly arranged dataframe with all supplemental information
+        pd.DataFrame
+            Returns the final LCA reults in a properly arranged dataframe with all supplemental information
 
         """
         tim0 = time.time()
