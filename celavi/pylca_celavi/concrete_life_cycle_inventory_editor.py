@@ -8,8 +8,7 @@ def concrete_life_cycle_inventory_updater(d_f,
                                           static_filename,
                                           stock_filename,
                                           emissions_filename,
-                                          sand_substitution_rate,
-                                          coal_substitution_rate):    
+                                          substitution_rate):
     """
     This function modifies static LCI based on availability of GFRP at the cement processing stage 
     and demand of concrete in the system
@@ -41,6 +40,9 @@ def concrete_life_cycle_inventory_updater(d_f,
     emissons_filename: str
            filename for emissions inventory
 
+    substitution_rate: Dict
+        Dictionary of material: sub rates for materials displaced by the
+        circular component
     
     Returns
     -------
@@ -83,7 +85,7 @@ def concrete_life_cycle_inventory_updater(d_f,
         required_sand = required_concrete * 0.84
         # 0.84 is the amount of sand required for 1kg concrete
 
-        sand_can_be_substituted = required_sand * sand_substitution_rate
+        sand_can_be_substituted = required_sand * substitution_rate['sand']
 
         # if less GFrp is available than what can be substituted then complete GFRP can be used to substitute
         if available_gfrp <= sand_can_be_substituted:
@@ -102,7 +104,7 @@ def concrete_life_cycle_inventory_updater(d_f,
         required_coal = required_concrete*0.0096291
         '0.009629 is the amount of coal required for 1kg concrete'
 
-        coal_can_be_substituted = required_coal * coal_substitution_rate
+        coal_can_be_substituted = required_coal * substitution_rate['coal']
 
         'if less GFRP is available than what can be substituted then complete GFRP can be used to substitute'
         if available_gfrp <= coal_can_be_substituted:
