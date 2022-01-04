@@ -86,7 +86,6 @@ for folder in subfolder_dict.values():
         os.makedirs(folder)
 
 # FILE NAMES FOR INPUT DATA
-# TODO: add check to ensure files exist
 # general inputs
 locations_computed_filename = os.path.join(args.data,
                                            data_dirs.get('inputs'),
@@ -205,8 +204,8 @@ circular_components = scenario_params.get('circular_components')
 # files immediately.
 
 os.chdir(subfolder_dict['lci_folder'])
-from celavi.des import Context  # TODO: is there no way this could be moved up?
-from celavi.diagnostic_viz import DiagnosticViz  # TODO: ditto above
+from celavi.des import Context
+from celavi.diagnostic_viz import DiagnosticViz
 
 
 # Note that the step_cost file must be updated (or programmatically generated)
@@ -355,7 +354,6 @@ materials = [des_params.get('component_materials')[c] for c in circular_componen
 material_list=[item for sublist in materials for item in sublist]
 
 # Create the DES context and tie it to the CostGraph
-# TODO: no cost_params is provided, is this normal?
 context = Context(
     locations_filename=locations_computed_filename,
     step_costs_filename=step_costs_filename,
