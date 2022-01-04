@@ -89,15 +89,12 @@ class Context:
 
         self.components: List[Component] = []
         self.env = simpy.Environment()
+      
+        # The top level dictionary has a key for each material type. The dictionaries
+        # at the next level down have an integer key for each year of the DES run.
+        # The values on these second-level dictionaries are the mass per component
+        # for that material in that year.
 
-
-        # TODO: the comment lines below are not very clear. What array?
-        # Consider modifying/adding to the
-        #  lines below.
-        # Read the average component masses as an array. Then turn it into a
-        # dictionary that maps integer years to component masses.
-        # File data is total component mass per technology unit
-        
         self.component_material_mass_tonne_dict: Dict[str, Dict[int, float]] = {}
         component_material_masses_df = pd.read_csv(component_material_masses_filename)
 
