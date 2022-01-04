@@ -381,54 +381,6 @@ class CostMethods:
             return 0.08 * _vkmt
 
 
-    @staticmethod
-    def finegrind_shred_transpo(path_dict):
-        """
-        Cost method for calculating lost material transportation costs (truck)
-        in USD/metric ton by accounting for the fraction of material lost from
-        the fine grinding step.
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Cost of transporting material loss metric ton of shredded blade
-            material by one kilometer. Units: USD/metric ton.
-        """
-        _vkmt = path_dict['vkmt']
-        _loss = path_dict['path_split']['fine grinding']['fraction']
-        if np.isnan(_vkmt):
-            return 0.0
-        else:
-            return 0.08 * (1 - _loss) * _vkmt
-
-    @staticmethod
-    def finegrind_loss_transpo(path_dict):
-        """
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-
-        """
-        _vkmt = path_dict['vkmt']
-        _loss = path_dict['path_split']['fine grinding']['fraction']
-        if np.isnan(_vkmt):
-            return 0.0
-        else:
-            return 0.08 * _loss * _vkmt
-
 
     @staticmethod
     def manufacturing(path_dict):
