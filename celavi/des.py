@@ -355,7 +355,7 @@ class Context:
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
             print(str(time.time() - time0)+' For loop of pylca took these many seconds')
-            if annual_data_for_lci > 0:
+            if annual_data_for_lci:
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 pylca_run_main(df_for_pylca_interface)
