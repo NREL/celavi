@@ -256,6 +256,10 @@ class Locations(Data):
 class TurbineLocations(Data):
     """
     Read in and process raw power plant locations dataset.
+
+    Dataset is downloadable at https://eerscmap.usgs.gov/uswtdb/
+
+    No manual changes are needed to the raw dataset before it is processed.
     """
     COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},

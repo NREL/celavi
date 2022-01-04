@@ -98,7 +98,18 @@ class ComputeLocations:
         """
         Ingests raw data from the U.S. Wind Turbine database, filters down to
         the contiguous U.S. and creates a data frame that can be combined with
-        other sets of facility location data.
+        other sets of facility location data. The number_of_technology_units
+        file is also created from this dataset.
+
+        See TurbineLocations child class of Data class for column names and
+        data types, and where to download the USWTDB.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+
         """
 
         # Process data for wind power plants - from USWTDB
@@ -117,12 +128,6 @@ class ComputeLocations:
                                                    "p_year": "year"},
                                           inplace=True)
 
-        # TODO: why replacing self-explanatory names with non self-explanatory
-        #  ones? why not replacing t_state by state and t_county by county for
-        #  instance. Consider refactor region_id_1, region_id_2, region_id_3
-        #  and region_id_4 by self-explanatory variable names in the all
-        #  project. Also, could the exclusions below linked to considering only
-        #  road transportation in the contiguous US be generalized?
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'GU']
         turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'HI']
@@ -135,7 +140,8 @@ class ComputeLocations:
         # exclude Block Island since no transport from offshore turbine to shore
         turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.facility_id != 58035]
 
-        # Filter down the dataset to generate the number_of_turbines file
+        # Filter down the dataset to generate the number_of_technology_units
+        # file
         n_turb = turbine_locations_with_eia[
             ['facility_id', 'p_name', 'year', 'p_tnum', 't_model', 't_cap']
         ].drop_duplicates().dropna()
@@ -148,14 +154,12 @@ class ComputeLocations:
         data6 = data5.merge(data4, on = ['year','facility_id'])        
 
         # Store this dataframe into self for use in capacity projection
-        # calculations
-        # this file created the number of turbines file.
+        # calculations and creation of the number_of_technology_units file
         self.capacity_data = data6
 
         turbine_locations_filtered = turbine_locations_with_eia[
             turbine_locations_with_eia.year >= self.start_year
         ]
-
 
         # determine average lat and long for all turbines by facility_id
         # (this is the plant location for each facility_id)
@@ -166,8 +170,7 @@ class ComputeLocations:
         # Unique eia id and p _year have only one lat long associated now along with one region county and state.
         
         wind_plant_locations = plant_locations
-        # use the number_of_turbines data structure to filter down the
-        # turbine_locations_with_eia data structure
+        # use data6 to filter down the power plant locations list
         wind_plant_locations = wind_plant_locations[
             wind_plant_locations.facility_id.isin(
                 data6.facility_id
@@ -175,11 +178,6 @@ class ComputeLocations:
         ].drop_duplicates(subset='facility_id',
                           keep='first')
 
-        # TODO: because quite similar bits of codes are used several times
-        #  and that warnings are pretty similar as well, consider writing a
-        #  method to handle lookup for the wind_power_plant, landfills, and
-        #  other_facility. The method would take one of the type as input and
-        #  return the lookup or output a warning.
         wind_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if wind_plant_type_lookup:
             wind_plant_facility_type_convention = wind_plant_type_lookup
