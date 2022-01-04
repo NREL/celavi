@@ -408,8 +408,9 @@ else:
     print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
 
-sand_substitution_rate = pylca_inventory_parameters.get('circular_components')
-coal_substitution_rate = pylca_inventory_parameters.get('circular_components')
+sand_substitution_rate = pylca_inventory_parameters.get('sand_substitution_rate')
+coal_substitution_rate = pylca_inventory_parameters.get('coal_substitution_rate')
+
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   shortcutlca_filename=shortcutlca_filename,
