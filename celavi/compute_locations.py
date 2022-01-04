@@ -249,11 +249,6 @@ class ComputeLocations:
                                                                 })
         landfill_locations_all = landfill_locations_all.astype({'landfill_closure_year': 'int'})
 
-        # TODO: because quite similar bits of codes are used several times
-        #  and that warnings are pretty similar as well, consider writing a
-        #  method to handle lookup for the wind_power_plant, landfills, and
-        #  other_facility. The method would take one of the type as input and
-        #  return the lookup or output a warning.
         landfill_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('landfill')].values[0][0]
         if landfill_type_lookup:
             landfill_facility_type_convention = landfill_type_lookup
@@ -273,9 +268,35 @@ class ComputeLocations:
 
         return landfill_locations_no_nulls
 
+
     def other_facility(self):
         """
-        Process other facility data
+        Process additional facility data that does not already have a dataset-
+        specific method. See the OtherFacilityLocations child class of the Data
+        class for column names.
+
+        If using this method, the location dataset being read in must already
+        be in the same format as the Return value.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        facility_locations: pd.DataFrame
+            Dataset of generic facility locations including unique facility ID,
+             the facility type identifier, a lat/long pair, and four generic
+             region identifiers (country, state, county, etc.)
+
+            Columns:
+                facility_id : int
+                facility_type : str
+                lat : float
+                long : float
+                region_id_1 : str
+                region_id_2 : str
+                region_id_3 : str
+                region_id_4 : str
         """
 
         facility_locations = Data.OtherFacilityLocations(fpath=self.other_facility_locations, backfill=self.backfill)
@@ -285,11 +306,6 @@ class ComputeLocations:
 
         list_other_facility_types = facility_locations.facility_type.unique()
 
-        # TODO: because quite similar bits of codes are used several times
-        #  and that warnings are pretty similar as well, consider writing a
-        #  method to handle lookup for the wind_power_plant, landfills, and
-        #  other_facility. The method would take one of the type as input and
-        #  return the lookup or output a warning.
         for facility_type in list_other_facility_types:
             other_facility_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains(facility_type)].values[0][0]
 
@@ -307,6 +323,7 @@ class ComputeLocations:
                           "number unique facility_id is %d." % (number_other_facilities, number_unique_facility_id)
             warnings.warn(warning_str)
         return facility_locations
+
 
     def capacity_projections(self):
         """
