@@ -9,6 +9,7 @@ from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
+from celavi.pylca_celavi.des_interface import PylcaCelavi
 import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
@@ -29,6 +30,7 @@ try:
         cg_params = config.get('costgraph_parameters', {})
         des_params = config.get('discrete_event_parameters', {})
         pathway_params = config.get('pathway_parameters', {})
+        pylca_inventory_parameters = config.get('pylca_inventory_parameters',{})
 except IOError as err:
     print(f'Could not open {config_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -51,6 +53,7 @@ distance_filtering = flags.get('distance_filtering', False)
 pickle_costgraph = flags.get('pickle_costgraph', True)
 generate_step_costs = flags.get('generate_step_costs', True)
 use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
+use_shortcut_lca_calculations = flags.get('use_shortcut_lca_calculation', False)
 
 
 # SUB FOLDERS
@@ -152,6 +155,40 @@ costgraph_csv_filename = os.path.join(args.data,
                                       data_dirs.get('outputs'),
                                       outputs.get('costgraph_csv'))
 
+# LCI input filenames
+lca_results_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('lca_results_filename'))
+
+shortcutlca_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('shortcutlca_filename'))
+
+static_lci_filename = os.path.join(args.data,
+                                   data_dirs.get('lci'),
+                                   inputs.get('static_lci_filename'))
+
+uslci_filename = os.path.join(args.data,
+                              data_dirs.get('lci'),
+                              inputs.get('uslci_filename'))
+
+stock_filename = os.path.join(args.data,
+                              data_dirs.get('lci'),
+                              inputs.get('stock_filename'))
+
+emissions_lci_filename = os.path.join(args.data,
+                                      data_dirs.get('lci'),
+                                      inputs.get('emissions_lci_filename'))
+
+traci_lci_filename = os.path.join(args.data,
+                                  data_dirs.get('lci'),
+                                  inputs.get('traci_lci_filename'))
+
+dynamic_lci_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('dynamic_lci_filename'))
+
+# FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
@@ -325,6 +362,22 @@ else:
 
 print('CostGraph exists\n\n\n')
 
+
+sand_substitution_rate = pylca_inventory_parameters.get('circular_components')
+coal_substitution_rate = pylca_inventory_parameters.get('circular_components')
+# Prepare LCIA code
+lca = PylcaCelavi(lca_results_filename=lca_results_filename,
+                  shortcutlca_filename=shortcutlca_filename,
+                  dynamic_lci_filename=dynamic_lci_filename,
+                  static_lci_filename=static_lci_filename,
+                  uslci_filename=uslci_filename,
+                  stock_filename=stock_filename,
+                  emissions_lci_filename=emissions_lci_filename,
+                  traci_lci_filename=traci_lci_filename,
+                  use_shortcut_lca_calculations=use_shortcut_lca_calculations,
+                  sand_substitution_rate=sand_substitution_rate,
+                  coal_substitution_rate=coal_substitution_rate)
+
 # Get the start year and timesteps_per_year
 start_year = scenario_params.get('start_year')
 timesteps_per_year = scenario_params.get('timesteps_per_year')
@@ -347,6 +400,7 @@ context = Context(
     possible_components=list(des_params.get('component_list', []).keys()),
     possible_materials=material_list,
     cost_graph=netw,
+    lca=lca,
     cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
     path_dict=pathway_params,
     min_year=start_year,

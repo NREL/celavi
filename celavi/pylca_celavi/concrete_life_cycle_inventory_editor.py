@@ -1,31 +1,71 @@
 import pandas as pd
 
-"""
-This module models a stock variable for concrete.
 
-I do not need to create a concrete stock variable in the DES.
+def concrete_life_cycle_inventory_updater(d_f,
+                                          yr,
+                                          k,
+                                          stage,
+                                          static_filename,
+                                          stock_filename,
+                                          emissions_filename,
+                                          sand_substitution_rate,
+                                          coal_substitution_rate):    
+    """
+    This function modifies static LCI based on availability of GFRP at the cement processing stage 
+    and demand of concrete in the system
+    
+    GFRP may or may not be available in the system every year. If GFRP is available when 
+    concrete is not required or does not have a final demand, a stock variable is ceated to store GFRP and used in later years 
+    for cement co processing    
+    
+    Parameters
+    ----------
+    d_f: pd.Dataframe
+        dataframe with material flow, stage and facility information from DES
 
-The only file that this creates is the pickle file between years.
-"""
+    yr: int
+        year
 
+    k: str
+        current material under study
 
-def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
-    sand_substitution_rate = 0.15
-    coal_substitution_rate = 0.30
+    stage: str
+            current stage under study
 
+    static_filename: str
+           filename for the lca fixed inventory 
+
+    stock_filename: str
+           filename for storage pickle variable
+
+    emissons_filename: str
+           filename for emissions inventory
+
+    
+    Returns
+    -------
+    pd.DataFrame
+        updated static inventory with changes due to concrete demand and GFRP availability.
+    pd.DataFrame
+        emissions inventory
+
+    """
+    
+      
+    
     if k == 'glass fiber reinforced polymer' and stage == 'cement co-processing':
-        fd_cur2 = fd_cur2.reset_index()
-        fd_cur2.to_pickle('gfrp_cement_coprocess_stock.pickle',compression = None)
+        d_f = d_f.reset_index()
+        d_f.to_pickle(stock_filename,compression = None)
         return pd.DataFrame(), pd.DataFrame()
 
 
-    #The problem of concrete emission where emission is dependant upon the value of glass fiber availalbe in the system'
+    #The problem of concrete emission where emission is dependant upon the value of glass fiber available in the system'
     elif k == 'concrete':
-        df_static = pd.read_csv('foreground_process_inventory.csv')
+        df_static = pd.read_csv(static_filename)
         year_of_concrete_demand = yr
 
         # Reading gfrp storage variable in pickle from previous runs
-        gfrp_storage = pd.read_pickle('gfrp_cement_coprocess_stock.pickle')
+        gfrp_storage = pd.read_pickle(stock_filename)
         year_of_storage = gfrp_storage['year'][0]
 
         # Subtracting the year of demand and storage
@@ -36,7 +76,7 @@ def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
         else:
             available_gfrp = 0
 
-        req_conc_df = fd_cur2[fd_cur2['material'] == k].reset_index()
+        req_conc_df = d_f[d_f['material'] == k].reset_index()
         required_concrete = req_conc_df['flow quantity'][0]
 
         # sand update
@@ -81,12 +121,12 @@ def concrete_life_cycle_inventory_updater(fd_cur2,yr,k,stage):
         new_co2_emission_factor = 0.00092699/0.0096291 * new_coal_inventory_factor
         # These numbers are all obtained from the inventory which says that the use of 0.0096291 kg coal will cause 0.000926 kg Co2 emission
         # This co2 emission only includes the coal combustion impact factor. Other fuels need to be added separately
-        df_emissions = pd.read_csv('emissions_inventory.csv')
+        df_emissions = pd.read_csv(emissions_filename)
         df_emissions.loc[((df_emissions['product'] == 'carbon dioxide') & (df_emissions['process'] == 'concrete, in use')),'value'] = new_co2_emission_factor
         return df_static,df_emissions
 
     else:
 
-        df_static = pd.read_csv('foreground_process_inventory.csv')
-        df_emissions = pd.read_csv('emissions_inventory.csv')
+        df_static = pd.read_csv(static_filename)
+        df_emissions = pd.read_csv(emissions_filename)
         return df_static,df_emissions
