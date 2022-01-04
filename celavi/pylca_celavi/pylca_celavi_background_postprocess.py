@@ -7,6 +7,26 @@ import os
 import pdb
 
 def postprocessing(final_res,insitu):
+    """
+    This function is used for post processing of final results dataframe
+    It adds the insitu emissions with the background emissions. 
+
+    Parameters
+    ----------
+    final_res: Dataframe
+       dataframe with background LCA results
+    
+    insitu: Dataframe
+       dataframe with insitu emissions
+    
+    
+    
+    Returns
+    -------
+    pd.DataFrame
+       final combined total emissions dataframe   
+
+    """
     #Giving names to the columns for the final result file
     column_names = ['flow name','flow unit','flow quantity','year','facility_id','stage','material']
 
@@ -36,11 +56,30 @@ def postprocessing(final_res,insitu):
     return final_res
 
 
-def impact_calculations(final_res):    
+def impact_calculations(final_res,traci_lci_filename):    
    
-     
+    """
+    This function is used for LCIA post processing of final results dataframe
+    It converts mass flow of pollutants to Environmental impacts based on TRACI 2.1
+    characterization method
+
+    Parameters
+    ----------
+    final_res: Dataframe
+       dataframe with total LCA results
+    
+    traci_lci_filename: str
+       name of the traci characerization file
+    
+    
+    
+    Returns
+    -------
+    pd.DataFrame
+        dataframe wih LCIA impact results    
+    """     
    
-    traci = pd.read_csv('traci21.csv')
+    traci = pd.read_csv(traci_lci_filename)
     traci = traci.fillna(0)
     impacts = list(traci.columns)
     valuevars = ['Global Warming Air (kg CO2 eq / kg substance)',
@@ -78,14 +117,3 @@ def impact_calculations(final_res):
     df_lcia = df_lcia.groupby(['year','facility_id', 'material','stage','impacts'])['impact'].agg('sum').reset_index()
     
     return df_lcia                      
-    #impacts = ['Global Warming Air (kg CO2 eq / kg substance)']   
-    '''                                
-    for im in valuevars:
-       df =  traci_df[traci_df['impacts'] == im] 
-       graph_df_lcia = final_lci_result.merge(df, left_on = ['flow name'], right_on = ['Substance Name'])
-       
-       graph_df_lcia = graph_df_lcia.groupby(['year', 'material','stage','scenario', 'coarse grinding location',
-           'distance to recycling facility', 'distance to cement plant',
-           'flow unit', 'impacts'])['impact'].agg('sum').reset_index()
-
-    '''

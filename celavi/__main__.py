@@ -9,6 +9,7 @@ from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
+from celavi.pylca_celavi.des_interface import PylcaCelavi
 import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
@@ -30,6 +31,7 @@ try:
         inputs = case.get('input_files', {})
         generated = case.get('generated_files', {})
         outputs = case.get('output_files', {})
+        pylca_inventory_parameters = config.get('pylca_inventory_parameters',{})
 except IOError as err:
     print(f'Could not open {case_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -67,7 +69,8 @@ generate_step_costs = flags.get('generate_step_costs', True)
 # use fixed (or random Weibull) lifetimes for technology components
 use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
 # use previously generated LCIA results instead of re-calculating
-use_lcia_shortcut = flags.get('use_lcia_shortcut', True)
+use_shortcut_lca_calculations = flags.get('use_shortcut_lca_calculation', False)
+
 
 ## SUB FOLDERS
 subfolder_dict = {
@@ -166,7 +169,40 @@ costgraph_csv_filename = os.path.join(args.data,
                                       data_dirs.get('outputs'),
                                       outputs.get('costgraph_csv'))
 
-# File where pathway choice criterion history is saved
+# LCI input filenames
+lca_results_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('lca_results_filename'))
+
+shortcutlca_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('shortcutlca_filename'))
+
+static_lci_filename = os.path.join(args.data,
+                                   data_dirs.get('lci'),
+                                   inputs.get('static_lci_filename'))
+
+uslci_filename = os.path.join(args.data,
+                              data_dirs.get('lci'),
+                              inputs.get('uslci_filename'))
+
+stock_filename = os.path.join(args.data,
+                              data_dirs.get('lci'),
+                              inputs.get('stock_filename'))
+
+emissions_lci_filename = os.path.join(args.data,
+                                      data_dirs.get('lci'),
+                                      inputs.get('emissions_lci_filename'))
+
+traci_lci_filename = os.path.join(args.data,
+                                  data_dirs.get('lci'),
+                                  inputs.get('traci_lci_filename'))
+
+dynamic_lci_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('dynamic_lci_filename'))
+
+# FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
@@ -358,6 +394,35 @@ else:
     print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
 
+sand_substitution_rate = pylca_inventory_parameters.get('circular_components')
+coal_substitution_rate = pylca_inventory_parameters.get('circular_components')
+# Prepare LCIA code
+lca = PylcaCelavi(lca_results_filename=lca_results_filename,
+                  shortcutlca_filename=shortcutlca_filename,
+                  dynamic_lci_filename=dynamic_lci_filename,
+                  static_lci_filename=static_lci_filename,
+                  uslci_filename=uslci_filename,
+                  stock_filename=stock_filename,
+                  emissions_lci_filename=emissions_lci_filename,
+                  traci_lci_filename=traci_lci_filename,
+                  use_shortcut_lca_calculations=use_shortcut_lca_calculations,
+                  sand_substitution_rate=sand_substitution_rate,
+                  coal_substitution_rate=coal_substitution_rate)
+
+# Get the start year and timesteps_per_year
+start_year = scenario_params.get('start_year')
+timesteps_per_year = scenario_params.get('timesteps_per_year')
+
+# calculate des timesteps such that the model runs through the end of the
+# end year rather than stopping at the beginning of the end year
+des_timesteps = int(
+    timesteps_per_year * (scenario_params.get('end_year') - start_year) + timesteps_per_year
+)
+
+# Get list of unique materials involved in the case study
+materials = [des_params.get('component_materials')[c] for c in circular_components]
+material_list=[item for sublist in materials for item in sublist]
+
 # Create the DES context and tie it to the CostGraph
 context = Context(
     locations_filename=locations_computed_filename,
@@ -367,6 +432,8 @@ context = Context(
     possible_materials=material_list,
     cost_graph=netw,
     cost_graph_update_interval_timesteps=model_run.get('cg_update'),
+    lca=lca,
+    cost_graph_update_interval_timesteps=cg_params.get('cg_update_timesteps'),
     path_dict=pathways,
     min_year=start_year,
     max_timesteps=des_timesteps,
