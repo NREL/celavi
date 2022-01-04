@@ -11,8 +11,7 @@ from celavi.inventory import FacilityInventory
 from celavi.transportation_tracker import TransportationTracker
 from celavi.component import Component
 from celavi.costgraph import CostGraph
-
-from celavi.pylca_celavi.des_interface import pylca_run_main
+from celavi.pylca_celavi.des_interface import PylcaCelavi
 
 
 class Context:
@@ -34,6 +33,7 @@ class Context:
         possible_components: List[str],
         possible_materials: List[str],
         cost_graph: CostGraph,
+        lca: PylcaCelavi,
         cost_graph_update_interval_timesteps: int,
         path_dict: Dict = None,
         min_year: int = 2000,
@@ -57,8 +57,11 @@ class Context:
             The possible materials in the components. This should span all
             component types.
 
-        cost_graph: CostGraph:
+        cost_graph: CostGraph
             The instance of the cost graph to use with this DES model.
+
+        lca: PylcaCelavi
+            The LCA interface to the DES.
 
         cost_graph_update_interval_timesteps: int
             Update the cost graph every n timesteps.
@@ -152,6 +155,7 @@ class Context:
             self.transportation_trackers[step_facility_id] = TransportationTracker(timesteps=max_timesteps)
 
         self.cost_graph = cost_graph
+        self.lca = lca
         self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
 
         self.data_for_lci: List[Dict[str, float]] = []
@@ -358,7 +362,7 @@ class Context:
             if annual_data_for_lci:
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
-                pylca_run_main(df_for_pylca_interface)
+                self.lca.pylca_run_main(df_for_pylca_interface)
             else:
                 print(f'{datetime.now()} DES interface: All Masses are 0')
 
