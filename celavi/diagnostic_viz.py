@@ -102,7 +102,6 @@ class DiagnosticViz:
             # scale component counts with dictionary from config, if component
             # columns are present
             try:
-                print('Gathering and scaling component count inventories')
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
@@ -111,7 +110,7 @@ class DiagnosticViz:
                     value for key, value in self.component_count.items()
                 ]
             except KeyError as e:
-                print('Gathering component mass histories')
+                print(f'Skipping component count scaling because {e}')
             cumulative_histories.append(cumulative_history)
 
         cumulative_histories = pd.concat(cumulative_histories)

@@ -106,7 +106,6 @@ class Router(object):
     @staticmethod
     def get_all_routes(locations_file,
                        route_pair_file,
-                       distance_filtering,
                        transportation_graph,
                        node_locations,
                        routing_output_folder,
@@ -133,10 +132,10 @@ class Router(object):
 
         # import locations data
         locations = pd.read_csv(locations_file)
-        route_pairs = Data.RoutePairs(fpath=route_pair_file,backfill=backfill)
+        route_pairs = pd.read_csv(route_pair_file)
         # Get a list of destination facility types that must be in-state
         # from route_pairs
-        _instate_dest = route_pairs[route_pairs['in_state_only'] == True].destination_facility_type.drop_duplicates().values
+        _instate_dest = route_pairs[route_pairs['connection'] == 'in_state'].destination_facility_type.drop_duplicates().values
 
         # identify states in locations data and loop through states (useful for debugging; loop could be removed)
         # compute routes for all locations in each state and save results
@@ -174,7 +173,7 @@ class Router(object):
 
             # Remove entries from the out-of-state route list where the
             # connections are required to be in-state
-            _keep = outstate_routes.in_state_only == False
+            _keep = outstate_routes.connection == 'any'
             route_list = instate_routes.append(outstate_routes[_keep])
 
             # if route_list is empty, generate empty data frame for export (e.g., create column for total_vmt)
@@ -252,18 +251,6 @@ class Router(object):
                                                                  'source_long', 'destination_facility_id', 'destination_facility_type',
                                                                  'destination_lat', 'destination_long'])['vmt'].transform('sum')
 
-                # if the routes should be filtered based on distance,
-                if distance_filtering:
-                    # remove rows where total_vmt > max distance
-                    route_list = route_list[route_list.total_vmt <= route_list.vmt_max]
-
-                # remove columns used in distance filtering
-                route_list.drop(
-                    labels=['in_state_only', 'vmt_max'],
-                    axis=1,
-                    inplace=True
-                )
-
                 route_list.to_csv(file_output)
 
         # append all data from independent state loops into one master routing data frame
@@ -272,9 +259,6 @@ class Router(object):
             data = pd.read_csv(file)
             data_complete = data_complete.append(data)
 
-
-
-        data_complete.to_csv(preprocessing_output_folder + 'routes_computed.csv',
-                             index=False)
+        data_complete.to_csv(preprocessing_output_folder + 'routes_computed.csv')
 
         return data_complete
