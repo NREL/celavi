@@ -10,6 +10,8 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
 from celavi.pylca_celavi.des_interface import PylcaCelavi
+from celavi.des import Context
+from celavi.diagnostic_viz import DiagnosticViz
 import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
@@ -267,17 +269,6 @@ material_list=[item for sublist in materials for item in sublist]
 substitution_rate = tech.get('substitution_rates')
 
 np.random.seed(scenario.get('seed', 13))
-
-# Because the LCIA code has filenames hardcoded and cannot be reconfigured,
-# change the working directory to the lci_folder to accommodate those read
-# and write operations. Also, the Context must be imported down here after
-# the working directory is changed because the LCIA will attempt to read
-# files immediately.
-
-os.chdir(subfolder_dict['lci_folder'])
-from celavi.des import Context
-from celavi.diagnostic_viz import DiagnosticViz
-
 
 # Note that the step_cost file must be updated (or programmatically generated)
 # to include all facility ids. Otherwise, cost graph can't run with the full
