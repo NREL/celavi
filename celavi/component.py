@@ -1,3 +1,8 @@
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
+
 from typing import Deque, Tuple, Dict
 from collections import deque
 
@@ -189,6 +194,8 @@ class Component:
         """
         while True:
 
+            # TODO: consider replacing "if len(self.pathway) > 0:" by
+            #  "if self.pathway:"
             if len(self.pathway) > 0:
                 location, lifespan, distance = self.pathway.popleft()
                 factype = location.split('_')[0]
@@ -202,6 +209,11 @@ class Component:
                         1,
                         env.now
                     )
+
+                    # TODO: consider adding a comment to explain why it is
+                    #  better to have the increment_inbound_tonne_km method in
+                    #  a separate python module rather than within this module
+                    #  or the inventory or des modules
 
                     for _, mass in self.mass_tonnes.items():
                         fac_transport.increment_inbound_tonne_km(mass * distance, env.now)
@@ -218,10 +230,23 @@ class Component:
                         node_name = location,
                         connect_to = self.split_dict[factype]['facility_2'])
 
+                    # TODO: the contex.count_facility_inventorie,
+                    #  context.transportation_trackers,
+                    #  context.mass_facility_inventories,
+                    #  .increment_quantity(...) and
+                    #  for material, mass in self.mass_tonnes.items():
+                    #    .increment_inbound_tonne_km(...), and
+                    #    .increment_quantity()
+                    #  are used three times with different inputs. Consider
+                    #  writing one general method that takes necessary inputs
+                    #  and do the steps that are repeated three times
+                    #  (and call the method three times). Other repeated parts
+                    #  of the code below may also be included if that works.
                     fac1_count_inventory = self.context.count_facility_inventories[_split_facility_1]
                     fac1_transport = self.context.transportation_trackers[_split_facility_1]
                     fac1_mass_inventory = self.context.mass_facility_inventories[_split_facility_1]
                     fac1_count_inventory.increment_quantity(
+
                         self.kind,
                         self.split_dict[factype]['fraction'],
                         env.now

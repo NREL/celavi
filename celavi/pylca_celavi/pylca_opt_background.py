@@ -1,11 +1,32 @@
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
+
+# TODO: Consider using a class to organize the code below. Some variables
+#  currently defined outside functions (at places that may feel random to
+#  the reader) could then be defined in the __init__ function of the class.
+
+# TODO: Consider generalizing "pylca_opt_foreground.py",
+#  "pylca_opt_background.py", and "insitu_emission.py": a lot of code in
+#  those two modules are similar. For instance creating the tech_matrix,
+#  products and process lists, most of the pre-processing function etc. A
+#  class with more general function could be created and an instance of the
+#  class could be created when needed for the functions that compute the insitu
+#  emissions and foreground (part that are not similar between the two cases
+#  would be defined in those functions). A boolean, such as "insitu_emission",
+#  could be used for the code to differentiate inputs manipulations when needed
+#  (e.g., for the line "res.to_csv('intermediate_demand.csv', mode='a',
+#  header=False, index=False)" which is in pylca_opt_foreground.py, but not in
+#  insitu_emission.py or pylca_opt_background.py.
+
 import pickle
 import pandas as pd
 import numpy as np
 import time
-from pyomo.environ import ConcreteModel,Set,Param,Var,Constraint,Objective,minimize, SolverFactory
+from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize, SolverFactory
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-
 
 
 def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename):
@@ -36,10 +57,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
        Final LCA results in the form of a dataframe after performing after calculation checks
 
     """
-
     processes = {}
     processes = pickle.load( open( uslci_filename, "rb" ))
-
     
     def process_product_func():
 
@@ -134,7 +153,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         Parameters:
         -----------
 
-
         Returns:
         --------
         pd.DataFrame
@@ -177,7 +195,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         
         Parameters:
         -----------
-
 
         Returns:
         --------
@@ -482,10 +499,14 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
-    final_dem = uslci_product_df.merge(f_d, left_on = 0, right_on = 'flow name', how = 'left')
+    # TODO: consider adding comments to explain where uslci_product_df is
+    #  coming from or if possible defining uslci_product_df within this
+    #  function.
+    final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     #To make the optimization easier
     F = final_dem['flow quantity']/final_demand_scaler
     res2 = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
     
     return res2
+

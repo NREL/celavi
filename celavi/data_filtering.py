@@ -1,5 +1,9 @@
-import pandas as pd
+# TODO: Add a short module docstring above the code to:
+#  1) provide authors, date of creation
+#  2) give a high level description (2-3 lines) of what the module does
+#  3) write any other relevant information
 
+import pandas as pd
 
 
 def filter_locations(loc_file_name,num_of_turbines_filename,states):
@@ -29,12 +33,12 @@ def filter_locations(loc_file_name,num_of_turbines_filename,states):
         """
 
         locations = pd.read_csv(loc_file_name)
-        
+
         selected_states = states
-        
+
         locations_filtered = locations[locations['region_id_2'].isin(selected_states)]
         locations_filtered.to_csv(loc_file_name)
-        
+
         facililites_included = locations_filtered[['facility_id', 'facility_type', 'lat', 'long']]
         facility_id_included = list(pd.unique(facililites_included['facility_id']))
 
@@ -44,7 +48,6 @@ def filter_locations(loc_file_name,num_of_turbines_filename,states):
 
 
 def filter_routes(locations_filename, routes_filename):
-       
         """
         This function is used to filter the routes file.        
         After filtering the routes file it rewrites and

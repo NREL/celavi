@@ -23,8 +23,10 @@ import tempfile
 import celavi.data_manager as Data
 
 
-class Router(object):
-    """Discover routing between nodes"""
+class Router:
+    """
+    Discover routing between nodes
+    """
 
     def __init__(self,
                  edges,
@@ -32,11 +34,17 @@ class Router(object):
                  memory=None, algorithm=bidirectional_dijkstra,
                  ):
         """
-        :param edges: [DataFrame]
-        :param node_map: [DataFrame]
-        :param memory [joblib.Memory]
-        :param algorithm: [function]
-        :return:
+
+        Parameters
+        ----------
+        edges: [DataFrame]
+        node_map: [DataFrame]
+        memory [joblib.Memory]
+        algorithm: [function]
+
+        Returns
+        -------
+        None
         """
 
         self.node_map = node_map
@@ -54,19 +62,28 @@ class Router(object):
         if self.memory is not None:
             self.get_route = self.memory.cache(self.get_route, ignore=['self'], verbose=0)
 
-        print('loading routing graph',flush = True)
+        print('loading routing graph', flush=True)
         _ = self.edges.apply(lambda x: self.Graph.add_edge(**x), axis=1)
 
     def get_route(self, start, end):
 
         """
         Find route from <start> to <end>, if exists.
-        :param start: [list] [long, lat]
-        :param end: [list] [long, lat]
-        :return: [DataFrame]
+
+        Parameters
+        ----------
+        start: [list] [long, lat]
+
+        end: [list] [long, lat]
+
+        Returns
+        -------
+        [DataFrame]
         """
 
         _start_point = np.array(start)
+        # TODO: consider adding a comment specifying what cKDTree.query()
+        #  outputs (distance to and index of the nearest neighbor(s))
         _start_point_idx = self._btree.query(_start_point, k=1)[1]
         from_node = self.node_map.loc[_start_point_idx, 'node_id']
 
@@ -99,6 +116,7 @@ class Router(object):
             .sum().reset_index()
 
         _summary['region_transportation'] = _summary['statefp'] + _summary['countyfp']
+        # TODO:  A comment should also specify why weight is divided by 1000.
         _summary['vkmt'] = _summary['weight'] / 1000.0
 
         return _summary[['region_transportation', 'fclass', 'vkmt']]
@@ -115,7 +133,31 @@ class Router(object):
         Calculates distances traveled between all locations in the locations_file.
         Includes distance traveled through each transportation region (e.g., county FIPS) and road class.
 
-        :return:
+        Parameters
+        ----------
+        locations_file
+            Dataset of facility locations
+
+        route_pair_file
+            Dataset of allowable facility pairs to connect with routes
+
+        distance_filtering
+            Dataset of distance-based router filtering
+
+        transportation_graph
+            Transportation network data
+
+        node_locations
+
+        routing_output_folder
+            Path to directory for routing outputs
+
+        preprocessing_output_folder
+            Path to directory for preprocessing outputs
+
+        Returns
+        -------
+        DataFrame
         """
         backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
 
@@ -143,7 +185,7 @@ class Router(object):
         state_list = locations.region_id_2.unique()
         file_output_list = []
         for state in state_list:
-            print(state,flush = True)
+            print(state, flush=True)
             file_output = routing_output_folder + 'route_list_output_{}.csv'.format(state)
             file_output_list.append(file_output)
 
@@ -195,7 +237,7 @@ class Router(object):
                 _routes = route_list[['source_long',
                                       'source_lat',
                                       'destination_long',
-                                      'destination_lat']]  # .drop_duplicates()
+                                      'destination_lat']]
 
                 _routes.to_csv(routing_output_folder + 'latlongs.csv')
 
@@ -207,12 +249,12 @@ class Router(object):
                     _vkmt_by_county_all_routes = pd.DataFrame()
 
                     # loop through all locations to compute routes
-                    print('finding routes',flush = True)
+                    print('finding routes', flush=True)
                     for i in np.arange(_routes.shape[0]):
 
                         # print every 20 routes
                         if i % 20 == 0:
-                            print(i,flush = True)
+                            print(i, flush=True)
 
                         _vkmt_by_county = router.get_route(start=(_routes.source_long.iloc[i],
                                                                  _routes.source_lat.iloc[i]),
