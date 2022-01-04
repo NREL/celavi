@@ -99,9 +99,9 @@ class Router(object):
             .sum().reset_index()
 
         _summary['region_transportation'] = _summary['statefp'] + _summary['countyfp']
-        _summary['vmt'] = _summary['weight'] / 1000.0 * 0.621371
+        _summary['vkmt'] = _summary['weight'] / 1000.0
 
-        return _summary[['region_transportation', 'fclass', 'vmt']]
+        return _summary[['region_transportation', 'fclass', 'vkmt']]
 
     @staticmethod
     def get_all_routes(locations_file,
@@ -177,15 +177,15 @@ class Router(object):
             _keep = outstate_routes.in_state_only == False
             route_list = instate_routes.append(outstate_routes[_keep])
 
-            # if route_list is empty, generate empty data frame for export (e.g., create column for total_vmt)
+            # if route_list is empty, generate empty data frame for export (e.g., create column for total_vkmt)
             # otherwise, loop through all locations in route_list and compute routing distances
             if route_list.empty:
                 print('list is empty')
-                route_list['vmt'] = ''
+                route_list['vkmt'] = ''
                 route_list = route_list.drop(['merge'], axis=1)
-                route_list['total_vmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
+                route_list['total_vkmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
                                                                  'source_long', 'destination_facility_id', 'destination_facility_type',
-                                                                 'destination_lat', 'destination_long'])['vmt'].transform('sum')
+                                                                 'destination_lat', 'destination_long'])['vkmt'].transform('sum')
                 route_list.to_csv(file_output)
 
             else:
@@ -200,11 +200,11 @@ class Router(object):
                 _routes.to_csv(routing_output_folder + 'latlongs.csv')
 
                 # if routing engine is specified, use it to get the route (fips and
-                # vmt) for each pair of input locations
+                # vkmt) for each pair of input locations
                 if router is not None:
 
                     # initialize holder for all routes
-                    _vmt_by_county_all_routes = pd.DataFrame()
+                    _vkmt_by_county_all_routes = pd.DataFrame()
 
                     # loop through all locations to compute routes
                     print('finding routes',flush = True)
@@ -214,31 +214,31 @@ class Router(object):
                         if i % 20 == 0:
                             print(i,flush = True)
 
-                        _vmt_by_county = router.get_route(start=(_routes.source_long.iloc[i],
+                        _vkmt_by_county = router.get_route(start=(_routes.source_long.iloc[i],
                                                                  _routes.source_lat.iloc[i]),
                                                           end=(_routes.destination_long.iloc[i],
                                                                _routes.destination_lat.iloc[i]))
 
                         # add identifier columns for later merging with route_list
-                        _vmt_by_county['source_long'] = _routes.source_long.iloc[i]
-                        _vmt_by_county['source_lat'] = _routes.source_lat.iloc[i]
-                        _vmt_by_county['destination_long'] = _routes.destination_long.iloc[i]
-                        _vmt_by_county['destination_lat'] = _routes.destination_lat.iloc[i]
+                        _vkmt_by_county['source_long'] = _routes.source_long.iloc[i]
+                        _vkmt_by_county['source_lat'] = _routes.source_lat.iloc[i]
+                        _vkmt_by_county['destination_long'] = _routes.destination_long.iloc[i]
+                        _vkmt_by_county['destination_lat'] = _routes.destination_lat.iloc[i]
 
                         # either create the data frame to store all routes,
                         # or append the current route
-                        if _vmt_by_county_all_routes.empty:
-                            _vmt_by_county_all_routes = _vmt_by_county
+                        if _vkmt_by_county_all_routes.empty:
+                            _vkmt_by_county_all_routes = _vkmt_by_county
 
                         else:
-                            _vmt_by_county_all_routes = \
-                                _vmt_by_county_all_routes.append(_vmt_by_county,
+                            _vkmt_by_county_all_routes = \
+                                _vkmt_by_county_all_routes.append(_vkmt_by_county,
                                                                  ignore_index=True,
                                                                  sort=True)
 
                     # after the loop through all routes is complete, merge the data
                     # frame containing all routes with route_list
-                    route_list = route_list.merge(_vmt_by_county_all_routes,
+                    route_list = route_list.merge(_vkmt_by_county_all_routes,
                                                   how='left',
                                                   on=['source_long',
                                                       'source_lat',
@@ -247,19 +247,19 @@ class Router(object):
 
 
                 route_list = route_list.drop(['merge'], axis=1)
-                # compute total_vmt
-                route_list['total_vmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
+                # compute total_vkmt
+                route_list['total_vkmt'] = route_list.groupby(by=['source_facility_id', 'source_facility_type', 'source_lat',
                                                                  'source_long', 'destination_facility_id', 'destination_facility_type',
-                                                                 'destination_lat', 'destination_long'])['vmt'].transform('sum')
+                                                                 'destination_lat', 'destination_long'])['vkmt'].transform('sum')
 
                 # if the routes should be filtered based on distance,
                 if distance_filtering:
-                    # remove rows where total_vmt > max distance
-                    route_list = route_list[route_list.total_vmt <= route_list.vmt_max]
+                    # remove rows where total_vkmt > max distance
+                    route_list = route_list[route_list.total_vkmt <= route_list.vkmt_max]
 
                 # remove columns used in distance filtering
                 route_list.drop(
-                    labels=['in_state_only', 'vmt_max'],
+                    labels=['in_state_only', 'vkmt_max'],
                     axis=1,
                     inplace=True
                 )
