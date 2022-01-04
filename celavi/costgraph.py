@@ -9,9 +9,12 @@ from celavi.costmethods import CostMethods
 
 class CostGraph:
     """
-        Contains methods for reading in graph data, creating network of
-        facilities in a supply chain, and finding preferred pathways for
-        implementation.
+        Contains methods for:
+         - Reading in graph data
+         - Creating a network of processing steps and facilities in a circular
+         supply chain
+         - Identifying preferred pathways through the supply chain
+         - Calculating supply chain characteristics such as pathway cost
     """
 
     def __init__(self,
@@ -37,47 +40,46 @@ class CostGraph:
 
         Parameters
         ----------
-        step_costs_file
-            file listing processing steps and cost calculation methods by
-            facility type
-        fac_edges_file
-            file listing intra-facility edges by facility type
-        transpo_edges_file
-            file listing inter-facility edges and transpo cost calculation
-            methods
-        locations_file
-            path to dataset of facility locations
-        routes_file
-            path to dataset of routes between facilities
-        pathway_crit_history_filename
-            Name of file where the history of whatever criterion is used to
+        step_costs_file : str
+            Path to file listing processing steps and cost calculation methods
+            by facility type.
+        fac_edges_file : str
+            Path to file listing intra-facility edges by facility type.
+        transpo_edges_file : str
+            Path to file listing inter-facility edges and transportation cost
+            calculation methods.
+        locations_file : str
+            Path to dataset of facility locations.
+        routes_file : str
+            Path to dataset of routes between facilities.
+        pathway_crit_history_filename : str
+            Path to file where the history of whatever criterion is used to
             decide between circularity pathways is saved.
-        circular_components
-            Names of components for which this CostGraph is built
-        component_initial_mass
+        circular_components : list
+            Names of components for which this CostGraph is built.
+        component_initial_mass : float
             Average mass of a single technology component at the beginning of
-            the model run. Units: metric tons (tonnes)
-        path_dict
+            the model run. Units: metric tons (tonnes).
+        path_dict : Dict
             Dictionary of case-study-specific parameters to be passed into
-            the cost methods.
-        sc_begin
-            processing step(s) where supply chain paths begin. String or list
-            of strings.
-        sc_end
-            processing step(s) where supply chain paths terminate. String or
-            list of strings.
-        year
+            the cost methods. Can be of any structure as defined in the
+            scenario config file.
+        sc_begin : str
+            List of processing step(s) where supply chain paths begin.
+        sc_end : tuple
+            List of processing step(s) where supply chain paths terminate.
+        year : float
             DES model year at which cost graph is instantiated.
-        verbose
+        verbose : int
             Integer specifying how much info CostGraph should provide as it
             works.
             0 = No information other than return values
             1 = Info on when key methods start and stop
             >1 = Detailed info on facilities, nodes, and edges
-        save_copy
+        save_copy : bool
             Whether or not to save the initial Cost Graph network structure
             as a CSV file (edge list).
-        save_name
+        save_name : str
             CSV file name where the initial Cost Graph network structure is
             saved (edge list).
         """
