@@ -1,4 +1,3 @@
-
 import networkx as nx
 import pandas as pd
 import numpy as np
@@ -8,7 +7,6 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-
 class CostGraph:
     """
         Contains methods for reading in graph data, creating network of
@@ -17,20 +15,6 @@ class CostGraph:
     """
 
     def __init__(self,
-                 step_costs_file: str,
-                 fac_edges_file: str,
-                 transpo_edges_file: str,
-                 locations_file: str,
-                 routes_file: str,
-                 pathway_cost_history_filename: str,
-                 sc_begin: str = 'manufacturing',
-                 sc_end=('landfilling', 'cement co-processing', 'next use'),
-                 year: float = 2000.0,
-                 max_dist: float = 300.0,
-                 verbose: int = 0,
-                 save_copy=False,
-                 save_name='netw.csv',
-                 **kwargs):
                  step_costs_file : str,
                  fac_edges_file : str,
                  transpo_edges_file : str,
@@ -98,13 +82,13 @@ class CostGraph:
             saved (edge list).
         """
         self.start_time = time()
-        self.step_costs = pd.read_csv(step_costs_file)
-        self.fac_edges = pd.read_csv(fac_edges_file)
+        self.step_costs=pd.read_csv(step_costs_file)
+        self.fac_edges=pd.read_csv(fac_edges_file)
         self.transpo_edges = pd.read_csv(transpo_edges_file)
 
         # these data sets are processed line by line
-        self.loc_file = locations_file
-        self.routes_file = routes_file
+        self.loc_file=locations_file
+        self.routes_file=routes_file
 
         # also read in the locations as a dataframe for reference in
         # find_nearest
@@ -116,7 +100,7 @@ class CostGraph:
             self.circular_components=circular_components[0]
         else:
             self.circular_components=circular_components
-        
+
         self.path_dict=path_dict
 
         self.year=year
@@ -166,8 +150,8 @@ class CostGraph:
 
 
     def all_element_combos(self,
-                           list1: list,
-                           list2: list):
+                           list1 : list,
+                           list2 : list):
         """
         Converts two lists into a list of tuples where each tuple contains
         one element from each list:
@@ -193,10 +177,11 @@ class CostGraph:
 
         return list(_out)
 
-    @staticmethod
-    def list_of_tuples(list1: list,
-                       list2: list,
-                       list3: list = None):
+
+    def list_of_tuples(self,
+                       list1 : list,
+                       list2 : list,
+                       list3 : list = None):
         """
         Converts two or three lists into a list of two- or three-tuples where
         each tuple contains the corresponding elements from each list:
@@ -217,7 +202,7 @@ class CostGraph:
 
         Returns
         -------
-            list of 2-tuples or 3-tuples
+            list of 2-tuples
         """
 
         if list3 is not None:
@@ -234,8 +219,8 @@ class CostGraph:
 
 
     def find_nearest(self,
-                     source: str,
-                     crit: str):
+                     source : str,
+                     crit : str):
         """
         Method that finds the nearest nodes to source and returns that node name,
         the path length to the nearest node, and the path to the nearest node.
@@ -278,10 +263,8 @@ class CostGraph:
             # dict of shortest paths to all targets
             nearest = min(subdict, key=subdict.get)
             timeout = nx.get_node_attributes(self.supply_chain, 'timeout')
-            # Get list of component timeouts for facilities in the path
             timeout_list = [value for key, value in timeout.items()
                             if key in short_paths[nearest]]
-            # Get the distances between adjacent facilities from the network
             dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist']
                          for d in range(len(short_paths[nearest])-1)]
             dist_list.insert(0, 0.0)
@@ -332,7 +315,7 @@ class CostGraph:
 
 
     def get_edges(self,
-                  facility_df: pd.DataFrame,
+                  facility_df : pd.DataFrame,
                   u_edge='step',
                   v_edge='next_step'):
         """
@@ -360,7 +343,7 @@ class CostGraph:
         _type = facility_df['facility_type'].values[0]
 
         _out = self.fac_edges[
-            [u_edge, v_edge]
+            [u_edge,v_edge]
         ].loc[
             self.fac_edges.facility_type == _type
         ].dropna().to_records(index=False).tolist()
@@ -409,8 +392,6 @@ class CostGraph:
             self.step_costs.facility_id == _id
         ]
 
-        # assign dummy timeout value - will be overwritten in the Context,
-        # if necessary
         _step_cost['timeout'] = 1
 
         # create list of dictionaries from data frame with processing steps,
@@ -515,7 +496,7 @@ class CostGraph:
 
                 # Build the subgraph representation and add it to the list of
                 # facility subgraphs
-                _fac_graph = self.build_facility_graph(facility_df=_line)
+                _fac_graph = self.build_facility_graph(facility_df = _line)
 
                 # add onto the supply supply chain graph
                 self.supply_chain.add_nodes_from(_fac_graph.nodes(data=True))
@@ -550,9 +531,6 @@ class CostGraph:
             # combinations of _u_nodes and _v_nodes
             _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
 
-            # assign edge attributes including cost methods
-            # attributes will be different if the destination node is at the
-            # end of the supply chain
             if not any([self.supply_chain.nodes[_v]['step']
                         in self.sc_end for _v in _v_nodes]):
                 _methods = [
@@ -602,7 +580,7 @@ class CostGraph:
                                            'source_facility_type',
                                            'destination_facility_id',
                                            'destination_facility_type',
-                                           'total_vmt'],
+                                           'total_vkmt'],
                                   chunksize=1)
             _prev_line = None
 
@@ -619,7 +597,7 @@ class CostGraph:
                         {'and': [{"==": [("facility_id",),
                                          _line['source_facility_id'].values[0]]},
                                  {"in": [("connects",),
-                                         ["out", "bid"]]}]}))
+                                         ["out","bid"]]}]}))
 
                 # loop thru all edges that connect to the source nodes
                 for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
@@ -630,13 +608,12 @@ class CostGraph:
                             _line['destination_facility_id'].values[0]:
                         if self.verbose > 1:
                             print('Adding ',
-                                  str(_line['total_vmt'].values[0]),
+                                  str(_line['total_vkmt'].values[0]),
                                   ' km between ',
                                   u_node,
                                   ' and ',
                                   v_node)
-                        # Additional factor converts miles to km
-                        data['dist'] = 1.60934 * _line['total_vmt'].values[0]
+                        data['dist'] = _line['total_vkmt'].values[0]
 
         # After all of the route distances have been added, any edges that
         # have a distance of -1 km are deleted from the network.
@@ -675,8 +652,8 @@ class CostGraph:
 
 
     def choose_paths(self,
-                     source: str = None,
-                     crit: str = 'cost'):
+                     source : str = None,
+                     crit : str = 'cost'):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
         all possible pathways between source and target nodes. Other "costs"
@@ -694,7 +671,7 @@ class CostGraph:
 
         Returns
         -------
-        Dictionary containing the source node, target node, path between
+        Dictionary containing the source, node, target node, path between
         source and target, and the pathway "cost".
         """
         # Since all edges now contain both processing costs (for the u node)
@@ -708,9 +685,6 @@ class CostGraph:
             else:
                 _paths = []
                 _chosen_path = self.find_nearest(source=source, crit=crit)
-                # TODO: is _paths = [] and then _paths.append() really
-                #  necessary? Can path be defined directly (i.e., _paths = {})
-                #  after _chosen_path is computed?
                 _paths.append({'source': source,
                                'target': _chosen_path[0],
                                'path': _chosen_path[2],
@@ -720,9 +694,9 @@ class CostGraph:
 
 
     def find_upstream_neighbor(self,
-                               node_id: int,
-                               connect_to: str = 'manufacturing',
-                               crit: str = 'dist'):
+                               node_id : int,
+                               connect_to : str = 'manufacturing',
+                               crit : str = 'dist'):
         """
         Given a node in the network, find the "nearest" upstream neighbor to
         that node that is of the type specified by connect_to. "Nearest" is
@@ -757,7 +731,7 @@ class CostGraph:
             return None
         else:
             # If node_id does exist in the supply chain, pull out the node name
-            _node = [x for x, y in self.supply_chain.nodes(data=True)
+            _node = [x for x,y in self.supply_chain.nodes(data=True)
                      if y['facility_id'] == node_id
                      and y['connects'] == 'bid'][0]
 
@@ -793,10 +767,10 @@ class CostGraph:
 
 
     def find_downstream(self,
-                        node_name: str = None,
-                        facility_id: int = None,
-                        connect_to: str = 'landfill',
-                        crit: str = 'dist'):
+                        node_name : str = None,
+                        facility_id : int = None,
+                        connect_to : str = 'landfill',
+                        crit : str = 'dist'):
         """
 
         Parameters
@@ -848,8 +822,8 @@ class CostGraph:
             return None
 
         # Search the list for the "closest" node
-        if len(_downst_nodes) == 0:  # TODO: consider "if not _downst_nodes:"
-            # If there are no downstream nodes of the correct type, print a
+        if len(_downst_nodes) == 0:
+            # If there are no upstream nodes of the correct type, print a
             # message and return None
             print(f'Node {node_name} does not have any downstream neighbors of type {connect_to}',
                   flush=True)
@@ -859,11 +833,6 @@ class CostGraph:
             # If there are multiple options, identify the nearest neighbor
             # according to the crit(eria) parameter
 
-            # TODO: referring to _node only works if a facility_id is passed in
-            #  this method, not if a node_name is passed. Consider adding:
-            #  _node = [x for x, y in self.supply_chain.nodes(data=True)
-            #                          if y['facility_id'] == facility_id][0]
-            #  within the "elif node_name is not None:" condition.
             _upstream_dists = [self.supply_chain.edges[_node, _lnd_n][crit]
                                for _lnd_n in _downst_nodes]
             _nearest_downst_node = _downst_nodes[_upstream_dists.index(
@@ -933,3 +902,4 @@ class CostGraph:
         ).drop_duplicates(
             ignore_index=True
         ).to_csv(self.pathway_crit_history_filename, index=False)
+
