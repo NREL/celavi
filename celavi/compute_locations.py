@@ -337,7 +337,7 @@ class ComputeLocations:
 
         Returns
         -------
-        
+
         """
 
         # Read in the standard scenario data
@@ -497,7 +497,19 @@ class ComputeLocations:
 
     def join_facilities(self, locations_output_file):
         """
-        Join all facility data into single file
+        Call other ComputeLocations methods to process raw locations datasets
+        into a single facility location dataset. Creates the
+        number_of_technology_units dataset from historical installation data
+        and capacity expansion projection data.
+
+        Parameters
+        ----------
+        locations_output_file : str
+            Path where the processed and aggregated locations dataset is saved
+
+        Returns
+        -------
+        None
         """
 
         wind_plant_locations = ComputeLocations.wind_power_plant(self)
@@ -508,10 +520,6 @@ class ComputeLocations:
         locations = locations.append(landfill_locations_no_nulls)
         locations.reset_index(drop=True, inplace=True)
 
-        # TODO: Isn't the code below duplicate? It seems that
-        #  "ComputeLocations.wind_power_plant(self)" should already have
-        #  removed GU, HI etc. If not duplicate could it be all handled
-        #  once in the wind_power_plant method?
         # exclude Hawaii, Guam, Puerto Rico, and Alaska
         # (only have road network data for the contiguous United States)
         locations = locations[locations.region_id_2 != 'GU']
