@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Tue Sep 15 12:42:32 2020
-
-@author: tghosh
-"""
-
-
 import warnings
 import pandas as pd
 import numpy as np
@@ -14,24 +5,46 @@ import sys
 import multiprocessing
 import time
 import os
-# import pyutilib.subprocess.GlobalData
+import pyutilib.subprocess.GlobalData
+pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
-# pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-warnings.filterwarnings("ignore")
+# This emulates what the pyomo command-line tools does
+from pyomo.opt import SolverFactory
 
-try:
-    os.remove('intermediate_demand.csv')
-except FileNotFoundError:
-    pass
+
+
 
     
 #Reading in static and dynamics lca databases
-print('>>>', os.getcwd())
-df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
+
 
 #We are integrating static lca with dynamics lca over here. 
-def preprocessing(year,df_static):
+def preprocessing(year,df_static,dynamic_lci_filename):
+
+    """
+    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
+    inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
+
+    Parameters
+    ----------
+    year : str
+         year of LCA calculation
+    df_static : pd.DataFrame
+         lca inventory static 
+    dynamic_lci_filename: str
+         filename for the dynamic inventory   
     
+    Returns
+    -------
+    pd.DataFrame
+        cleaned process inventory merged with dynamic data
+    pd.DataFrame    
+        inventory with no product flows
+
+    """
+    
+    #Reading in dynamics LCA databases
+    df_dynamic = pd.read_csv(dynamic_lci_filename)
     df_dynamic_year = df_dynamic[df_dynamic['year'] == year]
     frames = [df_static,df_dynamic_year]
     df = pd.concat(frames)
@@ -42,11 +55,7 @@ def preprocessing(year,df_static):
     df_input.loc[:,'value'] = df_input.loc[:,'value']  * (-1)
     df = pd.concat([df_input,df_output])
 
-    #Removing flows without source because optimization problem becomes infeasible
-    #Removing flows without source
-    #For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
-    #Dummy flows need to be removed. 
-    #This part removes the dummy flows and flows without any production processes from the X matrix. 
+
     process_input_with_process  =  pd.unique(df_output['product'])
     df['indicator'] = df['product'].isin(process_input_with_process)
     process_df = df[df['indicator'] == True]
@@ -56,10 +65,36 @@ def preprocessing(year,df_static):
     del df_with_all_other_flows['indicator']
     
     process_df.loc[:,'value'] = process_df.loc[:,'value'].astype(np.float64)
+
     return process_df,df_with_all_other_flows
 
 
 def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
+
+    """
+    This function houses the optimizer for solve Xs = F. 
+    Solves the Xs=F equation. 
+    Solves the scaling vector.  
+
+    Parameters
+    ----------
+    tech_matrix : numpy matrix
+         technology matrix from the process inventory
+    F : vector
+         Final demand vector 
+    process: str
+         filename for the dynamic inventory   
+    df_with_all_other_flows: pd.DataFrame
+         lca inventory with no product flows
+
+    
+    Returns
+    -------
+    pd.DataFrame
+        LCA results
+    """
+
+
     X_matrix = tech_matrix.to_numpy()
     # Creation of a Concrete Model
     model = ConcreteModel()
@@ -102,9 +137,7 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
 
     # This is an optional code path that allows the script to be run outside of
     # pyomo command-line.  For example:  python transport.py
-        # This emulates what the pyomo command-line tools does
-    from pyomo.opt import SolverFactory
-    import pyomo.environ
+
     opt = SolverFactory("glpk")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
@@ -125,13 +158,60 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
 
 
 def electricity_corrector_before20(df):
-    #This part is used to replace pre 2020 electricity flows with US'Electricity, at Grid, US, 2010'
+
+    """
+    This function is used to replace pre 2020 electricity flows with the base electricity mix flow
+    in the USLCI inventory Electricity, at Grid, US, 2010'
     
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        process inventory
+
+    Returns
+    -------
+    pd.DataFrame
+        process inventory with electricity flows before 2020 converted to the base electricity
+        mix flow in USLCI. 
+    """
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
 
 def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
+    
+    """
+    Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
+    
+    Parameters
+    ----------
+    tech matrix: pd.Dataframe
+         technology matrix built from the process inventory. 
+    F: final demand series vector
+         final demand of the LCA problem
+    yr: int
+         year of analysis
+    i: int
+         facility ID
+    j: str
+        stage
+    k: sr
+        material
+    final_demand_scaler: int
+        scaling variable number to ease optimization
+    process: list
+        list of processes included in the technology matrix
+    df_with_all_other_flows: pd.DataFrame
+        Dataframe with flows in the inventory which do not have a production process. 
+
+    Returns
+    -------
+    pd.DataFrame
+        Returns the final LCA reults in a properly arranged dataframe with all supplemental information
+
+    """
+
     res = pd.DataFrame()
     res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
     res['value'] = res['value']*final_demand_scaler
@@ -150,7 +230,36 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     return res
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename):
+
+    """
+    Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
+    Creates the technology matrix and the final demand vector based on input data. 
+    Performs necessary checks before and after the LCA optimization calculation. 
+    
+    Parameters
+    ----------
+    f_d: pd.Dataframe
+      Dataframe from DES interface containing material flow information
+    yr: int
+      year of analysis
+    fac_id: int
+      facility id
+    stage: str
+      stage of analysis
+    material: str
+      material of LCA analysis
+    df_static: pd.Dataframe
+      static foreground LCA inventory
+    dynamic_lci_filename: str
+      filename for the dynamic LCA inventory
+    
+    Returns
+    -------
+    pd.DataFrame
+        Final LCA results in the form of a dataframe after performing after calculation checks
+
+    """
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
@@ -158,7 +267,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static):
     #Running LCA for all years as obtained from CELAVI
 
     #Incorporating dynamics lci database
-    process_df,df_with_all_other_flows = preprocessing(int(yr),df_static)
+    process_df,df_with_all_other_flows = preprocessing(int(yr),df_static,dynamic_lci_filename)
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'product', columns = 'process', values = 'value' )
     tech_matrix = tech_matrix.fillna(0)
