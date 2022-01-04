@@ -1,6 +1,5 @@
-# TODO: remove Union, Tuple and floor if they are not used
-from typing import Dict, List, Callable, Union, Tuple
-from math import floor, ceil
+from typing import Dict, List, Callable
+from math import ceil
 from datetime import datetime
 import time
 
@@ -98,6 +97,7 @@ class Context:
         # Read the average component masses as an array. Then turn it into a
         # dictionary that maps integer years to component masses.
         # File data is total component mass per technology unit
+        
         self.component_material_mass_tonne_dict: Dict[str, Dict[int, float]] = {}
         component_material_masses_df = pd.read_csv(component_material_masses_filename)
 
