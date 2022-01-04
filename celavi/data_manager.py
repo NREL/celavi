@@ -311,7 +311,8 @@ class OtherFacilityLocations(Data):
 
 class LandfillLocations(Data):
     """
-    Read in and process landfill facility locations dataset.
+    Read in and process raw landfill facility locations dataset from the U.S.
+    EPA's LMOP database at https://www.epa.gov/lmop.
     """
     COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
                {'name': 'State', 'type': str, 'index': False, 'backfill': None},

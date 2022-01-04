@@ -207,8 +207,31 @@ class ComputeLocations:
 
     def landfill(self):
         """
-        Process raw data from U.S. EPA (LMOP) to create a dataset of  landfill
-        locations in the contiguous U.S.
+        Processes raw data from U.S. EPA Landfill Methane Outreach Program
+        (LMOP) to create a dataset of  landfill locations in the contiguous
+        U.S. See the LandfillLocations child class of the Data class for
+        column names and download location.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        landfill_locations_no_nulls : pd.DataFrame
+            Dataset of landfill locations including unique facility ID, the
+            facility type identifier, a lat/long pair, and four generic region
+            identifiers (country, state, county, etc.)
+
+            Columns:
+                facility_id : int
+                facility_type : str
+                lat : float
+                long : float
+                region_id_1 : str
+                region_id_2 : str
+                region_id_3 : str
+                region_id_4 : str
+
         """
 
         # load landfill facility data
