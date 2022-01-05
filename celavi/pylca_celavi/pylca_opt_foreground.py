@@ -46,12 +46,11 @@ def preprocessing(year,state,df_static,dynamic_lci_filename):
     """
     
     #Reading in dynamics LCA databases
-    df_dynamic = pd.read_csv(dynamic_lci_filename)
+    df_dynamic = pd.read_csv(dynamic_lci_filename)    
     df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
-    df_dynamic_year = df_dynamic_year.drop('state')
+    df_dynamic_year = df_dynamic_year.drop('state',axis = 1)
     frames = [df_static,df_dynamic_year]
     df = pd.concat(frames)
-
     df_input = df[df['input'] == True]
     df_output = df[df['input'] == False]
     
@@ -271,7 +270,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
     #Running LCA for all years as obtained from CELAVI
 
     #Incorporating dynamics lci database
-    process_df,df_with_all_other_flows = preprocessing(int(yr),df_static,dynamic_lci_filename)
+    process_df,df_with_all_other_flows = preprocessing(int(yr),state,df_static,dynamic_lci_filename)
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'product', columns = 'process', values = 'value' )
     tech_matrix = tech_matrix.fillna(0)

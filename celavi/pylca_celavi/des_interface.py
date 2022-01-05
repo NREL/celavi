@@ -181,65 +181,72 @@ class PylcaCelavi:
         res_df = pd.DataFrame()
         df=df.reset_index()
         lcia_mass_flow = pd.DataFrame()
-    
-        #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
-        for index,row in df.iterrows():
+        states = list(pd.unique(df['state']))
+
+        #The LCA needs to be done for every region separately. Thus separating the states in the dataframe.
+        for st in states:
+            df_s = df[df['state'] == st]
+
             
-            year = row['year']
-            stage = row['stage']
-            material = row['material']
-            facility_id = row['facility_id']
-            state = row['state']
-            new_df = df[df['index'] == index]
-
-            if self.use_shortcut_lca_calculations:
-                #Calling the lca performance improvement function to do shortcut calculations. 
-                df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
-    
-            else:
-                
-                df_with_no_lca_entry = new_df
-                result_shortcut = pd.DataFrame()
-
-            if not df_with_no_lca_entry.empty:
-                # Calculates the concrete lifecycle flow and emissions inventory
-                df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.sand_substitution_rate, self.coal_substitution_rate)
-    
-                if not df_static.empty:
-    
-                    working_df = df_with_no_lca_entry
-                    working_df['flow name'] = working_df['material'] + ', ' + working_df['stage']
-                    working_df= working_df[['flow name','flow quantity']]
-    
-                    # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
-                    # It calculates the LCI flows of the foreground process.
-                    res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename)
-    
-                    # model_celavi_lci_insitu() calculating direct emissions from foreground
-                    # processes.
-                    emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
-    
-                    if not res.empty:
-                        res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename)   
-                        lci = postprocessing(res,emission)
-                        res = impact_calculations(lci,self.traci_lci_filename)
-                        res_df = pd.concat([res_df,res])
-                        lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
-                        
-                        
-                        df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-                        lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
-                        lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
-                        lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
-                        lca_db = lca_db[lca_db['material'] != 'concrete']
-                        lca_db['year'] = lca_db['year'].astype(int)
-                        lca_db = lca_db.drop_duplicates()
-                        lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
         
-            else:
-                print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
+            #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
+            for index,row in df_s.iterrows():
+                
+                year = row['year']
+                stage = row['stage']
+                material = row['material']
+                facility_id = row['facility_id']
+                state = row['state']
+                new_df = df_s[df_s['index'] == index]
 
-            res_df = pd.concat([res_df,result_shortcut])
+    
+                if self.use_shortcut_lca_calculations:
+                    #Calling the lca performance improvement function to do shortcut calculations. 
+                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
+        
+                else:
+                    
+                    df_with_no_lca_entry = new_df
+                    result_shortcut = pd.DataFrame()
+    
+                if not df_with_no_lca_entry.empty:
+                    # Calculates the concrete lifecycle flow and emissions inventory
+                    df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.sand_substitution_rate, self.coal_substitution_rate)
+        
+                    if not df_static.empty:
+        
+                        working_df = df_with_no_lca_entry
+                        working_df['flow name'] = working_df['material'] + ', ' + working_df['stage']
+                        working_df= working_df[['flow name','flow quantity']]
+                        
+                        # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
+                        # It calculates the LCI flows of the foreground process.
+                        res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename)
+                        # model_celavi_lci_insitu() calculating direct emissions from foreground
+                        # processes.
+                        emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
+        
+                        if not res.empty:
+                            res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename)   
+                            lci = postprocessing(res,emission)
+                            res = impact_calculations(lci,self.traci_lci_filename)
+                            res_df = pd.concat([res_df,res])
+                            lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
+                            
+                            
+                            df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
+                            lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
+                            lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
+                            lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+                            lca_db = lca_db[lca_db['material'] != 'concrete']
+                            lca_db['year'] = lca_db['year'].astype(int)
+                            lca_db = lca_db.drop_duplicates()
+                            lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
+            
+                else:
+                    print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
+    
+                res_df = pd.concat([res_df,result_shortcut])
 
         #Correcting the units for LCIA results. 
         for index,row in res_df.iterrows():
