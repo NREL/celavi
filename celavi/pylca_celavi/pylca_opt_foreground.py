@@ -19,7 +19,7 @@ from pyomo.opt import SolverFactory
 
 
 #We are integrating static lca with dynamics lca over here. 
-def preprocessing(year,df_static,dynamic_lci_filename):
+def preprocessing(year,state,df_static,dynamic_lci_filename):
 
     """
     This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
@@ -29,6 +29,8 @@ def preprocessing(year,df_static,dynamic_lci_filename):
     ----------
     year : str
          year of LCA calculation
+    state : str
+         state of Facility
     df_static : pd.DataFrame
          lca inventory static 
     dynamic_lci_filename: str
@@ -45,7 +47,8 @@ def preprocessing(year,df_static,dynamic_lci_filename):
     
     #Reading in dynamics LCA databases
     df_dynamic = pd.read_csv(dynamic_lci_filename)
-    df_dynamic_year = df_dynamic[df_dynamic['year'] == year]
+    df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
+    df_dynamic_year = df_dynamic_year.drop('state')
     frames = [df_static,df_dynamic_year]
     df = pd.concat(frames)
 
@@ -196,7 +199,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
          facility ID
     j: str
         stage
-    k: sr
+    k: str
         material
     final_demand_scaler: int
         scaling variable number to ease optimization
@@ -222,6 +225,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
        res.loc[:,'stage'] = j
        res.loc[:,'material'] = k
 
+
     res = electricity_corrector_before20(res)
 
     # Intermediate demand is not required by the framewwork, but it is useful
@@ -230,7 +234,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     return res
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename):
 
     """
     Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 

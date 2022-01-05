@@ -189,6 +189,7 @@ class PylcaCelavi:
             stage = row['stage']
             material = row['material']
             facility_id = row['facility_id']
+            state = row['state']
             new_df = df[df['index'] == index]
 
             if self.use_shortcut_lca_calculations:
@@ -212,7 +213,7 @@ class PylcaCelavi:
     
                     # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
                     # It calculates the LCI flows of the foreground process.
-                    res = model_celavi_lci(working_df,year,facility_id,stage,material,df_static,self.dynamic_lci_filename)
+                    res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename)
     
                     # model_celavi_lci_insitu() calculating direct emissions from foreground
                     # processes.
