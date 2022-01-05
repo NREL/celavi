@@ -1,5 +1,5 @@
-from typing import Dict, List, Callable, Union, Tuple
-from math import floor, ceil
+from typing import Dict, List, Callable
+from math import ceil
 from datetime import datetime
 import time
 
@@ -108,18 +108,31 @@ class Context:
         # Inventories hold the simple counts of materials at stages of
         # their lifecycle. The "component" inventories hold the counts
         # of whole components. The "material" inventories hold the mass
-        # of those components.
-
-        locations = pd.read_csv(locations_filename)
-        step_costs = pd.read_csv(step_costs_filename)
-
-        # After this merge, there will be "facility_type_x" and
-        # "facility_type_y" columns
-        locations_step_costs = locations.merge(step_costs, on='facility_id')
+        # of those components. Transportation trackers hold the inbound
+        # tonne * km that are being transported into facilites.
 
         self.count_facility_inventories = {}
         self.transportation_trackers = {}
         self.mass_facility_inventories = {}
+
+        # Read the locations and step costs to make the facility inventories
+        locations = pd.read_csv(locations_filename)
+        step_costs = pd.read_csv(step_costs_filename)
+
+        # Find state level location information for each facility. This should
+        # be in the region_id_2 column. Put this into a dictionary that maps
+        # facility ids to states. This is so the LCA code can user per-state
+        # electricity mixes. The integers are cast as strings because that
+        # is how they will be looked up in the interface to the LCA code.
+
+        self.facility_states = {
+            str(row['facility_id']): row['region_id_2']
+            for _, row in locations.iterrows()
+        }
+
+        # After this merge, there will be "facility_type_x" and
+        # "facility_type_y" columns
+        locations_step_costs = locations.merge(step_costs, on='facility_id')
 
         for _, row in locations_step_costs.iterrows():
             facility_type = row['facility_type_x']
@@ -332,7 +345,8 @@ class Context:
                             'year': year,
                             'material': material,
                             'flow unit': 'kg',
-                            'facility_id': facility_id
+                            'facility_id': facility_id,
+                            'state': self.facility_states[facility_id]
                         }
                         self.data_for_lci.append(row)
                         annual_data_for_lci.append(row)
@@ -348,7 +362,8 @@ class Context:
                         'year': year,
                         'material': 'transportation',
                         'flow unit': 't * km',
-                        'facility_id': facility_id
+                        'facility_id': facility_id,
+                        'state': self.facility_states[facility_id]
                     }
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
