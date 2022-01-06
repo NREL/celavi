@@ -225,7 +225,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     return res
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename,intermediate_demand_filename):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,intermediate_demand_filename):
 
     """
     Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
