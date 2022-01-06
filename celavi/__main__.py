@@ -19,6 +19,8 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
 from celavi.pylca_celavi.des_interface import PylcaCelavi
+from celavi.des import Context
+from celavi.diagnostic_viz import DiagnosticViz
 import yaml
 
 parser = argparse.ArgumentParser(description='Execute CELAVI model')
@@ -40,7 +42,6 @@ try:
         inputs = case.get('input_files', {})
         generated = case.get('generated_files', {})
         outputs = case.get('output_files', {})
-        pylca_inventory_parameters = case.get('pylca_inventory_parameters',{})
 except IOError as err:
     print(f'Could not open {case_yaml_filename} for configuration. Exiting with status code 1.')
     exit(1)
@@ -78,7 +79,7 @@ generate_step_costs = flags.get('generate_step_costs', True)
 # use fixed (or random Weibull) lifetimes for technology components
 use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
 # use previously generated LCIA results instead of re-calculating
-use_shortcut_lca_calculations = flags.get('use_shortcut_lca_calculation', False)
+use_lcia_shortcut = flags.get('use_lcia_shortcut', False)
 
 
 ## SUB FOLDERS
@@ -184,7 +185,7 @@ costgraph_csv_filename = os.path.join(args.data,
 
 # LCI input filenames
 lca_results_filename = os.path.join(args.data,
-                                    data_dirs.get('lci'),
+                                    data_dirs.get('outputs'),
                                     outputs.get('lca_results_filename'))
 
 shortcutlca_filename = os.path.join(args.data,
@@ -278,18 +279,9 @@ des_timesteps = int(
 materials = [tech.get('component_materials')[c] for c in circular_components]
 material_list=[item for sublist in materials for item in sublist]
 
+substitution_rate = tech.get('substitution_rates')
+
 np.random.seed(scenario.get('seed', 13))
-
-# Because the LCIA code has filenames hardcoded and cannot be reconfigured,
-# change the working directory to the lci_folder to accommodate those read
-# and write operations. Also, the Context must be imported down here after
-# the working directory is changed because the LCIA will attempt to read
-# files immediately.
-
-os.chdir(subfolder_dict['lci_folder'])
-from celavi.des import Context
-from celavi.diagnostic_viz import DiagnosticViz
-
 
 # Note that the step_cost file must be updated (or programmatically generated)
 # to include all facility ids. Otherwise, cost graph can't run with the full
@@ -408,8 +400,6 @@ else:
     print(f'CostGraph object read in at {np.round(time.time() - time0, 1)}',
           flush=True)
 
-sand_substitution_rate = pylca_inventory_parameters.get('sand_substitution_rate')
-coal_substitution_rate = pylca_inventory_parameters.get('coal_substitution_rate')
 
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
@@ -420,9 +410,8 @@ lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   stock_filename=stock_filename,
                   emissions_lci_filename=emissions_lci_filename,
                   traci_lci_filename=traci_lci_filename,
-                  use_shortcut_lca_calculations=use_shortcut_lca_calculations,
-                  sand_substitution_rate=sand_substitution_rate,
-                  coal_substitution_rate=coal_substitution_rate)
+                  use_shortcut_lca_calculations=use_lcia_shortcut,
+                  substitution_rate=substitution_rate)
 
 # Get the start year and timesteps_per_year
 start_year = model_run.get('start_year')
