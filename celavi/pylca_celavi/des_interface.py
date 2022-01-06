@@ -44,7 +44,9 @@ class PylcaCelavi:
     """
     def __init__(self,
                  lca_results_filename,
+                 lcia_des_filename,
                  shortcutlca_filename,
+                 intermediate_demand_filename,
                  dynamic_lci_filename,
                  static_lci_filename,
                  uslci_filename,
@@ -64,8 +66,16 @@ class PylcaCelavi:
         lca_results_filename: str
             filename for the lca results file
 
+        lcia_des_filename : str
+            Path to file that stores impact results for passing back to the
+            discrete event simulation.
+
         shortcutlca_filename: str
             filename for the shortcut file for improving LCA calculations
+
+        intermediate_demand_filename : str
+            Path to file that stores final demands by year. For debugging
+            purposes only.
 
         dynamic_lci_filename: str
             filename for the lca inventory dependent upon time
@@ -98,7 +108,9 @@ class PylcaCelavi:
         """
         # filepaths for files used in the pylca calculations
         self.lca_results_filename = lca_results_filename
+        self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
+        self.intermediate_demand_filename = intermediate_demand_filename
         self.dynamic_lci_filename = dynamic_lci_filename
         self.static_lci_filename = static_lci_filename
         self.uslci_filename = uslci_filename
@@ -212,7 +224,7 @@ class PylcaCelavi:
     
                     # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
                     # It calculates the LCI flows of the foreground process.
-                    res = model_celavi_lci(working_df,year,facility_id,stage,material,df_static,self.dynamic_lci_filename)
+                    res = model_celavi_lci(working_df,year,facility_id,stage,material,df_static,self.dynamic_lci_filename,self.intermediate_demand_filename)
     
                     # model_celavi_lci_insitu() calculating direct emissions from foreground
                     # processes.
@@ -233,7 +245,10 @@ class PylcaCelavi:
                         lca_db = lca_db[lca_db['material'] != 'concrete']
                         lca_db['year'] = lca_db['year'].astype(int)
                         lca_db = lca_db.drop_duplicates()
-                        lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
+                        lca_db.to_csv(self.shortcutlca_filename,
+                                      mode = 'a',
+                                      index = False,
+                                      header = False)
         
             else:
                 print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
@@ -255,7 +270,7 @@ class PylcaCelavi:
 
            
         # The line below is just for debugging if needed
-        res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
+        res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
     
         # This is the result that needs to be analyzed every timestep.
         return res_df

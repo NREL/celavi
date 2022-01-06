@@ -184,6 +184,10 @@ costgraph_csv_filename = os.path.join(args.data,
                                       outputs.get('costgraph_csv'))
 
 # LCI input filenames
+lcia_des_filename = os.path.join(args.data,
+                                 data_dirs.get('lci'),
+                                 generated.get('lcia_to_des'))
+
 lca_results_filename = os.path.join(args.data,
                                     data_dirs.get('outputs'),
                                     outputs.get('lca_results_filename'))
@@ -191,6 +195,10 @@ lca_results_filename = os.path.join(args.data,
 shortcutlca_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
                                     generated.get('shortcutlca_filename'))
+
+intermediate_demand_filename = os.path.join(args.data,
+                                            data_dirs.get('lci'),
+                                            generated.get('intermediate_demand'))
 
 static_lci_filename = os.path.join(args.data,
                                    data_dirs.get('lci'),
@@ -219,6 +227,10 @@ traci_lci_filename = os.path.join(args.data,
 dynamic_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
                                     inputs.get('dynamic_lci_filename'))
+
+lcia_locations_filename = os.path.join(args.data,
+                                       data_dirs.get('lci'),
+                                       generated.get('lcia_locations'))
 
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
@@ -407,7 +419,9 @@ else:
 
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
+                  lcia_des_filename=lcia_des_filename,
                   shortcutlca_filename=shortcutlca_filename,
+                  intermediate_demand_filename=intermediate_demand_filename,
                   dynamic_lci_filename=dynamic_lci_filename,
                   static_lci_filename=static_lci_filename,
                   uslci_filename=uslci_filename,
@@ -550,9 +564,7 @@ netw.save_costgraph_outputs()
 # maps
 lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact',
               'impact_value']
-lcia_filename = os.path.join(subfolder_dict['lci_folder'],
-                             'final_lcia_results_to_des.csv')
-lcia_df = pd.read_csv(lcia_filename, names=lcia_names)
+lcia_df = pd.read_csv(lcia_des_filename, names=lcia_names)
 locations_df = pd.read_csv(locations_computed_filename)
 
 locations_columns = [
@@ -569,8 +581,7 @@ locations_columns = [
 locations_select_df = locations_df.loc[:, locations_columns]
 lcia_locations_df = lcia_df.merge(locations_select_df, how='inner',
                                   on='facility_id')
-lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'],
-                                       'lcia_locations_join.csv')
+
 lcia_locations_df.to_csv(lcia_locations_filename, index=False)
 
 # Print run finish message

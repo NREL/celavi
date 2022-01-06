@@ -171,7 +171,7 @@ def electricity_corrector_before20(df):
     return df
 
 
-def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
+def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):
     
     """
     Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
@@ -218,11 +218,11 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
 
     # Intermediate demand is not required by the framewwork, but it is useful
     # for debugging.
-    res.to_csv('intermediate_demand.csv', mode='a', header=False, index=False)
+    res.to_csv(intermediate_demand_filename, mode='a', header=False, index=False)
     return res
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename,intermediate_demand_filename):
 
     """
     Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
@@ -280,7 +280,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename
         # Dividing by scaling value to solve scaling issues
         F = F / 100000
     
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows)
+        res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows,intermediate_demand_filename)
         if len(res.columns) != 7:
             print(f'model_celavi_lci: res has {len(res.columns)}; needs 7 columns',
                   flush=True)
