@@ -7,7 +7,8 @@ import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename):
+def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
+                                lci_activity_locations):
 
     """
     Main function of this module which receives information from DES interface and runs the suppoeting optimization functions. 
@@ -28,6 +29,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
       material of LCA analysis
     uslci_filename: str
       filename for the USLCI inventory
+    lci_activity_locations
+        Path to file that provides a correspondence between location
+        identifiers in the US LCI.
     
     Returns
     -------
@@ -278,7 +282,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     process_product = process_product[process_product['value'] > 0]
     
     
-    location = pd.read_csv('location.csv')
+    location = pd.read_csv(lci_activity_locations)
     process_input_with_process = process_input_with_process.merge(location, left_on = 'location', right_on = 'old_name')
     process_input_with_process['location'] = process_input_with_process['new_name']
     process_input_with_process['conjoined_flownames'] = process_input_with_process['inputs']+ '@' + process_input_with_process['from_process'] + '@' + process_input_with_process['location'] 

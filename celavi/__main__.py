@@ -200,6 +200,10 @@ uslci_filename = os.path.join(args.data,
                               data_dirs.get('lci'),
                               inputs.get('uslci_filename'))
 
+lci_locations_filename = os.path.join(args.data,
+                                      data_dirs.get('lci'),
+                                      inputs.get('lci_activity_locations'))
+
 stock_filename = os.path.join(args.data,
                               data_dirs.get('lci'),
                               inputs.get('stock_filename'))
@@ -407,6 +411,7 @@ lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   dynamic_lci_filename=dynamic_lci_filename,
                   static_lci_filename=static_lci_filename,
                   uslci_filename=uslci_filename,
+                  lci_activity_locations=lci_locations_filename,
                   stock_filename=stock_filename,
                   emissions_lci_filename=emissions_lci_filename,
                   traci_lci_filename=traci_lci_filename,
