@@ -229,7 +229,7 @@ dynamic_lci_filename = os.path.join(args.data,
                                     inputs.get('dynamic_lci_filename'))
 
 lcia_locations_filename = os.path.join(args.data,
-                                       data_dirs.get('lci'),
+                                       data_dirs.get('outputs'),
                                        generated.get('lcia_locations'))
 
 # FILENAMES FOR OUTPUT DATA
