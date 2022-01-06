@@ -185,11 +185,11 @@ costgraph_csv_filename = os.path.join(args.data,
 # LCI input filenames
 lca_results_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('lca_results_filename'))
+                                    outputs.get('lca_results_filename'))
 
 shortcutlca_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('shortcutlca_filename'))
+                                    generated.get('shortcutlca_filename'))
 
 static_lci_filename = os.path.join(args.data,
                                    data_dirs.get('lci'),
@@ -334,7 +334,7 @@ else:
 
 
 # Data filtering for states
-states_to_filter = scenario_params.get('states_to_filter', [])
+states_to_filter = scen.get('states_to_filter', [])
 if location_filtering:
     if not states_to_filter:
         print('Cannot filter data; no state list provided', flush=True)
