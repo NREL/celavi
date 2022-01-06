@@ -222,7 +222,7 @@ class PylcaCelavi:
     
                 if not df_with_no_lca_entry.empty:
                     # Calculates the concrete lifecycle flow and emissions inventory
-                    df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.sand_substitution_rate, self.coal_substitution_rate)
+                    df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.substitution_rate)
         
                     if not df_static.empty:
         
@@ -232,13 +232,13 @@ class PylcaCelavi:
                         
                         # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
                         # It calculates the LCI flows of the foreground process.
-                        res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename)
+                        res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename,self.intermediate_demand_filename)
                         # model_celavi_lci_insitu() calculating direct emissions from foreground
                         # processes.
                         emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
         
                         if not res.empty:
-                            res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename)   
+                            res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename,self.lci_activity_locations)
                             lci = postprocessing(res,emission)
                             res = impact_calculations(lci,self.traci_lci_filename)
                             res_df = pd.concat([res_df,res])
