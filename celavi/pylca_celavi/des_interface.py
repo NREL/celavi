@@ -1,7 +1,6 @@
 import pandas as pd
 from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
 from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
-import sys
 import os
 from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 
@@ -10,7 +9,6 @@ from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_li
 
 # Background LCA runs on the USLCI after the foreground process
 from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing, impact_calculations
-
 
 class PylcaCelavi:
     """    
@@ -46,16 +44,18 @@ class PylcaCelavi:
     """
     def __init__(self,
                  lca_results_filename,
+                 lcia_des_filename,
                  shortcutlca_filename,
+                 intermediate_demand_filename,
                  dynamic_lci_filename,
                  static_lci_filename,
                  uslci_filename,
+                 lci_activity_locations,
                  stock_filename,
                  emissions_lci_filename,
                  traci_lci_filename,
                  use_shortcut_lca_calculations,
-                 sand_substitution_rate,
-                 coal_substitution_rate
+                 substitution_rate
                  ):
         
         """
@@ -66,8 +66,16 @@ class PylcaCelavi:
         lca_results_filename: str
             filename for the lca results file
 
+        lcia_des_filename : str
+            Path to file that stores impact results for passing back to the
+            discrete event simulation.
+
         shortcutlca_filename: str
             filename for the shortcut file for improving LCA calculations
+
+        intermediate_demand_filename : str
+            Path to file that stores final demands by year. For debugging
+            purposes only.
 
         dynamic_lci_filename: str
             filename for the lca inventory dependent upon time
@@ -77,6 +85,10 @@ class PylcaCelavi:
 
         uslci_filename: str
             filename of the USLCI background pickle file
+
+        lci_activity_locations
+            Path to file that provides a correspondence between location
+            identifiers in the US LCI.
 
         stock_filename: str
             filename for storage pickle variable
@@ -90,24 +102,24 @@ class PylcaCelavi:
         use_shortcut_lca_calculations: str
             boolean flag for using lca shortcut performance improvement method
             
-        sand_substitution_rate: float
-            sand inventory substitution rate for concrete manufacture using GFRP
-        
-        coal_substitution_rate: float
-            coal inventory substitution rate for concrete manufacture using GFRP
+        substitution_rate: Dict
+            Dictionary of material: sub rates for materials displaced by the
+            circular component
         """
         # filepaths for files used in the pylca calculations
         self.lca_results_filename = lca_results_filename
+        self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
+        self.intermediate_demand_filename = intermediate_demand_filename
         self.dynamic_lci_filename = dynamic_lci_filename
         self.static_lci_filename = static_lci_filename
         self.uslci_filename = uslci_filename
+        self.lci_activity_locations = lci_activity_locations
         self.stock_filename = stock_filename
         self.emissions_lci_filename = emissions_lci_filename
         self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
-        self.sand_substitution_rate = sand_substitution_rate
-        self.coal_substitution_rate = coal_substitution_rate
+        self.substitution_rate = substitution_rate
         
         #This is the final LCIA results file. Its created using the append function as CELAVI runs. 
         #Thus if there is a chance it exists we need to delete it
@@ -198,7 +210,6 @@ class PylcaCelavi:
                 facility_id = row['facility_id']
                 state = row['state']
                 new_df = df_s[df_s['index'] == index]
-
     
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
@@ -241,7 +252,10 @@ class PylcaCelavi:
                             lca_db = lca_db[lca_db['material'] != 'concrete']
                             lca_db['year'] = lca_db['year'].astype(int)
                             lca_db = lca_db.drop_duplicates()
-                            lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
+                            lca_db.to_csv(self.shortcutlca_filename,
+                                          mode = 'a',
+                                          index = False,
+                                          header = False)
             
                 else:
                     print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
@@ -263,7 +277,7 @@ class PylcaCelavi:
 
            
         # The line below is just for debugging if needed
-        res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
+        res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
     
         # This is the result that needs to be analyzed every timestep.
         return res_df

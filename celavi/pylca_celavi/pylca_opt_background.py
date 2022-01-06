@@ -2,13 +2,13 @@ import pickle
 import pandas as pd
 import numpy as np
 import time
-from pyomo.environ import ConcreteModel,Set,Param,Var,Constraint,Objective,minimize, SolverFactory
+from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize, SolverFactory
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 
-
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename):
+def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
+                                lci_activity_locations):
 
     """
     Main function of this module which receives information from DES interface and runs the suppoeting optimization functions. 
@@ -29,6 +29,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
       material of LCA analysis
     uslci_filename: str
       filename for the USLCI inventory
+    lci_activity_locations
+        Path to file that provides a correspondence between location
+        identifiers in the US LCI.
     
     Returns
     -------
@@ -36,10 +39,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
        Final LCA results in the form of a dataframe after performing after calculation checks
 
     """
-
     processes = {}
     processes = pickle.load( open( uslci_filename, "rb" ))
-
     
     def process_product_func():
 
@@ -134,7 +135,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         Parameters:
         -----------
 
-
         Returns:
         --------
         pd.DataFrame
@@ -177,7 +177,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         
         Parameters:
         -----------
-
 
         Returns:
         --------
@@ -283,7 +282,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     process_product = process_product[process_product['value'] > 0]
     
     
-    location = pd.read_csv('location.csv')
+    location = pd.read_csv(lci_activity_locations)
     process_input_with_process = process_input_with_process.merge(location, left_on = 'location', right_on = 'old_name')
     process_input_with_process['location'] = process_input_with_process['new_name']
     process_input_with_process['conjoined_flownames'] = process_input_with_process['inputs']+ '@' + process_input_with_process['from_process'] + '@' + process_input_with_process['location'] 
@@ -482,10 +481,11 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
-    final_dem = uslci_product_df.merge(f_d, left_on = 0, right_on = 'flow name', how = 'left')
+    final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     #To make the optimization easier
     F = final_dem['flow quantity']/final_demand_scaler
     res2 = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
     
     return res2
+

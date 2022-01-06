@@ -89,10 +89,12 @@ class Context:
 
         self.components: List[Component] = []
         self.env = simpy.Environment()
+      
+        # The top level dictionary has a key for each material type. The dictionaries
+        # at the next level down have an integer key for each year of the DES run.
+        # The values on these second-level dictionaries are the mass per component
+        # for that material in that year.
 
-        # Read the average component masses as an array. Then turn it into a
-        # dictionary that maps integer years to component masses.
-        # File data is total component mass per technology unit
         self.component_material_mass_tonne_dict: Dict[str, Dict[int, float]] = {}
         component_material_masses_df = pd.read_csv(component_material_masses_filename)
 
@@ -108,8 +110,7 @@ class Context:
         # Inventories hold the simple counts of materials at stages of
         # their lifecycle. The "component" inventories hold the counts
         # of whole components. The "material" inventories hold the mass
-        # of those components. Transportation trackers hold the inbound
-        # tonne * km that are being transported into facilites.
+        # of those components.
 
         self.count_facility_inventories = {}
         self.transportation_trackers = {}
@@ -230,7 +231,7 @@ class Context:
             The DataFrame which has components specified in the columns
             listed above.
 
-        lifespan_fns: lifespan_fns: Dict[str, Callable[[], float]]
+        lifespan_fns: Dict[str, Callable[[], float]]
             A dictionary with the kind of component as the key and a Callable
             (probably a lambda function) that takes no arguments and returns
             a float as the value. When called, the value should return a value
@@ -293,6 +294,7 @@ class Context:
         """
         year = int(ceil(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
+
         cumulative_counts = [
             facility.cumulative_input_history[component_kind][timestep]
             for name, facility in self.count_facility_inventories.items()
@@ -368,7 +370,7 @@ class Context:
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
             print(str(time.time() - time0)+' For loop of pylca took these many seconds')
-            if len(annual_data_for_lci) > 0:
+            if annual_data_for_lci:
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface)

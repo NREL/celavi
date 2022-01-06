@@ -3,6 +3,14 @@ from collections import deque
 
 
 class Component:
+    """
+    The Component class works with the Context class to run the discrete
+    event simulation. There is one instance of Component per physical
+    component in the simulation. This class models each step in the
+    lifecycle of the component, from begining of life (BOL) to end of
+    life (EOL).
+    """
+
     def __init__(
         self,
         context,
@@ -188,12 +196,11 @@ class Component:
             The environment in which this process is running.
         """
         while True:
-
-            if len(self.pathway) > 0:
+            if self.pathway:
                 location, lifespan, distance = self.pathway.popleft()
                 factype = location.split('_')[0]
                 if factype in self.split_dict.keys():
-                    # increment the facility inventory and transpo tracker
+                    # increment the facility inventory and transportation tracker
                     fac_count_inventory = self.context.count_facility_inventories[location]
                     fac_transport = self.context.transportation_trackers[location]
                     fac_mass_inventory = self.context.mass_facility_inventories[location]
@@ -216,12 +223,14 @@ class Component:
                     )
                     _split_facility_2 = self.context.cost_graph.find_downstream(
                         node_name = location,
-                        connect_to = self.split_dict[factype]['facility_2'])
-
+                        connect_to = self.split_dict[factype]['facility_2']
+                    )
+                    
                     fac1_count_inventory = self.context.count_facility_inventories[_split_facility_1]
                     fac1_transport = self.context.transportation_trackers[_split_facility_1]
                     fac1_mass_inventory = self.context.mass_facility_inventories[_split_facility_1]
                     fac1_count_inventory.increment_quantity(
+
                         self.kind,
                         self.split_dict[factype]['fraction'],
                         env.now
