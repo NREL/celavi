@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def concrete_life_cycle_inventory_updater(d_f,
                                           yr,
                                           k,
@@ -91,17 +90,17 @@ def concrete_life_cycle_inventory_updater(d_f,
         if available_gfrp <= sand_can_be_substituted:
             sand_substituted = available_gfrp
         else:
-           sand_substituted = sand_can_be_substituted
+            sand_substituted = sand_can_be_substituted
 
         required_sand = required_sand - sand_substituted
 
         new_sand_inventory_factor = required_sand/required_concrete
         # updating the inventory
 
-        df_static.loc[((df_static['product'] == 'sand and gravel') & (df_static['process'] == 'concrete, cement co-processing')),'value'] =   new_sand_inventory_factor
+        df_static.loc[((df_static['product'] == 'sand and gravel') & (df_static['process'] == 'concrete, cement co-processing')), 'value'] = new_sand_inventory_factor
 
         # coal update
-        required_coal = required_concrete*0.0096291
+        required_coal = required_concrete * 0.0096291
         '0.009629 is the amount of coal required for 1kg concrete'
 
         coal_can_be_substituted = required_coal * substitution_rate['coal']
@@ -115,12 +114,12 @@ def concrete_life_cycle_inventory_updater(d_f,
         required_coal = required_coal - coal_substituted
         'subtracting the amount of GFRP available with a substitution factor'
 
-        new_coal_inventory_factor = required_coal/required_concrete
-        df_static.loc[((df_static['product'] == 'coal, raw') & (df_static['process'] == 'concrete, cement co-processing')),'value'] =   new_coal_inventory_factor
+        new_coal_inventory_factor = required_coal / required_concrete
+        df_static.loc[((df_static['product'] == 'coal, raw') & (df_static['process'] == 'concrete, cement co-processing')), 'value'] = new_coal_inventory_factor
         'updating inventory'
 
         # carbon dioxide update
-        new_co2_emission_factor = 0.00092699/0.0096291 * new_coal_inventory_factor
+        new_co2_emission_factor = 0.00092699 / 0.0096291 * new_coal_inventory_factor
         # These numbers are all obtained from the inventory which says that the use of 0.0096291 kg coal will cause 0.000926 kg Co2 emission
         # This co2 emission only includes the coal combustion impact factor. Other fuels need to be added separately
         df_emissions = pd.read_csv(emissions_filename)
@@ -132,3 +131,4 @@ def concrete_life_cycle_inventory_updater(d_f,
         df_static = pd.read_csv(static_filename)
         df_emissions = pd.read_csv(emissions_filename)
         return df_static,df_emissions
+

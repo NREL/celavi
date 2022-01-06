@@ -1,7 +1,6 @@
 import pandas as pd
 from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
 from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
-import sys
 import os
 from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 
@@ -10,7 +9,6 @@ from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_li
 
 # Background LCA runs on the USLCI after the foreground process
 from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing, impact_calculations
-
 
 class PylcaCelavi:
     """    

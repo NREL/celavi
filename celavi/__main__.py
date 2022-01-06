@@ -1,3 +1,12 @@
+"""
+Circular Economy Lifecycle Analysis and VIsualization, CELAVI
+
+This file performs data I/O, preprocessing, and calls modules to perform a
+complete CELAVI model run and save results.
+
+Authors: Rebecca Hanes, Alicia Key, Tapajyoti (TJ) Ghosh, Annika Eberle
+"""
+
 import argparse
 import os
 import pickle
@@ -102,8 +111,8 @@ locations_computed_filename = os.path.join(args.data,
                                            data_dirs.get('inputs'),
                                            generated.get('locs'))
 fac_edges_filename = os.path.join(args.data,
-                                   data_dirs.get('inputs'),
-                                   inputs.get('fac_edges'))
+                                  data_dirs.get('inputs'),
+                                  inputs.get('fac_edges'))
 transpo_edges_filename = os.path.join(args.data,
                                       data_dirs.get('inputs'),
                                       inputs.get('transpo_edges'))
@@ -124,7 +133,8 @@ routes_computed_filename = os.path.join(args.data,
 # transport graph (pre computed; don't change)
 transportation_graph_filename = os.path.join(args.data,
                                              data_dirs.get('us_roads'),
-                                             inputs.get('transportation_graph'))
+                                             inputs.get('transportation_graph')
+                                             )
 
 # node locations for transport graph (pre computed; don't change)
 node_locations_filename = os.path.join(args.data,
@@ -141,12 +151,15 @@ landfill_locations_filename = os.path.join(args.data,
                                            inputs.get('landfill_locs'))
 # other facility locations (e.g., cement)
 other_facility_locations_filename = os.path.join(args.data,
-                                                 data_dirs.get('raw_locations'),
-                                                 inputs.get('other_facility_locs'))
+                                                 data_dirs.get(
+                                                     'raw_locations'),
+                                                 inputs.get(
+                                                     'other_facility_locs'))
 
 lookup_facility_type_filename = os.path.join(args.data,
                                              data_dirs.get('lookup_tables'),
-                                             inputs.get('lookup_facility_type'))
+                                             inputs.get('lookup_facility_type')
+                                             )
 
 # file where the technology data will be saved after generating from raw inputs
 technology_data_filename = os.path.join(args.data,
@@ -313,8 +326,9 @@ else:
 
 
 # Data filtering for states
+states_to_filter = scen.get('states_to_filter', [])
 if location_filtering:
-    if len(states_to_filter) == 0:
+    if not states_to_filter:
         print('Cannot filter data; no state list provided', flush=True)
     else:
         print(f'Filtering locations: {states_to_filter}',
@@ -338,11 +352,11 @@ if run_routes:
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'],
-        preprocessing_output_folder=subfolder_dict['preprocessing_output_folder']
-    )
+        preprocessing_output_folder=subfolder_dict[
+            'preprocessing_output_folder'])
 
-print('Run routes completed at %d s' % np.round(time.time() - time0, 1),
-        flush=True)
+print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
+      flush=True)
 
 if initialize_costgraph:
     # Initialize the CostGraph using these parameter settings
@@ -374,7 +388,7 @@ if initialize_costgraph:
     if pickle_costgraph:
         # Save the CostGraph object using pickle
         pickle.dump(netw, open(costgraph_pickle_filename, 'wb'))
-        print('Cost graph pickled and saved',flush = True)
+        print('Cost graph pickled and saved', flush=True)
 
 else:
     # Read in a previously generated CostGraph object
@@ -501,8 +515,10 @@ diagnostic_viz_counts = DiagnosticViz(
     var_name='unit',
     value_name='count'
 )
-count_cumulative_histories = diagnostic_viz_counts.gather_and_melt_cumulative_histories()
-count_cumulative_histories.to_csv(count_cumulative_histories_filename, index=False)
+count_cumulative_histories = \
+    diagnostic_viz_counts.gather_and_melt_cumulative_histories()
+count_cumulative_histories.to_csv(count_cumulative_histories_filename,
+                                  index=False)
 diagnostic_viz_counts.generate_plots()
 
 # Plot the levels of the mass inventories
@@ -516,16 +532,21 @@ diagnostic_viz_mass = DiagnosticViz(
     var_name='material',
     value_name='tonnes'
 )
-mass_cumulative_histories = diagnostic_viz_mass.gather_and_melt_cumulative_histories()
-mass_cumulative_histories.to_csv(mass_cumulative_histories_filename, index=False)
+mass_cumulative_histories = \
+    diagnostic_viz_mass.gather_and_melt_cumulative_histories()
+mass_cumulative_histories.to_csv(mass_cumulative_histories_filename,
+                                 index=False)
 diagnostic_viz_mass.generate_plots()
 
 # Postprocess and save CostGraph outputs
 netw.save_costgraph_outputs()
 
-# Join LCIA and locations computed and write the result to enable creation of maps
-lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact', 'impact_value']
-lcia_filename = os.path.join(subfolder_dict['lci_folder'], 'final_lcia_results_to_des.csv')
+# Join LCIA and locations computed and write the result to enable creation of
+# maps
+lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact',
+              'impact_value']
+lcia_filename = os.path.join(subfolder_dict['lci_folder'],
+                             'final_lcia_results_to_des.csv')
 lcia_df = pd.read_csv(lcia_filename, names=lcia_names)
 locations_df = pd.read_csv(locations_computed_filename)
 
@@ -541,8 +562,10 @@ locations_columns = [
 ]
 
 locations_select_df = locations_df.loc[:, locations_columns]
-lcia_locations_df = lcia_df.merge(locations_select_df, how='inner', on='facility_id')
-lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'], 'lcia_locations_join.csv')
+lcia_locations_df = lcia_df.merge(locations_select_df, how='inner',
+                                  on='facility_id')
+lcia_locations_filename = os.path.join(subfolder_dict['outputs_folder'],
+                                       'lcia_locations_join.csv')
 lcia_locations_df.to_csv(lcia_locations_filename, index=False)
 
 # Print run finish message

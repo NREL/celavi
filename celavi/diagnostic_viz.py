@@ -1,5 +1,4 @@
 from typing import Dict, List
-from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -10,7 +9,7 @@ from .inventory import FacilityInventory
 
 class DiagnosticViz:
     """
-    This class creates diagnostic visualizations from a context when after the
+    This class creates diagnostic visualizations from a context after the
     model run has been executed.
     """
 
@@ -101,6 +100,8 @@ class DiagnosticViz:
             # columns are present
             try:
                 print('Gathering and scaling component count inventories')
+                # Multiply component counts in the inventory by the number of
+                # components in each technology unit
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[

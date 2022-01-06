@@ -16,7 +16,10 @@ import pandas as pd
 
 class Data(pd.DataFrame):
     """
-    Data representation.
+    Data representation. Specific datasets are created as child classes with
+    defined column names, data types, and backfilling values. Creating child
+    classes removes the need to define column names etc when the classes are
+    called to read data from files.
     """
 
     COLUMNS = []
@@ -24,10 +27,23 @@ class Data(pd.DataFrame):
     INDEX_COLUMNS = []
 
     def __init__(self, df=None, fpath=None, columns=None, backfill=True):
+        """
+        Parameters
+        ----------
+        df
+            Initial data frame
 
+        fpath
+            Filepath location of data to be read in
+
+        columns
+            List of columns to backfill
+
+        backfill
+            Boolean flag: perform backfilling with datatype-specific value
+        """
         _df = pd.DataFrame({}) if df is None and fpath is None else self.load(fpath=fpath,
                                                                               columns=columns)
-
         super(Data, self).__init__(data=_df)
 
         self.source = fpath or 'DataFrame'
@@ -53,11 +69,23 @@ class Data(pd.DataFrame):
 
         See pandas.read_table() help for additional arguments.
 
-        :param fpath: [string] file path to budget file or SQLite database file
-        :param columns: [dict] {name: type, ...}
-        :param memory_map: [bool] load directly to memory for improved performance
-        :param header: [int] 0-based row index containing column names
-        :return: [DataFrame]
+        Parameters
+        ----------
+        fpath: [string]
+            file path to CSV file or SQLite database file
+
+        columns: [dict]
+            {name: type, ...}
+
+        memory_map: [bool]
+            load directly to memory for improved performance
+
+        header: [int]
+            0-based row index containing column names
+
+        Returns
+        -------
+        DataFrame
         """
 
         try:
@@ -77,12 +105,21 @@ class Data(pd.DataFrame):
             return _df
 
     def backfill(self, column, value=0):
+
         """
         Replace NaNs in <column> with <value>.
 
-        :param column: [string]
-        :param value: [any]
-        :return:
+        Parameters
+        ----------
+        column: [string]
+            Name of column with NaNs to be backfilled
+
+        value: [any]
+            Value for backfill
+
+        Returns
+        -------
+        DataFrame with [column] backfilled with [value]
         """
 
         _dataset = str(type(self)).split("'")[1]
@@ -96,7 +133,7 @@ class Data(pd.DataFrame):
             # count the total values
             _count_total = self[column].__len__()
 
-            # fill the missing values with zeros
+            # fill the missing values with specified value
             self[column].fillna(value, inplace=True)
 
             # log a warning with the number of missing values
@@ -112,9 +149,13 @@ class Data(pd.DataFrame):
 
     def validate(self):
         """
-        Check that data are not empty
+        Check that data are not empty.
 
-        :return:
+        Return False if empty and True otherwise.
+
+        Returns
+        -------
+        Boolean flag
         """
         _name = type(self).__name__
 
@@ -143,7 +184,10 @@ class Data(pd.DataFrame):
 
 
 class TransportationGraph(Data):
-
+    """
+    Read in and process the underlying transportation network for the Router
+    module.
+    """
     COLUMNS = ({'name': 'edge_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'statefp', 'type': str, 'index': False, 'backfill': None},
                {'name': 'countyfp', 'type': str, 'index': False, 'backfill': None},
@@ -153,26 +197,32 @@ class TransportationGraph(Data):
                {'name': 'fclass', 'type': int, 'index': False, 'backfill': None})
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(TransportationGraph, self).__init__(df=df, fpath=fpath, columns=columns,
                                                   backfill=backfill)
 
 
 class TransportationNodeLocations(Data):
-
+    """
+    Read in and process tranportation node locations.
+    """
     COLUMNS = ({'name': 'node_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None})
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(TransportationNodeLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
 
 class Locations(Data):
+    """
+    Read in and process raw facility locations (other than power plants)
+    datasets.
+    """
     COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
@@ -184,13 +234,16 @@ class Locations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(Locations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
 
 class TurbineLocations(Data):
+    """
+    Read in and process raw power plant locations dataset.
+    """
     COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
                {'name': 't_county', 'type': str, 'index': False, 'backfill': None},
@@ -206,12 +259,16 @@ class TurbineLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(TurbineLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
+
 class OtherFacilityLocations(Data):
+    """
+    Read in and process additional, miscellaneous facility location datasets.
+    """
     COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
@@ -223,12 +280,16 @@ class OtherFacilityLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(OtherFacilityLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
+
 class LandfillLocations(Data):
+    """
+    Read in and process landfill facility locations dataset.
+    """
     COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
                {'name': 'State', 'type': str, 'index': False, 'backfill': None},
                {'name': 'Latitude', 'type': float, 'index': False, 'backfill': None},
@@ -240,25 +301,35 @@ class LandfillLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
+
 class StandardScenarios(Data):
+    """
+    Read in and process capacity expansion projection dataset.
+    NOTE: Delete the first line of the raw Standard Scenarios file before
+    reading in to CELAVI.
+    """
     COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},
                {'name': 't', 'type': int, 'index': False, 'backfill': None},
                {'name': 'wind-ons_MW', 'type': float, 'index': False, 'backfill': '-1'}
                )
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        super(StandardScenarios,self).__init__(df=df, fpath=fpath, columns=columns,
+        super(StandardScenarios, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
 
 class RoutePairs(Data):
+    """
+    Read in and process the dataset defining allowable facility pairs for the
+    Router.
+    """
     COLUMNS = ({'name': 'source_facility_type', 'type': str, 'index': True, 'backfill': None},
                {'name': 'destination_facility_type', 'type': str, 'index': True,'backfill': None},
                {'name': 'in_state_only', 'type': bool, 'index': False, 'backfill': None},
@@ -266,7 +337,7 @@ class RoutePairs(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(RoutePairs,self).__init__(df=df, fpath=fpath, columns=columns,
                                         backfill=backfill)
