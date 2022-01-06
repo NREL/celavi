@@ -367,9 +367,8 @@ if run_routes:
         distance_filtering=distance_filtering,
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
-        routing_output_folder=subfolder_dict['routing_output_folder'],
-        preprocessing_output_folder=subfolder_dict[
-            'preprocessing_output_folder'])
+        routes_output_file = routes_computed_filename,
+        routing_output_folder=subfolder_dict['routing_output_folder'])
 
 print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
       flush=True)
