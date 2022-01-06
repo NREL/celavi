@@ -228,10 +228,6 @@ dynamic_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
                                     inputs.get('dynamic_lci_filename'))
 
-lcia_locations_filename = os.path.join(args.data,
-                                       data_dirs.get('lci'),
-                                       generated.get('lcia_locations'))
-
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
     args.data,
@@ -581,7 +577,7 @@ locations_select_df = locations_df.loc[:, locations_columns]
 lcia_locations_df = lcia_df.merge(locations_select_df, how='inner',
                                   on='facility_id')
 
-lcia_locations_df.to_csv(lcia_locations_filename, index=False)
+lcia_locations_df.to_csv(lca_results_filename, index=False)
 
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
