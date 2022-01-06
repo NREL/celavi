@@ -1,3 +1,4 @@
+
 # INSITU EMISSION CALCULATOR
 
 import warnings
@@ -36,15 +37,15 @@ def preprocessing(year,df_static):
     df = df_static
     df_input = df[df['input'] == True]
     df_output = df[df['input'] == False]
-    df_input.loc[:,'value'] = df_input.loc[:,'value']  * (-1)
-    df = pd.concat([df_input,df_output])
+    df_input.loc[:, 'value'] = df_input.loc[:, 'value'] * (-1)
+    df = pd.concat([df_input, df_output])
     
-    #Removing flows without source because optimization problem becomes infeasible
-    #Removing flows without source
-    #For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
-    #Dummy flows need to be removed. 
-    #This part removes the dummy flows and flows without any production processes from the X matrix. 
-    process_input_with_process  =  pd.unique(df_output['product'])
+    # Removing flows without source because optimization problem becomes infeasible
+    # Removing flows without source
+    # For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
+    # Dummy flows need to be removed.
+    # This part removes the dummy flows and flows without any production processes from the X matrix.
+    process_input_with_process = pd.unique(df_output['product'])
     df['indicator'] = df['product'].isin(process_input_with_process)
     process_df = df[df['indicator'] == True]
     df_with_all_other_flows = df[df['indicator'] == False]
@@ -52,8 +53,8 @@ def preprocessing(year,df_static):
     del process_df['indicator']
     del df_with_all_other_flows['indicator']
     
-    process_df.loc[:,'value'] = process_df.loc[:,'value'].astype(np.float64)
-    return process_df,df_with_all_other_flows
+    process_df.loc[:, 'value'] = process_df.loc[:, 'value'].astype(np.float64)
+    return process_df, df_with_all_other_flows
 
 
 def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
@@ -85,27 +86,27 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     # Creation of a Concrete Model
     model = ConcreteModel()
 
-    def set_create(a,b):
+    def set_create(a, b):
         i_list = []
-        for i in range(a,b):
+        for i in range(a, b):
             i_list.append(i)
         return i_list
 
-    model.i = Set(initialize=set_create(0,X_matrix.shape[0]), doc='indices')
-    model.j = Set(initialize=set_create(0,X_matrix.shape[1]), doc='indices')
+    model.i = Set(initialize=set_create(0, X_matrix.shape[0]), doc='indices')
+    model.j = Set(initialize=set_create(0, X_matrix.shape[1]), doc='indices')
 
-    def x_init(model,i,j):
-        return X_matrix[i,j]
+    def x_init(model, i, j):
+        return X_matrix[i, j]
     model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
 
-    def f_init(model,i):
+    def f_init(model, i):
         return F[i]
 
     model.f = Param(model.i, initialize=f_init, doc='Final demand')
-    model.s = Var(model.j, bounds=(0,None), doc='Scaling Factor')
+    model.s = Var(model.j, bounds=(0, None), doc='Scaling Factor')
 
     def supply_rule(model, i):
-      return sum(model.x[i,j]*model.s[j] for j in model.j) >= model.f[i]
+      return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
     model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
 
     def objective_rule(model):
@@ -115,13 +116,13 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     def pyomo_postprocess(options=None, instance=None, results=None):
         df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
         return df
-      #model.s.display()
 
-    # This is an optional code path that allows the script to be run outside of
-    # pyomo command-line.  For example:  python transport.py
-        # This emulates what the pyomo command-line tools does
+
+
+    # This emulates what the pyomo command-line tools does
     from pyomo.opt import SolverFactory
     import pyomo.environ
+
     opt = SolverFactory("ipopt")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
@@ -129,12 +130,12 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     scaling_vector['process'] = process
     scaling_vector['scaling_factor'] = solution['s']
 
-    results_df = df_with_all_other_flows.merge(scaling_vector, on = ['process'], how = 'left')
+    results_df = df_with_all_other_flows.merge(scaling_vector, on=['process'], how='left')
 
     results_df['value'] = abs(results_df['value']) * results_df['scaling_factor']
     results_df = results_df[results_df['value'] > 0]
     results_df = results_df.fillna(0)
-    results_total = results_df.groupby(by = ['product','unit'])['value'].agg(sum).reset_index()
+    results_total = results_df.groupby(by=['product', 'unit'])['value'].agg(sum).reset_index()
 
     return results_total
 
@@ -207,7 +208,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     return res
 
 
-def model_celavi_lci_insitu(f_d,yr,fac_id,stage,material,df_emissions):
+def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
 
 
     """
@@ -245,31 +246,31 @@ def model_celavi_lci_insitu(f_d,yr,fac_id,stage,material,df_emissions):
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-   
+
     final_lci_result = pd.DataFrame()
-    #Running LCA for all years as obtained from CELAVI
-    #Incorporating dynamics lci database
-    process_df,df_with_all_other_flows = preprocessing(int(yr),df_emissions)
-    #Creating the technoology matrix for performing LCA caluclations
-    tech_matrix = process_df.pivot(index = 'product', columns = 'process', values = 'value' )
+    # Running LCA for all years as obtained from CELAVI
+    # Incorporating dynamics lci database
+    process_df, df_with_all_other_flows = preprocessing(int(yr), df_emissions)
+    # Creating the technology matrix for performing LCA calculations
+    tech_matrix = process_df.pivot(index='product', columns='process', values='value')
     tech_matrix = tech_matrix.fillna(0)
-    #This list of products and processes essentially help to determine the indexes and the products and processes
-    #to which they belong.
+    # This list of products and processes essentially help to determine the indexes and the products and processes
+    # to which they belong.
     products = list(tech_matrix.index)
     process = list(tech_matrix.columns)
     product_df = pd.DataFrame(products)
-    final_dem = product_df.merge(f_d, left_on = 0, right_on = 'flow name', how = 'left')
+    final_dem = product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     if chksum != 0:
         F = final_dem['flow quantity']
-        #Dividing by scaling value to solve scaling issues
-        F = F/100000
+        # Dividing by scaling value to solve scaling issues
+        F = F / 100000
 
-        res = runner(tech_matrix,F,yr,fac_id,stage,material,100000,process,df_with_all_other_flows)
-        #res.columns = ['flow name','unit','flow quantity','year','stage','material']
-        #res = model_celavi_lci_background(res, yr,stage,material)
-        res.columns = ['flow name','unit','flow quantity','year','facility_id','stage','material']
+        res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows)
+        # r es.columns = ['flow name', 'unit', 'flow quantity', 'year', 'stage', 'material']
+        # res = model_celavi_lci_background(res, yr, stage, material)
+        res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']
         return res
     else:
         return pd.DataFrame()

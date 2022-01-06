@@ -1,7 +1,6 @@
 import pandas as pd
 from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
 from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
-import sys
 import os
 from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 
@@ -10,7 +9,6 @@ from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import concrete_li
 
 # Background LCA runs on the USLCI after the foreground process
 from celavi.pylca_celavi.pylca_celavi_background_postprocess import postprocessing, impact_calculations
-
 
 class PylcaCelavi:
     """    
@@ -54,8 +52,7 @@ class PylcaCelavi:
                  emissions_lci_filename,
                  traci_lci_filename,
                  use_shortcut_lca_calculations,
-                 sand_substitution_rate,
-                 coal_substitution_rate
+                 substitution_rate
                  ):
         
         """
@@ -90,11 +87,9 @@ class PylcaCelavi:
         use_shortcut_lca_calculations: str
             boolean flag for using lca shortcut performance improvement method
             
-        sand_substitution_rate: float
-            sand inventory substitution rate for concrete manufacture using GFRP
-        
-        coal_substitution_rate: float
-            coal inventory substitution rate for concrete manufacture using GFRP
+        substitution_rate: Dict
+            Dictionary of material: sub rates for materials displaced by the
+            circular component
         """
         # filepaths for files used in the pylca calculations
         self.lca_results_filename = lca_results_filename
@@ -106,8 +101,7 @@ class PylcaCelavi:
         self.emissions_lci_filename = emissions_lci_filename
         self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
-        self.sand_substitution_rate = sand_substitution_rate
-        self.coal_substitution_rate = coal_substitution_rate
+        self.substitution_rate = substitution_rate
         
         #This is the final LCIA results file. Its created using the append function as CELAVI runs. 
         #Thus if there is a chance it exists we need to delete it
@@ -202,7 +196,7 @@ class PylcaCelavi:
 
             if not df_with_no_lca_entry.empty:
                 # Calculates the concrete lifecycle flow and emissions inventory
-                df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.sand_substitution_rate, self.coal_substitution_rate)
+                df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.substitution_rate)
     
                 if not df_static.empty:
     

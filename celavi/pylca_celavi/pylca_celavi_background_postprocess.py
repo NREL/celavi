@@ -35,18 +35,14 @@ def postprocessing(final_res,insitu):
         final_res = pd.DataFrame(columns=column_names)
     else:
         final_res.columns = list(column_names)
-
-
-    
-   
     
     if insitu.empty == False:
         insitu.columns = list(column_names)
-        #Adding up the insitu emission primariy for the cement manufacturing process
+        # Adding up the insitu emission primarily for the cement manufacturing process
         final_res['flow name'] = final_res['flow name'].str.lower()
         
-        column_names = ['flow name','flow unit','year','facility_id','stage','material']
-        total_em = insitu.merge(final_res,on = column_names,how = 'outer')
+        column_names = ['flow name', 'flow unit', 'year', 'facility_id', 'stage', 'material']
+        total_em = insitu.merge(final_res, on=column_names, how='outer')
         total_em = total_em.fillna(0)
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
         final_res = total_em.drop(columns = ['flow quantity_x','flow quantity_y'])
@@ -109,11 +105,12 @@ def impact_calculations(final_res,traci_lci_filename):
      'Human health CF  [CTUnoncancer/kg], Emission to cont. agric. Soil, non-canc.']
     
     
-    traci_df = pd.melt(traci, id_vars=['CAS #','Formatted CAS #','Substance Name'], value_vars=valuevars, var_name='impacts', value_name='value')
+    traci_df = pd.melt(traci, id_vars=['CAS #', 'Formatted CAS #', 'Substance Name'], value_vars=valuevars, var_name='impacts', value_name='value')
     
-    final_res['flow name'] =   final_res['flow name'].str.upper()                                 
-    df_lcia = final_res.merge(traci_df, left_on = ['flow name'], right_on = ['Substance Name'])
+    final_res['flow name'] = final_res['flow name'].str.upper()
+    df_lcia = final_res.merge(traci_df, left_on=['flow name'], right_on=['Substance Name'])
     df_lcia['impact'] = df_lcia['flow quantity'] * df_lcia['value']
-    df_lcia = df_lcia.groupby(['year','facility_id', 'material','stage','impacts'])['impact'].agg('sum').reset_index()
-    
+    df_lcia = df_lcia.groupby(['year', 'facility_id', 'material', 'stage', 'impacts'])['impact'].agg('sum').reset_index()  
+
     return df_lcia                      
+

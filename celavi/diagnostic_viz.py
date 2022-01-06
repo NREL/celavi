@@ -1,18 +1,15 @@
 from typing import Dict, List
 
-import os
-
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import time
 
 from .inventory import FacilityInventory
 
 
 class DiagnosticViz:
     """
-    This class creates diagnostic visualizations from a context when after the
+    This class creates diagnostic visualizations from a context after the
     model run has been executed.
     """
 
@@ -103,6 +100,8 @@ class DiagnosticViz:
             # columns are present
             try:
                 print('Gathering and scaling component count inventories')
+                # Multiply component counts in the inventory by the number of
+                # components in each technology unit
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
@@ -134,9 +133,6 @@ class DiagnosticViz:
         """
         This method generates the history plots.
         """
-        # First, melt the dataframe so that its data structure is generalized
-        # for either mass or count plots, and sum over years and facility types.
-
         # Create the figure
         fig = px.line(
             self.gather_and_melt_cumulative_histories(),
@@ -148,6 +144,9 @@ class DiagnosticViz:
             width=1000,
             height=1000,
         )
+
+        # If a previous figure exists, remove it
+        Path(self.output_plot_filename).unlink(missing_ok=True)
 
         # Write the figure
         fig.write_image(self.output_plot_filename)

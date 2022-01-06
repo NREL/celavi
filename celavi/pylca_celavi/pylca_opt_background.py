@@ -2,10 +2,9 @@ import pickle
 import pandas as pd
 import numpy as np
 import time
-from pyomo.environ import ConcreteModel,Set,Param,Var,Constraint,Objective,minimize, SolverFactory
+from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize, SolverFactory
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-
 
 
 def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename):
@@ -36,10 +35,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
        Final LCA results in the form of a dataframe after performing after calculation checks
 
     """
-
     processes = {}
     processes = pickle.load( open( uslci_filename, "rb" ))
-
     
     def process_product_func():
 
@@ -134,7 +131,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         Parameters:
         -----------
 
-
         Returns:
         --------
         pd.DataFrame
@@ -177,7 +173,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         
         Parameters:
         -----------
-
 
         Returns:
         --------
@@ -482,10 +477,11 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
-    final_dem = uslci_product_df.merge(f_d, left_on = 0, right_on = 'flow name', how = 'left')
+    final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     #To make the optimization easier
     F = final_dem['flow quantity']/final_demand_scaler
     res2 = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
     
     return res2
+
