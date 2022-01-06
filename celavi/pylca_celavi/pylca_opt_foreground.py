@@ -97,8 +97,6 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     model = ConcreteModel()
 
     def set_create(a, b):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         i_list = []
         for i in range(a, b):
             i_list.append(i)
@@ -107,17 +105,11 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     model.i = Set(initialize=set_create(0, X_matrix.shape[0]), doc='indices')
     model.j = Set(initialize=set_create(0, X_matrix.shape[1]), doc='indices')
 
-    # TODO: if function input model is not used, consider removing
     def x_init(model, i, j):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         return X_matrix[i, j]
     model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
 
-    # TODO: if function input model is not used, consider removing
     def f_init(model, i):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         return F[i]
 
     model.f = Param(model.i, initialize=f_init, doc='Final demand')
@@ -125,35 +117,18 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     model.s = Var(model.j, bounds=(0, None), doc='Scaling Factor')
 
     def supply_rule(model, i):
-      # TODO: add docstrings to explain input variables and what the function
-      #  does.
-
-      # TODO: consider correcting indentation of the line below
-      return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
+        return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
     model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
 
 
     def objective_rule(model):
-      # TODO: add docstrings to explain input variables and what the function
-      #  does.
-
-      # TODO: consider correcting indentation of the line below
       return sum(model.s[j] for j in model.j)
     model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
 
-
-    # TODO: if function inputs are not used, consider removing (it seems to
-    #  be used by pyomo but does not appear in the code?)
     def pyomo_postprocess(options=None, instance=None, results=None):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
         return df
-      # TODO: consider removing commented line below
-      # model.s.display()
 
-    # TODO: what is the optional code path? The code below solve the
-    #  optimization problem so I don't think is optional?
     # This is an optional code path that allows the script to be run outside of
     # pyomo command-line.  For example:  python transport.py
 
@@ -234,17 +209,11 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     res['value'] = res['value'] * final_demand_scaler
     if res.empty == False:
 
-       # TODO: consider correcting indentation of the fourl lines below
        res.loc[:, 'year'] = yr
        res.loc[:, 'facility_id'] = i
        res.loc[:, 'stage'] = j
        res.loc[:, 'material'] = k
 
-    # TODO: consider adding some explanation for the line below. For instance,
-    #  why isn't there a condition below or in the
-    #  "electricity_corrector_before20" function to only replace 'electricity'
-    #  by 'Electricity, at Grid, US, 2010' when yr is below 2020 (for rows
-    #  with yr < 2020)
     res = electricity_corrector_before20(res)
 
     # Intermediate demand is not required by the framewwork, but it is useful
@@ -286,7 +255,6 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-    # TODO: remove final_lci_result if not used
     final_lci_result = pd.DataFrame()
     # Running LCA for all years as obtained from CELAVI
 
@@ -309,10 +277,6 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename
     
     else:
         F = final_dem['flow quantity']
-        # TODO: consider explaining what is the scaling value and have it as
-        #  an input variable of the function (with default value) or at least
-        #  a stored in an explicit variable, especially
-        #  because it used twice.
         # Dividing by scaling value to solve scaling issues
         F = F / 100000
     

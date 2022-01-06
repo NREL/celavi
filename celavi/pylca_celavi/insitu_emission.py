@@ -1,15 +1,3 @@
-# TODO: Consider generalizing "pylca_opt_foreground.py",
-#  "pylca_opt_background.py", and "insitu_emission.py": a lot of code in
-#  those two modules are similar. For instance creating the tech_matrix,
-#  products and process lists, most of the pre-processing function etc. A
-#  class with more general function could be created and an instance of the
-#  class could be created when needed for the functions that compute the insitu
-#  emissions and foreground (part that are not similar between the two cases
-#  would be defined in those functions). A boolean, such as "insitu_emission",
-#  could be used for the code to differentiate inputs manipulations when needed
-#  (e.g., for the line "res.to_csv('intermediate_demand.csv', mode='a',
-#  header=False, index=False)" which is in pylca_opt_foreground.py, but not in
-#  insitu_emission.py or pylca_opt_background.py.
 
 # INSITU EMISSION CALCULATOR
 
@@ -99,8 +87,6 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     model = ConcreteModel()
 
     def set_create(a, b):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         i_list = []
         for i in range(a, b):
             i_list.append(i)
@@ -110,54 +96,33 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     model.j = Set(initialize=set_create(0, X_matrix.shape[1]), doc='indices')
 
     def x_init(model, i, j):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         return X_matrix[i, j]
     model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
 
     def f_init(model, i):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         return F[i]
 
     model.f = Param(model.i, initialize=f_init, doc='Final demand')
     model.s = Var(model.j, bounds=(0, None), doc='Scaling Factor')
 
     def supply_rule(model, i):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
       return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
     model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
 
     def objective_rule(model):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
       return sum(model.s[j] for j in model.j)
     model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
 
     def pyomo_postprocess(options=None, instance=None, results=None):
-        # TODO: add docstrings to explain input variables and what the function
-        #  does.
         df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
         return df
 
-      # TODO: If not used, consider removing commented line below
-      # model.s.display()
 
-    # TODO: what is the optional code path? The code below solve the
-    #  optimization problem so I don't think is optional?
-    # This is an optional code path that allows the script to be run outside of
-    # pyomo command-line.  For example:  python transport.py
-        # This emulates what the pyomo command-line tools does
-    # TODO: If there is no reason why not, consider move up the line below to
-    #  have it with other imports
+
+    # This emulates what the pyomo command-line tools does
     from pyomo.opt import SolverFactory
-    # TODO: if pyomo.environ is not used, consider removing
     import pyomo.environ
-    # TODO: Consider explaining why the ipopt solver is used in
-    #  "insitu_emission.py" but the glpk solver is used in
-    #  pylca_opt_foreground and pylca_opt_background (if generalizing the three
-    #  modules, the solver could be an input of the class (or function)).
+
     opt = SolverFactory("ipopt")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
@@ -282,7 +247,6 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
 
-    # TODO: remove final_lci_result if not used
     final_lci_result = pd.DataFrame()
     # Running LCA for all years as obtained from CELAVI
     # Incorporating dynamics lci database
@@ -300,15 +264,10 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
     chksum = np.sum(final_dem['flow quantity'])
     if chksum != 0:
         F = final_dem['flow quantity']
-        # TODO: consider explaining what is the scaling value and have it as
-        #  an input variable of the function (with default value) or at least
-        #  a stored in an explicit variable, especially
-        #  because it used twice.
         # Dividing by scaling value to solve scaling issues
         F = F / 100000
 
         res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows)
-        # TODO: If not used, consider removing commented lines below
         # r es.columns = ['flow name', 'unit', 'flow quantity', 'year', 'stage', 'material']
         # res = model_celavi_lci_background(res, yr, stage, material)
         res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']

@@ -1,9 +1,3 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
-# TODO: if sys, pickle, and os are not used, consider removing
 import pickle
 import sys
 import pandas as pd
@@ -83,7 +77,6 @@ def impact_calculations(final_res,traci_lci_filename):
    
     traci = pd.read_csv(traci_lci_filename)
     traci = traci.fillna(0)
-    # TODO: consider removing impacts if not used.
     impacts = list(traci.columns)
     valuevars = ['Global Warming Air (kg CO2 eq / kg substance)',
      'Acidification Air (kg SO2 eq / kg substance)',
