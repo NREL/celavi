@@ -43,9 +43,14 @@ def preprocessing(year,state,df_static,dynamic_lci_filename):
     """
     
     #Reading in dynamics LCA databases
-    df_dynamic = pd.read_csv(dynamic_lci_filename)    
-    df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
-    df_dynamic_year = df_dynamic_year.drop('state',axis = 1)
+    df_dynamic = pd.read_csv(dynamic_lci_filename) 
+    try:
+        df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
+        df_dynamic_year = df_dynamic_year.drop('state',axis = 1)
+    except:
+        print('States missing. Trying with national file')
+        df_dynamic_year = df_dynamic[(df_dynamic['year'] == year)]
+    
     frames = [df_static,df_dynamic_year]
     df = pd.concat(frames)
     df_input = df[df['input'] == True]

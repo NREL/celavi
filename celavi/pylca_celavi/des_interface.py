@@ -198,8 +198,6 @@ class PylcaCelavi:
         for st in states:
             df_s = df[df['state'] == st]
 
-            
-        
             #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
             for index,row in df_s.iterrows():
                 
