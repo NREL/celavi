@@ -198,11 +198,13 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     res = pd.DataFrame()
     res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
     res['value'] = res['value']*final_demand_scaler
-    if res.empty == False:
+    if res.empty == False:        
        res.loc[:,'year'] =  yr
        res.loc[:,'facility_id'] = i
        res.loc[:,'stage'] = j
        res.loc[:,'material'] = k
+    else:        
+       print("optimization insitu emission failed")
     
     res = electricity_corrector_before20(res)
     return res

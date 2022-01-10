@@ -188,8 +188,7 @@ class PylcaCelavi:
         pd.DataFrame
             LCIA results (also appends to csv file)
         """
-        df = df[df['flow quantity'] != 0]
-    
+        df = df[df['flow quantity'] != 0]        
         res_df = pd.DataFrame()
         df=df.reset_index()
         lcia_mass_flow = pd.DataFrame()
@@ -215,8 +214,7 @@ class PylcaCelavi:
                     #Calling the lca performance improvement function to do shortcut calculations. 
                     df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
         
-                else:
-                    
+                else:                    
                     df_with_no_lca_entry = new_df
                     result_shortcut = pd.DataFrame()
     
@@ -256,8 +254,11 @@ class PylcaCelavi:
                                           mode = 'a',
                                           index = False,
                                           header = False)
+                        else:        
+                           print(" optimization LCIA run failed ")
             
                 else:
+                    print('DataFrame sent from DES empty')
                     print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
     
                 res_df = pd.concat([res_df,result_shortcut])
