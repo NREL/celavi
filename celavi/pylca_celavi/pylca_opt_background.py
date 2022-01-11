@@ -451,7 +451,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
         res2 = pd.DataFrame()
         res,res2 = solver_optimization(tech_matrix, F)
         res['value'] = res['value']*final_demand_scaler
-        if res.empty == False:
+        if not res.empty:
           res.loc[:,'year'] =  i
           res.loc[:,'facility_id'] =  l
           res.loc[:,'stage'] = j
@@ -460,18 +460,16 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
           print(str(i) +' - '+j + ' - ' + k)
     
         else:                
-          print("optimization pylca-opt-background emission failed") 
-          pass
+          print(f"Pylca-opt-background emission optimization failed for {k} at {j} in {yr}")
        
-        if res2.empty == False:
+        if not res2.empty:
           res2.loc[:,'year'] =  i
           res.loc[:,'facility_id'] =  l
           res2.loc[:,'stage'] = j
           res2.loc[:,'material'] = k
     
         else:
-           print("optimization pylca-opt-background emission failed")
-           pass
+           print(f"Pylca-opt-background emission optimization failed for {k} at {j} in {yr}")
     
         print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)
     
