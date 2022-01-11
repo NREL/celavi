@@ -251,10 +251,15 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
       stage of analysis
     material: str
       material of LCA analysis
+    state: str
+        State in which this LCI is located
     df_static: pd.Dataframe
       static foreground LCA inventory
     dynamic_lci_filename: str
       filename for the dynamic LCA inventory
+    electricity_grid_spatial_level
+        Whether to use a national-average or state-level grid mix
+    intermediate_demand_filename
     
     Returns
     -------
@@ -265,7 +270,6 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-    final_lci_result = pd.DataFrame()
     # Running LCA for all years as obtained from CELAVI
 
     #Incorporating dynamics lci database
