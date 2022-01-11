@@ -258,7 +258,7 @@ class PylcaCelavi:
                                           index = False,
                                           header = False)
                         else:        
-                           print(" optimization LCIA run failed ")
+                           print(f'LCIA optimization failed for {material} at {stage} in {year}')
             
                 else:
                     print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
