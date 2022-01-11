@@ -224,9 +224,14 @@ traci_lci_filename = os.path.join(args.data,
                                   data_dirs.get('lci'),
                                   inputs.get('traci_lci_filename'))
 
-dynamic_lci_filename = os.path.join(args.data,
+
+state_electricity_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('dynamic_lci_filename'))
+                                    inputs.get('state_electricity_lci_filename'))
+
+national_electricity_lci_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('state_electricity_lci_filename'))
 
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
@@ -412,12 +417,20 @@ else:
           flush=True)
 
 
+# Electricity spatial mix level. Defaults to 'state' when not provided.
+electricity_grid_spatial_level = scenario.get('electricity_mix_level', 'state')
+
+if electricity_grid_spatial_level == 'state':
+    dynamic_lci_filename = state_electricity_lci_filename
+else:
+    dynamic_lci_filename = national_electricity_lci_filename
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   lcia_des_filename=lcia_des_filename,
                   shortcutlca_filename=shortcutlca_filename,
                   intermediate_demand_filename=intermediate_demand_filename,
                   dynamic_lci_filename=dynamic_lci_filename,
+                  electricity_grid_spatial_level = electricity_grid_spatial_level,
                   static_lci_filename=static_lci_filename,
                   uslci_filename=uslci_filename,
                   lci_activity_locations=lci_locations_filename,

@@ -48,6 +48,7 @@ class PylcaCelavi:
                  shortcutlca_filename,
                  intermediate_demand_filename,
                  dynamic_lci_filename,
+                 electricity_grid_spatial_level,
                  static_lci_filename,
                  uslci_filename,
                  lci_activity_locations,
@@ -79,6 +80,9 @@ class PylcaCelavi:
 
         dynamic_lci_filename: str
             filename for the lca inventory dependent upon time
+            
+        electricity_grid_spatial_level: str
+            grid spatial level used for lca calculations - state or national
 
         static_lci_filename: str
             filename for the lca fixed inventory 
@@ -112,6 +116,7 @@ class PylcaCelavi:
         self.shortcutlca_filename = shortcutlca_filename
         self.intermediate_demand_filename = intermediate_demand_filename
         self.dynamic_lci_filename = dynamic_lci_filename
+        self.electricity_grid_spatial_level = electricity_grid_spatial_level
         self.static_lci_filename = static_lci_filename
         self.uslci_filename = uslci_filename
         self.lci_activity_locations = lci_activity_locations
@@ -228,7 +233,7 @@ class PylcaCelavi:
                         
                         # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
                         # It calculates the LCI flows of the foreground process.
-                        res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename,self.intermediate_demand_filename)
+                        res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename,self.electricity_grid_spatial_level,self.intermediate_demand_filename)
                         # model_celavi_lci_insitu() calculating direct emissions from foreground
                         # processes.
                         emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
@@ -256,7 +261,6 @@ class PylcaCelavi:
                            print(" optimization LCIA run failed ")
             
                 else:
-                    print('DataFrame sent from DES empty')
                     print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
     
                 res_df = pd.concat([res_df,result_shortcut])

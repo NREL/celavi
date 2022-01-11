@@ -16,7 +16,7 @@ from pyomo.opt import SolverFactory
 
 
 #We are integrating static lca with dynamics lca over here. 
-def preprocessing(year,state,df_static,dynamic_lci_filename):
+def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level):
 
     """
     This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
@@ -44,11 +44,11 @@ def preprocessing(year,state,df_static,dynamic_lci_filename):
     
     #Reading in dynamics LCA databases
     df_dynamic = pd.read_csv(dynamic_lci_filename) 
-    try:
+    if electricity_grid_spatial_level == 'state':
         df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
         df_dynamic_year = df_dynamic_year.drop('state',axis = 1)
-    except:
-        print('States missing. Trying with national file')
+    else:
+        print('National electricity mix level selected. Trying with national file')
         df_dynamic_year = df_dynamic[(df_dynamic['year'] == year)]
     
     frames = [df_static,df_dynamic_year]
@@ -233,7 +233,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     return res
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,intermediate_demand_filename):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
 
     """
     Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
@@ -270,7 +270,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
     # Running LCA for all years as obtained from CELAVI
 
     #Incorporating dynamics lci database
-    process_df,df_with_all_other_flows = preprocessing(int(yr),state,df_static,dynamic_lci_filename)
+    process_df,df_with_all_other_flows = preprocessing(int(yr),state,df_static,dynamic_lci_filename,electricity_grid_spatial_level)
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'product', columns = 'process', values = 'value' )
     tech_matrix = tech_matrix.fillna(0)
