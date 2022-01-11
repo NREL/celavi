@@ -213,7 +213,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     res = pd.DataFrame()
     res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)
     res['value'] = res['value'] * final_demand_scaler
-    if res.empty == False:
+    if not res.empty:
 
        res.loc[:, 'year'] = yr
        res.loc[:, 'facility_id'] = i
@@ -221,7 +221,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
        res.loc[:, 'material'] = k
     
     else:        
-       print("optimization pylca-opt-foreground emission failed")
+       print(f"Pylca-opt-foreground emission optimization failed for {k} at {j} in {yr}")
 
 
     res = electricity_corrector_before20(res)
