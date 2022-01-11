@@ -231,7 +231,7 @@ state_electricity_lci_filename = os.path.join(args.data,
 
 national_electricity_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('state_electricity_lci_filename'))
+                                    inputs.get('natl_electricity_lci_filename'))
 
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
@@ -418,7 +418,7 @@ else:
 
 
 # Electricity spatial mix level. Defaults to 'state' when not provided.
-electricity_grid_spatial_level = scenario.get('electricity_mix_level', 'state')
+electricity_grid_spatial_level = scenario.get('electricity_grid_level', 'state')
 
 if electricity_grid_spatial_level == 'state':
     dynamic_lci_filename = state_electricity_lci_filename
