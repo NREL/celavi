@@ -236,11 +236,11 @@ national_electricity_lci_filename = os.path.join(args.data,
 
 state_reeds_grid_mix = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('state_reeds_grid_mix_filename'))
+                                    generated.get('state_reeds_grid_mix_filename'))
 
 national_reeds_grid_mix = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('national_reeds_grid_mix_filename'))
+                                    generated.get('national_reeds_grid_mix_filename'))
 
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
