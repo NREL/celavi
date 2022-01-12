@@ -260,7 +260,7 @@ class PylcaCelavi:
                                               index = False,
                                               header = False)
                             else:                                
-                                print('Empty dataframe returned from pylcia foreground')           
+                                print(f'Empty dataframe returned from pylcia foreground for {year} {stage} {material}')
                 
                         else:                              
                             print('Final demand for %s %s %s is zero' % (str(year), stage, material))

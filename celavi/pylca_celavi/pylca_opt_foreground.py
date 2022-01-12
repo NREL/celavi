@@ -282,7 +282,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
-        print('LCA inventory  does not exist not for %s %s %s' % (str(yr), stage, material))
+        print('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
     
     else:
