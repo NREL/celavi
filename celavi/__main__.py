@@ -232,7 +232,7 @@ state_electricity_lci_filename = os.path.join(args.data,
 
 national_electricity_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('state_electricity_lci_filename'))
+                                    inputs.get('national_electricity_lci_filename'))
 
 state_reeds_grid_mix = os.path.join(args.data,
                                     data_dirs.get('lci'),
@@ -429,8 +429,7 @@ else:
 # Electricity spatial mix level. Defaults to 'state' when not provided.
 electricity_grid_spatial_level = scenario.get('electricity_mix_level', 'state')
 
-if electricity_grid_spatial_level == 'state':
-    
+if electricity_grid_spatial_level == 'state':    
     reeds_importer = ReedsImporter(reeds_imported_filename = state_reeds_grid_mix,
                                    reeds_output_filename = state_electricity_lci_filename,
                                   )  
@@ -439,11 +438,10 @@ if electricity_grid_spatial_level == 'state':
 
 
 else:
-    
     reeds_importer = ReedsImporter(reeds_imported_filename = national_reeds_grid_mix,
                                    reeds_output_filename = national_electricity_lci_filename,
                                    )   
-    
+    reeds_importer.national_level_reeds_importer()
     dynamic_lci_filename = national_electricity_lci_filename
     
     

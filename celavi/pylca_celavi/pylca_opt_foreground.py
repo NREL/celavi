@@ -48,7 +48,6 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
         df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
         df_dynamic_year = df_dynamic_year.drop('state',axis = 1)
     else:
-        print('National electricity mix level selected. Trying with national file')
         df_dynamic_year = df_dynamic[(df_dynamic['year'] == year)]
     
     frames = [df_static,df_dynamic_year]
