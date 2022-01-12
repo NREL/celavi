@@ -228,19 +228,19 @@ traci_lci_filename = os.path.join(args.data,
 
 state_electricity_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('state_electricity_lci_filename'))
+                                    generated.get('state_electricity_lci_filename'))
 
 national_electricity_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('national_electricity_lci_filename'))
+                                    generated.get('national_electricity_lci_filename'))
 
 state_reeds_grid_mix = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    generated.get('state_reeds_grid_mix_filename'))
+                                    inputs.get('state_reeds_grid_mix_filename'))
 
 national_reeds_grid_mix = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    generated.get('national_reeds_grid_mix_filename'))
+                                    inputs.get('national_reeds_grid_mix_filename'))
 
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
