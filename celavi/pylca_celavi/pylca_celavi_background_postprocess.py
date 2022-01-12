@@ -47,7 +47,7 @@ def postprocessing(final_res,insitu):
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
         final_res = total_em.drop(columns = ['flow quantity_x','flow quantity_y'])
     else:
-        print('pylca_celavi_background_postprocess: insitu is empty')
+        print('pylca_celavi_background_postprocess: no insitu emissions')
         
     return final_res
 

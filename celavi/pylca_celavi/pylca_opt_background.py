@@ -460,7 +460,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
           print(str(i) +' - '+j + ' - ' + k)
     
         else:                
-          print(f"Pylca-opt-background emission optimization failed for {k} at {j} in {yr}")
+          print(f"optimization pylca-opt-background emission failed for {k} at {j} in {i}") 
+          pass
        
         if not res2.empty:
           res2.loc[:,'year'] =  i
@@ -469,7 +470,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
           res2.loc[:,'material'] = k
     
         else:
-           print(f"Pylca-opt-background emission optimization failed for {k} at {j} in {yr}")
+           print(f"optimization pylca-opt-background emission failed for {k} at {j} in {i}")
+           pass
     
         print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)
     

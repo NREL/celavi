@@ -48,6 +48,7 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
         df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
         df_dynamic_year = df_dynamic_year.drop('state',axis = 1)
     else:
+        print('National electricity mix level selected. Trying with national file')
         df_dynamic_year = df_dynamic[(df_dynamic['year'] == year)]
     
     frames = [df_static,df_dynamic_year]
@@ -211,7 +212,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     """
 
     res = pd.DataFrame()
-    res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)
+    res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)        
     res['value'] = res['value'] * final_demand_scaler
     if not res.empty:
 
@@ -219,17 +220,17 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
        res.loc[:, 'facility_id'] = i
        res.loc[:, 'stage'] = j
        res.loc[:, 'material'] = k
+       res = electricity_corrector_before20(res)
+       # Intermediate demand is not required by the framewwork, but it is useful
+       # for debugging.
+       res.to_csv(intermediate_demand_filename, mode='a', header=False, index=False)    
+       return res
     
     else:        
-       print(f"Pylca-opt-foreground emission optimization failed for {k} at {j} in {yr}")
+       print(f"optimization pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
 
 
-    res = electricity_corrector_before20(res)
 
-    # Intermediate demand is not required by the framewwork, but it is useful
-    # for debugging.
-    res.to_csv(intermediate_demand_filename, mode='a', header=False, index=False)
-    return res
 
 
 def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
@@ -251,15 +252,10 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
       stage of analysis
     material: str
       material of LCA analysis
-    state: str
-        State in which this LCI is located
     df_static: pd.Dataframe
       static foreground LCA inventory
     dynamic_lci_filename: str
       filename for the dynamic LCA inventory
-    electricity_grid_spatial_level
-        Whether to use a national-average or state-level grid mix
-    intermediate_demand_filename
     
     Returns
     -------
@@ -270,6 +266,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
+    final_lci_result = pd.DataFrame()
     # Running LCA for all years as obtained from CELAVI
 
     #Incorporating dynamics lci database
@@ -286,7 +283,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
-        print('Final demand for %s %s %s is zero' % (str(yr), stage, material))
+        print('LCA inventory  does not exist not for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
     
     else:

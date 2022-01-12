@@ -19,6 +19,7 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
 from celavi.pylca_celavi.des_interface import PylcaCelavi
+from celavi.reeds_importer import ReedsImporter
 from celavi.des import Context
 from celavi.diagnostic_viz import DiagnosticViz
 import yaml
@@ -231,7 +232,15 @@ state_electricity_lci_filename = os.path.join(args.data,
 
 national_electricity_lci_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
-                                    inputs.get('natl_electricity_lci_filename'))
+                                    inputs.get('state_electricity_lci_filename'))
+
+state_reeds_grid_mix = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('state_reeds_grid_mix_filename'))
+
+national_reeds_grid_mix = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('national_reeds_grid_mix_filename'))
 
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
@@ -418,12 +427,27 @@ else:
 
 
 # Electricity spatial mix level. Defaults to 'state' when not provided.
-electricity_grid_spatial_level = scenario.get('electricity_grid_level', 'state')
+electricity_grid_spatial_level = scenario.get('electricity_mix_level', 'state')
 
 if electricity_grid_spatial_level == 'state':
+    
+    reeds_importer = ReedsImporter(reeds_imported_filename = state_reeds_grid_mix,
+                                   reeds_output_filename = state_electricity_lci_filename,
+                                  )  
+    reeds_importer.state_level_reeds_importer()
     dynamic_lci_filename = state_electricity_lci_filename
+
+
 else:
+    
+    reeds_importer = ReedsImporter(reeds_imported_filename = national_reeds_grid_mix,
+                                   reeds_output_filename = national_electricity_lci_filename,
+                                   )   
+    
     dynamic_lci_filename = national_electricity_lci_filename
+    
+    
+   
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   lcia_des_filename=lcia_des_filename,

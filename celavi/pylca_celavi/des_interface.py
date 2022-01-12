@@ -231,35 +231,41 @@ class PylcaCelavi:
                         working_df['flow name'] = working_df['material'] + ', ' + working_df['stage']
                         working_df= working_df[['flow name','flow quantity']]
                         
-                        # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
-                        # It calculates the LCI flows of the foreground process.
-                        res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename,self.electricity_grid_spatial_level,self.intermediate_demand_filename)
-                        # model_celavi_lci_insitu() calculating direct emissions from foreground
-                        # processes.
-                        emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
-        
-                        if not res.empty:
-                            res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename,self.lci_activity_locations)
-                            lci = postprocessing(res,emission)
-                            res = impact_calculations(lci,self.traci_lci_filename)
-                            res_df = pd.concat([res_df,res])
-                            lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
+                        if sum(working_df['flow quantity']) != 0:
                             
-                            
-                            df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-                            lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
-                            lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
-                            lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
-                            lca_db = lca_db[lca_db['material'] != 'concrete']
-                            lca_db['year'] = lca_db['year'].astype(int)
-                            lca_db = lca_db.drop_duplicates()
-                            lca_db.to_csv(self.shortcutlca_filename,
-                                          mode = 'a',
-                                          index = False,
-                                          header = False)
-                        else:        
-                           print(f'LCIA optimization failed for {material} at {stage} in {year}')
-            
+                            # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
+                            # It calculates the LCI flows of the foreground process.
+                            res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename,self.electricity_grid_spatial_level,self.intermediate_demand_filename)
+                            # model_celavi_lci_insitu() calculating direct emissions from foreground
+                            # processes.
+                            emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
+                            if not res.empty:
+                                
+                                res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename,self.lci_activity_locations)
+                                lci = postprocessing(res,emission)
+                                res = impact_calculations(lci,self.traci_lci_filename)
+                                res_df = pd.concat([res_df,res])
+                                lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
+                                
+                                
+                                df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
+                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
+                                lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
+                                lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+                                lca_db = lca_db[lca_db['material'] != 'concrete']
+                                lca_db['year'] = lca_db['year'].astype(int)
+                                lca_db = lca_db.drop_duplicates()
+                                lca_db.to_csv(self.shortcutlca_filename,
+                                              mode = 'a',
+                                              index = False,
+                                              header = False)
+                            else:                                
+                                print('Empty dataframe returned from pylcia foreground')           
+                
+                        else:                              
+                            print('Final demand for %s %s %s is zero' % (str(year), stage, material))
+                
+                
                 else:
                     print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
     
