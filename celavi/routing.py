@@ -127,8 +127,8 @@ class Router:
                        distance_filtering,
                        transportation_graph,
                        node_locations,
-                       routing_output_folder,
-                       preprocessing_output_folder):
+                       routes_output_file,
+                       routing_output_folder):
         """
         Calculates distances traveled between all locations in the locations_file.
         Includes distance traveled through each transportation region (e.g., county FIPS) and road class.
@@ -148,6 +148,9 @@ class Router:
             Transportation network data
 
         node_locations
+
+        routes_output_file
+            Path to file where complete routes dataset is saved.
 
         routing_output_folder
             Path to directory for routing outputs
@@ -316,7 +319,7 @@ class Router:
 
 
 
-        data_complete.to_csv(preprocessing_output_folder + 'routes_computed.csv',
+        data_complete.to_csv(routes_output_file,
                              index=False)
 
         return data_complete

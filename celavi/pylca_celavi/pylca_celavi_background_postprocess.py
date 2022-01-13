@@ -1,9 +1,3 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
-# TODO: if sys, pickle, and os are not used, consider removing
 import pickle
 import sys
 import pandas as pd
@@ -53,7 +47,7 @@ def postprocessing(final_res,insitu):
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
         final_res = total_em.drop(columns = ['flow quantity_x','flow quantity_y'])
     else:
-        print('pylca_celavi_background_postprocess: insitu is empty')
+        print('pylca_celavi_background_postprocess: no insitu emissions')
         
     return final_res
 
@@ -83,7 +77,6 @@ def impact_calculations(final_res,traci_lci_filename):
    
     traci = pd.read_csv(traci_lci_filename)
     traci = traci.fillna(0)
-    # TODO: consider removing impacts if not used.
     impacts = list(traci.columns)
     valuevars = ['Global Warming Air (kg CO2 eq / kg substance)',
      'Acidification Air (kg SO2 eq / kg substance)',

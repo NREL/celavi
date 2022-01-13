@@ -14,8 +14,8 @@ class CostMethods:
     """
 
     def __init__(self,
-                 step_costs_file: str = '../celavi-data/inputs/step_costs.csv',
-                 transpo_edges_file: str = '../celavi-data/inputs/transpo_edges.csv'):
+                 step_costs_file: str,
+                 transpo_edges_file: str):
         """
 
         Parameters

@@ -4,6 +4,8 @@ import numpy as np
 class TransportationTracker:
     """
     The TransportationTracker class inbound tonne*km values into a facility.
+    What distinguishes this class from the FacilityInventory is that
+    the inbound tonne_km only increments.
     """
 
     def __init__(self, timesteps):

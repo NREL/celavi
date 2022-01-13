@@ -1,25 +1,3 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
-# TODO: Consider using a class to organize the code below. Some variables
-#  currently defined outside functions (at places that may feel random to
-#  the reader) could then be defined in the __init__ function of the class.
-
-# TODO: Consider generalizing "pylca_opt_foreground.py",
-#  "pylca_opt_background.py", and "insitu_emission.py": a lot of code in
-#  those two modules are similar. For instance creating the tech_matrix,
-#  products and process lists, most of the pre-processing function etc. A
-#  class with more general function could be created and an instance of the
-#  class could be created when needed for the functions that compute the insitu
-#  emissions and foreground (part that are not similar between the two cases
-#  would be defined in those functions). A boolean, such as "insitu_emission",
-#  could be used for the code to differentiate inputs manipulations when needed
-#  (e.g., for the line "res.to_csv('intermediate_demand.csv', mode='a',
-#  header=False, index=False)" which is in pylca_opt_foreground.py, but not in
-#  insitu_emission.py or pylca_opt_background.py.
-
 import pickle
 import pandas as pd
 import numpy as np
@@ -29,7 +7,8 @@ import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename):
+def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
+                                lci_activity_locations):
 
     """
     Main function of this module which receives information from DES interface and runs the suppoeting optimization functions. 
@@ -50,6 +29,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
       material of LCA analysis
     uslci_filename: str
       filename for the USLCI inventory
+    lci_activity_locations
+        Path to file that provides a correspondence between location
+        identifiers in the US LCI.
     
     Returns
     -------
@@ -300,7 +282,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     process_product = process_product[process_product['value'] > 0]
     
     
-    location = pd.read_csv('location.csv')
+    location = pd.read_csv(lci_activity_locations)
     process_input_with_process = process_input_with_process.merge(location, left_on = 'location', right_on = 'old_name')
     process_input_with_process['location'] = process_input_with_process['new_name']
     process_input_with_process['conjoined_flownames'] = process_input_with_process['inputs']+ '@' + process_input_with_process['from_process'] + '@' + process_input_with_process['location'] 
@@ -469,7 +451,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
         res2 = pd.DataFrame()
         res,res2 = solver_optimization(tech_matrix, F)
         res['value'] = res['value']*final_demand_scaler
-        if res.empty == False:
+        if not res.empty:
           res.loc[:,'year'] =  i
           res.loc[:,'facility_id'] =  l
           res.loc[:,'stage'] = j
@@ -477,15 +459,18 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     
           print(str(i) +' - '+j + ' - ' + k)
     
-        else:
-           pass
-        if res2.empty == False:
+        else:                
+          print(f"optimization pylca-opt-background emission failed for {k} at {j} in {i}") 
+          pass
+       
+        if not res2.empty:
           res2.loc[:,'year'] =  i
           res.loc[:,'facility_id'] =  l
           res2.loc[:,'stage'] = j
           res2.loc[:,'material'] = k
     
         else:
+           print(f"optimization pylca-opt-background emission failed for {k} at {j} in {i}")
            pass
     
         print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)
@@ -499,9 +484,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename)
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
-    # TODO: consider adding comments to explain where uslci_product_df is
-    #  coming from or if possible defining uslci_product_df within this
-    #  function.
     final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     #To make the optimization easier

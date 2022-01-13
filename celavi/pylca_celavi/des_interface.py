@@ -44,10 +44,14 @@ class PylcaCelavi:
     """
     def __init__(self,
                  lca_results_filename,
+                 lcia_des_filename,
                  shortcutlca_filename,
+                 intermediate_demand_filename,
                  dynamic_lci_filename,
+                 electricity_grid_spatial_level,
                  static_lci_filename,
                  uslci_filename,
+                 lci_activity_locations,
                  stock_filename,
                  emissions_lci_filename,
                  traci_lci_filename,
@@ -63,17 +67,32 @@ class PylcaCelavi:
         lca_results_filename: str
             filename for the lca results file
 
+        lcia_des_filename : str
+            Path to file that stores impact results for passing back to the
+            discrete event simulation.
+
         shortcutlca_filename: str
             filename for the shortcut file for improving LCA calculations
 
+        intermediate_demand_filename : str
+            Path to file that stores final demands by year. For debugging
+            purposes only.
+
         dynamic_lci_filename: str
             filename for the lca inventory dependent upon time
+            
+        electricity_grid_spatial_level: str
+            grid spatial level used for lca calculations - state or national
 
         static_lci_filename: str
             filename for the lca fixed inventory 
 
         uslci_filename: str
             filename of the USLCI background pickle file
+
+        lci_activity_locations
+            Path to file that provides a correspondence between location
+            identifiers in the US LCI.
 
         stock_filename: str
             filename for storage pickle variable
@@ -93,10 +112,14 @@ class PylcaCelavi:
         """
         # filepaths for files used in the pylca calculations
         self.lca_results_filename = lca_results_filename
+        self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
+        self.intermediate_demand_filename = intermediate_demand_filename
         self.dynamic_lci_filename = dynamic_lci_filename
+        self.electricity_grid_spatial_level = electricity_grid_spatial_level
         self.static_lci_filename = static_lci_filename
         self.uslci_filename = uslci_filename
+        self.lci_activity_locations = lci_activity_locations
         self.stock_filename = stock_filename
         self.emissions_lci_filename = emissions_lci_filename
         self.traci_lci_filename = traci_lci_filename
@@ -170,69 +193,83 @@ class PylcaCelavi:
         pd.DataFrame
             LCIA results (also appends to csv file)
         """
-        df = df[df['flow quantity'] != 0]
-    
+        df = df[df['flow quantity'] != 0]        
         res_df = pd.DataFrame()
         df=df.reset_index()
         lcia_mass_flow = pd.DataFrame()
-    
-        #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
-        for index,row in df.iterrows():
-            
-            year = row['year']
-            stage = row['stage']
-            material = row['material']
-            facility_id = row['facility_id']
-            new_df = df[df['index'] == index]
+        states = list(pd.unique(df['state']))
 
-            if self.use_shortcut_lca_calculations:
-                #Calling the lca performance improvement function to do shortcut calculations. 
-                df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
-    
-            else:
+        #The LCA needs to be done for every region separately. Thus separating the states in the dataframe.
+        for st in states:
+            df_s = df[df['state'] == st]
+
+            #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
+            for index,row in df_s.iterrows():
                 
-                df_with_no_lca_entry = new_df
-                result_shortcut = pd.DataFrame()
-
-            if not df_with_no_lca_entry.empty:
-                # Calculates the concrete lifecycle flow and emissions inventory
-                df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.substitution_rate)
+                year = row['year']
+                stage = row['stage']
+                material = row['material']
+                facility_id = row['facility_id']
+                state = row['state']
+                new_df = df_s[df_s['index'] == index]
     
-                if not df_static.empty:
-    
-                    working_df = df_with_no_lca_entry
-                    working_df['flow name'] = working_df['material'] + ', ' + working_df['stage']
-                    working_df= working_df[['flow name','flow quantity']]
-    
-                    # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
-                    # It calculates the LCI flows of the foreground process.
-                    res = model_celavi_lci(working_df,year,facility_id,stage,material,df_static,self.dynamic_lci_filename)
-    
-                    # model_celavi_lci_insitu() calculating direct emissions from foreground
-                    # processes.
-                    emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
-    
-                    if not res.empty:
-                        res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename)   
-                        lci = postprocessing(res,emission)
-                        res = impact_calculations(lci,self.traci_lci_filename)
-                        res_df = pd.concat([res_df,res])
-                        lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
-                        
-                        
-                        df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-                        lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
-                        lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
-                        lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
-                        lca_db = lca_db[lca_db['material'] != 'concrete']
-                        lca_db['year'] = lca_db['year'].astype(int)
-                        lca_db = lca_db.drop_duplicates()
-                        lca_db.to_csv('lca_db.csv',mode = 'a',index = False, header = False)
+                if self.use_shortcut_lca_calculations:
+                    #Calling the lca performance improvement function to do shortcut calculations. 
+                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
         
-            else:
-                print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
-
-            res_df = pd.concat([res_df,result_shortcut])
+                else:                    
+                    df_with_no_lca_entry = new_df
+                    result_shortcut = pd.DataFrame()
+    
+                if not df_with_no_lca_entry.empty:
+                    # Calculates the concrete lifecycle flow and emissions inventory
+                    df_static,df_emissions = concrete_life_cycle_inventory_updater(new_df, year, material, stage, self.static_lci_filename, self.stock_filename, self.emissions_lci_filename, self.substitution_rate)
+        
+                    if not df_static.empty:
+        
+                        working_df = df_with_no_lca_entry
+                        working_df['flow name'] = working_df['material'] + ', ' + working_df['stage']
+                        working_df= working_df[['flow name','flow quantity']]
+                        
+                        if sum(working_df['flow quantity']) != 0:
+                            
+                            # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
+                            # It calculates the LCI flows of the foreground process.
+                            res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename,self.electricity_grid_spatial_level,self.intermediate_demand_filename)
+                            # model_celavi_lci_insitu() calculating direct emissions from foreground
+                            # processes.
+                            emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
+                            if not res.empty:
+                                
+                                res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename,self.lci_activity_locations)
+                                lci = postprocessing(res,emission)
+                                res = impact_calculations(lci,self.traci_lci_filename)
+                                res_df = pd.concat([res_df,res])
+                                lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
+                                
+                                
+                                df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
+                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
+                                lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
+                                lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+                                lca_db = lca_db[lca_db['material'] != 'concrete']
+                                lca_db['year'] = lca_db['year'].astype(int)
+                                lca_db = lca_db.drop_duplicates()
+                                lca_db.to_csv(self.shortcutlca_filename,
+                                              mode = 'a',
+                                              index = False,
+                                              header = False)
+                            else:                                
+                                print(f'Empty dataframe returned from pylcia foreground for {year} {stage} {material}')
+                
+                        else:                              
+                            print('Final demand for %s %s %s is zero' % (str(year), stage, material))
+                
+                
+                else:
+                    print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
+    
+                res_df = pd.concat([res_df,result_shortcut])
 
         #Correcting the units for LCIA results. 
         for index,row in res_df.iterrows():
@@ -249,7 +286,7 @@ class PylcaCelavi:
 
            
         # The line below is just for debugging if needed
-        res_df.to_csv('final_lcia_results_to_des.csv', mode='a', header=False, index=False)
+        res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
     
         # This is the result that needs to be analyzed every timestep.
         return res_df

@@ -1,8 +1,10 @@
 from typing import Dict, List
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
 import plotly.express as px
+
 from .inventory import FacilityInventory
 
 
@@ -132,9 +134,6 @@ class DiagnosticViz:
         """
         This method generates the history plots.
         """
-        # First, melt the dataframe so that its data structure is generalized
-        # for either mass or count plots, and sum over years and facility types.
-
         # Create the figure
         fig = px.line(
             self.gather_and_melt_cumulative_histories(),
@@ -146,6 +145,9 @@ class DiagnosticViz:
             width=1000,
             height=1000,
         )
+
+        # If a previous figure exists, remove it
+        Path(self.output_plot_filename).unlink(missing_ok=True)
 
         # Write the figure
         fig.write_image(self.output_plot_filename)

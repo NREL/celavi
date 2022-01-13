@@ -16,7 +16,10 @@ import pandas as pd
 
 class Data(pd.DataFrame):
     """
-    Data representation.
+    Data representation. Specific datasets are created as child classes with
+    defined column names, data types, and backfilling values. Creating child
+    classes removes the need to define column names etc when the classes are
+    called to read data from files.
     """
 
     COLUMNS = []
@@ -41,8 +44,6 @@ class Data(pd.DataFrame):
         """
         _df = pd.DataFrame({}) if df is None and fpath is None else self.load(fpath=fpath,
                                                                               columns=columns)
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(Data, self).__init__(data=_df)
 
         self.source = fpath or 'DataFrame'
@@ -132,7 +133,7 @@ class Data(pd.DataFrame):
             # count the total values
             _count_total = self[column].__len__()
 
-            # fill the missing values with zeros  # TODO: rather "with value"
+            # fill the missing values with specified value
             self[column].fillna(value, inplace=True)
 
             # log a warning with the number of missing values
@@ -187,11 +188,6 @@ class TransportationGraph(Data):
     Read in and process the underlying transportation network for the Router
     module.
     """
-    # TODO Moreover, wouldn't it be simpler to
-    #  always call the Data class but with different columns input whenever it
-    #  is used for Locations, TurbineLocations etc.? Otherwise maybe justify
-    #  why several sub Data classes are needed in the short description of
-    #  the class.
     COLUMNS = ({'name': 'edge_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'statefp', 'type': str, 'index': False, 'backfill': None},
                {'name': 'countyfp', 'type': str, 'index': False, 'backfill': None},
@@ -201,11 +197,8 @@ class TransportationGraph(Data):
                {'name': 'fclass', 'type': int, 'index': False, 'backfill': None})
 
     def __init__(self, df=None, fpath=None,
-                 # TODO: how is "for k in d.keys()" used? should it be removed?
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(TransportationGraph, self).__init__(df=df, fpath=fpath, columns=columns,
                                                   backfill=backfill)
 
@@ -219,11 +212,8 @@ class TransportationNodeLocations(Data):
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None})
 
     def __init__(self, df=None, fpath=None,
-                 # TODO: how is "for k in d.keys()" used? should it be removed?
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(TransportationNodeLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
@@ -244,11 +234,8 @@ class Locations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 # TODO: how is "for k in d.keys()" used? should it be removed?
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(Locations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
@@ -276,11 +263,8 @@ class TurbineLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 # TODO: how is "for k in d.keys()" used? should it be removed?
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(TurbineLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                           backfill=backfill)
 
@@ -300,11 +284,8 @@ class OtherFacilityLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 # TODO: how is "for k in d.keys()" used? should it be removed?
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(OtherFacilityLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
@@ -325,11 +306,8 @@ class LandfillLocations(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 # TODO: how is "for k in d.keys()" used? should it be removed?
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(LandfillLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
@@ -355,11 +333,8 @@ class StandardScenarios(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 # TODO: how is "for k in d.keys()" used? should it be removed?
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        # TODO: consider replacing super(X, self).init(...) by
-        #  super().init(...)
         super(StandardScenarios, self).__init__(df=df, fpath=fpath, columns=columns,
                                                backfill=backfill)
 
@@ -376,7 +351,7 @@ class RoutePairs(Data):
                )
 
     def __init__(self, df=None, fpath=None,
-                 columns={d['name']: d['type'] for d in COLUMNS for k in d.keys()},
+                 columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(RoutePairs,self).__init__(df=df, fpath=fpath, columns=columns,
                                         backfill=backfill)
