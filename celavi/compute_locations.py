@@ -98,11 +98,35 @@ class ComputeLocations:
         """
         Ingests raw data from the U.S. Wind Turbine database, filters down to
         the contiguous U.S. and creates a data frame that can be combined with
-        other sets of facility location data.
+        other sets of facility location data. The number_of_technology_units
+        file is also created from this dataset.
+
+        See TurbineLocations child class of Data class for column names and
+        data types, and where to download the USWTDB.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        wind_plant_locations: pd.DataFrame
+            Dataset of power plant locations including unique facility ID, the
+            facility type identifier, a lat/long pair, and four generic region
+            identifiers (country, state, county, etc.)
+
+            Columns:
+                facility_id : int
+                facility_type : str
+                lat : float
+                long : float
+                region_id_1 : str
+                region_id_2 : str
+                region_id_3 : str
+                region_id_4 : str
         """
 
         # Process data for wind power plants - from USWTDB
-        turbine_locations = Data.TurbineLocations(fpath=self.power_plant_locations, backfill=self.backfill)
+        turbine_locations = Data.TechUnitLocations(fpath=self.power_plant_locations, backfill=self.backfill)
         
         # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
         turbine_locations_with_eia = turbine_locations[(turbine_locations['eia_id'] != '-1') &
@@ -117,12 +141,6 @@ class ComputeLocations:
                                                    "p_year": "year"},
                                           inplace=True)
 
-        # TODO: why replacing self-explanatory names with non self-explanatory
-        #  ones? why not replacing t_state by state and t_county by county for
-        #  instance. Consider refactor region_id_1, region_id_2, region_id_3
-        #  and region_id_4 by self-explanatory variable names in the all
-        #  project. Also, could the exclusions below linked to considering only
-        #  road transportation in the contiguous US be generalized?
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'GU']
         turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'HI']
@@ -135,7 +153,8 @@ class ComputeLocations:
         # exclude Block Island since no transport from offshore turbine to shore
         turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.facility_id != 58035]
 
-        # Filter down the dataset to generate the number_of_turbines file
+        # Filter down the dataset to generate the number_of_technology_units
+        # file
         n_turb = turbine_locations_with_eia[
             ['facility_id', 'p_name', 'year', 'p_tnum', 't_model', 't_cap']
         ].drop_duplicates().dropna()
@@ -148,14 +167,12 @@ class ComputeLocations:
         data6 = data5.merge(data4, on = ['year','facility_id'])        
 
         # Store this dataframe into self for use in capacity projection
-        # calculations
-        # this file created the number of turbines file.
+        # calculations and creation of the number_of_technology_units file
         self.capacity_data = data6
 
         turbine_locations_filtered = turbine_locations_with_eia[
             turbine_locations_with_eia.year >= self.start_year
         ]
-
 
         # determine average lat and long for all turbines by facility_id
         # (this is the plant location for each facility_id)
@@ -166,8 +183,7 @@ class ComputeLocations:
         # Unique eia id and p _year have only one lat long associated now along with one region county and state.
         
         wind_plant_locations = plant_locations
-        # use the number_of_turbines data structure to filter down the
-        # turbine_locations_with_eia data structure
+        # use data6 to filter down the power plant locations list
         wind_plant_locations = wind_plant_locations[
             wind_plant_locations.facility_id.isin(
                 data6.facility_id
@@ -175,11 +191,6 @@ class ComputeLocations:
         ].drop_duplicates(subset='facility_id',
                           keep='first')
 
-        # TODO: because quite similar bits of codes are used several times
-        #  and that warnings are pretty similar as well, consider writing a
-        #  method to handle lookup for the wind_power_plant, landfills, and
-        #  other_facility. The method would take one of the type as input and
-        #  return the lookup or output a warning.
         wind_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if wind_plant_type_lookup:
             wind_plant_facility_type_convention = wind_plant_type_lookup
@@ -196,7 +207,31 @@ class ComputeLocations:
 
     def landfill(self):
         """
-        Process data for landfills - from EPA LMOP
+        Processes raw data from U.S. EPA Landfill Methane Outreach Program
+        (LMOP) to create a dataset of  landfill locations in the contiguous
+        U.S. See the LandfillLocations child class of the Data class for
+        column names and download location.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        landfill_locations_no_nulls : pd.DataFrame
+            Dataset of landfill locations including unique facility ID, the
+            facility type identifier, a lat/long pair, and four generic region
+            identifiers (country, state, county, etc.)
+
+            Columns:
+                facility_id : int
+                facility_type : str
+                lat : float
+                long : float
+                region_id_1 : str
+                region_id_2 : str
+                region_id_3 : str
+                region_id_4 : str
+
         """
 
         # load landfill facility data
@@ -214,11 +249,6 @@ class ComputeLocations:
                                                                 })
         landfill_locations_all = landfill_locations_all.astype({'landfill_closure_year': 'int'})
 
-        # TODO: because quite similar bits of codes are used several times
-        #  and that warnings are pretty similar as well, consider writing a
-        #  method to handle lookup for the wind_power_plant, landfills, and
-        #  other_facility. The method would take one of the type as input and
-        #  return the lookup or output a warning.
         landfill_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('landfill')].values[0][0]
         if landfill_type_lookup:
             landfill_facility_type_convention = landfill_type_lookup
@@ -238,9 +268,35 @@ class ComputeLocations:
 
         return landfill_locations_no_nulls
 
+
     def other_facility(self):
         """
-        Process other facility data
+        Process additional facility data that does not already have a dataset-
+        specific method. See the OtherFacilityLocations child class of the Data
+        class for column names.
+
+        If using this method, the location dataset being read in must already
+        be in the same format as the Return value.
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        facility_locations: pd.DataFrame
+            Dataset of generic facility locations including unique facility ID,
+             the facility type identifier, a lat/long pair, and four generic
+             region identifiers (country, state, county, etc.)
+
+            Columns:
+                facility_id : int
+                facility_type : str
+                lat : float
+                long : float
+                region_id_1 : str
+                region_id_2 : str
+                region_id_3 : str
+                region_id_4 : str
         """
 
         facility_locations = Data.OtherFacilityLocations(fpath=self.other_facility_locations, backfill=self.backfill)
@@ -250,11 +306,6 @@ class ComputeLocations:
 
         list_other_facility_types = facility_locations.facility_type.unique()
 
-        # TODO: because quite similar bits of codes are used several times
-        #  and that warnings are pretty similar as well, consider writing a
-        #  method to handle lookup for the wind_power_plant, landfills, and
-        #  other_facility. The method would take one of the type as input and
-        #  return the lookup or output a warning.
         for facility_type in list_other_facility_types:
             other_facility_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains(facility_type)].values[0][0]
 
@@ -273,14 +324,20 @@ class ComputeLocations:
             warnings.warn(warning_str)
         return facility_locations
 
+
     def capacity_projections(self):
         """
+        Use NREL's Standard Scenarios for electricity grid mix projections to
+        calculate future technology unit installations. See the
+        StandardScenarios child class of the Data parent class for additional
+        information on obtaining and formatting the input dataset.
+
         Parameters
         ----------
 
         Returns
         -------
-        None
+
         """
 
         # Read in the standard scenario data
@@ -395,15 +452,6 @@ class ComputeLocations:
             how='outer'
         )
 
-        # TODO: it seems that the "turbine_data_filename.csv" is an
-        #  intermediary output that is used as an input later. In the config
-        #  file it is listed as an input. Consider clarifying the role of
-        #  "turbine_data_filename.csv" (is it a file that the user will need
-        #  to provide?). Make sure to clarify for the user that some files
-        #  written under inputs in the config file are actually intermediary
-        #  output and that they don't need to be provided.
-        # combine the historical data with the capacity expansion projections
-        # then save to CSV to create the turbine data file (number_of_turbines)
         self.capacity_data.append(
             capacity_future,
             ignore_index=True,
@@ -449,7 +497,19 @@ class ComputeLocations:
 
     def join_facilities(self, locations_output_file):
         """
-        Join all facility data into single file
+        Call other ComputeLocations methods to process raw locations datasets
+        into a single facility location dataset. Creates the
+        number_of_technology_units dataset from historical installation data
+        and capacity expansion projection data.
+
+        Parameters
+        ----------
+        locations_output_file : str
+            Path where the processed and aggregated locations dataset is saved
+
+        Returns
+        -------
+        None
         """
 
         wind_plant_locations = ComputeLocations.wind_power_plant(self)
@@ -460,10 +520,6 @@ class ComputeLocations:
         locations = locations.append(landfill_locations_no_nulls)
         locations.reset_index(drop=True, inplace=True)
 
-        # TODO: Isn't the code below duplicate? It seems that
-        #  "ComputeLocations.wind_power_plant(self)" should already have
-        #  removed GU, HI etc. If not duplicate could it be all handled
-        #  once in the wind_power_plant method?
         # exclude Hawaii, Guam, Puerto Rico, and Alaska
         # (only have road network data for the contiguous United States)
         locations = locations[locations.region_id_2 != 'GU']

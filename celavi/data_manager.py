@@ -240,9 +240,13 @@ class Locations(Data):
                                                           backfill=backfill)
 
 
-class TurbineLocations(Data):
+class TechUnitLocations(Data):
     """
     Read in and process raw power plant locations dataset.
+
+    Dataset is downloadable at https://eerscmap.usgs.gov/uswtdb/
+
+    No manual changes are needed to the raw dataset before it is processed.
     """
     COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
@@ -261,8 +265,8 @@ class TurbineLocations(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        super(TurbineLocations, self).__init__(df=df, fpath=fpath, columns=columns,
-                                                          backfill=backfill)
+        super(TechUnitLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                backfill=backfill)
 
 
 class OtherFacilityLocations(Data):
@@ -288,7 +292,8 @@ class OtherFacilityLocations(Data):
 
 class LandfillLocations(Data):
     """
-    Read in and process landfill facility locations dataset.
+    Read in and process raw landfill facility locations dataset from the U.S.
+    EPA's LMOP database at https://www.epa.gov/lmop.
     """
     COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
                {'name': 'State', 'type': str, 'index': False, 'backfill': None},
@@ -309,8 +314,17 @@ class LandfillLocations(Data):
 
 class StandardScenarios(Data):
     """
-    Read in and process capacity expansion projection dataset.
-    NOTE: Delete the first line of the raw Standard Scenarios file before
+    Read in and process Standard Scenarios electricity grid mix datasets,
+    viewable and downloadable at
+     https://cambium.nrel.gov/?project=c3fec8d8-6243-4a8a-9bff-66af71889958 .
+    More information on the Standard Scenarios project is available from
+    https://www.nrel.gov/analysis/standard-scenarios.html .
+
+    This class is set up to use the annual, state-level datasets, with file
+    names that end in: "_annual_state.csv". Using any other type of dataset
+    will produce an error.
+
+    USER NOTE: Delete the first line of the raw Standard Scenarios file before
     reading in to CELAVI.
     """
     COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},

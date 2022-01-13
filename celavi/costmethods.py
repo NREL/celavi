@@ -1,8 +1,3 @@
-# TODO: Add a short module docstring above the code to:
-#  1) provide authors, date of creation
-#  2) give a high level description (2-3 lines) of what the module does
-#  3) write any other relevant information
-
 import pandas as pd
 import numpy as np
 import warnings
@@ -10,34 +5,23 @@ import warnings
 
 class CostMethods:
     """
-
+    Functions for calculating processing and transportation costs throughout
+    the supply chain. The methods in this Class must be re-written to
+    correspond to each case study; in general, these methods are not reusable
+    across different supply chains or technologies.
     """
 
-    def __init__(self,
-                 step_costs_file: str,
-                 transpo_edges_file: str):
+    def __init__(self):
         """
 
         Parameters
         ----------
-        step_costs_file
-            file listing processing steps and cost calculation methods by
-            facility type
-        transpo_edges_file
-            file listing inter-facility edges and transpo cost calculation
-            methods
+
 
         Returns
         -------
-        None
+
         """
-        # TODO: it seems that the two variables below are not used anywhere
-        #  (whenever the data from those two csv files are needed (e.g., in
-        #  the costgraph module) they are directly read into Pandas DataFrames
-        #  using the file locations provided in the config file. Consider
-        #  removing the two lines below and the few lines above.
-        self.step_costs = pd.read_csv(step_costs_file)
-        self.transpo_edges = pd.read_csv(transpo_edges_file)
 
 
     @staticmethod
@@ -50,13 +34,13 @@ class CostMethods:
         path_dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
-            processes
+            processes.
 
         Returns
         -------
         float
             Use this method for any processing step or transportation edge with
-            no associated cost
+            no associated cost.
         """
         return 0.0
 
@@ -380,54 +364,6 @@ class CostMethods:
         else:
             return 0.08 * _vkmt
 
-
-    @staticmethod
-    def finegrind_shred_transpo(path_dict):
-        """
-        Cost method for calculating lost material transportation costs (truck)
-        in USD/metric ton by accounting for the fraction of material lost from
-        the fine grinding step.
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Cost of transporting material loss metric ton of shredded blade
-            material by one kilometer. Units: USD/metric ton.
-        """
-        _vkmt = path_dict['vkmt']
-        _loss = path_dict['path_split']['fine grinding']['fraction']
-        if np.isnan(_vkmt):
-            return 0.0
-        else:
-            return 0.08 * (1 - _loss) * _vkmt
-
-    @staticmethod
-    def finegrind_loss_transpo(path_dict):
-        """
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-
-        """
-        _vkmt = path_dict['vkmt']
-        _loss = path_dict['path_split']['fine grinding']['fraction']
-        if np.isnan(_vkmt):
-            return 0.0
-        else:
-            return 0.08 * _loss * _vkmt
 
 
     @staticmethod

@@ -445,7 +445,7 @@ else:
     dynamic_lci_filename = national_electricity_lci_filename
     
     
-   
+
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   lcia_des_filename=lcia_des_filename,
