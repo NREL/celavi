@@ -19,6 +19,7 @@ from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
 from celavi.pylca_celavi.des_interface import PylcaCelavi
+from celavi.reeds_importer import ReedsImporter
 from celavi.des import Context
 from celavi.diagnostic_viz import DiagnosticViz
 import yaml
@@ -224,13 +225,22 @@ traci_lci_filename = os.path.join(args.data,
                                   data_dirs.get('lci'),
                                   inputs.get('traci_lci_filename'))
 
-dynamic_lci_filename = os.path.join(args.data,
-                                    data_dirs.get('lci'),
-                                    inputs.get('dynamic_lci_filename'))
 
-lcia_locations_filename = os.path.join(args.data,
-                                       data_dirs.get('outputs'),
-                                       generated.get('lcia_locations'))
+state_electricity_lci_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    generated.get('state_electricity_lci_filename'))
+
+national_electricity_lci_filename = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    generated.get('national_electricity_lci_filename'))
+
+state_reeds_grid_mix = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('state_reeds_grid_mix_filename'))
+
+national_reeds_grid_mix = os.path.join(args.data,
+                                    data_dirs.get('lci'),
+                                    inputs.get('national_reeds_grid_mix_filename'))
 
 # FILENAMES FOR OUTPUT DATA
 pathway_crit_history_filename = os.path.join(
@@ -342,7 +352,7 @@ else:
 
 
 # Data filtering for states
-states_to_filter = scen.get('states_to_filter', [])
+states_to_filter = scenario.get('states_included', [])
 if location_filtering:
     if not states_to_filter:
         print('Cannot filter data; no state list provided', flush=True)
@@ -416,12 +426,33 @@ else:
           flush=True)
 
 
+# Electricity spatial mix level. Defaults to 'state' when not provided.
+electricity_grid_spatial_level = scenario.get('electricity_mix_level', 'state')
+
+if electricity_grid_spatial_level == 'state':    
+    reeds_importer = ReedsImporter(reeds_imported_filename = state_reeds_grid_mix,
+                                   reeds_output_filename = state_electricity_lci_filename,
+                                  )  
+    reeds_importer.state_level_reeds_importer()
+    dynamic_lci_filename = state_electricity_lci_filename
+
+
+else:
+    reeds_importer = ReedsImporter(reeds_imported_filename = national_reeds_grid_mix,
+                                   reeds_output_filename = national_electricity_lci_filename,
+                                   )   
+    reeds_importer.national_level_reeds_importer()
+    dynamic_lci_filename = national_electricity_lci_filename
+    
+    
+   
 # Prepare LCIA code
 lca = PylcaCelavi(lca_results_filename=lca_results_filename,
                   lcia_des_filename=lcia_des_filename,
                   shortcutlca_filename=shortcutlca_filename,
                   intermediate_demand_filename=intermediate_demand_filename,
                   dynamic_lci_filename=dynamic_lci_filename,
+                  electricity_grid_spatial_level = electricity_grid_spatial_level,
                   static_lci_filename=static_lci_filename,
                   uslci_filename=uslci_filename,
                   lci_activity_locations=lci_locations_filename,
@@ -581,7 +612,7 @@ locations_select_df = locations_df.loc[:, locations_columns]
 lcia_locations_df = lcia_df.merge(locations_select_df, how='inner',
                                   on='facility_id')
 
-lcia_locations_df.to_csv(lcia_locations_filename, index=False)
+lcia_locations_df.to_csv(lca_results_filename, index=False)
 
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',

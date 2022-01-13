@@ -16,7 +16,7 @@ from pyomo.opt import SolverFactory
 
 
 #We are integrating static lca with dynamics lca over here. 
-def preprocessing(year,df_static,dynamic_lci_filename):
+def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level):
 
     """
     This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
@@ -26,6 +26,8 @@ def preprocessing(year,df_static,dynamic_lci_filename):
     ----------
     year : str
          year of LCA calculation
+    state : str
+         state of Facility
     df_static : pd.DataFrame
          lca inventory static 
     dynamic_lci_filename: str
@@ -41,11 +43,15 @@ def preprocessing(year,df_static,dynamic_lci_filename):
     """
     
     #Reading in dynamics LCA databases
-    df_dynamic = pd.read_csv(dynamic_lci_filename)
-    df_dynamic_year = df_dynamic[df_dynamic['year'] == year]
-    frames = [df_static, df_dynamic_year]
+    df_dynamic = pd.read_csv(dynamic_lci_filename) 
+    if electricity_grid_spatial_level == 'state':
+        df_dynamic_year = df_dynamic[(df_dynamic['year'] == year) & (df_dynamic['state'] == state)]
+        df_dynamic_year = df_dynamic_year.drop('state',axis = 1)
+    else:
+        df_dynamic_year = df_dynamic[(df_dynamic['year'] == year)]
+    
+    frames = [df_static,df_dynamic_year]
     df = pd.concat(frames)
-
     df_input = df[df['input'] == True]
     df_output = df[df['input'] == False]
     
@@ -188,7 +194,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
          facility ID
     j: str
         stage
-    k: sr
+    k: str
         material
     final_demand_scaler: int
         scaling variable number to ease optimization
@@ -205,24 +211,28 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     """
 
     res = pd.DataFrame()
-    res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)
+    res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)        
     res['value'] = res['value'] * final_demand_scaler
-    if res.empty == False:
+    if not res.empty:
 
        res.loc[:, 'year'] = yr
        res.loc[:, 'facility_id'] = i
        res.loc[:, 'stage'] = j
        res.loc[:, 'material'] = k
+       res = electricity_corrector_before20(res)
+       # Intermediate demand is not required by the framewwork, but it is useful
+       # for debugging.
+       res.to_csv(intermediate_demand_filename, mode='a', header=False, index=False)    
+       return res
+    
+    else:        
+       print(f"optimization pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
 
-    res = electricity_corrector_before20(res)
-
-    # Intermediate demand is not required by the framewwork, but it is useful
-    # for debugging.
-    res.to_csv(intermediate_demand_filename, mode='a', header=False, index=False)
-    return res
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename,intermediate_demand_filename):
+
+
+def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
 
     """
     Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
@@ -259,7 +269,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename
     # Running LCA for all years as obtained from CELAVI
 
     #Incorporating dynamics lci database
-    process_df,df_with_all_other_flows = preprocessing(int(yr),df_static,dynamic_lci_filename)
+    process_df,df_with_all_other_flows = preprocessing(int(yr),state,df_static,dynamic_lci_filename,electricity_grid_spatial_level)
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'product', columns = 'process', values = 'value' )
     tech_matrix = tech_matrix.fillna(0)
@@ -272,7 +282,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,df_static,dynamic_lci_filename
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
-        print('Final demand for %s %s %s is zero' % (str(yr), stage, material))
+        print('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
     
     else:
