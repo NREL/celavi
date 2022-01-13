@@ -220,6 +220,7 @@ class CostMethods:
         """
         _dict = path_dict['learning']['fine grinding']
         _loss = path_dict['path_split']['fine grinding']['fraction']
+        _year = path_dict['year']
 
         # If the "cumul" value is None, then there has been no processing
         # through fine grinding and the initial cumul value from the config
@@ -247,7 +248,7 @@ class CostMethods:
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         # see the landfilling method - this cost model is identical
-        _landfill = _loss * 3.0E-29 * np.exp(0.0344 * path_dict['year'])
+        _landfill = _loss * 8.0E-30 * np.exp(0.0352 * _year)
 
         # returns processing cost, reduced by learning, minus revenue which
         # stays constant over time (USD/metric ton)
@@ -337,10 +338,11 @@ class CostMethods:
             one kilometer. Units: USD/metric ton.
         """
         _vkmt = path_dict['vkmt']
+        _year = path_dict['year']
         if _vkmt is None:
             return 0.0
         else:
-            return 0.08 * _vkmt
+            return (0.0011221 * _year - 2.1912399) * _vkmt
 
 
 
