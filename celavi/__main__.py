@@ -352,7 +352,7 @@ else:
 
 
 # Data filtering for states
-states_to_filter = scen.get('states_to_filter', [])
+states_to_filter = scenario.get('states_included', [])
 if location_filtering:
     if not states_to_filter:
         print('Cannot filter data; no state list provided', flush=True)
