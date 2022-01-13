@@ -240,7 +240,7 @@ class Locations(Data):
                                                           backfill=backfill)
 
 
-class TurbineLocations(Data):
+class TechUnitLocations(Data):
     """
     Read in and process raw power plant locations dataset.
 
@@ -265,8 +265,8 @@ class TurbineLocations(Data):
     def __init__(self, df=None, fpath=None,
                  columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
-        super(TurbineLocations, self).__init__(df=df, fpath=fpath, columns=columns,
-                                                          backfill=backfill)
+        super(TechUnitLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                backfill=backfill)
 
 
 class OtherFacilityLocations(Data):

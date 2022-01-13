@@ -126,7 +126,7 @@ class ComputeLocations:
         """
 
         # Process data for wind power plants - from USWTDB
-        turbine_locations = Data.TurbineLocations(fpath=self.power_plant_locations, backfill=self.backfill)
+        turbine_locations = Data.TechUnitLocations(fpath=self.power_plant_locations, backfill=self.backfill)
         
         # select only those turbines with eia_ids (exclude turbines without) only 9314 out of 67814 don't have eia_id
         turbine_locations_with_eia = turbine_locations[(turbine_locations['eia_id'] != '-1') &

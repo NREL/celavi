@@ -50,7 +50,7 @@ class Context:
             The pathname to the file that contains the average component masses.
 
         possible_components: List[str]
-            The list of possible items (like "blade", "turbine", "foundation")
+            The list of possible technology components.
 
         possible_materials: List[str]
             The possible materials in the components. This should span all

@@ -39,9 +39,9 @@ def filter_locations(loc_filename,
         facililites_included = locations_filtered[['facility_id', 'facility_type', 'lat', 'long']]
         facility_id_included = list(pd.unique(facililites_included['facility_id']))
 
-        number_of_turbines = pd.read_csv(tech_units_filename)
-        number_of_turbines_filtered = number_of_turbines[number_of_turbines['facility_id'].isin(facility_id_included)]
-        number_of_turbines_filtered.to_csv(tech_units_filename)
+        num_tech_units = pd.read_csv(tech_units_filename)
+        num_tech_units_filter = num_tech_units[num_tech_units['facility_id'].isin(facility_id_included)]
+        num_tech_units_filter.to_csv(tech_units_filename)
 
 
 def filter_routes(filtered_locations_filename, routes_filename):
