@@ -115,20 +115,9 @@ class CostMethods:
         -------
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
         """
-        # TODO: Input parameters should be used instead of magic numbers or
-        #  at least those numbers should be stored in variables.
-        #  Those variables could have default values set up in the init method
-        #  of the CostMethods class (this way they may not be modified by users
-        #  but the code is better organized).
         return 27.56
 
 
-    # TODO: Consider having one general method that would compute learning by
-    #  doing based on 4 inputs: cumul_initial, cumul, learning_rate, and
-    #  init_cost. And  based on three steps i) determine cumul_blade,
-    #  ii) compute learning, iii) update costs. The general method could then
-    #  be called in the coarse_grinding_onsite, coarse_grinding, and
-    #  fine_grinding methods with different inputs.
     @staticmethod
     def coarse_grinding_onsite(path_dict):
         """
@@ -284,11 +273,6 @@ class CostMethods:
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
              to cement co-processing plant
         """
-        # TODO: Input parameters should be used instead of magic numbers or
-        #  at least those numbers should be stored in variables.
-        #  Those variables could have default values set up in the init method
-        #  of the CostMethods class (this way they may not be modified by users
-        #  but the code is better organized).
         return -10.37
 
 
@@ -334,12 +318,6 @@ class CostMethods:
             return _cost * _vkmt / _mass
 
 
-    # TODO: Consider having one general method that would compute transport
-    #  costs based on 3 inputs: modifier, distance (_vkmt), and costs (0.08).
-    #  And  based on the current code with "return costs * modifier * _vkmt"
-    #  The general method could then be called in the shred_transpo,
-    #  finegrind_shred_transpo, and finegrind_loss_transpo, and methods with
-    #  different inputs.
     @staticmethod
     def shred_transpo(path_dict):
         """
@@ -388,11 +366,6 @@ class CostMethods:
             Cost of manufacturing 1 metric ton of new turbine blade.
 
         """
-        # TODO: Input parameters should be used instead of magic numbers or
-        #  at least those numbers should be stored in variables.
-        #  Those variables could have default values set up in the init method
-        #  of the CostMethods class (this way they may not be modified by users
-        #  but the code is better organized).
         return 11440.0
 
 
