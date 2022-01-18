@@ -82,8 +82,6 @@ class Router:
         """
 
         _start_point = np.array(start)
-        # TODO: consider adding a comment specifying what cKDTree.query()
-        #  outputs (distance to and index of the nearest neighbor(s))
         _start_point_idx = self._btree.query(_start_point, k=1)[1]
         from_node = self.node_map.loc[_start_point_idx, 'node_id']
 
@@ -116,7 +114,6 @@ class Router:
             .sum().reset_index()
 
         _summary['region_transportation'] = _summary['statefp'] + _summary['countyfp']
-        # TODO:  A comment should also specify why weight is divided by 1000.
         _summary['vkmt'] = _summary['weight'] / 1000.0
 
         return _summary[['region_transportation', 'fclass', 'vkmt']]
@@ -154,9 +151,6 @@ class Router:
 
         routing_output_folder
             Path to directory for routing outputs
-
-        preprocessing_output_folder
-            Path to directory for preprocessing outputs
 
         Returns
         -------
