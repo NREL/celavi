@@ -273,7 +273,6 @@ mass_cumulative_histories_filename = os.path.join(
 
 ## Read in datasets that are passed around as DataFrames or similar
 component_material_mass = pd.read_csv(component_material_masses_filename)
-technology_data = pd.read_csv(technology_data_filename)
 
 ## Define general model and scenario parameters
 if use_computed_routes:
@@ -496,6 +495,7 @@ print(f'Context initialized at {np.round(time.time() - time0, 1)} s', flush=True
 
 # Create the technology dataframe that will be used to populate
 # the context with components.
+technology_data = pd.read_csv(technology_data_filename)
 components = []
 for _, row in technology_data.iterrows():
     year = row['year']
