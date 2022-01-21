@@ -36,7 +36,7 @@ def concrete_life_cycle_inventory_updater(d_f,
     stock_filename: str
            filename for storage pickle variable
 
-    emissons_filename: str
+    emissions_filename: str
            filename for emissions inventory
 
     substitution_rate: Dict
@@ -131,4 +131,3 @@ def concrete_life_cycle_inventory_updater(d_f,
         df_static = pd.read_csv(static_filename)
         df_emissions = pd.read_csv(emissions_filename)
         return df_static,df_emissions
-

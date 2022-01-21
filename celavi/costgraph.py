@@ -904,4 +904,3 @@ class CostGraph:
         ).drop_duplicates(
             ignore_index=True
         ).to_csv(self.pathway_crit_history_filename, index=False)
-

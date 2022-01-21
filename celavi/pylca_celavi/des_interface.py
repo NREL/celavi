@@ -290,4 +290,3 @@ class PylcaCelavi:
     
         # This is the result that needs to be analyzed every timestep.
         return res_df
-           
