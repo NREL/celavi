@@ -4,7 +4,6 @@ import pandas as pd
 def filter_locations(loc_filename,
                      tech_units_filename,
                      states):
-
         """
         This function is used to filter facility and technology unit locations
         based on the list of states to include provided in the

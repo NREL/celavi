@@ -13,27 +13,6 @@ from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective,
 
 #We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,df_static):
-
-    """
-    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
-    inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
-
-    Parameters
-    ----------
-    year : str
-        year of LCA calculation
-    df_static : pd.DataFrame
-        lca inventory static 
-
-    
-    Returns
-    -------
-    pd.DataFrame
-       cleaned process inventory merged with dynamic data
-    pd.DataFrame   
-       inventory with no product flows
-
-    """
     df = df_static
     df_input = df[df['input'] == True]
     df_output = df[df['input'] == False]
@@ -58,30 +37,6 @@ def preprocessing(year,df_static):
 
 
 def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
-
-    """
-    This function houses the optimizer for solve Xs = F. 
-    Solves the Xs=F equation. 
-    Solves the scaling vector.  
-
-    Parameters
-    ----------
-    tech_matrix : numpy matrix
-         technology matrix from the process inventory
-    F : vector
-         Final demand vector 
-    process: str
-         filename for the dynamic inventory   
-    df_with_all_other_flows: pd.DataFrame
-         lca inventory with no product flows
-
-    
-    Returns
-    -------
-    pd.DataFrame
-       LCA results
-    """
-
     X_matrix = tech_matrix.to_numpy()
     # Creation of a Concrete Model
     model = ConcreteModel()
@@ -140,60 +95,12 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     return results_total
 
 def electricity_corrector_before20(df):
-    """
-    This function is used to replace pre 2020 electricity flows with the base electricity mix flow
-    in the USLCI inventory Electricity, at Grid, US, 2010'
-    
-
-    Parameters
-    ----------
-    df: pd.DataFrame
-        process inventory
-
-    Returns
-    -------
-    pd.DataFrame
-       process inventory with electricity flows before 2020 converted to the base electricity
-       mix flow in USLCI. 
-    """
-
+    #This part is used to replace pre 2020 electricity flows with US'Electricity, at Grid, US, 2010'
     
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
 def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows):
-
-    """
-    Runs the optimization function and creates final data frame in proper format
-
-    Parameters
-    ----------
-    tech matrix: pd.Dataframe
-         technology matrix built from the process inventory. 
-    F: final demand series vector
-         final demand of the LCA problem
-    yr: int
-         year of analysis
-    i: int
-         facility ID
-    j: str
-        stage
-    k: sr
-        material
-    final_demand_scaler: int
-        scaling variable number to ease optimization
-    process: list
-        list of processes included in the technology matrix
-    df_with_all_other_flows: pd.DataFrame
-        Dataframe with flows in the inventory which do not have a production process. 
-    
-
-    Returns
-    -------
-    pd.DataFrame
-       Dataframe with LCA results
-    """
-
     
     res = pd.DataFrame()
     res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
@@ -211,40 +118,6 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
 
 
 def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
-
-
-    """
-    This is used for calculating insitu emissions
-    Creates technology matrix and final demand vector from inventory data
-    Runs the PyLCA optimizer to perform LCA calculations
-    Conforms results to a dataframe 
-
-    Parameters
-    ----------
-    f_d: Dataframe 
-    Dataframe from DES 
-    
-    yr: int
-    Year of calculation
-
-    fac_id: int
-    Facility ID of facility being evaluated
-
-    stage: str 
-    Stage of facility being evaluated
-
-    material: str
-    material being evaluated
-
-    df_emission: df
-    Emissons inventory
-
-    Returns
-    -------
-    pd.DataFrame
-         Insitu emissions within a Dataframe after LCA calculations
-    """
-
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()

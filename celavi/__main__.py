@@ -83,6 +83,7 @@ use_fixed_lifetime = flags.get('use_fixed_lifetime', True)
 use_lcia_shortcut = flags.get('use_lcia_shortcut', False)
 
 
+
 ## SUB FOLDERS
 subfolder_dict = {
     'preprocessing_output_folder':
@@ -120,9 +121,9 @@ transpo_edges_filename = os.path.join(args.data,
 route_pair_filename = os.path.join(args.data,
                                    data_dirs.get('inputs'),
                                    inputs.get('route_pairs'))
-component_material_masses_filename = os.path.join(args.data,
+avg_blade_masses_filename = os.path.join(args.data,
                                          data_dirs.get('inputs'),
-                                         inputs.get('component_material_mass'))
+                                         inputs.get('avg_blade_masses'))
 routes_custom_filename = os.path.join(args.data,
                                       data_dirs.get('inputs'),
                                       inputs.get('routes_custom'))
@@ -143,7 +144,7 @@ node_locations_filename = os.path.join(args.data,
                                        inputs.get('node_locs'))
 
 # file paths for raw data used to compute locations
-power_plant_locations_filename = os.path.join(args.data,
+wind_turbine_locations_filename = os.path.join(args.data,
                                                data_dirs.get('raw_locations'),
                                                inputs.get('power_plant_locs'))
 # LMOP data for landfill locations
@@ -162,10 +163,11 @@ lookup_facility_type_filename = os.path.join(args.data,
                                              inputs.get('lookup_facility_type')
                                              )
 
-# file where the technology data will be saved after generating from raw inputs
-technology_data_filename = os.path.join(args.data,
+# file where the turbine data will be saved after generating from raw inputs
+turbine_data_filename = os.path.join(args.data,
                                      data_dirs.get('inputs'),
                                      generated.get('technology_data'))
+
 
 # dataset of capacity expansion projections
 capacity_proj_filename = os.path.join(args.data,
@@ -246,7 +248,7 @@ national_reeds_grid_mix = os.path.join(args.data,
 pathway_crit_history_filename = os.path.join(
     args.data,
     data_dirs.get('outputs'),
-    outputs.get('pathway_criterion_history')
+    outputs.get('pathway_cost_history')
 )
 
 # Raw DES output filenames
@@ -359,7 +361,7 @@ if location_filtering:
         print(f'Filtering locations: {states_to_filter}',
               flush=True)
         filter_locations(locations_computed_filename,
-                         technology_data_filename,
+                         turbine_data_filename,
                          states_to_filter)
     # if the data is being filtered and a new routes file is NOT being
     # generated, then the existing routes file must also be filtered
@@ -373,11 +375,12 @@ if run_routes:
     routes_computed = Router.get_all_routes(
         locations_file=locations_computed_filename,
         route_pair_file=route_pair_filename,
-        distance_filtering=distance_filtering,
         transportation_graph=transportation_graph_filename,
         node_locations=node_locations_filename,
         routes_output_file = routes_computed_filename,
         routing_output_folder=subfolder_dict['routing_output_folder'])
+
+avgblade = pd.read_csv(avg_blade_masses_filename)
 
 print('Run routes completed in %d s' % np.round(time.time() - time0, 1),
       flush=True)
@@ -497,20 +500,19 @@ print(f'Context initialized at {np.round(time.time() - time0, 1)} s', flush=True
 # the context with components.
 technology_data = pd.read_csv(technology_data_filename)
 components = []
-for _, row in technology_data.iterrows():
+for _, row in turbine_data.iterrows():
     year = row['year']
     in_use_facility_id = int(row['facility_id'])
     manuf_facility_id = netw.find_upstream_neighbor(int(row['facility_id']))
-    n_technology = int(row['n_technology'])
+    n_turbine = int(row['n_turbine'])
 
-    for _ in range(n_technology):
-        for c in circular_components:
-            components.append({
-                'year': year,
-                'kind': c,
-                'manuf_facility_id': manuf_facility_id,
-                'in_use_facility_id': in_use_facility_id
-            })
+    for _ in range(n_turbine):
+        components.append({
+            'year': year,
+            'kind': 'blade',
+            'manuf_facility_id': manuf_facility_id,
+            'in_use_facility_id': in_use_facility_id
+        })
 
 components = pd.DataFrame(components)
 

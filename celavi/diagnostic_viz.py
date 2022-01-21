@@ -103,6 +103,7 @@ class DiagnosticViz:
                 print('Gathering and scaling component count inventories')
                 # Multiply component counts in the inventory by the number of
                 # components in each technology unit
+
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
@@ -111,7 +112,7 @@ class DiagnosticViz:
                     value for key, value in self.component_count.items()
                 ]
             except KeyError as e:
-                print('Gathering component mass histories')
+                print(f'Skipping component count scaling because {e}')
             cumulative_histories.append(cumulative_history)
 
         cumulative_histories = pd.concat(cumulative_histories)

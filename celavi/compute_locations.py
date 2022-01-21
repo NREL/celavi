@@ -22,14 +22,13 @@ class ComputeLocations:
     """
 
     def __init__(self,
-                 start_year : int,
-                 power_plant_locations,
+                 wind_turbine_locations,
                  landfill_locations,
                  other_facility_locations,
                  transportation_graph,
                  node_locations,
                  lookup_facility_type,
-                 technology_data_filename,
+                 turbine_data_filename,
                  standard_scenarios_filename):
         """
         Parameters
@@ -65,15 +64,13 @@ class ComputeLocations:
             projections past the current year.
         """
 
-        self.start_year = start_year
-
         # file paths for raw data used to compute locations
-        self.power_plant_locations = power_plant_locations
+        self.wind_turbine_locations = wind_turbine_locations
         self.landfill_locations = landfill_locations
         self.other_facility_locations = other_facility_locations
         self.transportation_graph = transportation_graph
         self.node_locations = node_locations
-        self.technology_data_filename = technology_data_filename
+        self.turbine_data_filename = turbine_data_filename
         self.standard_scenarios_filename = standard_scenarios_filename
 
         self.lookup_facility_type_file = lookup_facility_type
@@ -159,7 +156,7 @@ class ComputeLocations:
             ['facility_id', 'p_name', 'year', 'p_tnum', 't_model', 't_cap']
         ].drop_duplicates().dropna()
 
-        n_turb2 = n_turb[n_turb['year'] >= self.start_year]
+        n_turb2 = n_turb[n_turb['year'] > 1999]
         
         data3 = n_turb2.groupby(['year','facility_id','p_name','t_cap']).size().reset_index().rename(columns={0:'n_turbine'})        
         data4 = data3.groupby(['year','facility_id']).apply(lambda x: np.average(x.t_cap, weights=x.n_turbine)).reset_index().rename(columns={0:'t_cap'})
@@ -171,7 +168,7 @@ class ComputeLocations:
         self.capacity_data = data6
 
         turbine_locations_filtered = turbine_locations_with_eia[
-            turbine_locations_with_eia.year >= self.start_year
+            turbine_locations_with_eia.year > 1999
         ]
 
         # determine average lat and long for all turbines by facility_id
@@ -456,10 +453,8 @@ class ComputeLocations:
             capacity_future,
             ignore_index=True,
             sort=True
-        ).rename(
-            columns={'n_turbine': 'n_technology'}
         ).to_csv(
-            self.technology_data_filename,
+            self.turbine_data_filename,
             index=False
         )
 

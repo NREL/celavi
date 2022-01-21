@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep 15 12:42:32 2020
+
+@author: tghosh
+"""
+
+
 import warnings
 import pandas as pd
 import numpy as np
@@ -5,15 +14,16 @@ import sys
 import multiprocessing
 import time
 import os
-import pyutilib.subprocess.GlobalData
-pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+# import pyutilib.subprocess.GlobalData
 from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
 
 # This emulates what the pyomo command-line tools does
 from pyomo.opt import SolverFactory
 
-#Reading in static and dynamics lca databases
 
+#Reading in static and dynamics lca databases
+print('>>>', os.getcwd())
+df_dynamic = pd.read_csv('dynamic_secondary_lci_foreground.csv')
 
 #We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level):
@@ -58,7 +68,11 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
     df_input.loc[:,'value'] = df_input.loc[:,'value']  * (-1)
     df = pd.concat([df_input,df_output])
 
-
+    #Removing flows without source because optimization problem becomes infeasible
+    #Removing flows without source
+    #For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
+    #Dummy flows need to be removed. 
+    #This part removes the dummy flows and flows without any production processes from the X matrix. 
     process_input_with_process  =  pd.unique(df_output['product'])
 
     df['indicator'] = df['product'].isin(process_input_with_process)
@@ -69,12 +83,10 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
     del df_with_all_other_flows['indicator']
     
     process_df.loc[:,'value'] = process_df.loc[:,'value'].astype(np.float64)
-
     return process_df,df_with_all_other_flows
 
 
 def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
-
     """
     This function houses the optimizer for solve Xs = F. 
     Solves the Xs=F equation. 
@@ -137,7 +149,9 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
 
     # This is an optional code path that allows the script to be run outside of
     # pyomo command-line.  For example:  python transport.py
-
+        # This emulates what the pyomo command-line tools does
+    from pyomo.opt import SolverFactory
+    import pyomo.environ
     opt = SolverFactory("glpk")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
@@ -209,7 +223,6 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
         Returns the final LCA reults in a properly arranged dataframe with all supplemental information
 
     """
-
     res = pd.DataFrame()
     res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)        
     res['value'] = res['value'] * final_demand_scaler
@@ -227,9 +240,6 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
     
     else:        
        print(f"optimization pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
-
-
-
 
 
 def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
@@ -270,6 +280,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
 
     #Incorporating dynamics lci database
     process_df,df_with_all_other_flows = preprocessing(int(yr),state,df_static,dynamic_lci_filename,electricity_grid_spatial_level)
+
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'product', columns = 'process', values = 'value' )
     tech_matrix = tech_matrix.fillna(0)
