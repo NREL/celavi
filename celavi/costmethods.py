@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import scipy.stats as st
 import warnings
 
 
@@ -65,7 +66,8 @@ class CostMethods:
         """
         _year = path_dict['year']
         _fee = 8.0E-30 * np.exp(0.0352 * _year)
-        return _fee
+        _fee_unc = st.triang.rvs(c=0.5,loc=0.8*_fee,scale=0.4*_fee)
+        return _fee_unc
 
 
     @staticmethod
@@ -93,9 +95,11 @@ class CostMethods:
 
         _year = path_dict['year']
         _mass = path_dict['component mass']
-        _cost = 42.6066109 * _year ** 2 - 170135.7518957 * _year +\
-                169851728.663209
-        return _cost / _mass
+        _cost = (42.6066109 * _year ** 2 - 170135.7518957 * _year + 169851728.663209) / _mass
+
+        _cost_unc = st.triang.rvs(c = 0.5, loc = 0.8*_cost, scale = 0.4*_cost)
+
+        return _cost_unc
 
 
     @staticmethod
@@ -115,7 +119,8 @@ class CostMethods:
         -------
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
         """
-        return 27.56
+
+        return 27.56 #st.triang.rvs(c = 0.5, loc = 0.8*27.56, scale = 0.4*27.56)
 
 
     @staticmethod
@@ -155,7 +160,11 @@ class CostMethods:
         # these factors are unitless
         coarsegrind_learning = coarsegrind_cumul ** _dict['learn rate']
 
-        return _dict['initial cost'] * coarsegrind_learning
+        _cost = _dict['initial cost'] * coarsegrind_learning
+
+        _cost_unc = st.triang.rvs(c=0.5, loc=0.8*_cost, scale=0.4*_cost)
+
+        return _cost_unc
 
 
     @staticmethod
@@ -274,7 +283,8 @@ class CostMethods:
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
              to cement co-processing plant
         """
-        return -10.37
+        _cost_unc = -1.0*st.triang.rvs(c = 0.5, loc = 0.8 * 10.37, scale = 0.4*10.37)
+        return _cost_unc
 
 
     @staticmethod
@@ -342,7 +352,9 @@ class CostMethods:
         if _vkmt is None:
             return 0.0
         else:
-            return (0.0011221 * _year - 2.1912399) * _vkmt
+            _cost = (0.0011221 * _year - 2.1912399) * _vkmt
+            _cost_unc = st.triang.rvs(c=0.5, loc=0.8*_cost, scale=0.4*_cost)
+            return _cost_unc
 
 
 
@@ -368,7 +380,9 @@ class CostMethods:
             Cost of manufacturing 1 metric ton of new turbine blade.
 
         """
-        return 11440.0
+        _cost = 11440.0
+        _cost_unc = st.triang.rvs(c=0.5, loc=0.8*_cost, scale=0.4*_cost)
+        return _cost_unc
 
 
     @staticmethod
