@@ -557,7 +557,8 @@ class CostGraph:
                                 self.supply_chain.nodes[edge[1]]['step_cost_method'])
                     ],
                         'cost': 0.0,
-                        'dist': -1.0}
+                        'dist': -1.0,
+                        'route_id': None}
                     for edge in _edge_list
                 ]
 
@@ -616,6 +617,7 @@ class CostGraph:
                                   ' and ',
                                   v_node)
                         data['dist'] = _line['total_vkmt'].values[0]
+                        data['route_id'] = _line['route_id'].values[0]
 
         # After all of the route distances have been added, any edges that
         # have a distance of -1 km are deleted from the network.
