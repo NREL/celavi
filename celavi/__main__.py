@@ -528,13 +528,14 @@ for component in tech.get('component_list').keys():
 # fixed lifetimes.
 if not use_fixed_lifetime:
     for c in circular_components:
-        lifespan_fns[c] = lambda : weibull_min.rvs(
-            tech.get('component_weibull_params')[c]['K'],
-            loc=tech.get('min_lifespan'),
-            scale=tech.get('component_weibull_params')[c]['L'] -
-                  tech.get('min_lifespan'),
-            size=1
-        )[0]
+        lifespan_fns[c] = \
+            lambda : weibull_min.rvs(
+                tech.get('component_weibull_params')[c]['K'],
+                loc=model_run.get('min_lifespan'),
+                scale=tech.get('component_weibull_params')[c]['L'] -
+                      model_run.get('min_lifespan'),
+                size=1
+            )[0]
 
 print(f'Components initialized at {np.round(time.time() - time0, 1)} s',flush=True)
 
