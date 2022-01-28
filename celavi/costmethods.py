@@ -9,19 +9,16 @@ class CostMethods:
     the supply chain. The methods in this Class must be re-written to
     correspond to each case study; in general, these methods are not reusable
     across different supply chains or technologies.
+
+
     """
 
-    def __init__(self):
+    def __init__(self, seed):
         """
-
-        Parameters
-        ----------
-
-
-        Returns
-        -------
+        Provide a random number generator to all uncertain CostMethods.
 
         """
+        self.seed = seed
 
 
     @staticmethod
@@ -45,8 +42,7 @@ class CostMethods:
         return 0.0
 
 
-    @staticmethod
-    def landfilling(path_dict):
+    def landfilling(self, path_dict):
         """
         Tipping fee model based on national average tipping fees and year-over-
         year percent increase of 3.5%.
@@ -70,13 +66,13 @@ class CostMethods:
             _c = path_dict['triang_params']['landfilling']['c']
             _loc = path_dict['triang_params']['landfilling']['loc']
             _scale = path_dict['triang_params']['landfilling']['scale']
-            return st.triang.rvs(c=_c,loc=_loc*_fee,scale=_scale*_fee)
+            return st.triang.rvs(c=_c,loc=_loc*_fee,scale=_scale*_fee, random_state=self.seed)
         else:
             return _fee
 
 
-    @staticmethod
-    def rotor_teardown(path_dict):
+
+    def rotor_teardown(self, path_dict):
         """
         Cost (USD/metric ton) of removing one metric ton of blade from the
         turbine. The cost of removing a single blade is calculated as one-third
@@ -108,13 +104,13 @@ class CostMethods:
             _c = path_dict['triang_params']['rotor_teardown']['c']
             _loc = path_dict['triang_params']['rotor_teardown']['loc']
             _scale = path_dict['triang_params']['rotor_teardown']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost)
+            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
 
 
-    @staticmethod
-    def segmenting(path_dict):
+
+    def segmenting(self, path_dict):
         """
         Cost method for blade segmenting into 30m sections performed on-site at
         the wind power plant.
@@ -135,13 +131,13 @@ class CostMethods:
             _c = path_dict['triang_params']['rotor_teardown']['c']
             _loc = path_dict['triang_params']['rotor_teardown']['loc']
             _scale = path_dict['triang_params']['rotor_teardown']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost)
+            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
 
 
-    @staticmethod
-    def coarse_grinding_onsite(path_dict):
+
+    def coarse_grinding_onsite(self, path_dict):
         """
         Cost method for coarsely grinding turbine blades onsite at a wind
         power plant. This calculation uses industrial learning-by-doing
@@ -183,13 +179,13 @@ class CostMethods:
             _c = path_dict['triang_params']['coarse_grinding_onsite']['c']
             _loc = path_dict['triang_params']['coarse_grinding_onsite']['loc']
             _scale = path_dict['triang_params']['coarse_grinding_onsite']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost)
+            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
 
 
-    @staticmethod
-    def coarse_grinding(path_dict):
+
+    def coarse_grinding(self, path_dict):
         """
         Cost method for coarsely grinding turbine blades at a mechanical
         recycling facility. This calculation uses industrial learning-by-doing
@@ -231,13 +227,13 @@ class CostMethods:
             _c = path_dict['triang_params']['coarse_grinding']['c']
             _loc = path_dict['triang_params']['coarse_grinding']['loc']
             _scale = path_dict['triang_params']['coarse_grinding']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost)
+            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
 
 
-    @staticmethod
-    def fine_grinding(path_dict):
+
+    def fine_grinding(self, path_dict):
         """
         Cost method for finely grinding turbine blades at a mechanical
         recycling facility. This calculation uses industrial learning-by-doing
@@ -303,11 +299,11 @@ class CostMethods:
             _scale_fgr = path_dict['triang_params']['fine_grinding_revenue']['scale']
 
             _cost_unc = st.triang.rvs(
-                c=_c_fg, loc=_loc_fg * _cost, scale=_scale_fg * _cost
+                c=_c_fg, loc=_loc_fg * _cost, scale=_scale_fg * _cost, random_state=self.seed
             ) + st.triang.rvs(
-                c=_c_lf, loc=_loc_lf * _landfill, scale=_scale_lf * _landfill
-            ) + st.triang.rvs(
-                c=_c_fgr, loc=_loc_fgr * _revenue, scale=_scale_fgr * _revenue
+                c=_c_lf, loc=_loc_lf * _landfill, scale=_scale_lf * _landfill, random_state=self.seed
+            ) - st.triang.rvs(
+                c=_c_fgr, loc=_loc_fgr * _revenue, scale=_scale_fgr * _revenue, random_state=self.seed
             )
 
             return _cost_unc
@@ -317,8 +313,8 @@ class CostMethods:
             return _cost + _landfill - _revenue
 
 
-    @staticmethod
-    def coprocessing(path_dict):
+
+    def coprocessing(self, path_dict):
         """
         Cost method that calculates revenue from sale of coarsely-ground blade
         material to cement co-processing plant.
@@ -341,13 +337,13 @@ class CostMethods:
             _c = path_dict['triang_params']['coprocessing']['c']
             _loc = path_dict['triang_params']['coprocessing']['loc']
             _scale = path_dict['triang_params']['coprocessing']['scale']
-            return -1.0*st.triang.rvs(c=_c, loc = _loc*_revenue, scale=_scale*_revenue)
+            return -1.0*st.triang.rvs(c=_c, loc = _loc*_revenue, scale=_scale*_revenue, random_state=self.seed)
         else:
             return -1.0 * _revenue
 
 
-    @staticmethod
-    def segment_transpo(path_dict):
+
+    def segment_transpo(self, path_dict):
         """
         Calculate segment transportation cost in USD/metric ton
 
@@ -390,14 +386,14 @@ class CostMethods:
                 _loc = path_dict['triang_params']['segment_transpo']['loc']
                 _scale = path_dict['triang_params']['segment_transpo']['scale']
                 return st.triang.rvs(
-                    c=_c, loc=_loc*_cost, scale=_scale*_cost
+                    c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
                 ) * _vkmt / _mass
             else:
                 return _cost * _vkmt / _mass
 
 
-    @staticmethod
-    def shred_transpo(path_dict):
+
+    def shred_transpo(self, path_dict):
         """
         Cost method for calculating shredded blade transportation costs (truck)
         in USD/metric ton.
@@ -426,14 +422,14 @@ class CostMethods:
                 _loc = path_dict['triang_params']['shred_transpo']['loc']
                 _scale = path_dict['triang_params']['shred_transpo']['scale']
                 return st.triang.rvs(
-                    c=_c, loc=_loc*_cost, scale=_scale*_cost
+                    c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
                 )
             else:
                 return _cost
 
 
-    @staticmethod
-    def manufacturing(path_dict):
+
+    def manufacturing(self, path_dict):
         """
         Cost method for calculating blade manufacturing costs in USD/metric
         ton. Data sourced from Murray et al. (2019), a techno-economic analysis
@@ -460,13 +456,13 @@ class CostMethods:
             _c = path_dict['triang_params']['manufacturing']['c']
             _loc = path_dict['triang_params']['manufacturing']['loc']
             _scale = path_dict['triang_params']['manufacturing']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost)
+            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
 
 
-    @staticmethod
-    def blade_transpo(path_dict):
+
+    def blade_transpo(self, path_dict):
         """
         Cost of transporting 1 metric ton of complete wind blade by 1 km.
         Currently the segment transportation cost is used as proxy.
@@ -510,7 +506,7 @@ class CostMethods:
                 _loc = path_dict['triang_params']['blade_transpo']['loc']
                 _scale = path_dict['triang_params']['blade_transpo']['scale']
                 return st.triang.rvs(
-                    c=_c, loc=_loc*_cost, scale=_scale*_cost
+                    c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
                 ) * _vkmt / _mass
             else:
                 return _cost * _vkmt / _mass

@@ -317,4 +317,3 @@ class Router:
         data_complete.to_csv(routes_output_file,
                              index=False)
 
-        return data_complete
