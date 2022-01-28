@@ -24,6 +24,7 @@ class DiagnosticViz:
         component_count: Dict[str, int],
         var_name: str,
         value_name: str,
+        run: int,
     ):
         """
         Parameters
@@ -55,15 +56,19 @@ class DiagnosticViz:
 
         value_name: str
             The name of the generalized value column, like 'count' or 'tonnes'.
+
+        run : int
+            Model run identifier for uncertainty runs within a scenario.
         """
         self.facility_inventories = facility_inventories
-        self.output_plot_filename = output_plot_filename
+        self.output_plot_filename = str.split(output_plot_filename, ".")[0] + '_' + str(run) + '.' + str.split(output_plot_filename, ".")[1]
         self.keep_cols = keep_cols
         self.start_year = start_year
         self.timestep_per_year = timesteps_per_year
         self.component_count = component_count
         self.var_name = var_name
         self.value_name = value_name
+        self.run = run
 
         # This instance attribute is not set by a parameter to the
         # constructor. Rather, it is merely created to hold a cached
@@ -127,6 +132,9 @@ class DiagnosticViz:
             .sum()
             .reset_index()
         )
+
+        # Add a column with the model run number
+        self.gathered_and_melted_cumulative_histories['run'] = self.run
 
         return self.gathered_and_melted_cumulative_histories
 
