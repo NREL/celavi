@@ -62,10 +62,10 @@ class CostMethods:
         _year = path_dict['year']
         _fee = 8.0E-30 * np.exp(0.0352 * _year)
 
-        if path_dict['uncertainty']:
-            _c = path_dict['triang_params']['landfilling']['c']
-            _loc = path_dict['triang_params']['landfilling']['loc']
-            _scale = path_dict['triang_params']['landfilling']['scale']
+        if path_dict['cost_uncertainty']['landfilling']:
+            _c = path_dict['cost_uncertainty']['landfilling']['c']
+            _loc = path_dict['cost_uncertainty']['landfilling']['loc']
+            _scale = path_dict['cost_uncertainty']['landfilling']['scale']
             return st.triang.rvs(c=_c,loc=_loc*_fee,scale=_scale*_fee, random_state=self.seed)
         else:
             return _fee
@@ -100,10 +100,10 @@ class CostMethods:
                  170135.7518957 * _year +
                  169851728.663209) / _mass
 
-        if path_dict['uncertainty']:
-            _c = path_dict['triang_params']['rotor_teardown']['c']
-            _loc = path_dict['triang_params']['rotor_teardown']['loc']
-            _scale = path_dict['triang_params']['rotor_teardown']['scale']
+        if path_dict['cost_uncertainty']['rotor_teardown']:
+            _c = path_dict['cost_uncertainty']['rotor_teardown']['c']
+            _loc = path_dict['cost_uncertainty']['rotor_teardown']['loc']
+            _scale = path_dict['cost_uncertainty']['rotor_teardown']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
@@ -127,10 +127,10 @@ class CostMethods:
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
         """
         _cost = 27.56
-        if path_dict['uncertainty']:
-            _c = path_dict['triang_params']['rotor_teardown']['c']
-            _loc = path_dict['triang_params']['rotor_teardown']['loc']
-            _scale = path_dict['triang_params']['rotor_teardown']['scale']
+        if path_dict['cost_uncertainty']['segmenting']:
+            _c = path_dict['cost_uncertainty']['segmenting']['c']
+            _loc = path_dict['cost_uncertainty']['segmenting']['loc']
+            _scale = path_dict['cost_uncertainty']['segmenting']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
@@ -175,10 +175,10 @@ class CostMethods:
 
         _cost = _dict['initial cost'] * coarsegrind_learning
 
-        if path_dict['uncertainty']:
-            _c = path_dict['triang_params']['coarse_grinding_onsite']['c']
-            _loc = path_dict['triang_params']['coarse_grinding_onsite']['loc']
-            _scale = path_dict['triang_params']['coarse_grinding_onsite']['scale']
+        if path_dict['cost_uncertainty']['coarse_grinding_onsite']:
+            _c = path_dict['cost_uncertainty']['coarse_grinding_onsite']['c']
+            _loc = path_dict['cost_uncertainty']['coarse_grinding_onsite']['loc']
+            _scale = path_dict['cost_uncertainty']['coarse_grinding_onsite']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
@@ -223,10 +223,10 @@ class CostMethods:
 
         _cost = _dict['initial cost'] * coarsegrind_learning
 
-        if path_dict['uncertainty']:
-            _c = path_dict['triang_params']['coarse_grinding']['c']
-            _loc = path_dict['triang_params']['coarse_grinding']['loc']
-            _scale = path_dict['triang_params']['coarse_grinding']['scale']
+        if path_dict['cost_uncertainty']['coarse_grinding']:
+            _c = path_dict['cost_uncertainty']['coarse_grinding']['c']
+            _loc = path_dict['cost_uncertainty']['coarse_grinding']['loc']
+            _scale = path_dict['cost_uncertainty']['coarse_grinding']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
@@ -284,19 +284,19 @@ class CostMethods:
         # see the landfilling method - this cost model is identical
         _landfill = _loss * 8.0E-30 * np.exp(0.0352 * _year)
 
-        if path_dict['uncertainty']:
+        if path_dict['cost_uncertainty']['fine_grinding']:
             # Parameters for fine grinding cost
-            _c_fg = path_dict['triang_params']['fine_grinding']['c']
-            _loc_fg = path_dict['triang_params']['fine_grinding']['loc']
-            _scale_fg = path_dict['triang_params']['fine_grinding']['scale']
+            _c_fg = path_dict['cost_uncertainty']['fine_grinding']['c']
+            _loc_fg = path_dict['cost_uncertainty']['fine_grinding']['loc']
+            _scale_fg = path_dict['cost_uncertainty']['fine_grinding']['scale']
             # Parameters for landfilling cost
-            _c_lf = path_dict['triang_params']['landfilling']['c']
-            _loc_lf = path_dict['triang_params']['landfilling']['loc']
-            _scale_lf = path_dict['triang_params']['landfilling']['scale']
+            _c_lf = path_dict['cost_uncertainty']['landfilling']['c']
+            _loc_lf = path_dict['cost_uncertainty']['landfilling']['loc']
+            _scale_lf = path_dict['cost_uncertainty']['landfilling']['scale']
             # Parameters for fine grinding revenue
-            _c_fgr = path_dict['triang_params']['fine_grinding_revenue']['c']
-            _loc_fgr = path_dict['triang_params']['fine_grinding_revenue']['loc']
-            _scale_fgr = path_dict['triang_params']['fine_grinding_revenue']['scale']
+            _c_fgr = path_dict['cost_uncertainty']['fine_grinding_revenue']['c']
+            _loc_fgr = path_dict['cost_uncertainty']['fine_grinding_revenue']['loc']
+            _scale_fgr = path_dict['cost_uncertainty']['fine_grinding_revenue']['scale']
 
             _cost_unc = st.triang.rvs(
                 c=_c_fg, loc=_loc_fg * _cost, scale=_scale_fg * _cost, random_state=self.seed
@@ -333,10 +333,10 @@ class CostMethods:
         """
 
         _revenue = 10.37
-        if path_dict['uncertainty']:
-            _c = path_dict['triang_params']['coprocessing']['c']
-            _loc = path_dict['triang_params']['coprocessing']['loc']
-            _scale = path_dict['triang_params']['coprocessing']['scale']
+        if path_dict['cost_uncertainty']['coprocessing']:
+            _c = path_dict['cost_uncertainty']['coprocessing']['c']
+            _loc = path_dict['cost_uncertainty']['coprocessing']['loc']
+            _scale = path_dict['cost_uncertainty']['coprocessing']['scale']
             return -1.0*st.triang.rvs(c=_c, loc = _loc*_revenue, scale=_scale*_revenue, random_state=self.seed)
         else:
             return -1.0 * _revenue
@@ -381,10 +381,10 @@ class CostMethods:
                     'Year out of range for segment transport; setting cost = 17.40')
                 _cost = 17.40
 
-            if path_dict['uncertainty']:
-                _c = path_dict['triang_params']['segment_transpo']['c']
-                _loc = path_dict['triang_params']['segment_transpo']['loc']
-                _scale = path_dict['triang_params']['segment_transpo']['scale']
+            if path_dict['cost_uncertainty']['segment_transpo']:
+                _c = path_dict['cost_uncertainty']['segment_transpo']['c']
+                _loc = path_dict['cost_uncertainty']['segment_transpo']['loc']
+                _scale = path_dict['cost_uncertainty']['segment_transpo']['scale']
                 return st.triang.rvs(
                     c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
                 ) * _vkmt / _mass
@@ -417,10 +417,10 @@ class CostMethods:
         else:
             _cost = (0.0011221 * _year - 2.1912399) * _vkmt
 
-            if path_dict['uncertainty']:
-                _c = path_dict['triang_params']['shred_transpo']['c']
-                _loc = path_dict['triang_params']['shred_transpo']['loc']
-                _scale = path_dict['triang_params']['shred_transpo']['scale']
+            if path_dict['cost_uncertainty']['shred_transpo']:
+                _c = path_dict['cost_uncertainty']['shred_transpo']['c']
+                _loc = path_dict['cost_uncertainty']['shred_transpo']['loc']
+                _scale = path_dict['cost_uncertainty']['shred_transpo']['scale']
                 return st.triang.rvs(
                     c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
                 )
@@ -452,10 +452,10 @@ class CostMethods:
         """
         _cost = 11440.0
 
-        if path_dict['uncertainty']:
-            _c = path_dict['triang_params']['manufacturing']['c']
-            _loc = path_dict['triang_params']['manufacturing']['loc']
-            _scale = path_dict['triang_params']['manufacturing']['scale']
+        if path_dict['cost_uncertainty']['manufacturing']:
+            _c = path_dict['cost_uncertainty']['manufacturing']['c']
+            _loc = path_dict['cost_uncertainty']['manufacturing']['loc']
+            _scale = path_dict['cost_uncertainty']['manufacturing']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
@@ -501,10 +501,10 @@ class CostMethods:
                     'Year out of range for blade transport; setting cost = 17.40')
                 _cost = 17.40
 
-            if path_dict['uncertainty']:
-                _c = path_dict['triang_params']['blade_transpo']['c']
-                _loc = path_dict['triang_params']['blade_transpo']['loc']
-                _scale = path_dict['triang_params']['blade_transpo']['scale']
+            if path_dict['cost_uncertainty']['blade_transpo']:
+                _c = path_dict['cost_uncertainty']['blade_transpo']['c']
+                _loc = path_dict['cost_uncertainty']['blade_transpo']['loc']
+                _scale = path_dict['cost_uncertainty']['blade_transpo']['scale']
                 return st.triang.rvs(
                     c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
                 ) * _vkmt / _mass
