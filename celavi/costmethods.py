@@ -415,7 +415,7 @@ class CostMethods:
         if _vkmt is None:
             return 0.0
         else:
-            _cost = (0.0011221 * _year - 2.1912399) * _vkmt
+            _cost = 0.0011221 * _year - 2.1912399
 
             if path_dict['cost_uncertainty']['shred_transpo']:
                 _c = path_dict['cost_uncertainty']['shred_transpo']['c']
@@ -423,9 +423,9 @@ class CostMethods:
                 _scale = path_dict['cost_uncertainty']['shred_transpo']['scale']
                 return st.triang.rvs(
                     c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
-                )
+                ) * _vkmt
             else:
-                return _cost
+                return _cost * _vkmt
 
 
 
