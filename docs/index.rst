@@ -8,8 +8,9 @@ Welcome to celavi's documentation!
 
 .. toctree::
    doc_component
-   doc_computelocations
+   doc_compute_locations
    doc_costmethods
+   doc_costgraph
    doc_data_filtering
    doc_data_manager
    doc_diagnostic_viz
