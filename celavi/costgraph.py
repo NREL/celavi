@@ -6,7 +6,7 @@ from time import time
 from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
-
+import pdb
 class CostGraph:
     """
         Contains methods for:
@@ -183,7 +183,8 @@ class CostGraph:
     def list_of_tuples(self,
                        list1 : list,
                        list2 : list,
-                       list3 : list = None):
+                       list3 : list = None,
+                       list4 : list = None):
         """
         Converts two or three lists into a list of two- or three-tuples where
         each tuple contains the corresponding elements from each list:
@@ -201,18 +202,26 @@ class CostGraph:
             list of any data type
         list3
             list of any data type (optional)
+        list4
+            list of any data type 
 
         Returns
         -------
-            list of 2-tuples
+            list of n-tuples where n can be 2, 3, or 4
         """
 
-        if list3 is not None:
+        if list3 is not None and list4 is None:
             _len = len(list1)
             if any(len(lst) != _len for lst in [list1, list2, list3]):
                 raise NotImplementedError
             else:
                 return list(map(lambda x, y, z: (x, y, z), list1, list2, list3))
+        elif list3 is not None and list4 is not None:
+            _len = len(list1)
+            if any(len(lst) != _len for lst in [list1, list2, list3, list4]):
+                raise NotImplementedError
+            else:
+                return list(map(lambda w, x, y, z: (w, x, y, z), list1, list2, list3, list4))
         else:
             if len(list1) != len(list2):
                 raise NotImplementedError
@@ -270,9 +279,11 @@ class CostGraph:
             dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist']
                          for d in range(len(short_paths[nearest])-1)]
             dist_list.insert(0, 0.0)
+            route_id_list = 
             _out = self.list_of_tuples(short_paths[nearest],
                                        timeout_list,
-                                       dist_list)
+                                       dist_list,
+                                       route_id_list)
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
@@ -583,7 +594,8 @@ class CostGraph:
                                            'source_facility_type',
                                            'destination_facility_id',
                                            'destination_facility_type',
-                                           'total_vkmt'],
+                                           'total_vkmt',
+                                           'route_id'],
                                   chunksize=1)
             _prev_line = None
 
