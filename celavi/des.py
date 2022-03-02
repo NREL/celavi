@@ -320,15 +320,11 @@ class Context:
             The SimPy environment this process belongs to.
         """
         while True:
-            print(f'{datetime.now()} In While loop pylca interface', flush=True)
-            time0 = time.time()
             yield env.timeout(self.timesteps_per_year)
-            print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
 
             annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - self.timesteps_per_year
-            time0 = time.time()
             year = int(ceil(self.timesteps_to_years(env.now)))
 
             for facility_name, facility in self.mass_facility_inventories.items():
@@ -369,13 +365,12 @@ class Context:
                     }
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
-            print(str(time.time() - time0)+' For loop of pylca took these many seconds')
             if annual_data_for_lci:
-                print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
+                print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface)
             else:
-                print(f'{datetime.now()} DES interface: All Masses are 0')
+                print(f'{datetime.now()} pylca_interface_process(): All Masses are 0')
 
     def average_total_component_mass_for_year(self, year):
         """
