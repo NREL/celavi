@@ -302,7 +302,6 @@ class Context:
         ]
         total_count = sum(cumulative_counts)
         total_mass = total_count * avg_component_mass
-        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass} tonnes')
         return total_mass
 
     def pylca_interface_process(self, env):
@@ -326,15 +325,20 @@ class Context:
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - self.timesteps_per_year
             year = int(ceil(self.timesteps_to_years(env.now)))
-
             for facility_name, facility in self.mass_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
                 for material in self.possible_materials:
                     annual_transactions = facility.transaction_history.loc[
                                           window_first_timestep:window_last_timestep + 1, material
                                           ]
-                    positive_annual_transactions = annual_transactions[annual_transactions > 0]
+                    # If the facility is NOT manufacturing, keep only positive transactions
+                    if facility_name.find('manufacturing') == -1:
+                         positive_annual_transactions = annual_transactions[annual_transactions > 0]
+                    else:
+                        # If the facility IS manufacturing, use all of the transactions
+                        positive_annual_transactions = annual_transactions
                     mass_tonnes = positive_annual_transactions.sum()
+                    #print(f'Year {year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
                     mass_kg = mass_tonnes * 1000
                     if mass_kg > 0:
                         row = {
@@ -348,7 +352,6 @@ class Context:
                         }
                         self.data_for_lci.append(row)
                         annual_data_for_lci.append(row)
-
             for facility_name, tracker in self.transportation_trackers.items():
                 _, facility_id = facility_name.split("_")
                 annual_transportations = tracker.inbound_tonne_km[window_first_timestep:window_last_timestep + 1]
