@@ -1,5 +1,5 @@
 from typing import Dict, List, Callable
-from math import ceil
+from math import floor
 from datetime import datetime
 import time
 
@@ -292,7 +292,7 @@ class Context:
             Total cumulative mass of the component in the process at the
             timestep.
         """
-        year = int(ceil(self.timesteps_to_years(timestep)))
+        year = int(floor(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
 
         cumulative_counts = [
@@ -324,7 +324,7 @@ class Context:
             annual_data_for_lci = []
             window_last_timestep = env.now
             window_first_timestep = window_last_timestep - self.timesteps_per_year
-            year = int(ceil(self.timesteps_to_years(env.now)))
+            year = int(floor(self.timesteps_to_years(env.now)))
             for facility_name, facility in self.mass_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
                 for material in self.possible_materials:
@@ -383,14 +383,14 @@ class Context:
         ----------
         year: float
             The floating point year. Will be rounded to nearest integer year with
-            int() and ceil()
+            int() and floor()
 
         Returns
         -------
         float
             Average total component mass for a year.
         """
-        year_int = int(ceil(year))
+        year_int = int(floor(year))
         total_mass = 0.0
         for material in self.possible_materials:
             total_mass += self.component_material_mass_tonne_dict[material][year_int]
