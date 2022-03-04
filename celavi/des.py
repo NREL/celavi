@@ -347,7 +347,7 @@ class Context:
                     mass_tonnes = positive_annual_transactions.sum()
                     if mass_tonnes > 0:                        
                         actual_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year//2])))
-                        print(f'ActualYear {actual_year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
+                        print(f'actual_year {actual_year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
                     mass_kg = mass_tonnes * 1000
                     if mass_kg > 0:
                         row = {
