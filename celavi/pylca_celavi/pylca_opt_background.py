@@ -492,20 +492,20 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
     f_d['flow name'] = f_d['flow name'].str.lower()
     #print dataframe to debug connecting between foreground and background
     uslci_product_df.to_csv('uslci_process_df.csv')
-    f_d.to_csv('demandofforeground.csv', mode = 'a') 
+    f_d.to_csv('demand_of_foreground.csv', mode = 'a') 
 
     final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     #To make the optimization easier
     if chksum > 100000:
-            final_demand_scaler = 100000
+        final_demand_scaler = 100000
     elif chksum > 10000:
-            final_demand_scaler = 10000
+        final_demand_scaler = 10000
     elif chksum > 100:
-            final_demand_scaler = 100
+        final_demand_scaler = 100
     else:
-            final_demand_scaler = 1
+        final_demand_scaler = 1
 
     #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
