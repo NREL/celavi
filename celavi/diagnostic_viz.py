@@ -1,5 +1,4 @@
-from typing import Dict, List
-from pathlib import Path
+////////////port Path
 
 import pandas as pd
 import numpy as np
@@ -101,7 +100,7 @@ class DiagnosticViz:
             # scale component counts with dictionary from config, if component
             # columns are present
             try:
-                print('Gathering and scaling component count inventories')
+                #print('Gathering and scaling component count inventories')
                 # Multiply component counts in the inventory by the number of
                 # components in each technology unit
                 cumulative_history.loc[
@@ -112,7 +111,7 @@ class DiagnosticViz:
                     value for key, value in self.component_count.items()
                 ]
             except KeyError as e:
-                print('Gathering component mass histories')
+                #print('Gathering component mass histories')
             cumulative_histories.append(cumulative_history)
 
         cumulative_histories = pd.concat(cumulative_histories)
