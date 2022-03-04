@@ -202,6 +202,8 @@ class Context:
         float
             The year converted from the discrete timestep.
         """
+        print(timesteps)
+        print(timesteps / self.timesteps_per_year + self.min_year)
         return timesteps / self.timesteps_per_year + self.min_year
 
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
@@ -292,6 +294,7 @@ class Context:
             Total cumulative mass of the component in the process at the
             timestep.
         """
+        
         year = int(floor(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
 
@@ -338,7 +341,8 @@ class Context:
                         # If the facility IS manufacturing, use all of the transactions
                         positive_annual_transactions = annual_transactions
                     mass_tonnes = positive_annual_transactions.sum()
-                    #print(f'Year {year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
+                    if mass_tonnes > 0:
+                        print(f'Year {year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
                     mass_kg = mass_tonnes * 1000
                     if mass_kg > 0:
                         row = {
@@ -369,11 +373,12 @@ class Context:
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
             if annual_data_for_lci:
-                print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
+                #print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface)
             else:
-                print(f'{datetime.now()} pylca_interface_process(): All Masses are 0')
+                pass
+                #print(f'{datetime.now()} pylca_interface_process(): All Masses are 0')
 
     def average_total_component_mass_for_year(self, year):
         """
@@ -390,24 +395,23 @@ class Context:
         float
             Average total component mass for a year.
         """
-        year_int = int(floor(year))
+        year = int(floor(year))
         total_mass = 0.0
         for material in self.possible_materials:
-            total_mass += self.component_material_mass_tonne_dict[material][year_int]
+            total_mass += self.component_material_mass_tonne_dict[material][year]
         return total_mass
 
     def update_cost_graph_process(self, env):
         """
         This is the SimPy process that updates the cost graph periodically.
         """
-        print('Updating cost graph')
+        #print('Updating cost graph')
         while True:
-            print(f'{datetime.now()} In While loop update cost graph',flush = True)
+            #print(f'{datetime.now()} In While loop update cost graph',flush = True)
             time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
-            print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
+            #print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             year = self.timesteps_to_years(env.now)
-
             _path_dict = self.path_dict.copy()
             _path_dict['year'] = year
             _path_dict['component mass'] = self.average_total_component_mass_for_year(year)
@@ -421,7 +425,7 @@ class Context:
                     )
             self.cost_graph.update_costs(_path_dict)
 
-            print(f"{datetime.now()} Updated cost graph {year}", flush=True)
+            #print(f"{datetime.now()} Updated cost graph {year}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """
@@ -433,7 +437,7 @@ class Context:
             A dictionary of inventories mapped to their cumulative histories.
         """
 
-        print('DES RUN STARTING\n\n\n',flush=True)
+        #print('DES RUN STARTING\n\n\n',flush=True)
         self.env.process(self.update_cost_graph_process(self.env))
         self.env.process(self.pylca_interface_process(self.env))
         self.env.run(until=int(self.max_timesteps))
