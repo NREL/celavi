@@ -173,7 +173,7 @@ def electricity_corrector_before20(df):
         process inventory with electricity flows before 2020 converted to the base electricity
         mix flow in USLCI. 
     """
-    df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
+    df = df.replace(to_replace='electricity', value='electricity')
     return df
 
 
