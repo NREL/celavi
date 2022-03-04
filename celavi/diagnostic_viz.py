@@ -1,5 +1,6 @@
-////////////port Path
-
+from typing import Dict, List
+from pathlib import Path
+from contextlib import suppress
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -97,12 +98,13 @@ class DiagnosticViz:
                 cumulative_history["timestep"] / self.timestep_per_year
             ) + self.start_year
             cumulative_history["year_floor"] = np.floor(cumulative_history["year"])
+            
             # scale component counts with dictionary from config, if component
             # columns are present
-            try:
-                #print('Gathering and scaling component count inventories')
-                # Multiply component counts in the inventory by the number of
-                # components in each technology unit
+            
+            # Multiply component counts in the inventory by the number of
+            # components in each technology unit
+            with suppress(KeyError):
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
@@ -110,8 +112,7 @@ class DiagnosticViz:
                 ] * [
                     value for key, value in self.component_count.items()
                 ]
-            except KeyError as e:
-                #print('Gathering component mass histories')
+
             cumulative_histories.append(cumulative_history)
 
         cumulative_histories = pd.concat(cumulative_histories)
