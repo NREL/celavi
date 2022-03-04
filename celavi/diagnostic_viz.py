@@ -88,6 +88,7 @@ class DiagnosticViz:
 
         for facility, inventory in self.facility_inventories.items():
             cumulative_history = inventory.cumulative_history
+            cumulative_history = cumulative_history.drop(columns = ['timestep'])
             cumulative_history = cumulative_history.reset_index()
             cumulative_history.rename(columns={"index": "timestep"}, inplace=True)
             facility_type, facility_id = facility.split("_")

@@ -202,9 +202,8 @@ class Context:
         float
             The year converted from the discrete timestep.
         """
-        print(timesteps)
-        print(timesteps / self.timesteps_per_year + self.min_year)
-        return timesteps / self.timesteps_per_year + self.min_year
+        result = timesteps / self.timesteps_per_year + self.min_year
+        return result
 
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
         """
@@ -325,15 +324,20 @@ class Context:
             yield env.timeout(self.timesteps_per_year)
 
             annual_data_for_lci = []
-            window_last_timestep = env.now
+            window_last_timestep = env.now-1
             window_first_timestep = window_last_timestep - self.timesteps_per_year
             year = int(floor(self.timesteps_to_years(env.now)))
             for facility_name, facility in self.mass_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
                 for material in self.possible_materials:
                     annual_transactions = facility.transaction_history.loc[
-                                          window_first_timestep:window_last_timestep + 1, material
+                                          window_first_timestep:window_last_timestep, material
                                           ]
+                    sliced_info = facility.transaction_history.loc[
+                                          window_first_timestep:window_last_timestep, [material,'timestep']
+                                          ].reset_index()
+                    #Debugging file for mass transactions.
+                    sliced_info.to_csv('mass_tonnes_check.csv', mode = 'a')
                     # If the facility is NOT manufacturing, keep only positive transactions
                     if facility_name.find('manufacturing') == -1:
                          positive_annual_transactions = annual_transactions[annual_transactions > 0]
@@ -341,14 +345,15 @@ class Context:
                         # If the facility IS manufacturing, use all of the transactions
                         positive_annual_transactions = annual_transactions
                     mass_tonnes = positive_annual_transactions.sum()
-                    if mass_tonnes > 0:
-                        print(f'Year {year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
+                    if mass_tonnes > 0:                        
+                        actual_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year//2])))
+                        print(f'ActualYear {actual_year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
                     mass_kg = mass_tonnes * 1000
                     if mass_kg > 0:
                         row = {
                             'flow quantity': mass_kg,
                             'stage': process_name,
-                            'year': year,
+                            'year': actual_year,
                             'material': material,
                             'flow unit': 'kg',
                             'facility_id': facility_id,
@@ -364,7 +369,7 @@ class Context:
                     row = {
                         'flow quantity': tonne_km,
                         'stage': 'Transportation',
-                        'year': year,
+                        'year': actual_year,
                         'material': 'transportation',
                         'flow unit': 't * km',
                         'facility_id': facility_id,
@@ -373,12 +378,11 @@ class Context:
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
             if annual_data_for_lci:
-                #print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
+                print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface)
             else:
-                pass
-                #print(f'{datetime.now()} pylca_interface_process(): All Masses are 0')
+                print(f'{datetime.now()} pylca_interface_process(): All Masses are 0')
 
     def average_total_component_mass_for_year(self, year):
         """
