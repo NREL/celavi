@@ -96,7 +96,7 @@ class DiagnosticViz:
             cumulative_history["year"] = (
                 cumulative_history["timestep"] / self.timestep_per_year
             ) + self.start_year
-            cumulative_history["year_ceil"] = np.ceil(cumulative_history["year"])
+            cumulative_history["year_floor"] = np.floor(cumulative_history["year"])
             # scale component counts with dictionary from config, if component
             # columns are present
             try:
@@ -117,7 +117,7 @@ class DiagnosticViz:
         cumulative_histories = pd.concat(cumulative_histories)
 
         self.gathered_and_melted_cumulative_histories = (
-            cumulative_histories.drop(["timestep", "year_ceil", "facility_id"], axis=1)
+            cumulative_histories.drop(["timestep", "year_floor", "facility_id"], axis=1)
             .melt(
                 var_name=self.var_name,
                 value_name=self.value_name,
