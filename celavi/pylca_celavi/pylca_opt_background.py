@@ -465,7 +465,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
        
         if not res2.empty:
           res2.loc[:,'year'] =  i
-          res.loc[:,'facility_id'] =  l
+          res2.loc[:,'facility_id'] =  l
           res2.loc[:,'stage'] = j
           res2.loc[:,'material'] = k
     
