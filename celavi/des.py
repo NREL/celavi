@@ -446,8 +446,9 @@ class Context:
             #print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             
             year = self.timesteps_to_years(env.now)
-            #ALICIA edits this part
-            if year < 2051:
+            max_year = self.min_year + (self.max_timesteps / self.timesteps_per_year)
+
+            if year < max_year:
                 _path_dict = self.path_dict.copy()
                 _path_dict['year'] = year
                 _path_dict['component mass'] = self.average_total_component_mass_for_year(year)
