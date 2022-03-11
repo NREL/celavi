@@ -36,6 +36,7 @@ class Context:
         cost_graph_update_interval_timesteps: int,
         path_dict: Dict = None,
         min_year: int = 2000,
+        end_year: int = 2050,
         max_timesteps: int = 600,
         timesteps_per_year: int = 12
     ):
@@ -85,6 +86,7 @@ class Context:
         self.path_dict = path_dict
         self.max_timesteps = max_timesteps
         self.min_year = min_year
+        self.end_year = end_year
         self.timesteps_per_year = timesteps_per_year
 
         self.components: List[Component] = []
@@ -446,9 +448,8 @@ class Context:
             #print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             
             year = self.timesteps_to_years(env.now)
-            max_year = self.min_year + (self.max_timesteps / self.timesteps_per_year)
 
-            if year < max_year:
+            if year < self.end_year:
                 _path_dict = self.path_dict.copy()
                 _path_dict['year'] = year
                 _path_dict['component mass'] = self.average_total_component_mass_for_year(year)
