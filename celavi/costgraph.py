@@ -6,7 +6,7 @@ from time import time
 from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
-import pdb
+
 class CostGraph:
     """
         Contains methods for:
@@ -279,7 +279,8 @@ class CostGraph:
             dist_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['dist']
                          for d in range(len(short_paths[nearest])-1)]
             dist_list.insert(0, 0.0)
-            route_id_list = 
+            route_id_list = [self.supply_chain.edges[short_paths[nearest][d:d+2]]['route_id'] for d in range(len(short_paths[nearest])-1)]
+            route_id_list.insert(0, None)
             _out = self.list_of_tuples(short_paths[nearest],
                                        timeout_list,
                                        dist_list,
@@ -470,7 +471,8 @@ class CostGraph:
                             )
                 ],
                 'cost': 0.0,
-                'dist': 0.0}
+                'dist': 0.0,
+                'route_id': None}
             for edge in _unique_edges
         ]
 
