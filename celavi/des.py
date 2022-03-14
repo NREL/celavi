@@ -5,6 +5,7 @@ import time
 
 import simpy
 import pandas as pd
+import numpy as np
 
 from celavi.inventory import FacilityInventory
 from celavi.transportation_tracker import TransportationTracker
@@ -348,6 +349,7 @@ class Context:
                             'material': material,
                             'flow unit': 'kg',
                             'facility_id': facility_id,
+                            'route_id': None, 
                             'state': self.facility_states[facility_id]
                         }
                         self.data_for_lci.append(row)
@@ -355,20 +357,64 @@ class Context:
 
             for facility_name, tracker in self.transportation_trackers.items():
                 _, facility_id = facility_name.split("_")
+                # List of all inbound transportation amounts to this facility in the past window
                 annual_transportations = tracker.inbound_tonne_km[window_first_timestep:window_last_timestep + 1]
-                tonne_km = annual_transportations.sum()
-                if tonne_km > 0:
+                # Corresponding list of the routes along which the inbound transportation took place
+                route_ids = tracker.route_id[window_first_timestep:window_last_timestep + 1]
+
+                # Case 1 (easiest): There was no inbound transportation and the rest of this block is skipped
+                    # Provide no data to LCIA. Executes if none of the if/elif statements below are True.
+                
+                # Case 2 (easy): There was only one instance of inbound transportation 
+                # and therefore only one corresponding route
+                if len(annual_transportations[annual_transportations != 0]) == 1:
+                    # Provide one row of data to LCIA by filtering out zeros/Nones. No aggregation needed.
                     row = {
-                        'flow quantity': tonne_km,
+                        'flow quantity': annual_transportations[annual_transportations != 0][0],
                         'stage': 'Transportation',
                         'year': year,
                         'material': 'transportation',
                         'flow unit': 't * km',
                         'facility_id': facility_id,
+                        'route_id': route_ids[annual_transportations != 0][0], 
                         'state': self.facility_states[facility_id]
                     }
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
+                elif len(annual_transportations[annual_transportations != 0]) > 1:
+                    # Case 3 (easy): There were multiple instances of inbound transportation that all took place along the same route
+                    if len(np.unique(route_ids[annual_transportations != 0])) == 1:
+                        # Provide one row of data to LCIA by summing the inbound transportation and filtering out Nones in route_ids.
+                        row = {
+                            'flow quantity': annual_transportations.sum(),
+                            'stage': 'Transportation',
+                            'year': year,
+                            'material': 'transportation',
+                            'flow unit': 't * km',
+                            'facility_id': facility_id,
+                            'route_id': route_ids[annual_transportations != 0][0], 
+                            'state': self.facility_states[facility_id]
+                        }
+                        self.data_for_lci.append(row)
+                        annual_data_for_lci.append(row)
+                    # Case 4 (less easy): There were multiple instances of inbound transportation that took place along different routes
+                    elif len(np.unique(route_ids[annual_transportations != 0])) > 1:                
+                        # Provide as many rows of data to LCIA as there are unique routes by filtering out zeros/Nones. Only 
+                        # aggregate if one or more routes had multiple instances of inbound transportation.
+                        for _r in np.unique(route_ids[annual_transportations != 0]):
+                            row = {
+                                'flow quantity': annual_transportations[route_ids == _r].sum(),
+                                'stage': 'Transportation',
+                                'year': year,
+                                'material': 'transportation',
+                                'flow unit': 't * km',
+                                'facility_id': facility_id,
+                                'route_id': _r, 
+                                'state': self.facility_states[facility_id]
+                            }
+                            self.data_for_lci.append(row)
+                            annual_data_for_lci.append(row)
+            
             print(str(time.time() - time0)+' For loop of pylca took these many seconds')
             if annual_data_for_lci:
                 print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
