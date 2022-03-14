@@ -210,6 +210,7 @@ class PylcaCelavi:
                 stage = row['stage']
                 material = row['material']
                 facility_id = row['facility_id']
+                route_id = row['route_id']
                 state = row['state']
                 new_df = df_s[df_s['index'] == index]
     
