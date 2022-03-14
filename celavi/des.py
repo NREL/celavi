@@ -340,28 +340,15 @@ class Context:
                     sliced_info = facility.transaction_history.loc[
                                           window_first_timestep:window_last_timestep, [material,'timestep']
                                           ].reset_index()
-                    #Debugging file for mass transactions.
-                    """A problematic value occurs when in one sliced dataframe we have two years and the second year has a positive
-                    mass value. Due to that, calculating the proper year for the total mass sum becomes a little difficult
-                    For example - 
-                    A sliced dataframe contains 13 timesteps. From Jan 2021 to Jan 2022. Thus we can have two dataframe slices that have
-                    the time step corressponding to January of 2022 (one which ends in Jan 2022 and one which begins at Jan 2022)
-                    Manufacturing masses generally gets filled up in the first dataframe in the last time step. Thus Manufacturing mass years are
-                    displaced by -1 in the calculations We need to correct that. 
-                    if Manufacturing takes place in May 2021 and Jan 2022, its difficult to sum up the total mass for manufacturing
-                    for this particular dataframe slice because the year is spread out.
-                    Reducing the slice dataframe size results in all January activities and masses go missing. 
-                    """
+                    
                     sliced_info['year'] = sliced_info['timestep']/self.timesteps_per_year+self.min_year                    
                     actual_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year//2])))
                     problematic_value = sliced_info[material][self.timesteps_per_year]
-                    # A problematic value is when mass is reported in the last time step of a sliced dataframe which belongs to the next year.
-                    # Generally this happens ONLY for manufacturing. 
+
+                    # A problematic value is when mass is reported in the last time step of a sliced dataframe
+                    # which belongs to the next year. Generally this happens only for manufacturing. 
                     if problematic_value > 0: 
-                        print(f'Process name {process_name} facility_id {facility_id}')
                         problem_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year])))
-                        print(f'We find year problem with {facility_name}')
-                        print(f'Corrected actual year {actual_year} to {actual_year+1}')
                         actual_year = actual_year + 1
                     
                     #If the facility is NOT manufacturing, keep only positive transactions
