@@ -95,18 +95,17 @@ class Component:
 
         path_choice = path_choices_dict[in_use_facility_id]
         self.pathway = deque()
-
-        for facility, lifespan, distance in path_choice['path']:
+        for facility, lifespan, distance, route_id in path_choice['path']:
             # Override the initial timespan when component goes into use.
 
             if facility.startswith("in use"):
-                self.pathway.append((facility, self.initial_lifespan_timesteps, distance))
+                self.pathway.append((facility, self.initial_lifespan_timesteps, distance, route_id))
             elif any([facility.startswith(i)
                       for i in self.context.path_dict['permanent_lifespan_facility']]):
-                self.pathway.append((facility, self.context.max_timesteps * 2, distance))
+                self.pathway.append((facility, self.context.max_timesteps * 2, distance, route_id))
             # Otherwise, use the timespan the model gives us.
             else:
-                self.pathway.append((facility, lifespan, distance))
+                self.pathway.append((facility, lifespan, distance, route_id))
 
     def bol_process(self, env):
         """
@@ -158,13 +157,19 @@ class Component:
         count_transport = self.context.transportation_trackers[self.current_location]
         for _, mass in self.mass_tonnes.items():
             count_transport.increment_inbound_tonne_km(
-                mass * self.context.cost_graph.supply_chain.edges[
+                tonne_km = mass * self.context.cost_graph.supply_chain.edges[
                     f"manufacturing_{int(self.manuf_facility_id)}",
                     f"in use_{int(self.in_use_facility_id)}"
                 ][
                     'dist'
                 ],
-                env.now
+                route_id = self.context.cost_graph.supply_chain.edges[
+                    f"manufacturing_{int(self.manuf_facility_id)}",
+                    f"in use_{int(self.in_use_facility_id)}"
+                ][
+                    'route_id'
+                ],
+                timestep = env.now
             )
 
         # Component stays in use for its lifetime
@@ -177,7 +182,6 @@ class Component:
         count_inventory.increment_quantity(self.kind, -1, env.now)
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, -mass, env.now)
-
         # Take the current facility off the to-do list
         self.pathway.popleft()
 
@@ -197,7 +201,7 @@ class Component:
         """
         while True:
             if self.pathway:
-                location, lifespan, distance = self.pathway.popleft()
+                location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split('_')[0]
                 if factype in self.split_dict.keys():
                     # increment the facility inventory and transportation tracker
@@ -211,7 +215,7 @@ class Component:
                     )
 
                     for _, mass in self.mass_tonnes.items():
-                        fac_transport.increment_inbound_tonne_km(mass * distance, env.now)
+                        fac_transport.increment_inbound_tonne_km(tonne_km = mass * distance, route_id = route_id, timestep = env.now)
 
                     for material, mass in self.mass_tonnes.items():
                         fac_mass_inventory.increment_quantity(material, mass, env.now)
@@ -238,8 +242,9 @@ class Component:
 
                     for material, mass in self.mass_tonnes.items():
                         fac1_transport.increment_inbound_tonne_km(
-                            self.split_dict[factype]['fraction'] * mass * distance,
-                            env.now
+                            tonne_km = self.split_dict[factype]['fraction'] * mass * distance,
+                            route_id = route_id,
+                            timestep = env.now
                         )
                         fac1_mass_inventory.increment_quantity(
                             material,
@@ -264,8 +269,9 @@ class Component:
                         )
 
                         fac2_transport.increment_inbound_tonne_km(
-                            (1 - self.split_dict[factype]['fraction']) * mass * distance,
-                            env.now
+                            tonne_km = (1 - self.split_dict[factype]['fraction']) * mass * distance,
+                            route_id = route_id, 
+                            timestep = env.now
                         )
 
                     yield env.timeout(lifespan)
@@ -291,7 +297,7 @@ class Component:
                     # Again, assuming the transportation impacts are the same per unit
                     # mass for all materials.
                     for _, mass in self.mass_tonnes.items():
-                        transport.increment_inbound_tonne_km(mass * distance, env.now)
+                        transport.increment_inbound_tonne_km(tonne_km = mass * distance, route_id = route_id, timestep = env.now)
 
                     self.current_location = location
 
@@ -301,6 +307,5 @@ class Component:
 
                     for material, mass in self.mass_tonnes.items():
                         mass_inventory.increment_quantity(material, -mass, env.now)
-
             else:
                 break
