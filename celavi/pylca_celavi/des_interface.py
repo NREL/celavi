@@ -173,9 +173,7 @@ class PylcaCelavi:
             
             
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
-            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()
-            df_with_no_lca_entry.to_csv('chk.csv', mode = 'a')
-            
+            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()            
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
             df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']]
             result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
