@@ -173,7 +173,7 @@ def electricity_corrector_before20(df):
         process inventory with electricity flows before 2020 converted to the base electricity
         mix flow in USLCI. 
     """
-    df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
+    df = df.replace(to_replace='electricity', value='electricity')
     return df
 
 
@@ -281,16 +281,27 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
     final_dem = product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
+    f_d.to_csv('demand_of_celavi.csv', mode = 'a')
     if chksum == 0:
         print('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
     
     else:
+        #To make the optimization easier
+        if chksum > 100000:
+            final_demand_scaler = 10000
+        elif chksum > 10000:
+            final_demand_scaler = 1000
+        elif chksum > 100:
+            final_demand_scaler = 10
+        else:
+            final_demand_scaler = 1
+            
         F = final_dem['flow quantity']
         # Dividing by scaling value to solve scaling issues
-        F = F / 100000
+        F = F / final_demand_scaler
     
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows,intermediate_demand_filename)
+        res = runner(tech_matrix, F, yr, fac_id, stage, material, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
         if len(res.columns) != 7:
             print(f'model_celavi_lci: res has {len(res.columns)}; needs 7 columns',
                   flush=True)

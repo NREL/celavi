@@ -1,6 +1,6 @@
 from typing import Dict, List
 from pathlib import Path
-
+from contextlib import suppress
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -88,6 +88,7 @@ class DiagnosticViz:
 
         for facility, inventory in self.facility_inventories.items():
             cumulative_history = inventory.cumulative_history
+            cumulative_history = cumulative_history.drop(columns = ['timestep'])
             cumulative_history = cumulative_history.reset_index()
             cumulative_history.rename(columns={"index": "timestep"}, inplace=True)
             facility_type, facility_id = facility.split("_")
@@ -96,13 +97,14 @@ class DiagnosticViz:
             cumulative_history["year"] = (
                 cumulative_history["timestep"] / self.timestep_per_year
             ) + self.start_year
-            cumulative_history["year_ceil"] = np.ceil(cumulative_history["year"])
+            cumulative_history["year_floor"] = np.floor(cumulative_history["year"])
+            
             # scale component counts with dictionary from config, if component
             # columns are present
-            try:
-                print('Gathering and scaling component count inventories')
-                # Multiply component counts in the inventory by the number of
-                # components in each technology unit
+            
+            # Multiply component counts in the inventory by the number of
+            # components in each technology unit
+            with suppress(KeyError):
                 cumulative_history.loc[
                     :, [key for key, value in self.component_count.items()]
                 ] = cumulative_history.loc[
@@ -110,14 +112,13 @@ class DiagnosticViz:
                 ] * [
                     value for key, value in self.component_count.items()
                 ]
-            except KeyError as e:
-                print('Gathering component mass histories')
+
             cumulative_histories.append(cumulative_history)
 
         cumulative_histories = pd.concat(cumulative_histories)
 
         self.gathered_and_melted_cumulative_histories = (
-            cumulative_histories.drop(["timestep", "year_ceil", "facility_id"], axis=1)
+            cumulative_histories.drop(["timestep", "year_floor", "facility_id"], axis=1)
             .melt(
                 var_name=self.var_name,
                 value_name=self.value_name,

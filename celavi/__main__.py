@@ -467,8 +467,11 @@ timesteps_per_year = model_run.get('timesteps_per_year')
 
 # calculate des timesteps such that the model runs through the end of the
 # end year rather than stopping at the beginning of the end year
+
+end_year = model_run.get('end_year')
+
 des_timesteps = int(
-    timesteps_per_year * (model_run.get('end_year') - start_year) + timesteps_per_year
+    timesteps_per_year * (end_year - start_year) + timesteps_per_year
 )
 
 # Get list of unique materials involved in the case study
@@ -487,6 +490,7 @@ context = Context(
     lca=lca,
     path_dict=pathways,
     min_year=start_year,
+    end_year=end_year,
     max_timesteps=des_timesteps,
     timesteps_per_year=timesteps_per_year
 )

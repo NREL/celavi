@@ -66,17 +66,18 @@ class FacilityInventory:
         for possible_item in possible_items:
             self.component_materials[possible_item] = 0.0
 
-        # Populate the deposit and withdrawal history with copies of the
-        # initialized dictionary from above that has all values set to 0.0
         self.transactions: List[Dict[str, float]] = []
-        for _ in range(timesteps):
-            self.transactions.append(self.component_materials.copy())
-
+        for timestep in range(timesteps):
+            component_materials_copy = self.component_materials.copy()
+            component_materials_copy['timestep'] = timestep
+            self.transactions.append(component_materials_copy)
         # Populate the deposit-only history with copies of the
         # initialized dictionary from above that has all values set to 0.0
         self.input_transactions: List[Dict[str, float]] = []
-        for _ in range(timesteps):
-            self.input_transactions.append(self.component_materials.copy())
+        for timestep in range(timesteps):
+            component_materials_copy = self.component_materials.copy()
+            component_materials_copy['timestep'] = timestep
+            self.input_transactions.append(component_materials_copy)
 
     def increment_quantity(
         self, item_name: str, quantity: float, timestep: int

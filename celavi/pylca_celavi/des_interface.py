@@ -179,7 +179,7 @@ class PylcaCelavi:
             print('No existing results file:'+self.shortcutlca_filename)        
             return df,pd.DataFrame()
 
-    def pylca_run_main(self, df):
+    def pylca_run_main(self, df, verbose = 0):
         """
         This function runs the individual pylca celavi functions for performing various calculations
         
@@ -205,7 +205,6 @@ class PylcaCelavi:
 
             #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
             for index,row in df_s.iterrows():
-                
                 year = row['year']
                 stage = row['stage']
                 material = row['material']
@@ -259,12 +258,12 @@ class PylcaCelavi:
                                               mode = 'a',
                                               index = False,
                                               header = False)
-                            else:                                
-                                print(f'Empty dataframe returned from pylcia foreground for {year} {stage} {material}')
-                
-                        else:                              
-                            print('Final demand for %s %s %s is zero' % (str(year), stage, material))
-                
+                            else:
+                              if verbose > 0:                                
+                                print(f'Empty dataframe returned from pylcia foreground for {year} {stage} {material}')                
+                        else:
+                           if verbose > 0:                              
+                            print('Final demand for %s %s %s is zero' % (str(year), stage, material))               
                 
                 else:
                     print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
