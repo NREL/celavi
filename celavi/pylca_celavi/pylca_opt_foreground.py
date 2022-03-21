@@ -177,7 +177,7 @@ def electricity_corrector_before20(df):
     return df
 
 
-def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):
+def runner(tech_matrix,F,yr,i,j,k,route_id,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):
     
     """
     Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
@@ -196,6 +196,8 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
         stage
     k: str
         material
+    route_id: str
+        UUID identifying the transportation route
     final_demand_scaler: int
         scaling variable number to ease optimization
     process: list
@@ -219,6 +221,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
        res.loc[:, 'facility_id'] = i
        res.loc[:, 'stage'] = j
        res.loc[:, 'material'] = k
+       res.loc[:, 'route_id'] = route_id
        res = electricity_corrector_before20(res)
        # Intermediate demand is not required by the framewwork, but it is useful
        # for debugging.
@@ -232,7 +235,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
 
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
 
     """
     Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
@@ -290,14 +293,14 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
         # Dividing by scaling value to solve scaling issues
         F = F / 100000
     
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows,intermediate_demand_filename)
-        if len(res.columns) != 7:
+        res = runner(tech_matrix, F, yr, fac_id, stage, material, route_id, 100000, process, df_with_all_other_flows,intermediate_demand_filename)
+        if len(res.columns) != 8:
             print(f'model_celavi_lci: res has {len(res.columns)}; needs 7 columns',
                   flush=True)
             return pd.DataFrame(
                 columns=['flow name', 'unit', 'flow quantity',
-                         'year', 'facility_id', 'stage', 'material']
+                         'year', 'facility_id', 'stage', 'material', 'route_id']
             )
         else:
-            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']
+            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id']
             return res

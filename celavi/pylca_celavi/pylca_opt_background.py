@@ -7,7 +7,7 @@ import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
+def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci_filename,
                                 lci_activity_locations):
 
     """
@@ -27,6 +27,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
       stage of analysis
     material: str
       material of LCA analysis
+    route_id: str
+        Unique identifier for transportation route.
     uslci_filename: str
       filename for the USLCI inventory
     lci_activity_locations
@@ -417,7 +419,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
         return emissions_results_total,product_results_total
             
     
-    def runner(tech_matrix, F,i,l,j,k,final_demand_scaler):
+    def runner(tech_matrix, F,i,l,j,k,route_id,final_demand_scaler):
 
         """
         Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
@@ -436,6 +438,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
             stage
         k: str
             material
+        route_id: str
+            Unique identifier for transportation route.
         final_demand_scaler: int
             scaling variable number to ease optimization
 
@@ -456,6 +460,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
           res.loc[:,'facility_id'] =  l
           res.loc[:,'stage'] = j
           res.loc[:,'material'] = k
+          res.loc[:, 'route_id'] = route_id
     
           print(str(i) +' - '+j + ' - ' + k)
     
@@ -468,6 +473,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
           res.loc[:,'facility_id'] =  l
           res2.loc[:,'stage'] = j
           res2.loc[:,'material'] = k
+          res2.loc[:, 'route_id'] = route_id
     
         else:
            print(f"optimization pylca-opt-background emission failed for {k} at {j} in {i}")
@@ -488,7 +494,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
     final_dem = final_dem.fillna(0)
     #To make the optimization easier
     F = final_dem['flow quantity']/final_demand_scaler
-    res2 = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
+    res2 = runner(tech_matrix,F,yr,fac_id,stage,material,route_id,final_demand_scaler)
     
     return res2
 
