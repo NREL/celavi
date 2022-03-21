@@ -124,10 +124,11 @@ def concrete_life_cycle_inventory_updater(d_f,
         # This co2 emission only includes the coal combustion impact factor. Other fuels need to be added separately
         df_emissions = pd.read_csv(emissions_filename)
         df_emissions.loc[((df_emissions['product'] == 'carbon dioxide') & (df_emissions['process'] == 'concrete, in use')),'value'] = new_co2_emission_factor
+        df_static['route_id'] = None
+        df_emissions['route_id'] = None
         return df_static,df_emissions
 
     else:
-
         df_static = pd.read_csv(static_filename)
         df_emissions = pd.read_csv(emissions_filename)
         return df_static,df_emissions
