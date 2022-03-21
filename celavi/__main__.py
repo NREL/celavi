@@ -592,7 +592,7 @@ netw.save_costgraph_outputs()
 
 # Join LCIA and locations computed and write the result to enable creation of
 # maps
-lcia_names = ['year', 'facility_id', 'material', 'stage', 'impact',
+lcia_names = ['year', 'facility_id', 'material', 'route_id', 'stage', 'impact',
               'impact_value']
 lcia_df = pd.read_csv(lcia_des_filename, names=lcia_names)
 locations_df = pd.read_csv(locations_computed_filename)
