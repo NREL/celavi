@@ -4,7 +4,7 @@ import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 import os
-import pdb
+
 
 def postprocessing(final_res,insitu):
     """
@@ -28,7 +28,7 @@ def postprocessing(final_res,insitu):
 
     """
     #Giving names to the columns for the final result file
-    column_names = ['flow name','flow unit','flow quantity','year','facility_id','stage','material']
+    column_names = ['flow name','flow unit','flow quantity','year','facility_id','stage','material', 'route_id']
 
     if final_res.empty:
         print('pylca_celavi_background_postprocess: final_res is empty')
@@ -41,7 +41,7 @@ def postprocessing(final_res,insitu):
         # Adding up the insitu emission primarily for the cement manufacturing process
         final_res['flow name'] = final_res['flow name'].str.lower()
         
-        column_names = ['flow name', 'flow unit', 'year', 'facility_id', 'stage', 'material']
+        column_names = ['flow name', 'flow unit', 'year', 'facility_id', 'stage', 'material', 'route_id']
         total_em = insitu.merge(final_res, on=column_names, how='outer')
         total_em = total_em.fillna(0)
         total_em['flow quantity'] = total_em['flow quantity_x'] + total_em['flow quantity_y']
@@ -106,11 +106,10 @@ def impact_calculations(final_res,traci_lci_filename):
     
     
     traci_df = pd.melt(traci, id_vars=['CAS #', 'Formatted CAS #', 'Substance Name'], value_vars=valuevars, var_name='impacts', value_name='value')
-    
     final_res['flow name'] = final_res['flow name'].str.upper()
     df_lcia = final_res.merge(traci_df, left_on=['flow name'], right_on=['Substance Name'])
     df_lcia['impact'] = df_lcia['flow quantity'] * df_lcia['value']
-    df_lcia = df_lcia.groupby(['year', 'facility_id', 'material', 'stage', 'impacts'])['impact'].agg('sum').reset_index()  
+    df_lcia = df_lcia.groupby(['year', 'facility_id', 'material', 'route_id', 'stage', 'impacts'],dropna=False)['impact'].agg('sum').reset_index()  
 
     return df_lcia                      
 
