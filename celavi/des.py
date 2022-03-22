@@ -1,5 +1,5 @@
 from typing import Dict, List, Callable
-from math import ceil
+from math import floor
 from datetime import datetime
 import time
 
@@ -37,6 +37,7 @@ class Context:
         cost_graph_update_interval_timesteps: int,
         path_dict: Dict = None,
         min_year: int = 2000,
+        end_year: int = 2050,
         max_timesteps: int = 600,
         timesteps_per_year: int = 12
     ):
@@ -86,6 +87,7 @@ class Context:
         self.path_dict = path_dict
         self.max_timesteps = max_timesteps
         self.min_year = min_year
+        self.end_year = end_year
         self.timesteps_per_year = timesteps_per_year
 
         self.components: List[Component] = []
@@ -203,7 +205,8 @@ class Context:
         float
             The year converted from the discrete timestep.
         """
-        return timesteps / self.timesteps_per_year + self.min_year
+        result = timesteps / self.timesteps_per_year + self.min_year
+        return result
 
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
         """
@@ -293,7 +296,8 @@ class Context:
             Total cumulative mass of the component in the process at the
             timestep.
         """
-        year = int(ceil(self.timesteps_to_years(timestep)))
+        
+        year = int(floor(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
 
         cumulative_counts = [
@@ -303,7 +307,6 @@ class Context:
         ]
         total_count = sum(cumulative_counts)
         total_mass = total_count * avg_component_mass
-        print(f'{datetime.now()} process_name {process_name}, kind {component_kind}, time {timestep}, total_mass {total_mass} tonnes')
         return total_mass
 
     def pylca_interface_process(self, env):
@@ -321,31 +324,53 @@ class Context:
             The SimPy environment this process belongs to.
         """
         while True:
-            print(f'{datetime.now()} In While loop pylca interface', flush=True)
-            time0 = time.time()
             yield env.timeout(self.timesteps_per_year)
-            print(str(time.time() - time0) + ' yield of env timeout pylca took these many seconds')
 
             annual_data_for_lci = []
             window_last_timestep = env.now
-            window_first_timestep = window_last_timestep - self.timesteps_per_year
-            time0 = time.time()
-            year = int(ceil(self.timesteps_to_years(env.now)))
+            window_first_timestep = env.now - self.timesteps_per_year
+
+            year = int(floor(self.timesteps_to_years(env.now)))
 
             for facility_name, facility in self.mass_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
                 for material in self.possible_materials:
                     annual_transactions = facility.transaction_history.loc[
-                                          window_first_timestep:window_last_timestep + 1, material
+                                          window_first_timestep:window_last_timestep, material
                                           ]
-                    positive_annual_transactions = annual_transactions[annual_transactions > 0]
+                    sliced_info = facility.transaction_history.loc[
+                                          window_first_timestep:window_last_timestep, [material,'timestep']
+                                          ].reset_index()
+                    
+                    sliced_info['year'] = sliced_info['timestep']/self.timesteps_per_year+self.min_year                    
+                    actual_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year//2])))
+                    problematic_value = sliced_info[material][self.timesteps_per_year]
+
+                    # A problematic value is when mass is reported in the last time step of a sliced dataframe
+                    # which belongs to the next year. Generally this happens only for manufacturing. 
+                    if problematic_value > 0: 
+                        problem_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year])))
+                        actual_year = actual_year + 1
+                    
+                    #If the facility is NOT manufacturing, keep only positive transactions
+                    if facility_name.find('manufacturing') == -1:
+                         positive_annual_transactions = annual_transactions[annual_transactions > 0]
+                    else:
+                        #If the facility IS manufacturing, use all of the transactions
+                        positive_annual_transactions = annual_transactions
                     mass_tonnes = positive_annual_transactions.sum()
+
+                    if mass_tonnes > 0:
+                        print(f'Actual_year {actual_year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
+                        sliced_info['facility_name'] = facility_name
+                        sliced_info['facility_id'] = facility_id
+                        sliced_info.to_csv('mass_tonnes_check_debug.csv', index = False, mode = 'a')
                     mass_kg = mass_tonnes * 1000
                     if mass_kg > 0:
                         row = {
                             'flow quantity': mass_kg,
                             'stage': process_name,
-                            'year': year,
+                            'year': actual_year,
                             'material': material,
                             'flow unit': 'kg',
                             'facility_id': facility_id,
@@ -354,7 +379,6 @@ class Context:
                         }
                         self.data_for_lci.append(row)
                         annual_data_for_lci.append(row)
-
             for facility_name, tracker in self.transportation_trackers.items():
                 _, facility_id = facility_name.split("_")
                 # List of all inbound transportation amounts to this facility in the past window
@@ -372,15 +396,17 @@ class Context:
                     row = {
                         'flow quantity': annual_transportations[annual_transportations != 0][0],
                         'stage': 'Transportation',
-                        'year': year,
+                        'year': actual_year,
                         'material': 'transportation',
                         'flow unit': 't * km',
                         'facility_id': facility_id,
                         'route_id': route_ids[annual_transportations != 0][0], 
                         'state': self.facility_states[facility_id]
                     }
+                    print(f'Transportation row {row}') 
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
+                
                 elif len(annual_transportations[annual_transportations != 0]) > 1:
                     # Case 3 (easy): There were multiple instances of inbound transportation that all took place along the same route
                     if len(np.unique(route_ids[annual_transportations != 0])) == 1:
@@ -416,12 +442,13 @@ class Context:
                             annual_data_for_lci.append(row)
             
             print(str(time.time() - time0)+' For loop of pylca took these many seconds')
+
             if annual_data_for_lci:
-                print(f'{datetime.now()} DES interface: Found flow quantities greater than 0, performing LCIA')
+                print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface)
             else:
-                print(f'{datetime.now()} DES interface: All Masses are 0')
+                print(f'{datetime.now()} pylca_interface_process(): All Masses are 0')
 
     def average_total_component_mass_for_year(self, year):
         """
@@ -431,45 +458,47 @@ class Context:
         ----------
         year: float
             The floating point year. Will be rounded to nearest integer year with
-            int() and ceil()
+            int() and floor()
 
         Returns
         -------
         float
             Average total component mass for a year.
         """
-        year_int = int(ceil(year))
+        year = int(floor(year))
         total_mass = 0.0
         for material in self.possible_materials:
-            total_mass += self.component_material_mass_tonne_dict[material][year_int]
+            total_mass += self.component_material_mass_tonne_dict[material][year]
         return total_mass
 
     def update_cost_graph_process(self, env):
         """
         This is the SimPy process that updates the cost graph periodically.
         """
-        print('Updating cost graph')
+        #print('Updating cost graph')
         while True:
-            print(f'{datetime.now()} In While loop update cost graph',flush = True)
+            #print(f'{datetime.now()} In While loop update cost graph',flush = True)
             time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
-            print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
+            #print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
+            
             year = self.timesteps_to_years(env.now)
 
-            _path_dict = self.path_dict.copy()
-            _path_dict['year'] = year
-            _path_dict['component mass'] = self.average_total_component_mass_for_year(year)
+            if year < self.end_year:
+                _path_dict = self.path_dict.copy()
+                _path_dict['year'] = year
+                _path_dict['component mass'] = self.average_total_component_mass_for_year(year)
 
-            for key in self.path_dict['learning'].keys():
-                _path_dict['learning'][key]['cumul'] = \
-                    self.cumulative_mass_for_component_in_process_at_timestep(
-                        component_kind=_path_dict['learning'][key]['component'],
-                        process_name=_path_dict['learning'][key]['steps'],
-                        timestep=env.now
-                    )
-            self.cost_graph.update_costs(_path_dict)
+                for key in self.path_dict['learning'].keys():
+                    _path_dict['learning'][key]['cumul'] = \
+                        self.cumulative_mass_for_component_in_process_at_timestep(
+                            component_kind=_path_dict['learning'][key]['component'],
+                            process_name=_path_dict['learning'][key]['steps'],
+                            timestep=env.now
+                        )
+                self.cost_graph.update_costs(_path_dict)
 
-            print(f"{datetime.now()} Updated cost graph {year}", flush=True)
+            #print(f"{datetime.now()} Updated cost graph {year}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """
@@ -481,7 +510,7 @@ class Context:
             A dictionary of inventories mapped to their cumulative histories.
         """
 
-        print('DES RUN STARTING\n\n\n',flush=True)
+        #print('DES RUN STARTING\n\n\n',flush=True)
         self.env.process(self.update_cost_graph_process(self.env))
         self.env.process(self.pylca_interface_process(self.env))
         self.env.run(until=int(self.max_timesteps))

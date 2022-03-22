@@ -7,8 +7,17 @@ Welcome to celavi's documentation!
 ==================================
 
 .. toctree::
-   doc_main
-   doc_state_machine_units_model
+   doc_component
+   doc_compute_locations
+   doc_costmethods
+   doc_costgraph
+   doc_data_filtering
+   doc_data_manager
+   doc_diagnostic_viz
+   doc_inventory
+   doc_reeds_importer
+   doc_routing
+   doc_des
 
 
 
