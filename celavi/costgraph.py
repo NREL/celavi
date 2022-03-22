@@ -1,3 +1,4 @@
+from typing import List, Union
 import networkx as nx
 import pandas as pd
 import numpy as np
@@ -9,12 +10,11 @@ from celavi.costmethods import CostMethods
 
 class CostGraph:
     """
-        Contains methods for:
-         - Reading in graph data
-         - Creating a network of processing steps and facilities in a circular
-         supply chain
-         - Identifying preferred pathways through the supply chain
-         - Calculating supply chain characteristics such as pathway cost
+    Contains methods for:
+        - Reading in graph data
+        - Creating a network of processing steps and facilities in a circular supply chain
+        - Identifying preferred pathways through the supply chain
+        - Calculating supply chain characteristics such as pathway cost
     """
 
     def __init__(self,
@@ -129,7 +129,7 @@ class CostGraph:
 
 
     @staticmethod
-    def get_node_names(facilityID : [int, str],
+    def get_node_names(facilityID : List[Union[int, str]],
                        subgraph_steps: list):
         """
         Generates a list of unique node names from a list of processing steps
@@ -365,13 +365,13 @@ class CostGraph:
             DataFrame containing unique facility IDs, processing steps, and
             the name of the method (if any) used to calculate processing costs
             Column names in facility_df must be:
-                ['facility_id', 'step', 'connects', 'step_cost_method']
+            ['facility_id', 'step', 'connects', 'step_cost_method']
 
         Returns
         -------
-            List of (str, dict) tuples used to define a networkx DiGraph
-            Attributes are: processing step, cost method, facility ID, and
-            region identifiers
+        List of (str, dict) tuples used to define a networkx DiGraph
+        Attributes are: processing step, cost method, facility ID, and
+        region identifiers
 
         """
         if self.verbose > 1:
