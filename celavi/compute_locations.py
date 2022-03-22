@@ -36,32 +36,32 @@ class ComputeLocations:
         power_plant_locations
             Data set of renewable energy power plant locations including lat,
             long, region identifier columns, and other power-plant-specific
-            information as needed.
+            information as needed
 
         landfill_locations
-            Data set of landfills in the contiguous US.
+            Data set of landfill locations
 
         other_facility_locations
-            Data set of all other facility types involved in the case study.
+            Data set of all other facility types involved in the case study
 
         transportation_graph
-            Network of all roads in the contiguous US.
+            Transportation network data
 
         node_locations
-
+            Node locations within transportation graph
 
         lookup_facility_type
-            File defining the allowable set of facility types in the case study.
+            File defining the allowable set of facility types in the case study
 
         technology_data_filename
             File with technology-specific installation data, including year
             installed, location (lat, long, and region identifiers), and any
             technology-specific data required to model material flows into
-            power plants.
+            power plants
 
         standard_scenarios_filename
             File of output from NREL's REEDS model, used for capacity expansion
-            projections past the current year.
+            projections past the current year
         """
 
         self.start_year = start_year

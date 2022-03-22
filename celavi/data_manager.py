@@ -205,7 +205,7 @@ class TransportationGraph(Data):
 
 class TransportationNodeLocations(Data):
     """
-    Read in and process tranportation node locations.
+    Read in and process the node locations in the transportation graph.
     """
     COLUMNS = ({'name': 'node_id', 'type': int, 'index': True, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},

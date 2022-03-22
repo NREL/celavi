@@ -114,7 +114,7 @@ class Router:
             .sum().reset_index()
 
         _summary['region_transportation'] = _summary['statefp'] + _summary['countyfp']
-        _summary['vkmt'] = _summary['weight'] / 1000.0
+        _summary['vkmt'] = _summary['weight'] / 1000.0  # converts from meters to kilometers for 'vkmt' summary information
 
         return _summary[['region_transportation', 'fclass', 'vkmt']]
 
@@ -145,6 +145,7 @@ class Router:
             Transportation network data
 
         node_locations
+            Node locations within transportation graph
 
         routes_output_file
             Path to file where complete routes dataset is saved.
