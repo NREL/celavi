@@ -158,20 +158,16 @@ class PylcaCelavi:
         """
         try:
             db= pd.read_csv(self.shortcutlca_filename)
-            db.columns = ['year', 'stage', 'material', 'flow name', 'route_id', 'emission factor kg/kg']
+            db.columns = ['year', 'stage', 'material','route_id', 'flow name', 'emission factor kg/kg']
             db = db.drop_duplicates()
             df2 = df.merge(db, on = ['year', 'stage', 'material', 'route_id'], how = 'outer',indicator = True)
+            
             df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
-            
-            
-            df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
-            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()
-            
+            df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only'].drop_duplicates()            
             
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
             df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id']]
             result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
-            
             return df_with_no_lca_entry, result_shortcut
         
         except FileNotFoundError:
@@ -214,9 +210,10 @@ class PylcaCelavi:
                 new_df = df_s[df_s['index'] == index]
     
                 if self.use_shortcut_lca_calculations:
+                    
                     #Calling the lca performance improvement function to do shortcut calculations. 
                     df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
-        
+
                 else:                    
                     df_with_no_lca_entry = new_df
                     result_shortcut = pd.DataFrame()
@@ -246,7 +243,6 @@ class PylcaCelavi:
                                 res = impact_calculations(lci,self.traci_lci_filename)
                                 res_df = pd.concat([res_df,res])
                                 lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
-                                
                                 df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
                                 lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material', 'route_id'])
                                 lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
