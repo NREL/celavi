@@ -193,6 +193,10 @@ lca_results_filename = os.path.join(args.data,
                                     data_dirs.get('outputs'),
                                     outputs.get('lca_results_filename'))
 
+lca_transpo_results_filename = os.path.join(args.data,
+                                    data_dirs.get('outputs'),
+                                    outputs.get('lca_transpo_results_filename'))
+
 shortcutlca_filename = os.path.join(args.data,
                                     data_dirs.get('lci'),
                                     generated.get('shortcutlca_filename'))
@@ -609,10 +613,37 @@ locations_columns = [
 ]
 
 locations_select_df = locations_df.loc[:, locations_columns]
-lcia_locations_df = lcia_df.merge(locations_select_df, how='inner',
-                                  on='facility_id')
 
+# Create and save LCIA results for facilities, with location data
+lcia_process = lcia_df.loc[lcia_df.route_id.isna()]
+lcia_locations_df = lcia_process.merge(locations_select_df, how='inner', on='facility_id')
 lcia_locations_df.to_csv(lca_results_filename, index=False)
+
+# Create and save LCIA results for transportation, by route county
+lcia_transpo = lcia_df.dropna(
+).merge(
+    pd.read_csv(
+        routes_computed_filename,
+        usecols=['route_id','region_transportation','vkmt','total_vkmt']
+    ),
+    on='route_id',
+    how='outer'
+).dropna(
+    subset=['region_transportation']
+).rename(
+    columns={
+        'facility_id': 'destination_facility_id',
+        'impact_value': 'impact_total',
+        'vkmt': 'vkmt_by_region',
+        'total_vkmt': 'vkmt_total'
+    }
+)
+
+# Calculate transportation impacts by region (county) using county-level vkmt and route-level vkmt
+lcia_transpo['impact_by_region'] = lcia_transpo.impact_total * lcia_transpo.vkmt_by_region / lcia_transpo.vkmt_total
+
+# Save the disaggregated transportation impacts to file
+lcia_transpo.to_csv(lca_transpo_results_filename, index=False)
 
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
