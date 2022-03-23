@@ -637,7 +637,7 @@ lcia_transpo = lcia_df.dropna(
     subset=['region_transportation']
 ).rename(
     columns={
-        'facility_id': 'destination_facility_id',
+        'region_transportation': 'region_id_2',
         'impact_value': 'impact_total',
         'vkmt': 'vkmt_by_region',
         'total_vkmt': 'vkmt_total'
@@ -645,7 +645,10 @@ lcia_transpo = lcia_df.dropna(
 )
 
 # Calculate transportation impacts by region (county) using county-level vkmt and route-level vkmt
-lcia_transpo['impact_by_region'] = lcia_transpo.impact_total * lcia_transpo.vkmt_by_region / lcia_transpo.vkmt_total
+lcia_transpo['impact_value'] = lcia_transpo.impact_total * lcia_transpo.vkmt_by_region / lcia_transpo.vkmt_total
+
+# Drop unneeded columns
+lcia_transpo.drop(axis=1, columns=['route_id','vkmt_by_region','vkmt_total', 'impact_total'], inplace=True)
 
 # Save the disaggregated transportation impacts to file
 lcia_transpo.to_csv(lca_transpo_results_filename, index=False)
