@@ -33,6 +33,8 @@ class CostGraph:
                  verbose : int = 0,
                  save_copy = False,
                  save_name = 'netw.csv',
+                 run = 0,
+                 random_state = np.random.default_rng(13)
                  ):
         """
         Reads in small datasets to DataFrames and stores the path to the large
@@ -82,7 +84,11 @@ class CostGraph:
         save_name : str
             CSV file name where the initial Cost Graph network structure is
             saved (edge list).
+        run : int
+            Model run number for evaluating uncertainty within a scenario
         """
+        self.cost_methods = CostMethods(seed=random_state)
+
         self.start_time = time()
         self.step_costs=pd.read_csv(step_costs_file)
         self.fac_edges=pd.read_csv(fac_edges_file)
@@ -114,7 +120,7 @@ class CostGraph:
         self.verbose = verbose
 
         self.pathway_crit_history_filename = pathway_crit_history_filename
-
+        self.run = run
         # create empty List to store the pathway cost output data
         self.pathway_crit_history = list()
 
@@ -454,7 +460,7 @@ class CostGraph:
         _methods = [
             {'cost_method':
                 [
-                    getattr(CostMethods,
+                    getattr(self.cost_methods,
                             _facility.nodes[edge[0]]['step_cost_method']
                             )
                 ],
@@ -537,9 +543,9 @@ class CostGraph:
                         in self.sc_end for _v in _v_nodes]):
                 _methods = [
                     {'cost_method': [
-                        getattr(CostMethods,
+                        getattr(self.cost_methods,
                                 self.supply_chain.nodes[edge[0]]['step_cost_method']),
-                        getattr(CostMethods,
+                        getattr(self.cost_methods,
                                 _transpo_cost)
                     ],
                         'cost': 0.0,
@@ -549,11 +555,11 @@ class CostGraph:
             else:
                 _methods = [
                     {'cost_method': [
-                        getattr(CostMethods,
+                        getattr(self.cost_methods,
                                 self.supply_chain.nodes[edge[0]]['step_cost_method']),
-                        getattr(CostMethods,
+                        getattr(self.cost_methods,
                                 _transpo_cost),
-                        getattr(CostMethods,
+                        getattr(self.cost_methods,
                                 self.supply_chain.nodes[edge[1]]['step_cost_method'])
                     ],
                         'cost': 0.0,
@@ -779,7 +785,6 @@ class CostGraph:
         ----------
         node_name
         facility_id
-        node_id
         connect_to
         crit
 
@@ -898,10 +903,8 @@ class CostGraph:
         -------
         None
         """
-
-        pd.DataFrame(
-            self.pathway_crit_history
-        ).drop_duplicates(
-            ignore_index=True
-        ).to_csv(self.pathway_crit_history_filename, index=False)
+        _out = pd.DataFrame(self.pathway_crit_history).drop_duplicates(ignore_index=True)
+        _out['run'] = self.run
+        with open(self.pathway_crit_history_filename, 'a') as f:
+            _out.to_csv(f, mode='a', header=f.tell() == 0, index=False, line_terminator='\n')
 
