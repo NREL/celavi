@@ -259,22 +259,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     process_emissions = pd.concat(frames)
     process_emissions = process_emissions.groupby(by = ['process','product','unit'])['value'].agg('sum').reset_index()
     del process_emission, process_emission_input,process_input,processes
-       
-    '''
-    In the new version of the database, there are some challenges. 
-    1. Process and product names are different
-    2. Same Products can be produced from different processes. Previously we had solved this by removing multiple providers except the first one.
-    3. The new database actually tells which exact process the input flow is coming from using default provider
-    
-    In this version we take into account all this information and try to create a better model. 
-    The way to solve this problem is 
-    
-    1. Create unique products for every process. Join the process and product names in the process_product database 
-    2. In the process input database, join the input flow name and from process name. 
-    3. These new columns created should be used to create the technology matrix. 
-    4. The new input as well as product flows will be unique because process names are added to them. 
-    5. Check the unique ness
-    '''
     
     process_product['conjoined_flownames'] = process_product['product'] + '@'+ process_product['process']
     #uniquechk = list(pd.unique(process_product['conjoined_flownames']))
@@ -503,8 +487,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
-    #f_d.to_csv('demand_of_foreground.csv')
-    print(f'The total final demand sum is {chksum}')
     #To make the optimization easier
     if chksum > 100000:
         final_demand_scaler = 100000
