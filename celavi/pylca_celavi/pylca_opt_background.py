@@ -465,7 +465,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
        
         if not res2.empty:
           res2.loc[:,'year'] =  i
-          res.loc[:,'facility_id'] =  l
+          res2.loc[:,'facility_id'] =  l
           res2.loc[:,'stage'] = j
           res2.loc[:,'material'] = k
     
@@ -477,17 +477,43 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
     
         return res
     
-    #To make the optimization easier
-    final_demand_scaler = 10000
+
+    
     #Have to edit this final demand to match the results from CELAVI
     f_d['flow name'] = f_d['flow name'] +'@' + f_d['flow name']
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
+
+    #Replace electricity    
+    f_d  = f_d .replace(to_replace='electricity@electricity', value='electricity, at grid@electricity, at grid, us, 2010')
+
+    uslci_product_df[0] = uslci_product_df[0].str.lower()
+    f_d['flow name'] = f_d['flow name'].str.lower()
+    #print dataframe to debug connecting between foreground and background
+    uslci_product_df.to_csv('uslci_process_df.csv')
+     
+
     final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
+    chksum = np.sum(final_dem['flow quantity'])
+    #f_d.to_csv('demand_of_foreground.csv')
+    print(f'The total final demand sum is {chksum}')
     #To make the optimization easier
-    F = final_dem['flow quantity']/final_demand_scaler
+    if chksum > 100000:
+        final_demand_scaler = 100000
+    elif chksum > 10000:
+        final_demand_scaler = 10000
+    elif chksum > 100:
+        final_demand_scaler = 10
+    else:
+        final_demand_scaler = 0.1
+
+    #print dataframe to debug connecting between foreground and background
+    final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
+    final_dem.to_csv('final_demand_from_background.csv')
+    #To make the optimization easier
+    F = final_dem['flow quantity']
     res2 = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
     
     return res2

@@ -134,7 +134,7 @@ class PylcaCelavi:
         except FileNotFoundError:
             print('No existing results file:'+self.lca_results_filename)
 
-    def lca_performance_improvement(self, df):
+    def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
         """
         This function is used to bypass optimization based pylca celavi calculations
         It reads emission factor data from previous runs stored in a file
@@ -157,17 +157,23 @@ class PylcaCelavi:
             DataFrame without any results if file doesn't exist
         """
         try:
-            db= pd.read_csv(self.shortcutlca_filename)
-            db.columns = ['year', 'stage', 'material', 'flow name', 'emission factor kg/kg']
-            db = db.drop_duplicates()
-            df2 = df.merge(db, on = ['year', 'stage', 'material'], how = 'outer',indicator = True)
-            df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
+            if electricity_grid_spatial_level != 'state':
+                db= pd.read_csv(self.shortcutlca_filename)
+                db.columns = ['year', 'stage', 'material', 'flow name', 'emission factor kg/kg']
+                db = db.drop_duplicates()
+                df2 = df.merge(db, on = ['year', 'stage', 'material'], how = 'outer',indicator = True)
+                df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
+            else:
+                db= pd.read_csv(self.shortcutlca_filename)
+                db.columns = ['year', 'stage', 'material', 'state','flow name', 'emission factor kg/kg']
+                db = db.drop_duplicates()
+                df2 = df.merge(db, on = ['year', 'stage', 'material','state'], how = 'outer',indicator = True)
+                df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()   
+
             
             
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
-            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()
-            
-            
+            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()            
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
             df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']]
             result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
@@ -179,7 +185,7 @@ class PylcaCelavi:
             print('No existing results file:'+self.shortcutlca_filename)        
             return df,pd.DataFrame()
 
-    def pylca_run_main(self, df):
+    def pylca_run_main(self, df, verbose = 0):
         """
         This function runs the individual pylca celavi functions for performing various calculations
         
@@ -205,7 +211,6 @@ class PylcaCelavi:
 
             #This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
             for index,row in df_s.iterrows():
-                
                 year = row['year']
                 stage = row['stage']
                 material = row['material']
@@ -215,7 +220,7 @@ class PylcaCelavi:
     
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
-                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df)
+                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state,self.electricity_grid_spatial_level)
         
                 else:                    
                     df_with_no_lca_entry = new_df
@@ -250,21 +255,26 @@ class PylcaCelavi:
                                 
                                 df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
                                 lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
-                                lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']   
-                                lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+                                lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']  
+                                if self.electricity_grid_spatial_level == 'state':
+                                    lca_db['state'] = state 
+                                    lca_db = lca_db[['year','stage','material','state','flow name','emission factor kg/kg']]
+                                else: 
+                                    lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+
                                 lca_db = lca_db[lca_db['material'] != 'concrete']
-                                lca_db['year'] = lca_db['year'].astype(int)
+                                lca_db['year'] = lca_db['year'].astype(int)                                
                                 lca_db = lca_db.drop_duplicates()
                                 lca_db.to_csv(self.shortcutlca_filename,
                                               mode = 'a',
                                               index = False,
                                               header = False)
-                            else:                                
-                                print(f'Empty dataframe returned from pylcia foreground for {year} {stage} {material}')
-                
-                        else:                              
-                            print('Final demand for %s %s %s is zero' % (str(year), stage, material))
-                
+                            else:
+                              if verbose > 0:                                
+                                print(f'Empty dataframe returned from pylcia foreground for {year} {stage} {material}')                
+                        else:
+                           if verbose > 0:                              
+                            print('Final demand for %s %s %s is zero' % (str(year), stage, material))               
                 
                 else:
                     print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
