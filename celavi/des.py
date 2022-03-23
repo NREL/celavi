@@ -361,7 +361,6 @@ class Context:
                     mass_tonnes = positive_annual_transactions.sum()
 
                     if mass_tonnes > 0:
-                        print(f'Actual_year {actual_year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
                         sliced_info['facility_name'] = facility_name
                         sliced_info['facility_id'] = facility_id
                         sliced_info.to_csv('mass_tonnes_check_debug.csv', index = False, mode = 'a')
@@ -386,10 +385,10 @@ class Context:
                 # Corresponding list of the routes along which the inbound transportation took place
                 route_ids = tracker.route_id[window_first_timestep:window_last_timestep + 1]
 
-                # Case 1 (easiest): There was no inbound transportation and the rest of this block is skipped
+                # Case 1: There was no inbound transportation and the rest of this block is skipped
                     # Provide no data to LCIA. Executes if none of the if/elif statements below are True.
                 
-                # Case 2 (easy): There was only one instance of inbound transportation 
+                # Case 2: There was only one instance of inbound transportation 
                 # and therefore only one corresponding route
                 if len(annual_transportations[annual_transportations != 0]) == 1:
                     # Provide one row of data to LCIA by filtering out zeros/Nones. No aggregation needed.
@@ -403,12 +402,11 @@ class Context:
                         'route_id': route_ids[annual_transportations != 0][0], 
                         'state': self.facility_states[facility_id]
                     }
-                    print(f'Transportation row {row}') 
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
                 
                 elif len(annual_transportations[annual_transportations != 0]) > 1:
-                    # Case 3 (easy): There were multiple instances of inbound transportation that all took place along the same route
+                    # Case 3: There were multiple instances of inbound transportation that all took place along the same route
                     if len(np.unique(route_ids[annual_transportations != 0])) == 1:
                         # Provide one row of data to LCIA by summing the inbound transportation and filtering out Nones in route_ids.
                         row = {
@@ -423,7 +421,7 @@ class Context:
                         }
                         self.data_for_lci.append(row)
                         annual_data_for_lci.append(row)
-                    # Case 4 (less easy): There were multiple instances of inbound transportation that took place along different routes
+                    # Case 4: There were multiple instances of inbound transportation that took place along different routes
                     elif len(np.unique(route_ids[annual_transportations != 0])) > 1:                
                         # Provide as many rows of data to LCIA as there are unique routes by filtering out zeros/Nones. Only 
                         # aggregate if one or more routes had multiple instances of inbound transportation.
@@ -440,8 +438,6 @@ class Context:
                             }
                             self.data_for_lci.append(row)
                             annual_data_for_lci.append(row)
-            
-            print(str(time.time() - time0)+' For loop of pylca took these many seconds')
 
             if annual_data_for_lci:
                 print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
@@ -475,12 +471,8 @@ class Context:
         """
         This is the SimPy process that updates the cost graph periodically.
         """
-        #print('Updating cost graph')
-        while True:
-            #print(f'{datetime.now()} In While loop update cost graph',flush = True)
-            time0 = time.time()            
+        while True:           
             yield env.timeout(self.cost_graph_update_interval_timesteps)
-            #print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
             
             year = self.timesteps_to_years(env.now)
 
