@@ -804,6 +804,9 @@ class CostGraph:
         -------
             Facility ID of the closest (according to "crit") facility
              of type "connect_to" downstream of the node indicated by node_id.
+             Optionally returns the distance to the downstream node and the
+             route_id along which material is transported to the downstream 
+             node.
 
         """
 
@@ -845,21 +848,22 @@ class CostGraph:
                     _nearest_downst_node = _downst_nodes[_upstream_dists.index(
                         min(_upstream_dists)
                     )]
-                    _nearest_facility_id = _nearest_downst_node.split('_')[1]
+                    _nearest_route_id = self.supply_chain.edges[_node, _nearest_downst_node]['route_id']
 
                     if not get_dist:
                         return _nearest_downst_node
                     else:
-                        return _nearest_downst_node, min(_upstream_dists)
+                        return _nearest_downst_node, min(_upstream_dists), _nearest_route_id
 
                 else:
                     # If there is only one option, pull that node's facility_id directly
                     _nearest_downst_node = _downst_nodes[0]
                     _upstream_dist = _upstream_dists[0]
+                    _nearest_route_id = self.supply_chain.edges[_node, _nearest_downst_node]['route_id']
                     if not get_dist:
                         return _nearest_downst_node
                     else:
-                        return _nearest_downst_node, _upstream_dist
+                        return _nearest_downst_node, _upstream_dist, _nearest_route_id
 
         elif node_name is not None:
             if not node_name in self.supply_chain.nodes:
@@ -879,17 +883,19 @@ class CostGraph:
                     _nearest_downst_node = _downst_nodes[_upstream_dists.index(
                         min(_upstream_dists)
                     )]
-                    _nearest_facility_id = _nearest_downst_node.split('_')[1]
+                    _nearest_route_id = self.supply_chain.edges[node_name, _nearest_downst_node]['route_id']
 
                     if not get_dist:
                         return _nearest_downst_node
                     else:
-                        return _nearest_downst_node, min(_upstream_dists)
+                        return _nearest_downst_node, min(_upstream_dists), _nearest_route_id
                 elif len(_downst_nodes) == 1:
+                    _nearest_downst_node = _downst_nodes[0]
+                    _nearest_route_id = self.supply_chain.edges[node_name, _nearest_downst_node]['route_id']
                     if not get_dist:
-                        return _downst_nodes[0]
+                        return _nearest_downst_node
                     else:
-                        return _downst_nodes[0], _upstream_dists[0]
+                        return _nearest_downst_node, _upstream_dists[0], _nearest_route_id
                 else:
                     print(
                         f'Node {node_name} does not have any downstream neighbors of type {connect_to}',
