@@ -20,7 +20,7 @@ class TransportationTracker:
         self.inbound_tonne_km = np.zeros(timesteps)
         self.route_id = np.array([None] * timesteps) 
 
-    def increment_inbound_tonne_km(self, tonne_km, route_id, timestep):
+    def increment_inbound_tonne_km(self, tonne_km, timestep, route_id = None):
         """
         Parameters
         ----------
@@ -30,6 +30,9 @@ class TransportationTracker:
 
         timestep
             The timestep that is being incremented.
+        
+        route_id
+            UUID for the route along which material is transported.
         """
 
         timestep = int(timestep)
