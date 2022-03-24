@@ -296,6 +296,7 @@ class Scenario:
             substitution_rate=self.scen["technology_components"].get(
                 "substitution_rates"
             ),
+            run=self.run
         )
 
     def execute(self):
@@ -314,6 +315,7 @@ class Scenario:
         # from scratch.
         if self.run > 0:
             self.netw.run = self.run
+            self.lca.run = self.run
             self.netw.year = start_year
             self.netw.path_dict["year"] = start_year
             self.netw.path_dict["component mass"] = component_total_mass.loc[
@@ -495,6 +497,7 @@ class Scenario:
             "stage",
             "impact",
             "impact_value",
+            "run",
         ]
         lcia_df = pd.read_csv(self.files["lcia_to_des"], names=lcia_names)
         locations_df = pd.read_csv(self.files["locs"])
@@ -513,9 +516,8 @@ class Scenario:
         locations_select_df = locations_df.loc[:, locations_columns]
         lcia_locations_df = lcia_df.merge(
             locations_select_df, how="inner", on="facility_id"
-        )
+        ).drop_duplicates()
 
-        lcia_locations_df["run"] = self.run
         with open(self.files["lca_results"], "a") as f:
             lcia_locations_df.to_csv(
                 f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
