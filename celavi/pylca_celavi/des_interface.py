@@ -56,7 +56,8 @@ class PylcaCelavi:
                  emissions_lci_filename,
                  traci_lci_filename,
                  use_shortcut_lca_calculations,
-                 substitution_rate
+                 substitution_rate,
+                 run = 0
                  ):
         
         """
@@ -109,6 +110,9 @@ class PylcaCelavi:
         substitution_rate: Dict
             Dictionary of material: sub rates for materials displaced by the
             circular component
+        
+        run : int
+            Integer indicating which model run this instance corresponds to
         """
         # filepaths for files used in the pylca calculations
         self.lca_results_filename = lca_results_filename
@@ -125,14 +129,15 @@ class PylcaCelavi:
         self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         self.substitution_rate = substitution_rate
+        self.run = run
         
         #This is the final LCIA results file. Its created using the append function as CELAVI runs. 
         #Thus if there is a chance it exists we need to delete it
         try:
-            os.remove(self.lca_results_filename)
-            print('old lcia results file deleted')
+            os.remove(self.lcia_des_filename)
+            print(f'PylcaCelavi: Deleted {self.lcia_des_filename}' )
         except FileNotFoundError:
-            print('No existing results file:'+self.lca_results_filename)
+            print(f'PyLCIA: {self.lcia_des_filename} not found')
 
     def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
         """
@@ -296,6 +301,7 @@ class PylcaCelavi:
 
            
         # The line below is just for debugging if needed
+        res_df["run"] = self.run
         res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
     
         # This is the result that needs to be analyzed every timestep.
