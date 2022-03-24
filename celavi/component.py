@@ -205,7 +205,7 @@ class Component:
                 factype = location.split('_')[0]
                 if factype in self.split_dict.keys():
                     # increment the facility inventory and transportation tracker
-                    self.move_component_to(env, loc=location, dist=distance)
+                    self.move_component_to(env, loc=location, dist=distance, route_id=route_id)
                     self.current_location = location
 
                     yield env.timeout(lifespan)
@@ -230,21 +230,21 @@ class Component:
                         env,
                         loc=_split_facility_1[0],
                         amt=self.split_dict[factype]['fraction'],
-                        dist=_split_facility_1[1]
+                        dist=_split_facility_1[1],
+                        route_id=_split_facility_1[2]
                     )
                     self.move_component_to(
                         env,
                         loc=_split_facility_2[0],
                         amt=1 - self.split_dict[factype]['fraction'],
-                        dist=_split_facility_2[1]
+                        dist=_split_facility_2[1],
+                        route_id=_split_facility_2[2]
                     )
                 elif factype in self.split_dict['pass']:
-                    # the inventory and transportation was incremented when the
-                    # blade hit the splitting step
                     pass
 
                 else:
-                    self.move_component_to(env, loc=location, dist=distance)
+                    self.move_component_to(env, loc=location, dist=distance, route_id=route_id)
 
                     self.current_location = location
 
@@ -255,7 +255,7 @@ class Component:
             else:
                 break
 
-    def move_component_to(self, env, loc, dist : float, amt = 1.0):
+    def move_component_to(self, env, loc, dist : float, route_id = None, amt = 1.0):
         """
         Increment mass, count, and transportation inventories.
 
@@ -276,7 +276,7 @@ class Component:
 
         for _mat, _mass in self.mass_tonnes.items():
             self.context.mass_facility_inventories[loc].increment_quantity(_mat, amt * _mass, env.now)
-            self.context.transportation_trackers[loc].increment_inbound_tonne_km(amt * _mass * dist, env.now)
+            self.context.transportation_trackers[loc].increment_inbound_tonne_km(tonne_km = amt * _mass * dist, timestep = env.now, route_id = route_id)
 
     def move_component_from(self, env, loc, amt = 1.0):
         """
