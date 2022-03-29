@@ -637,7 +637,7 @@ lcia_transpo = lcia_df.dropna(
     subset=['region_transportation']
 ).rename(
     columns={
-        'region_transportation': 'region_id_2',
+        'region_transportation': 'fips',
         'impact_value': 'impact_total',
         'vkmt': 'vkmt_by_region',
         'total_vkmt': 'vkmt_total'
@@ -648,10 +648,25 @@ lcia_transpo = lcia_df.dropna(
 lcia_transpo['impact_value'] = lcia_transpo.impact_total * lcia_transpo.vkmt_by_region / lcia_transpo.vkmt_total
 
 # Drop unneeded columns
-lcia_transpo.drop(axis=1, columns=['route_id','vkmt_by_region','vkmt_total', 'impact_total'], inplace=True)
+lcia_transpo.drop(axis=1, columns=['facility_id', 'route_id', 'material', 'stage', 'vkmt_by_region','vkmt_total', 'impact_total'], inplace=True)
 
+# When a route has multiple impact values in the same region, it means multiple road classes
+# were used. Sum these values to get one impact value per impact per region.
+# Groupby year-impact-fips and sum the impact_value over road classes
 # Save the disaggregated transportation impacts to file
-lcia_transpo.to_csv(lca_transpo_results_filename, index=False)
+lcia_transpo.groupby(
+    ['year', 'impact', 'fips']
+).agg(
+    'sum'
+).reset_index(
+).astype(
+    {'year': 'int',
+    'impact': 'str',
+    'fips': 'int',
+    'impact_value': 'float'}
+).to_csv(
+    lca_transpo_results_filename, index=False
+)
 
 # Print run finish message
 print(f'FINISHED RUN at {np.round(time.time() - time0)} s',
