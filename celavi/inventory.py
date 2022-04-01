@@ -4,6 +4,12 @@ import pandas as pd
 
 
 class FacilityInventory:
+    """
+    The inventory class holds an inventory of materials and quantities
+    for a landfill, virgin material extraction, or recycled material
+    availability.
+    """
+
     def __init__(
         self,
         facility_id: int,
@@ -15,10 +21,6 @@ class FacilityInventory:
         can_be_negative: bool = False,
     ):
         """
-        The inventory class holds an inventory of materials and quantities
-        for a landfill, virgin material extraction, or recycled material
-        availability
-
         Parameters
         ----------
         facility_id: int
