@@ -95,18 +95,17 @@ class Component:
 
         path_choice = path_choices_dict[in_use_facility_id]
         self.pathway = deque()
-
-        for facility, lifespan, distance in path_choice['path']:
+        for facility, lifespan, distance, route_id in path_choice['path']:
             # Override the initial timespan when component goes into use.
 
             if facility.startswith("in use"):
-                self.pathway.append((facility, self.initial_lifespan_timesteps, distance))
+                self.pathway.append((facility, self.initial_lifespan_timesteps, distance, route_id))
             elif any([facility.startswith(i)
                       for i in self.context.path_dict['permanent_lifespan_facility']]):
-                self.pathway.append((facility, self.context.max_timesteps * 2, distance))
+                self.pathway.append((facility, self.context.max_timesteps * 2, distance, route_id))
             # Otherwise, use the timespan the model gives us.
             else:
-                self.pathway.append((facility, lifespan, distance))
+                self.pathway.append((facility, lifespan, distance, route_id))
 
     def bol_process(self, env):
         """
@@ -158,13 +157,19 @@ class Component:
         count_transport = self.context.transportation_trackers[self.current_location]
         for _, mass in self.mass_tonnes.items():
             count_transport.increment_inbound_tonne_km(
-                mass * self.context.cost_graph.supply_chain.edges[
+                tonne_km = mass * self.context.cost_graph.supply_chain.edges[
                     f"manufacturing_{int(self.manuf_facility_id)}",
                     f"in use_{int(self.in_use_facility_id)}"
                 ][
                     'dist'
                 ],
-                env.now
+                route_id = self.context.cost_graph.supply_chain.edges[
+                    f"manufacturing_{int(self.manuf_facility_id)}",
+                    f"in use_{int(self.in_use_facility_id)}"
+                ][
+                    'route_id'
+                ],
+                timestep = env.now
             )
 
         # Component stays in use for its lifetime
@@ -177,7 +182,6 @@ class Component:
         count_inventory.increment_quantity(self.kind, -1, env.now)
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, -mass, env.now)
-
         # Take the current facility off the to-do list
         self.pathway.popleft()
 
@@ -197,110 +201,102 @@ class Component:
         """
         while True:
             if self.pathway:
-                location, lifespan, distance = self.pathway.popleft()
+                location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split('_')[0]
                 if factype in self.split_dict.keys():
                     # increment the facility inventory and transportation tracker
-                    fac_count_inventory = self.context.count_facility_inventories[location]
-                    fac_transport = self.context.transportation_trackers[location]
-                    fac_mass_inventory = self.context.mass_facility_inventories[location]
-                    fac_count_inventory.increment_quantity(
-                        self.kind,
-                        1,
-                        env.now
-                    )
-
-                    for _, mass in self.mass_tonnes.items():
-                        fac_transport.increment_inbound_tonne_km(mass * distance, env.now)
-
-                    for material, mass in self.mass_tonnes.items():
-                        fac_mass_inventory.increment_quantity(material, mass, env.now)
-
-                    # locate the nearest landfill and increment for material loss
-                    _split_facility_1 = self.context.cost_graph.find_downstream(
-                        facility_id = int(location.split('_')[1]),
-                        connect_to = self.split_dict[factype]['facility_1']
-                    )
-                    _split_facility_2 = self.context.cost_graph.find_downstream(
-                        node_name = location,
-                        connect_to = self.split_dict[factype]['facility_2']
-                    )
-                    
-                    fac1_count_inventory = self.context.count_facility_inventories[_split_facility_1]
-                    fac1_transport = self.context.transportation_trackers[_split_facility_1]
-                    fac1_mass_inventory = self.context.mass_facility_inventories[_split_facility_1]
-                    fac1_count_inventory.increment_quantity(
-
-                        self.kind,
-                        self.split_dict[factype]['fraction'],
-                        env.now
-                    )
-
-                    for material, mass in self.mass_tonnes.items():
-                        fac1_transport.increment_inbound_tonne_km(
-                            self.split_dict[factype]['fraction'] * mass * distance,
-                            env.now
-                        )
-                        fac1_mass_inventory.increment_quantity(
-                            material,
-                            self.split_dict[factype]['fraction'] * mass,
-                            env.now
-                        )
-
-                    fac2_count_inventory = self.context.count_facility_inventories[_split_facility_2]
-                    fac2_mass_inventory = self.context.mass_facility_inventories[_split_facility_2]
-                    fac2_transport = self.context.transportation_trackers[_split_facility_2]
-                    fac2_count_inventory.increment_quantity(
-                        self.kind,
-                        1 - self.split_dict[factype]['fraction'],
-                        env.now
-                    )
-
-                    for material, mass in self.mass_tonnes.items():
-                        fac2_mass_inventory.increment_quantity(
-                            material,
-                            (1 - self.split_dict[factype]['fraction']) * mass,
-                            env.now
-                        )
-
-                        fac2_transport.increment_inbound_tonne_km(
-                            (1 - self.split_dict[factype]['fraction']) * mass * distance,
-                            env.now
-                        )
+                    self.move_component_to(env, loc=location, dist=distance, route_id=route_id)
+                    self.current_location = location
 
                     yield env.timeout(lifespan)
 
-                    fac_count_inventory.increment_quantity(self.kind, -1, env.now)
-                    for material, mass in self.mass_tonnes.items():
-                        fac_mass_inventory.increment_quantity(material, -mass, env.now)
+                    self.move_component_from(env, loc=location)
 
+                    # locate the two downstream facilities that are closest
+                    _split_facility_1 = self.context.cost_graph.find_downstream(
+                        facility_id = int(location.split('_')[1]),
+                        connect_to = self.split_dict[factype]['facility_1'],
+                        get_dist=True
+                    )
+
+                    _split_facility_2 = self.context.cost_graph.find_downstream(
+                        node_name = location,
+                        connect_to = self.split_dict[factype]['facility_2'],
+                        get_dist=True
+                    )
+
+                    # Move component fractions to the split facilities
+                    self.move_component_to(
+                        env,
+                        loc=_split_facility_1[0],
+                        amt=self.split_dict[factype]['fraction'],
+                        dist=_split_facility_1[1],
+                        route_id=_split_facility_1[2]
+                    )
+                    self.move_component_to(
+                        env,
+                        loc=_split_facility_2[0],
+                        amt=1 - self.split_dict[factype]['fraction'],
+                        dist=_split_facility_2[1],
+                        route_id=_split_facility_2[2]
+                    )
                 elif factype in self.split_dict['pass']:
-                    # the inventory and transportation was incremented when the
-                    # blade hit the splitting step
                     pass
 
                 else:
-                    count_inventory = self.context.count_facility_inventories[location]
-                    mass_inventory = self.context.mass_facility_inventories[location]
-                    transport = self.context.transportation_trackers[location]
-                    count_inventory.increment_quantity(self.kind, 1, env.now)
-
-                    for material, mass in self.mass_tonnes.items():
-                        mass_inventory.increment_quantity(material, mass, env.now)
-
-                    # Again, assuming the transportation impacts are the same per unit
-                    # mass for all materials.
-                    for _, mass in self.mass_tonnes.items():
-                        transport.increment_inbound_tonne_km(mass * distance, env.now)
+                    self.move_component_to(env, loc=location, dist=distance, route_id=route_id)
 
                     self.current_location = location
 
                     yield env.timeout(lifespan)
 
-                    count_inventory.increment_quantity(self.kind, -1, env.now)
-
-                    for material, mass in self.mass_tonnes.items():
-                        mass_inventory.increment_quantity(material, -mass, env.now)
+                    self.move_component_from(env, loc=location)
 
             else:
                 break
+
+    def move_component_to(self, env, loc, dist : float, route_id = None, amt = 1.0):
+        """
+        Increment mass, count, and transportation inventories.
+
+        Parameters
+        ----------
+        env
+
+        amt : float
+            Number of components being moved. Defaults to 1.
+        
+        loc
+            Destination facility ID
+        
+        dist : float
+            Transportation distance in km to destination facility
+        """
+        self.context.count_facility_inventories[loc].increment_quantity(self.kind, amt, env.now)
+
+        for _mat, _mass in self.mass_tonnes.items():
+            self.context.mass_facility_inventories[loc].increment_quantity(_mat, amt * _mass, env.now)
+            self.context.transportation_trackers[loc].increment_inbound_tonne_km(tonne_km = amt * _mass * dist, timestep = env.now, route_id = route_id)
+
+    def move_component_from(self, env, loc, amt = 1.0):
+        """
+        Decrement mass and count inventories at the current facility.
+
+        Only INBOUND transportation is tracked by the facility, thus no
+        transportation tracking is done by this method.
+
+        Parameters
+        ----------
+        env
+
+        loc
+            Current facility ID
+        
+        amt : float
+            Number of components being moved. Defaults to 1.
+        """
+
+        self.context.count_facility_inventories[loc].increment_quantity(self.kind, -amt, env.now)
+
+        for _mat, _mass in self.mass_tonnes.items():
+            self.context.mass_facility_inventories[loc].increment_quantity(_mat, -amt * _mass, env.now)
