@@ -575,14 +575,14 @@ class Scenario:
         # were used. Sum these values to get one impact value per impact per region.
         # Groupby year-impact-fips and sum the impact_value over road classes
         # Save the disaggregated transportation impacts to file
-        lcia_transpo.groupby(["year", "impact", "fips"]).agg(
+        lcia_transpo_agg = lcia_transpo.groupby(["year", "impact", "run", "fips"]).agg(
             "sum"
         ).reset_index().astype(
-            {"year": "int", "impact": "str", "fips": "int", "impact_value": "float"}
+            {"year": "int", "impact": "str", "run": "int", "fips": "int", "impact_value": "float"}
         )
 
         with open(self.files["lcia_transpo_results"], "a") as f:
-            lcia_transpo.to_csv(
+            lcia_transpo_agg.to_csv(
                 f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
             )
 
