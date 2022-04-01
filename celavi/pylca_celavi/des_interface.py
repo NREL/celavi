@@ -152,6 +152,10 @@ class PylcaCelavi:
         df
             shortcut lca db filename
         
+        state
+
+        electricity_grid_spatial_level
+        
         Returns
         -------
 
@@ -164,23 +168,21 @@ class PylcaCelavi:
         try:
             if electricity_grid_spatial_level != 'state':
                 db= pd.read_csv(self.shortcutlca_filename)
-                db.columns = ['year', 'stage', 'material', 'flow name', 'emission factor kg/kg']
+                db.columns = ['year', 'stage', 'material', 'route_id', 'state', 'flow name', 'emission factor kg/kg']
                 db = db.drop_duplicates()
-                df2 = df.merge(db, on = ['year', 'stage', 'material'], how = 'outer',indicator = True)
+                df2 = df.merge(db, on = ['year', 'stage', 'material', 'route_id'], how = 'outer',indicator = True)
                 df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
             else:
                 db= pd.read_csv(self.shortcutlca_filename)
-                db.columns = ['year', 'stage', 'material', 'state','flow name', 'emission factor kg/kg']
+                db.columns = ['year', 'stage', 'material', 'route_id', 'state','flow name', 'emission factor kg/kg']
                 db = db.drop_duplicates()
-                df2 = df.merge(db, on = ['year', 'stage', 'material','state'], how = 'outer',indicator = True)
+                df2 = df.merge(db, on = ['year', 'stage', 'material','state', 'route_id'], how = 'outer',indicator = True)
                 df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()   
-
-            
             
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
             df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()            
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
-            df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']]
+            df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id']]
             result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
             
             return df_with_no_lca_entry, result_shortcut
@@ -220,13 +222,14 @@ class PylcaCelavi:
                 stage = row['stage']
                 material = row['material']
                 facility_id = row['facility_id']
+                route_id = row['route_id']
                 state = row['state']
                 new_df = df_s[df_s['index'] == index]
     
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
                     df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state,self.electricity_grid_spatial_level)
-        
+
                 else:                    
                     df_with_no_lca_entry = new_df
                     result_shortcut = pd.DataFrame()
@@ -245,13 +248,13 @@ class PylcaCelavi:
                             
                             # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
                             # It calculates the LCI flows of the foreground process.
-                            res = model_celavi_lci(working_df,year,facility_id,stage,material,state,df_static,self.dynamic_lci_filename,self.electricity_grid_spatial_level,self.intermediate_demand_filename)
+                            res = model_celavi_lci(working_df,year,facility_id,stage,material,route_id,state,df_static,self.dynamic_lci_filename,self.electricity_grid_spatial_level,self.intermediate_demand_filename)
                             # model_celavi_lci_insitu() calculating direct emissions from foreground
                             # processes.
                             emission = model_celavi_lci_insitu(working_df,year,facility_id,stage,material,df_emissions)
                             if not res.empty:
                                 
-                                res = model_celavi_lci_background(res,year,facility_id,stage,material,self.uslci_filename,self.lci_activity_locations)
+                                res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,self.uslci_filename,self.lci_activity_locations)
                                 lci = postprocessing(res,emission)
                                 res = impact_calculations(lci,self.traci_lci_filename)
                                 res_df = pd.concat([res_df,res])
@@ -259,13 +262,13 @@ class PylcaCelavi:
                                 
                                 
                                 df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
+                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material','route_id'])
                                 lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']  
                                 if self.electricity_grid_spatial_level == 'state':
                                     lca_db['state'] = state 
-                                    lca_db = lca_db[['year','stage','material','state','flow name','emission factor kg/kg']]
+                                    lca_db = lca_db[['year','stage','material','route_id','state','flow name','emission factor kg/kg']]
                                 else: 
-                                    lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+                                    lca_db = lca_db[['year','stage','material','route_id','flow name','emission factor kg/kg']]
 
                                 lca_db = lca_db[lca_db['material'] != 'concrete']
                                 lca_db['year'] = lca_db['year'].astype(int)                                
@@ -289,7 +292,7 @@ class PylcaCelavi:
         #Correcting the units for LCIA results. 
         for index,row in res_df.iterrows():
     
-            a = row[4]
+            a = row['impacts']
     
             try:
                 split_string = a.split("/kg", 1)
@@ -299,7 +302,6 @@ class PylcaCelavi:
                 split_string = a.split("/ kg", 1)
                 res_df = res_df.replace(a,split_string[0] + split_string[1])
 
-           
         # The line below is just for debugging if needed
         res_df["run"] = self.run
         res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
