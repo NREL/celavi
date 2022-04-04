@@ -515,7 +515,7 @@ class Scenario:
         ]
 
         locations_select_df = locations_df.loc[:, locations_columns]
-        lcia_process = lcia_df.loc[lcia_df.route_id.isna()]
+        lcia_process = lcia_df.loc[(lcia_df.run == self.run) & (lcia_df.route_id.isna())]
         lcia_locations_df = lcia_process.merge(
             locations_select_df, how="inner", on="facility_id"
         ).drop_duplicates()
@@ -527,7 +527,7 @@ class Scenario:
 
         # Create and save LCIA results for transportation, by route county
         lcia_transpo = (
-            lcia_df.dropna()
+            lcia_df.dropna().loc[lcia_df.run == self.run]
             .merge(
                 pd.read_csv(
                     self.files["routes_computed"]
