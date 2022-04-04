@@ -40,6 +40,10 @@ class Scenario:
         parser
             Parser object for reading in config files.
 
+        Raises
+        ------
+        IOError
+            Raises IOError if either config file cannot be opened.
         """
         self.args = parser.parse_args()
 
@@ -113,7 +117,14 @@ class Scenario:
         print(f"FINISHED RUN at {self.simtime(self.start)} s", flush=True)
 
     def get_filepaths(self):
-        """Check that input files exist and assemble paths."""
+        """
+        Check that input files exist and assemble paths.
+        
+        Raises
+        ------
+        Exception
+            Raises exception if necessary filepaths do not exist.
+        """
         for _dir, _fdict in self.case["files"].items():
             for _n, _f in _fdict.items():
                 # Capacity projection file is a scenario parameter and must be
@@ -127,11 +138,10 @@ class Scenario:
                     "inputs",
                     "quality_checks",
                 ]:
-                    print(
+                    raise Exception(
                         f"{_f} in {os.path.join(self.args.data, _dir)} "
                         f"does not exist"
                     )
-                    sys.exit(1)
                 self.files[_n] = _p
 
     def preprocess(self):
@@ -515,7 +525,9 @@ class Scenario:
         ]
 
         locations_select_df = locations_df.loc[:, locations_columns]
-        lcia_process = lcia_df.loc[(lcia_df.run == self.run) & (lcia_df.route_id.isna())]
+        lcia_process = lcia_df.loc[
+            (lcia_df.run == self.run) & (lcia_df.route_id.isna())
+        ]
         lcia_locations_df = lcia_process.merge(
             locations_select_df, how="inner", on="facility_id"
         ).drop_duplicates()
@@ -527,7 +539,8 @@ class Scenario:
 
         # Create and save LCIA results for transportation, by route county
         lcia_transpo = (
-            lcia_df.dropna().loc[lcia_df.run == self.run]
+            lcia_df.dropna()
+            .loc[lcia_df.run == self.run]
             .merge(
                 pd.read_csv(
                     self.files["routes_computed"]
@@ -575,10 +588,19 @@ class Scenario:
         # were used. Sum these values to get one impact value per impact per region.
         # Groupby year-impact-fips and sum the impact_value over road classes
         # Save the disaggregated transportation impacts to file
-        lcia_transpo_agg = lcia_transpo.groupby(["year", "impact", "run", "fips"]).agg(
-            "sum"
-        ).reset_index().astype(
-            {"year": "int", "impact": "str", "run": "int", "fips": "int", "impact_value": "float"}
+        lcia_transpo_agg = (
+            lcia_transpo.groupby(["year", "impact", "run", "fips"])
+            .agg("sum")
+            .reset_index()
+            .astype(
+                {
+                    "year": "int",
+                    "impact": "str",
+                    "run": "int",
+                    "fips": "int",
+                    "impact_value": "float",
+                }
+            )
         )
 
         with open(self.files["lcia_transpo_results"], "a") as f:
