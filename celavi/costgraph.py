@@ -831,7 +831,6 @@ class CostGraph:
                 # node name
                 _node = [x for x, y in self.supply_chain.nodes(data=True)
                          if y['facility_id'] == facility_id][0]
-                
                 # Get a list of all nodes with an outgoing edge that connects
                 # to this facility_id, with the specified facility type
                 _downst_nodes = [n for n in self.supply_chain.successors(_node)
@@ -841,13 +840,12 @@ class CostGraph:
                 
                 # Search the list for the "closest" node
                 if len(_downst_nodes) == 0:
-                     # If there are no upstream nodes of the correct type, print a
+                    # If there are no upstream nodes of the correct type, print a
                     # message and return None
                     print(
                         f'Node {node_name} does not have any downstream neighbors of type {connect_to}',
                         flush=True)
                     return None
-                
                 elif len(_downst_nodes) > 1:
                     # If there are multiple options, identify the nearest neighbor
                     # according to the crit(eria) parameter
@@ -861,7 +859,6 @@ class CostGraph:
                         return _nearest_downst_node
                     else:
                         return _nearest_downst_node, min(_upstream_dists), _nearest_route_id
-                
                 else:
                     # If there is only one option, pull that node's facility_id directly
                     _nearest_downst_node = _downst_nodes[0]
