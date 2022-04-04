@@ -488,7 +488,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
 
     #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
-    final_dem.to_csv('final_demand_from_background.csv')
     #To make the optimization easier
     F = final_dem['flow quantity']
     res2 = runner(tech_matrix,F,yr,fac_id,stage,material,route_id,final_demand_scaler)

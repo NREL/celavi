@@ -363,7 +363,6 @@ class Context:
                     if mass_tonnes > 0:
                         sliced_info['facility_name'] = facility_name
                         sliced_info['facility_id'] = facility_id
-                        sliced_info.to_csv('mass_tonnes_check_debug.csv', index = False, mode = 'a')
                     mass_kg = mass_tonnes * 1000
                     if mass_kg > 0:
                         row = {
