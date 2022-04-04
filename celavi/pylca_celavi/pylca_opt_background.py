@@ -468,10 +468,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     f_d  = f_d .replace(to_replace='electricity@electricity', value='electricity, at grid@electricity, at grid, us, 2010')
 
     uslci_product_df[0] = uslci_product_df[0].str.lower()
-    f_d['flow name'] = f_d['flow name'].str.lower()
-    #print dataframe to debug connecting between foreground and background
-    uslci_product_df.to_csv('uslci_process_df.csv')
-     
+    f_d['flow name'] = f_d['flow name'].str.lower()     
 
     final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
