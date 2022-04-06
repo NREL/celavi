@@ -43,7 +43,6 @@ class PylcaCelavi:
         traci21.csv TRACI2.1 characterization factor file.
     """
     def __init__(self,
-                 lca_results_filename,
                  lcia_des_filename,
                  shortcutlca_filename,
                  intermediate_demand_filename,
@@ -64,9 +63,6 @@ class PylcaCelavi:
         
         Parameters
         ----------
-        lca_results_filename: str
-            filename for the lca results file
-
         lcia_des_filename : str
             Path to file that stores impact results for passing back to the
             discrete event simulation.
@@ -111,7 +107,6 @@ class PylcaCelavi:
             circular component
         """
         # filepaths for files used in the pylca calculations
-        self.lca_results_filename = lca_results_filename
         self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
         self.intermediate_demand_filename = intermediate_demand_filename
@@ -129,10 +124,10 @@ class PylcaCelavi:
         #This is the final LCIA results file. Its created using the append function as CELAVI runs. 
         #Thus if there is a chance it exists we need to delete it
         try:
-            os.remove(self.lca_results_filename)
+            os.remove(self.lcia_des_filename)
             print('old lcia results file deleted')
         except FileNotFoundError:
-            print('No existing results file:'+self.lca_results_filename)
+            print('No existing results file:'+self.lcia_des_filename)
 
     def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
         """
@@ -182,7 +177,7 @@ class PylcaCelavi:
         
         except FileNotFoundError:
             
-            print('No existing results file:'+self.shortcutlca_filename)        
+            print('No existing shortcut LCA file:'+self.shortcutlca_filename)        
             return df,pd.DataFrame()
 
     def pylca_run_main(self, df, verbose = 0):
@@ -250,7 +245,7 @@ class PylcaCelavi:
                                 lci = postprocessing(res,emission)
                                 res = impact_calculations(lci,self.traci_lci_filename)
                                 res_df = pd.concat([res_df,res])
-                                lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
+                                lcia_mass_flow = lci
                                 
                                 
                                 df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
