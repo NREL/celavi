@@ -446,8 +446,7 @@ else:
     
 
 # Prepare LCIA code
-lca = PylcaCelavi(lca_results_filename=lca_results_filename,
-                  lcia_des_filename=lcia_des_filename,
+lca = PylcaCelavi(lcia_des_filename=lcia_des_filename,
                   shortcutlca_filename=shortcutlca_filename,
                   intermediate_demand_filename=intermediate_demand_filename,
                   dynamic_lci_filename=dynamic_lci_filename,
