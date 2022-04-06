@@ -288,7 +288,6 @@ class Scenario:
 
         # Prepare LCIA code
         self.lca = PylcaCelavi(
-            lca_results_filename=self.files["lcia_facility_results"],
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
             intermediate_demand_filename=self.files["intermediate_demand"],
