@@ -177,7 +177,7 @@ def electricity_corrector_before20(df):
     return df
 
 
-def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):
+def runner(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):
     
     """
     Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
@@ -196,6 +196,8 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
         stage
     k: str
         material
+    stage: str
+        stata
     final_demand_scaler: int
         scaling variable number to ease optimization
     process: list
@@ -219,6 +221,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
        res.loc[:, 'facility_id'] = i
        res.loc[:, 'stage'] = j
        res.loc[:, 'material'] = k
+       res.loc[:, 'state'] = state
        res = electricity_corrector_before20(res)
        # Intermediate demand is not required by the framewwork, but it is useful
        # for debugging.
@@ -301,14 +304,14 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
         # Dividing by scaling value to solve scaling issues
         F = F / final_demand_scaler
     
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
-        if len(res.columns) != 7:
-            print(f'model_celavi_lci: res has {len(res.columns)}; needs 7 columns',
+        res = runner(tech_matrix, F, yr, fac_id, stage, material, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
+        if len(res.columns) != 8:
+            print(f'model_celavi_lci: res has {len(res.columns)}; needs 8 columns',
                   flush=True)
             return pd.DataFrame(
                 columns=['flow name', 'unit', 'flow quantity',
-                         'year', 'facility_id', 'stage', 'material']
+                         'year', 'facility_id', 'stage', 'material', 'state']
             )
         else:
-            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']
+            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'state']
             return res
