@@ -177,8 +177,7 @@ def electricity_corrector_before20(df):
     return df
 
 
-def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):
-    
+def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):    
     """
     Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
     
@@ -233,9 +232,6 @@ def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_
     
     else:        
        print(f"optimization pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
-
-
-
 
 
 def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
@@ -307,7 +303,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
         F = final_dem['flow quantity']
         # Dividing by scaling value to solve scaling issues
         F = F / final_demand_scaler
-    
+        
         res = runner(tech_matrix, F, yr, fac_id, stage, material, route_id, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
         if len(res.columns) != 9:
             print(f'model_celavi_lci: res has {len(res.columns)}; needs 9 columns',

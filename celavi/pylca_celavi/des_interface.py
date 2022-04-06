@@ -43,7 +43,6 @@ class PylcaCelavi:
         traci21.csv TRACI2.1 characterization factor file.
     """
     def __init__(self,
-                 lca_results_filename,
                  lcia_des_filename,
                  shortcutlca_filename,
                  intermediate_demand_filename,
@@ -65,9 +64,6 @@ class PylcaCelavi:
         
         Parameters
         ----------
-        lca_results_filename: str
-            filename for the lca results file
-
         lcia_des_filename : str
             Path to file that stores impact results for passing back to the
             discrete event simulation.
@@ -115,7 +111,6 @@ class PylcaCelavi:
             Integer indicating which model run this instance corresponds to
         """
         # filepaths for files used in the pylca calculations
-        self.lca_results_filename = lca_results_filename
         self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
         self.intermediate_demand_filename = intermediate_demand_filename
@@ -168,7 +163,7 @@ class PylcaCelavi:
         try:
             if electricity_grid_spatial_level != 'state':
                 db= pd.read_csv(self.shortcutlca_filename)
-                db.columns = ['year', 'stage', 'material', 'route_id', 'state', 'flow name', 'emission factor kg/kg']
+                db.columns = ['year', 'stage', 'material', 'route_id', 'flow name', 'emission factor kg/kg']
                 db = db.drop_duplicates()
                 df2 = df.merge(db, on = ['year', 'stage', 'material', 'route_id'], how = 'outer',indicator = True)
                 df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
@@ -178,6 +173,7 @@ class PylcaCelavi:
                 db = db.drop_duplicates()
                 df2 = df.merge(db, on = ['year', 'stage', 'material','state', 'route_id'], how = 'outer',indicator = True)
                 df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()   
+
             
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
             df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()            
@@ -189,7 +185,7 @@ class PylcaCelavi:
         
         except FileNotFoundError:
             
-            print('No existing results file:'+self.shortcutlca_filename)        
+            print('No existing shortcut LCA file:'+self.shortcutlca_filename)        
             return df,pd.DataFrame()
 
     def pylca_run_main(self, df, verbose = 0):
@@ -229,7 +225,6 @@ class PylcaCelavi:
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
                     df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state,self.electricity_grid_spatial_level)
-
                 else:                    
                     df_with_no_lca_entry = new_df
                     result_shortcut = pd.DataFrame()
@@ -258,7 +253,7 @@ class PylcaCelavi:
                                 lci = postprocessing(res,emission)
                                 res = impact_calculations(lci,self.traci_lci_filename)
                                 res_df = pd.concat([res_df,res])
-                                lcia_mass_flow = pd.concat([lci,lcia_mass_flow])
+                                lcia_mass_flow = lci
                                 
                                 
                                 df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)

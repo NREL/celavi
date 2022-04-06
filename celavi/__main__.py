@@ -11,6 +11,7 @@ import argparse
 
 from celavi.scenario import Scenario
 
+
 PARSER = argparse.ArgumentParser(description="Execute CELAVI model")
 PARSER.add_argument("--data", help="Path to the input and output data folder.")
 PARSER.add_argument(
