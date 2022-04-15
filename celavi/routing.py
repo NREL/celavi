@@ -21,7 +21,7 @@ from scipy.spatial import ckdtree
 from joblib import Memory
 import tempfile
 import celavi.data_manager as Data
-
+import uuid
 
 class Router:
     """
@@ -264,6 +264,7 @@ class Router:
                         _vkmt_by_county['source_lat'] = _routes.source_lat.iloc[i]
                         _vkmt_by_county['destination_long'] = _routes.destination_long.iloc[i]
                         _vkmt_by_county['destination_lat'] = _routes.destination_lat.iloc[i]
+                        _vkmt_by_county['route_id'] = uuid.uuid4().hex
 
                         # either create the data frame to store all routes,
                         # or append the current route
@@ -317,4 +318,3 @@ class Router:
         data_complete.to_csv(routes_output_file,
                              index=False)
 
-        return data_complete

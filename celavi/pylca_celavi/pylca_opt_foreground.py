@@ -177,8 +177,7 @@ def electricity_corrector_before20(df):
     return df
 
 
-def runner(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):
-    
+def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):    
     """
     Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
     
@@ -196,6 +195,8 @@ def runner(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_
         stage
     k: str
         material
+    route_id: str
+        UUID identifying the transportation route
     stage: str
         stata
     final_demand_scaler: int
@@ -221,6 +222,7 @@ def runner(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_
        res.loc[:, 'facility_id'] = i
        res.loc[:, 'stage'] = j
        res.loc[:, 'material'] = k
+       res.loc[:, 'route_id'] = route_id
        res.loc[:, 'state'] = state
        res = electricity_corrector_before20(res)
        # Intermediate demand is not required by the framewwork, but it is useful
@@ -232,10 +234,7 @@ def runner(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_
        print(f"optimization pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
 
 
-
-
-
-def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
 
     """
     Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
@@ -254,6 +253,8 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
       stage of analysis
     material: str
       material of LCA analysis
+    route_id: str
+        Unique identifier for transportation route.
     df_static: pd.Dataframe
       static foreground LCA inventory
     dynamic_lci_filename: str
@@ -284,7 +285,6 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
     final_dem = product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
-    f_d.to_csv('demand_of_celavi.csv', mode = 'a')
     if chksum == 0:
         print('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
@@ -303,15 +303,15 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,state,df_static,dynamic_lci_fi
         F = final_dem['flow quantity']
         # Dividing by scaling value to solve scaling issues
         F = F / final_demand_scaler
-    
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
-        if len(res.columns) != 8:
-            print(f'model_celavi_lci: res has {len(res.columns)}; needs 8 columns',
+        
+        res = runner(tech_matrix, F, yr, fac_id, stage, material, route_id, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
+        if len(res.columns) != 9:
+            print(f'model_celavi_lci: res has {len(res.columns)}; needs 9 columns',
                   flush=True)
             return pd.DataFrame(
                 columns=['flow name', 'unit', 'flow quantity',
-                         'year', 'facility_id', 'stage', 'material', 'state']
+                         'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
             )
         else:
-            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'state']
+            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
             return res
