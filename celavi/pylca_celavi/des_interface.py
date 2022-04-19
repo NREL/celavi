@@ -163,15 +163,15 @@ class PylcaCelavi:
         try:
             if electricity_grid_spatial_level != 'state':
                 db= pd.read_csv(self.shortcutlca_filename)
-                db.columns = ['year', 'stage', 'material', 'route_id', 'flow name', 'emission factor kg/kg']
+                db.columns = ['year', 'stage', 'material', 'flow name', 'emission factor kg/kg']
                 db = db.drop_duplicates()
-                df2 = df.merge(db, on = ['year', 'stage', 'material', 'route_id'], how = 'outer',indicator = True)
+                df2 = df.merge(db, on = ['year', 'stage', 'material'], how = 'outer',indicator = True)
                 df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
             else:
                 db= pd.read_csv(self.shortcutlca_filename)
-                db.columns = ['year', 'stage', 'material', 'route_id', 'state','flow name', 'emission factor kg/kg']
+                db.columns = ['year', 'stage', 'material', 'state','flow name', 'emission factor kg/kg']
                 db = db.drop_duplicates()
-                df2 = df.merge(db, on = ['year', 'stage', 'material','state', 'route_id'], how = 'outer',indicator = True)
+                df2 = df.merge(db, on = ['year', 'stage', 'material','state'], how = 'outer',indicator = True)
                 df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()   
 
             
@@ -268,6 +268,7 @@ class PylcaCelavi:
                                 lca_db = lca_db[lca_db['material'] != 'concrete']
                                 lca_db['year'] = lca_db['year'].astype(int)                                
                                 lca_db = lca_db.drop_duplicates()
+                                del lca_db['route_id']
                                 lca_db.to_csv(self.shortcutlca_filename,
                                               mode = 'a',
                                               index = False,
