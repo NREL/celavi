@@ -491,7 +491,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
     uslci_product_df[0] = uslci_product_df[0].str.lower()
     f_d['flow name'] = f_d['flow name'].str.lower()
     #print dataframe to debug connecting between foreground and background
-    uslci_product_df.to_csv('uslci_process_df.csv')
      
 
     final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
@@ -511,7 +510,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
 
     #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
-    final_dem.to_csv('final_demand_from_background.csv')
     #To make the optimization easier
     F = final_dem['flow quantity']
     res2 = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
