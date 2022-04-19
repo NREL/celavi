@@ -71,7 +71,7 @@ class CostGraph:
         sc_end : tuple
             List of processing step(s) where supply chain paths terminate.
         year : float
-            DES model year at which cost graph is instantiated.
+            Simulation year provided by the DES at CostGraph instantiation.
         verbose : int
             Integer specifying how much info CostGraph should provide as it
             works.
@@ -86,6 +86,8 @@ class CostGraph:
             saved (edge list).
         run : int
             Model run number for evaluating uncertainty within a scenario
+        random_state : np.random.default_rng
+            Instantiated random number generator for uncertainty analysis.
         """
         self.cost_methods = CostMethods(seed=random_state)
 
@@ -231,7 +233,8 @@ class CostGraph:
     def find_nearest(self, source: str, crit: str):
         """
         Method that finds the nearest nodes to source and returns that node name,
-        the path length to the nearest node, and the path to the nearest node.
+        the path length to the nearest node, and the path to the nearest node as
+        a list of nodes.
 
         Original code source:
         https://stackoverflow.com/questions/50723854/networkx-finding-the-shortest-path-to-one-of-multiple-nodes-in-graph
@@ -367,15 +370,19 @@ class CostGraph:
         facility_df : pd.DataFrame
             DataFrame containing unique facility IDs, processing steps, and
             the name of the method (if any) used to calculate processing costs
-            Column names in facility_df must be:
-            ['facility_id', 'step', 'connects', 'step_cost_method']
+
+            Columns:
+                - facility_id : int
+                - step : str
+                - connects : str
+                - step_cost_method : str
 
         Returns
         -------
-        List of (str, dict) tuples used to define a networkx DiGraph
-        Attributes are: processing step, cost method, facility ID, and
-        region identifiers
-
+        List[(str, Dict)]
+            Data structure used to define a networkx DiGraph. Attributes
+            (dictionary keys) are: processing step, cost method, facility
+            ID, and region identifiers.
         """
         if self.verbose > 1:
             print(
@@ -415,15 +422,23 @@ class CostGraph:
 
         Parameters
         ----------
-        facility_df
+        facility_df : pd.DataFrame
             DataFrame with a single row that defines a supply chain facility.
-            facility_df must contain the columns:
-            ['facility_id', 'facility_type', 'lat', 'long', 'region_id_1',
-            'region_id_2', 'region_id_3', 'region_id_4']
+
+            Columns:
+                - facility_id : int
+                - facility_type : str
+                - lat : float
+                - long : float
+                - region_id_1 : str
+                - region_id_2 : str
+                - region_id_3 : str
+                - region_id_4 : str
 
         Returns
         -------
-            networkx DiGraph
+        networkx.DiGraph
+            Directed graph representation of one supply chain facility.
         """
         if self.verbose > 1:
             print(
@@ -481,10 +496,6 @@ class CostGraph:
         edges. Edges within facilities have no cost or distance. Edges
         between facilities have costs defined in the interconnections
         dataset and distances defined in the routes dataset.
-
-        Returns
-        -------
-        None
         """
         if self.verbose > 0:
             print(
@@ -715,19 +726,18 @@ class CostGraph:
         such as distance or environmental impacts may be used as well with
         modifications to the crit argument of the find_nearest call.
 
-        @todo verify that this method works for a cyclic graph
-
         Parameters
         ----------
-        source
-            Node name in the format "facility_type_facilityid".
-        crit
+        source : str
+            Node name in the format "facilitytype_facilityid".
+        crit : str
             Criterion on which "shortest" path is defined. Defaults to cost.
 
         Returns
         -------
-        Dictionary containing the source, node, target node, path between
-        source and target, and the pathway "cost".
+        Dict
+            Dictionary containing the source node, target node, path between
+            source and target, and the pathway "cost" (criterion).
         """
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
@@ -761,22 +771,21 @@ class CostGraph:
 
         Parameters
         ----------
-        node_id
+        node_id : int
             facility_id of a node in the supply chain network. No default.
-        connect_to
+        connect_to : str
             facility_type of the upstream node.
-        crit
+        crit : str
             Criteron used to decide which manufacturing node is "nearest".
             Defaults to distance.
 
         Returns
         -------
-        _nearest_facility_id
+        _nearest_facility_id : int
             Integer identifying the "closest" upstream node of type connect_to
             that connects to the node with the provided node_id. Returns None
             if node_id does not exist in the network or if the node_id does not
             connect to any nodes of the connect_to type.
-
         """
 
         # Check that the node_id exists in the supply chain.
@@ -838,23 +847,32 @@ class CostGraph:
         get_dist: bool = False,
     ):
         """
+        Given a node (node_name and/or facility_id) in the network, find the
+        node's "nearest" downstream neighbor of type connect_to. "Nearest"
+        is specified by the crit parameter.
 
         Parameters
         ----------
-        node_name
-        facility_id
-        connect_to
-        crit
-        get_dist
+        node_name : str
+            Full node name of the starting node.
+        facility_id : int
+            Unique facility ID for the starting node.
+        connect_to : str
+            Facility type to connect to.
+        crit : str
+            Criterion on which "shortest" pathway is determined.
+        get_dist : bool
+            If True, also return the transportation distance to the downstream
+            node and the route_id along which material is transported.
 
         Returns
         -------
+        int or (int, float, str)
             Facility ID of the closest (according to "crit") facility
-             of type "connect_to" downstream of the node indicated by node_id.
-             Optionally returns the distance to the downstream node and the
-             route_id along which material is transported to the downstream 
-             node.
-
+            of type "connect_to" downstream of the node indicated by node_id.
+            Optionally returns the distance to the downstream node and the
+            route_id along which material is transported to the downstream 
+            node.
         """
 
         # Check that the node_id exists in the supply chain.
@@ -991,14 +1009,10 @@ class CostGraph:
 
         Parameters
         ----------
-        path_dict
+        path_dict : Dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
-
-        Returns
-        -------
-        None
         """
         # update the year for CostGraph
         self.year = path_dict["year"]
@@ -1028,13 +1042,6 @@ class CostGraph:
         """
         Performs postprocessing on CostGraph outputs being saved to file and
         saves to user-specified filenames and directories
-
-        Parameters
-        ----------
-
-        Returns
-        -------
-        None
         """
         _out = pd.DataFrame(self.pathway_crit_history).drop_duplicates(
             ignore_index=True

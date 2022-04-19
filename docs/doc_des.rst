@@ -30,6 +30,17 @@ Facility Inventory
 .. automodule:: celavi.inventory
     :members:
 
+Critical Instance Variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+These variables are passed to other classes and methods within CELAVI.
+
+self.component_materials: Dict[str, float]
+	The cumulative amount of component materials over the entire
+	lifetime of the simulation.
+
+self.component_materials_deposits: List[Dict[str, float]]
+	The history of the deposits from this inventory. These are
+	instantaneous, not cumulative, values.
 
 Transportation Tracker
 ----------------------

@@ -3,36 +3,32 @@ import pandas as pd
 class ReedsImporter:
     """    
     The ReedsImporter class 
-    - Provides an object which stores the files names required for modifiying REEDS database to pylcia compatible version
-    - Calls the main functions required for performing the data manipulation
+
+    - Provides an object which stores the files names required for modifying ReEDS output datasets 
+    for compatibility with pyLCIA.
+    - Calls the data manipulation methods.
 
     Parameters
     ----------
     reeds_imported_filename: str
-        Name of the manually edited Reeds input file
+        Name of the manually edited ReEDS input file.
     
     reeds_output_filename: str
-        Name of the final pylcia compatible electricity grid mix file
-    
+        Name of the final pyLCIA compatible electricity grid mix file.
     """
     
     def __init__(self,
                  reeds_imported_filename,reeds_output_filename):
         """
-        This function stores the filenames required for REEDS data manipulation as properties of an object. 
+        Store the filenames required for ReEDS data manipulation. 
         
         Parameters
         ----------
         reeds_imported_filename: str
-            Name of the manually edited Reeds input file
+            Name of the manually edited ReEDS input file
         
         reeds_output_filename: str
-            Name of the final pylcia compatible electricity grid mix file
-            
-        Returns
-        ------
-        None
-        
+            Name of the final pylcia compatible electricity grid mix file.
         """
         
         self.reeds_imported_filename = reeds_imported_filename
@@ -40,16 +36,8 @@ class ReedsImporter:
         
     def state_level_reeds_importer(self):
         """
-        This function stores the filenames performs REEDS data manipulation at the state electricity grid mix level
-        
-        Parameters
-        ----------
-        None
-            
-        Returns
-        ------
-        None
-        
+        Store filenames and performs ReEDS data manipulation at the state
+        electricity grid mix level.        
         """
         
         df  = pd.read_csv(self.reeds_imported_filename)
@@ -62,7 +50,7 @@ class ReedsImporter:
         states = pd.unique(df2['state'])
         flows = pd.unique(df2['product'])
         flow = []
-        "Create the missing odd years"
+        # Create the missing odd years
         for fl in flows:
             for st in states:
                 for y in range(2021,2050,2):
@@ -96,16 +84,8 @@ class ReedsImporter:
         
     def national_level_reeds_importer(self):
         """
-        This function stores the filenames performs REEDS data manipulation at the national electricity grid mix level. 
-        
-        Parameters
-        ----------
-        None
-            
-        Returns
-        ------
-        None
-        
+        Stores filenames and performs ReEDS data manipulation at the national
+        electricity grid mix level.         
         """
             
         df  = pd.read_csv(self.reeds_imported_filename)

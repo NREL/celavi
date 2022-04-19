@@ -24,40 +24,30 @@ class FacilityInventory:
         Parameters
         ----------
         facility_id: int
-            The id of the facility in the locations table
+            The unique facility ID from the processed facility locations dataset.
 
         facility_type: str
             The type of the facility from the locations table.
 
         step: str
-            The step that is held by this inventory.
-
-        quantity_unit: str
-            The unit in which the quantity is recorded.
+            The processing step that is held by this inventory.
 
         possible_items: List[str]
             A list of strings (e.g., "Nacelle Aluminum") that represent all
-            possible component materials that may be stored in this inventory
+            possible component materials that may be stored in this inventory.            
 
         timesteps: int
             The number of discrete timesteps in the simulation that this
             inventory will hold.
+        
+        quantity_unit: str
+            The unit in which the quantity is recorded.
 
         can_be_negative: bool
             True if the quantity in this inventory can be negative. If False,
             the quantity must always be positive, and the instance will
             raise an exception if there is an attempt of a negative
             transaction.
-
-        Other instance variables
-        ------------------------
-        self.component_materials: Dict[str, float]
-            The cumulative amount of component materials over the entire
-            lifetime of the simulation.
-
-        self.component_materials_deposits: List[Dict[str, float]]
-            The history of the deposits and withdrawals from this
-            inventory. These are instantaneous, not cumulative, values.
         """
         self.step = step
         self.facility_id = facility_id
@@ -71,14 +61,14 @@ class FacilityInventory:
         self.transactions: List[Dict[str, float]] = []
         for timestep in range(timesteps):
             component_materials_copy = self.component_materials.copy()
-            component_materials_copy['timestep'] = timestep
+            component_materials_copy["timestep"] = timestep
             self.transactions.append(component_materials_copy)
         # Populate the deposit-only history with copies of the
         # initialized dictionary from above that has all values set to 0.0
         self.input_transactions: List[Dict[str, float]] = []
         for timestep in range(timesteps):
             component_materials_copy = self.component_materials.copy()
-            component_materials_copy['timestep'] = timestep
+            component_materials_copy["timestep"] = timestep
             self.input_transactions.append(component_materials_copy)
 
     def increment_quantity(
@@ -90,10 +80,11 @@ class FacilityInventory:
         For virgin material extractions, the quantity should be negative
         to indicate a withdrawal.
 
-        For landfill additions, the quantity should be positive to
-        indicate a deposit of material.
+        For landfills and other facility types where components or
+        materials accumulate or are stored, the quantity should be positive
+        to indicate a deposit of material.
 
-        For other lifecycle transitions, the quantity can either be
+        For other facility inventories, the quantity can either be
         positive or negative, depending on if there is an increase in
         supply or a decrease in supply at a particular facility inventory.
 
@@ -107,7 +98,7 @@ class FacilityInventory:
 
         timestep: int
             The timestep of this deposit or withdrawal or deposit
-            (depending on the sign the quantity)
+            (depending on the sign of the quantity).
 
         Returns
         -------
@@ -142,6 +133,10 @@ class FacilityInventory:
         """
         Calculate the cumulative level of a facility inventory over all its
         transactions.
+
+        For facilities where material is not stored and does not accumulate,
+        the cumulative history will be zero. The cumulative_input_history will
+        be more informative for facilities of this type.
 
         Returns
         -------
@@ -180,6 +175,9 @@ class FacilityInventory:
     @property
     def transaction_history(self) -> pd.DataFrame:
         """
+        Convert a dictionary of transactions at this facility into a
+        DataFrame.
+
         Because this method instantiates a DataFrame, it should be called
         sparingly, as this is a resource consuming procedure.
 
@@ -194,10 +192,16 @@ class FacilityInventory:
     @property
     def input_transaction_history(self) -> pd.DataFrame:
         """
+        Convert a dictionary of input transactions at this facility
+        into a DataFrame.
+        
+        Because this method instantiates a DataFrame, it should be called
+        sparingly, as this is a resource consuming procedure.
 
         Returns
         -------
-
+        pd.DataFrame
+            The history of input transactions in dataframe form.
         """
         input_transactions_df = pd.DataFrame(self.input_transactions)
         return input_transactions_df
