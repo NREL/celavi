@@ -126,6 +126,14 @@ class Scenario:
             Raises exception if necessary filepaths do not exist.
         """
         for _dir, _fdict in self.case["files"].items():
+            # Create the directory if it doesn't exist
+            if not os.path.isdir(
+                os.path.join(self.args.data, self.case["directories"][_dir])
+            ):
+                os.makedirs(
+                    os.path.join(self.args.data, self.case["directories"][_dir])
+                )
+
             for _n, _f in _fdict.items():
                 # Capacity projection file is a scenario parameter and must be
                 # processed separately
