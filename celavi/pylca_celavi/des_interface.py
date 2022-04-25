@@ -176,7 +176,13 @@ class PylcaCelavi:
 
             
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
-            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()            
+            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()
+            
+            try:
+                df_with_no_lca_entry = df_with_no_lca_entry[['year', 'facility_id', 'flow quantity', 'stage', 'state', 'material', 'flow unit']]  
+            except:
+                df_with_no_lca_entry = df_with_no_lca_entry[['year', 'facility_id', 'flow quantity', 'stage', 'material', 'flow unit']]  
+
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
             df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id']]
             result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
@@ -225,6 +231,7 @@ class PylcaCelavi:
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
                     df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state,self.electricity_grid_spatial_level)
+                    df_with_no_lca_entry['route_id'] = route_id #the lca performance improvement removes routes id. 
                 else:                    
                     df_with_no_lca_entry = new_df
                     result_shortcut = pd.DataFrame()
@@ -253,22 +260,25 @@ class PylcaCelavi:
                                 lci = postprocessing(res,emission)
                                 res = impact_calculations(lci,self.traci_lci_filename)
                                 res_df = pd.concat([res_df,res])
+
                                 lcia_mass_flow = lci
-                                
+                                del df_with_no_lca_entry['route_id']
+                                del lcia_mass_flow['route_id']
                                 
                                 df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material','route_id'])
+                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
                                 lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']  
+                                
                                 if self.electricity_grid_spatial_level == 'state':
-                                    lca_db['state'] = state 
-                                    lca_db = lca_db[['year','stage','material','route_id','state','flow name','emission factor kg/kg']]
+                                    lca_db['state'] = state
+                                    lca_db = lca_db[['year','stage','material','state','flow name','emission factor kg/kg']]
                                 else: 
-                                    lca_db = lca_db[['year','stage','material','route_id','flow name','emission factor kg/kg']]
+                                    lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
+                            
 
                                 lca_db = lca_db[lca_db['material'] != 'concrete']
                                 lca_db['year'] = lca_db['year'].astype(int)                                
                                 lca_db = lca_db.drop_duplicates()
-                                del lca_db['route_id']
                                 lca_db.to_csv(self.shortcutlca_filename,
                                               mode = 'a',
                                               index = False,
@@ -285,6 +295,8 @@ class PylcaCelavi:
     
                 res_df = pd.concat([res_df,result_shortcut])
 
+        import time
+        time0 = time.time()
         #Correcting the units for LCIA results. 
         for index,row in res_df.iterrows():
     
@@ -301,6 +313,7 @@ class PylcaCelavi:
         # The line below is just for debugging if needed
         res_df["run"] = self.run
         res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+        print('Time taken for lcia name correction seconds: ' + str(time.time()-time0), flush = True)
     
         # This is the result that needs to be analyzed every timestep.
         return res_df
