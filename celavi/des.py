@@ -5,6 +5,7 @@ import time
 
 import simpy
 import pandas as pd
+import numpy as np
 
 from celavi.inventory import FacilityInventory
 from celavi.transportation_tracker import TransportationTracker
@@ -38,17 +39,21 @@ class Context:
         min_year: int = 2000,
         end_year: int = 2050,
         max_timesteps: int = 600,
-        timesteps_per_year: int = 12
+        timesteps_per_year: int = 12,
     ):
         """
         Parameters
         ----------
+        locations_filename : str
+            Path to the processed facility locations dataset.
+
         step_costs_filename: str
-            The pathname to the step_costs file that will determine the steps in
+            Path to the step_costs dataset that determines the process steps in
             each facility.
 
         component_material_masses_filename: str
-            The pathname to the file that contains the average component masses.
+            Path to the dataset specifying component composition (materials and
+            masses) over time.
 
         possible_components: List[str]
             The list of possible technology components.
@@ -58,29 +63,32 @@ class Context:
             component types.
 
         cost_graph: CostGraph
-            The instance of the cost graph to use with this DES model.
+            The CostGraph instance to use with this Context instance.
 
         lca: PylcaCelavi
-            The LCA interface to the DES.
+            The pyLCIA instance to use with this Context instance.
 
         cost_graph_update_interval_timesteps: int
-            Update the cost graph every n timesteps.
+            Frequency at which the process costs within the CostGraph instance are
+            re-calculated.
 
         path_dict: Dict
             Dictionary of parameters for the learning-by-doing models and all
-            other pathway cost models
+            other pathway cost models. The structure and content of this dictionary
+            will vary by case study and is specified in the Scenario configuration
+            file.
 
         min_year: int
-            The starting year of the model. Optional. If left unspecified
+            Simulation start (calendar) year. Optional. If left unspecified
             defaults to 2000.
 
         max_timesteps: int
-            The maximum number of discrete timesteps in the model. Defaults to
-            200 or an end year of 2050.
+            The maximum number of discrete timesteps in the simulation. Defaults
+            to 200 or an end year of 2050.
 
         timesteps_per_year: int
-            The number of timesteps in one year. Default value is 12 timesteps
-            per year, corresponding to a monthly model resolution.
+            The number of timesteps in one simulation year. Default value is 12
+            timesteps per year, corresponding to a monthly model resolution.
         """
 
         self.path_dict = path_dict
@@ -91,7 +99,7 @@ class Context:
 
         self.components: List[Component] = []
         self.env = simpy.Environment()
-      
+
         # The top level dictionary has a key for each material type. The dictionaries
         # at the next level down have an integer key for each year of the DES run.
         # The values on these second-level dictionaries are the mass per component
@@ -103,9 +111,9 @@ class Context:
         for material in possible_materials:
             self.component_material_mass_tonne_dict[material] = {}
         for _, row in component_material_masses_df.iterrows():
-            year = row['year']
-            material = row['material']
-            self.component_material_mass_tonne_dict[material][year] = row['mass_tonnes']
+            year = row["year"]
+            material = row["material"]
+            self.component_material_mass_tonne_dict[material][year] = row["mass_tonnes"]
 
         self.possible_materials = possible_materials
 
@@ -129,18 +137,18 @@ class Context:
         # is how they will be looked up in the interface to the LCA code.
 
         self.facility_states = {
-            str(row['facility_id']): row['region_id_2']
+            str(row["facility_id"]): row["region_id_2"]
             for _, row in locations.iterrows()
         }
 
         # After this merge, there will be "facility_type_x" and
         # "facility_type_y" columns
-        locations_step_costs = locations.merge(step_costs, on='facility_id')
+        locations_step_costs = locations.merge(step_costs, on="facility_id")
 
         for _, row in locations_step_costs.iterrows():
-            facility_type = row['facility_type_x']
-            facility_id = row['facility_id']
-            step = row['step']
+            facility_type = row["facility_type_x"]
+            facility_id = row["facility_id"]
+            step = row["step"]
             step_facility_id = f"{step}_{facility_id}"
 
             self.count_facility_inventories[step_facility_id] = FacilityInventory(
@@ -150,7 +158,7 @@ class Context:
                 possible_items=possible_components,
                 timesteps=max_timesteps,
                 quantity_unit="count",
-                can_be_negative=False
+                can_be_negative=False,
             )
 
             self.mass_facility_inventories[step_facility_id] = FacilityInventory(
@@ -160,10 +168,12 @@ class Context:
                 possible_items=possible_materials,
                 timesteps=max_timesteps,
                 quantity_unit="tonnes",
-                can_be_negative=False
+                can_be_negative=False,
             )
 
-            self.transportation_trackers[step_facility_id] = TransportationTracker(timesteps=max_timesteps)
+            self.transportation_trackers[step_facility_id] = TransportationTracker(
+                timesteps=max_timesteps
+            )
 
         self.cost_graph = cost_graph
         self.lca = lca
@@ -173,7 +183,7 @@ class Context:
 
     def years_to_timesteps(self, year: float) -> int:
         """
-        Converts years into the corresponding timestep number of the discrete
+        Convert calendar year into the corresponding timestep of the discrete
         event model.
 
         Parameters
@@ -185,14 +195,14 @@ class Context:
         Returns
         -------
         int
-            The discrete timestep that corresponds to the year.
+            The DES timestep that corresponds to the year.
         """
 
         return int(year * self.timesteps_per_year)
 
     def timesteps_to_years(self, timesteps: int) -> float:
         """
-        Converts the discrete timestep to a year.
+        Convert the discrete DES timestep to a fractional calendar year.
 
         Parameters
         ----------
@@ -213,16 +223,6 @@ class Context:
         loads components from a DataFrame, has the following columns which
         correspond to the attributes of a component object:
 
-        kind: str
-            The type of component as a string. It isn't called "type" because
-            "type" is a keyword in Python.
-
-        year: float
-            The year the component goes into use.
-
-        mass_tonnes: float
-            The mass of the component in tonnes.
-
         Each component is placed into a process that will timeout when the
         component begins its useful life, as specified in year. From there,
         choices about the component's lifecycle are made as further processes
@@ -231,8 +231,18 @@ class Context:
         Parameters
         ----------
         df: pd.DataFrame
-            The DataFrame which has components specified in the columns
-            listed above.
+            The DataFrame which has components specified in the columns below.
+
+            Columns:
+                kind: str
+                    The type of component as a string. It isn't called "type" because
+                    "type" is a keyword in Python.
+
+                year: float
+                    The year the component goes into use.
+
+                mass_tonnes: float
+                    The mass of the component in tonnes.            
 
         lifespan_fns: Dict[str, Callable[[], float]]
             A dictionary with the kind of component as the key and a Callable
@@ -257,15 +267,14 @@ class Context:
                 in_use_facility_id=row["in_use_facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
-                mass_tonnes=mass_tonnes
+                mass_tonnes=mass_tonnes,
             )
             self.env.process(component.bol_process(self.env))
             self.components.append(component)
 
-    def cumulative_mass_for_component_in_process_at_timestep(self,
-                          component_kind: str,
-                          process_name: List[str],
-                          timestep: int):
+    def cumulative_mass_for_component_in_process_at_timestep(
+        self, component_kind: str, process_name: List[str], timestep: int
+    ):
         """
         Calculate the cumulative mass at a certain time of a given component
         passed through processes that contain the given name.
@@ -295,7 +304,7 @@ class Context:
             Total cumulative mass of the component in the process at the
             timestep.
         """
-        
+
         year = int(floor(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
 
@@ -335,72 +344,142 @@ class Context:
                 process_name, facility_id = facility_name.split("_")
                 for material in self.possible_materials:
                     annual_transactions = facility.transaction_history.loc[
-                                          window_first_timestep:window_last_timestep, material
-                                          ]
+                        window_first_timestep:window_last_timestep, material
+                    ]
                     sliced_info = facility.transaction_history.loc[
-                                          window_first_timestep:window_last_timestep, [material,'timestep']
-                                          ].reset_index()
-                    
-                    sliced_info['year'] = sliced_info['timestep']/self.timesteps_per_year+self.min_year                    
-                    actual_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year//2])))
+                        window_first_timestep:window_last_timestep,
+                        [material, "timestep"],
+                    ].reset_index()
+
+                    sliced_info["year"] = (
+                        sliced_info["timestep"] / self.timesteps_per_year
+                        + self.min_year
+                    )
+                    actual_year = int(
+                        floor(
+                            self.timesteps_to_years(
+                                sliced_info["timestep"][self.timesteps_per_year // 2]
+                            )
+                        )
+                    )
                     problematic_value = sliced_info[material][self.timesteps_per_year]
 
                     # A problematic value is when mass is reported in the last time step of a sliced dataframe
-                    # which belongs to the next year. Generally this happens only for manufacturing. 
-                    if problematic_value > 0: 
-                        problem_year = int(floor(self.timesteps_to_years(sliced_info['timestep'][self.timesteps_per_year])))
+                    # which belongs to the next year. Generally this happens only for manufacturing.
+                    if problematic_value > 0:
+                        problem_year = int(
+                            floor(
+                                self.timesteps_to_years(
+                                    sliced_info["timestep"][self.timesteps_per_year]
+                                )
+                            )
+                        )
                         actual_year = actual_year + 1
-                    
-                    #If the facility is NOT manufacturing, keep only positive transactions
-                    if facility_name.find('manufacturing') == -1:
-                         positive_annual_transactions = annual_transactions[annual_transactions > 0]
+
+                    # If the facility is NOT manufacturing, keep only positive transactions
+                    if facility_name.find("manufacturing") == -1:
+                        positive_annual_transactions = annual_transactions[
+                            annual_transactions > 0
+                        ]
                     else:
-                        #If the facility IS manufacturing, use all of the transactions
+                        # If the facility IS manufacturing, use all of the transactions
                         positive_annual_transactions = annual_transactions
                     mass_tonnes = positive_annual_transactions.sum()
 
                     if mass_tonnes > 0:
-                        print(f'Actual_year {actual_year}, Material {material}, Facility {facility_name}: {mass_tonnes} tonnes')
-                        sliced_info['facility_name'] = facility_name
-                        sliced_info['facility_id'] = facility_id
-                        sliced_info.to_csv('mass_tonnes_check_debug.csv', index = False, mode = 'a')
+                        sliced_info["facility_name"] = facility_name
+                        sliced_info["facility_id"] = facility_id
                     mass_kg = mass_tonnes * 1000
                     if mass_kg > 0:
                         row = {
-                            'flow quantity': mass_kg,
-                            'stage': process_name,
-                            'year': actual_year,
-                            'material': material,
-                            'flow unit': 'kg',
-                            'facility_id': facility_id,
-                            'state': self.facility_states[facility_id]
+                            "flow quantity": mass_kg,
+                            "stage": process_name,
+                            "year": actual_year,
+                            "material": material,
+                            "flow unit": "kg",
+                            "facility_id": facility_id,
+                            "route_id": None,
+                            "state": self.facility_states[facility_id],
                         }
                         self.data_for_lci.append(row)
                         annual_data_for_lci.append(row)
             for facility_name, tracker in self.transportation_trackers.items():
                 _, facility_id = facility_name.split("_")
-                annual_transportations = tracker.inbound_tonne_km[window_first_timestep:window_last_timestep]   
-                tonne_km = annual_transportations.sum()
-                if tonne_km > 0:
+                # List of all inbound transportation amounts to this facility in the past window
+                annual_transportations = tracker.inbound_tonne_km[
+                    window_first_timestep : window_last_timestep + 1
+                ]
+                # Corresponding list of the routes along which the inbound transportation took place
+                route_ids = tracker.route_id[
+                    window_first_timestep : window_last_timestep + 1
+                ]
+
+                # Case 1: There was no inbound transportation and the rest of this block is skipped
+                # Provide no data to LCIA. Executes if none of the if/elif statements below are True.
+
+                # Case 2: There was only one instance of inbound transportation
+                # and therefore only one corresponding route
+                if len(annual_transportations[annual_transportations != 0]) == 1:
+                    # Provide one row of data to LCIA by filtering out zeros/Nones. No aggregation needed.
                     row = {
-                        'flow quantity': tonne_km,
-                        'stage': 'Transportation',
-                        'year': actual_year,
-                        'material': 'transportation',
-                        'flow unit': 't * km',
-                        'facility_id': facility_id,
-                        'state': self.facility_states[facility_id]
+                        "flow quantity": annual_transportations[
+                            annual_transportations != 0
+                        ][0],
+                        "stage": "Transportation",
+                        "year": actual_year,
+                        "material": "transportation",
+                        "flow unit": "t * km",
+                        "facility_id": facility_id,
+                        "route_id": route_ids[annual_transportations != 0][0],
+                        "state": self.facility_states[facility_id],
                     }
-                    print(f'Transportation row {row}') 
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
 
+                elif len(annual_transportations[annual_transportations != 0]) > 1:
+                    # Case 3: There were multiple instances of inbound transportation that all took place along the same route
+                    if len(np.unique(route_ids[annual_transportations != 0])) == 1:
+                        # Provide one row of data to LCIA by summing the inbound transportation and filtering out Nones in route_ids.
+                        row = {
+                            "flow quantity": annual_transportations.sum(),
+                            "stage": "Transportation",
+                            "year": year,
+                            "material": "transportation",
+                            "flow unit": "t * km",
+                            "facility_id": facility_id,
+                            "route_id": route_ids[annual_transportations != 0][0],
+                            "state": self.facility_states[facility_id],
+                        }
+                        self.data_for_lci.append(row)
+                        annual_data_for_lci.append(row)
+                    # Case 4: There were multiple instances of inbound transportation that took place along different routes
+                    elif len(np.unique(route_ids[annual_transportations != 0])) > 1:
+                        # Provide as many rows of data to LCIA as there are unique routes by filtering out zeros/Nones. Only
+                        # aggregate if one or more routes had multiple instances of inbound transportation.
+                        for _r in np.unique(route_ids[annual_transportations != 0]):
+                            row = {
+                                "flow quantity": annual_transportations[
+                                    route_ids == _r
+                                ].sum(),
+                                "stage": "Transportation",
+                                "year": year,
+                                "material": "transportation",
+                                "flow unit": "t * km",
+                                "facility_id": facility_id,
+                                "route_id": _r,
+                                "state": self.facility_states[facility_id],
+                            }
+                            self.data_for_lci.append(row)
+                            annual_data_for_lci.append(row)
+
             if annual_data_for_lci:
-                print(f'{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA')
+                print(
+                    f"{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA"
+                )
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface)
             else:
-                print(f'{datetime.now()} pylca_interface_process(): All Masses are 0')
+                print(f"{datetime.now()} pylca_interface_process(): All Masses are 0")
 
     def average_total_component_mass_for_year(self, year):
         """
@@ -427,34 +506,31 @@ class Context:
         """
         This is the SimPy process that updates the cost graph periodically.
         """
-        #print('Updating cost graph')
         while True:
-            #print(f'{datetime.now()} In While loop update cost graph',flush = True)
-            time0 = time.time()            
             yield env.timeout(self.cost_graph_update_interval_timesteps)
-            #print(str(time.time() - time0) + ' yield of env timeout costgraph took these many seconds')
-            
+
             year = self.timesteps_to_years(env.now)
 
             if year < self.end_year:
                 _path_dict = self.path_dict.copy()
-                _path_dict['year'] = year
-                _path_dict['component mass'] = self.average_total_component_mass_for_year(year)
+                _path_dict["year"] = year
+                _path_dict[
+                    "component mass"
+                ] = self.average_total_component_mass_for_year(year)
 
-                for key in self.path_dict['learning'].keys():
-                    _path_dict['learning'][key]['cumul'] = \
-                        self.cumulative_mass_for_component_in_process_at_timestep(
-                            component_kind=_path_dict['learning'][key]['component'],
-                            process_name=_path_dict['learning'][key]['steps'],
-                            timestep=env.now
-                        )
+                for key in self.path_dict["learning"].keys():
+                    _path_dict["learning"][key][
+                        "cumul"
+                    ] = self.cumulative_mass_for_component_in_process_at_timestep(
+                        component_kind=_path_dict["learning"][key]["component"],
+                        process_name=_path_dict["learning"][key]["steps"],
+                        timestep=env.now,
+                    )
                 self.cost_graph.update_costs(_path_dict)
-
-            #print(f"{datetime.now()} Updated cost graph {year}", flush=True)
 
     def run(self) -> Dict[str, FacilityInventory]:
         """
-        This method starts the discrete event simulation running.
+        This method executes the discrete event simulation.
 
         Returns
         -------
@@ -462,7 +538,6 @@ class Context:
             A dictionary of inventories mapped to their cumulative histories.
         """
 
-        #print('DES RUN STARTING\n\n\n',flush=True)
         self.env.process(self.update_cost_graph_process(self.env))
         self.env.process(self.pylca_interface_process(self.env))
         self.env.run(until=int(self.max_timesteps))

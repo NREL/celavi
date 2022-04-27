@@ -9,7 +9,9 @@ Welcome to CELAVI's documentation!
 **CELAVI** (pron: c'est la vie) is the Circular Economy Lifecycle Analysis and VIsualization modeling framework.
 
 .. toctree::
+   doc_config
    doc_preprocessing
+   doc_scenario
    doc_des
    doc_costgraph
    doc_pylcia

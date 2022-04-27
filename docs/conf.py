@@ -51,6 +51,11 @@ templates_path = ["_templates"]
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
+# Don't sort documentation alphabetically by method name
+autodoc_member_order = "bysource"
+
+# Change the name of the main doc file to main_page instead of index
+master_doc = "main_page"
 
 # -- Options for HTML output -------------------------------------------------
 
