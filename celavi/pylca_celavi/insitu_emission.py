@@ -275,7 +275,7 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
         res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows)
         # r es.columns = ['flow name', 'unit', 'flow quantity', 'year', 'stage', 'material']
         # res = model_celavi_lci_background(res, yr, stage, material)
-        res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material']
+        res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id']
         return res
     else:
         return pd.DataFrame()

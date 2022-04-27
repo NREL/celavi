@@ -278,8 +278,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'conjoined_flownames', columns = 'process', values = 'value')
-    
-    #tech_matrix.to_csv('tech_matrix.csv')
     tech_matrix = tech_matrix.fillna(0)
     
     #This list of products and processes essentially help to determine the indexes and the products and processes
