@@ -36,32 +36,35 @@ class Component:
             The context that contains this component.
 
         kind: str
-            The type of this component. The word "type", however, is also a Python
-            keyword, so this attribute is named kind.
+            The type of this component. It isn't called "type" because
+            "type" is a keyword in Python.
 
         year: int
-            The year in which this component enters the use state for the first
-            time.
+            The calendar year in which this component enters the in use state
+            for the first time.
 
         lifespan_timesteps: float
-            The lifespan, in timesteps, of the component during its first
-            In use phase. The argument can be
-            provided as a floating point value, but it is converted into an
-            integer before it is assigned to the instance attribute. This allows
-            more intuitive integration with random number generators defined
-            outside this class which may return floating point values.
+            The component useful lifetime: the period, in timesteps, that
+            the component spends in its first in use state. The argument
+            can be provided as a floating point value, but it is converted
+            into an integer before it is assigned to the instance attribute.
+            This allows components to have either fixed integer lifespans,
+            fixed float lifespans, or lifespans defined with a Weibull 
+            probability distribution.
 
         mass_tonnes: Dict[str, float]
-            The masses of the materials of the component, in tonnes. Keys are
+            Component composition by material, in tonnes. Keys are
             material names. Values are material masses.
 
         manuf_facility_id: int
-            The initial facility id (where the component begins life) used in
-            initial pathway selection from CostGraph.
+            The facility id where the component begins life (typically but not
+            necessarily a manufacturing facility type) used in initial pathway
+            selection from CostGraph.
 
         in_use_facility_id: int
-            The facility ID where the component spends its useful lifetime
-            before beginning the end-of-life process.
+            The facility ID where the component spends its first useful lifetime
+            before beginning the end-of-life process (typically but not necessarily
+            a renewable energy power plant).
         """
 
         self.context = context
@@ -70,16 +73,16 @@ class Component:
         self.mass_tonnes = mass_tonnes
         self.manuf_facility_id = manuf_facility_id
         self.in_use_facility_id = in_use_facility_id
-        self.current_location = 'manufacturing_' + str(self.manuf_facility_id)
+        self.current_location = "manufacturing_" + str(self.manuf_facility_id)
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
-        self.split_dict = self.context.path_dict['path_split']
+        self.split_dict = self.context.path_dict["path_split"]
 
     def create_pathway_queue(self, from_facility_id: int):
         """
-        Query the CostGraph and construct a queue of the lifecycle for
+        Query the CostGraph instance and construct a queue of the lifecycle for
         this component. This method is called during the manufacturing step
-        and during the eol_process when exiting an "in use" location.
+        and during the eol_process when exiting the in use stage.
 
         This method does not return anything, rather it modifies the
         instance attribute self.pathway with a new deque.
@@ -91,36 +94,47 @@ class Component:
         """
         in_use_facility_id = f"in use_{int(from_facility_id)}"
         path_choices = self.context.cost_graph.choose_paths(source=in_use_facility_id)
-        path_choices_dict = {path_choice['source']: path_choice for path_choice in path_choices}
+        path_choices_dict = {
+            path_choice["source"]: path_choice for path_choice in path_choices
+        }
 
         path_choice = path_choices_dict[in_use_facility_id]
         self.pathway = deque()
-        for facility, lifespan, distance, route_id in path_choice['path']:
+        for facility, lifespan, distance, route_id in path_choice["path"]:
             # Override the initial timespan when component goes into use.
 
             if facility.startswith("in use"):
-                self.pathway.append((facility, self.initial_lifespan_timesteps, distance, route_id))
-            elif any([facility.startswith(i)
-                      for i in self.context.path_dict['permanent_lifespan_facility']]):
-                self.pathway.append((facility, self.context.max_timesteps * 2, distance, route_id))
+                self.pathway.append(
+                    (facility, self.initial_lifespan_timesteps, distance, route_id)
+                )
+            elif any(
+                [
+                    facility.startswith(i)
+                    for i in self.context.path_dict["permanent_lifespan_facility"]
+                ]
+            ):
+                self.pathway.append(
+                    (facility, self.context.max_timesteps * 2, distance, route_id)
+                )
             # Otherwise, use the timespan the model gives us.
             else:
                 self.pathway.append((facility, lifespan, distance, route_id))
 
     def bol_process(self, env):
         """
-        This process should be called exactly once during the discrete event
-        simulation. It is what starts the lifetime this component. Since it is
+        This process starts the lifecycle for this component. Since it is
         only called once, it does not have a loop, like most other SimPy
-        processes. When the component enters life, this method immediately
-        sets the end-of-life (EOL) process for the use state.
+        processes. When the component reaches end-of-life, this method
+        sets the end-of-life (EOL) pathway for the component.
 
         Parameters
         ----------
         env: simpy.Environment
             The SimPy environment running the DES timesteps.
         """
-        begin_timestep = (self.year - self.context.min_year) * self.context.timesteps_per_year
+        begin_timestep = (
+            self.year - self.context.min_year
+        ) * self.context.timesteps_per_year
         lifespan = 1
 
         # component waits to be manufactured
@@ -157,19 +171,16 @@ class Component:
         count_transport = self.context.transportation_trackers[self.current_location]
         for _, mass in self.mass_tonnes.items():
             count_transport.increment_inbound_tonne_km(
-                tonne_km = mass * self.context.cost_graph.supply_chain.edges[
+                tonne_km=mass
+                * self.context.cost_graph.supply_chain.edges[
                     f"manufacturing_{int(self.manuf_facility_id)}",
-                    f"in use_{int(self.in_use_facility_id)}"
-                ][
-                    'dist'
-                ],
-                route_id = self.context.cost_graph.supply_chain.edges[
+                    f"in use_{int(self.in_use_facility_id)}",
+                ]["dist"],
+                route_id=self.context.cost_graph.supply_chain.edges[
                     f"manufacturing_{int(self.manuf_facility_id)}",
-                    f"in use_{int(self.in_use_facility_id)}"
-                ][
-                    'route_id'
-                ],
-                timestep = env.now
+                    f"in use_{int(self.in_use_facility_id)}",
+                ]["route_id"],
+                timestep=env.now,
             )
 
         # Component stays in use for its lifetime
@@ -188,7 +199,6 @@ class Component:
         # Begin the end of life process
         env.process(self.eol_process(env))
 
-
     def eol_process(self, env):
         """
         This process controls the state transitions for the component at
@@ -202,10 +212,12 @@ class Component:
         while True:
             if self.pathway:
                 location, lifespan, distance, route_id = self.pathway.popleft()
-                factype = location.split('_')[0]
+                factype = location.split("_")[0]
                 if factype in self.split_dict.keys():
                     # increment the facility inventory and transportation tracker
-                    self.move_component_to(env, loc=location, dist=distance, route_id=route_id)
+                    self.move_component_to(
+                        env, loc=location, dist=distance, route_id=route_id
+                    )
                     self.current_location = location
 
                     yield env.timeout(lifespan)
@@ -214,37 +226,39 @@ class Component:
 
                     # locate the two downstream facilities that are closest
                     _split_facility_1 = self.context.cost_graph.find_downstream(
-                        facility_id = int(location.split('_')[1]),
-                        connect_to = self.split_dict[factype]['facility_1'],
-                        get_dist=True
+                        facility_id=int(location.split("_")[1]),
+                        connect_to=self.split_dict[factype]["facility_1"],
+                        get_dist=True,
                     )
 
                     _split_facility_2 = self.context.cost_graph.find_downstream(
-                        node_name = location,
-                        connect_to = self.split_dict[factype]['facility_2'],
-                        get_dist=True
+                        node_name=location,
+                        connect_to=self.split_dict[factype]["facility_2"],
+                        get_dist=True,
                     )
 
                     # Move component fractions to the split facilities
                     self.move_component_to(
                         env,
                         loc=_split_facility_1[0],
-                        amt=self.split_dict[factype]['fraction'],
+                        amt=self.split_dict[factype]["fraction"],
                         dist=_split_facility_1[1],
-                        route_id=_split_facility_1[2]
+                        route_id=_split_facility_1[2],
                     )
                     self.move_component_to(
                         env,
                         loc=_split_facility_2[0],
-                        amt=1 - self.split_dict[factype]['fraction'],
+                        amt=1 - self.split_dict[factype]["fraction"],
                         dist=_split_facility_2[1],
-                        route_id=_split_facility_2[2]
+                        route_id=_split_facility_2[2],
                     )
-                elif factype in self.split_dict['pass']:
+                elif factype in self.split_dict["pass"]:
                     pass
 
                 else:
-                    self.move_component_to(env, loc=location, dist=distance, route_id=route_id)
+                    self.move_component_to(
+                        env, loc=location, dist=distance, route_id=route_id
+                    )
 
                     self.current_location = location
 
@@ -255,48 +269,64 @@ class Component:
             else:
                 break
 
-    def move_component_to(self, env, loc, dist : float, route_id = None, amt = 1.0):
+    def move_component_to(self, env, loc, dist: float, route_id=None, amt=1.0):
         """
         Increment mass, count, and transportation inventories.
 
         Parameters
         ----------
-        env
-
-        amt : float
-            Number of components being moved. Defaults to 1.
+        env: simpy.Environment
+            The environment in which this process is running.
         
-        loc
-            Destination facility ID
+        loc: int
+            Destination facility ID.
         
         dist : float
-            Transportation distance in km to destination facility
+            Transportation distance in km to destination facility.
+        
+        route_id : str
+            UUID for route along which component is moved. Defaults to None.
+
+        amt : float
+            Number of components being moved. Defaults to 1.        
         """
-        self.context.count_facility_inventories[loc].increment_quantity(self.kind, amt, env.now)
+        self.context.count_facility_inventories[loc].increment_quantity(
+            self.kind, amt, env.now
+        )
 
         for _mat, _mass in self.mass_tonnes.items():
-            self.context.mass_facility_inventories[loc].increment_quantity(_mat, amt * _mass, env.now)
-            self.context.transportation_trackers[loc].increment_inbound_tonne_km(tonne_km = amt * _mass * dist, timestep = env.now, route_id = route_id)
+            self.context.mass_facility_inventories[loc].increment_quantity(
+                _mat, amt * _mass, env.now
+            )
+            self.context.transportation_trackers[loc].increment_inbound_tonne_km(
+                tonne_km=amt * _mass * dist, timestep=env.now, route_id=route_id
+            )
 
-    def move_component_from(self, env, loc, amt = 1.0):
+    def move_component_from(self, env, loc, amt=1.0):
         """
         Decrement mass and count inventories at the current facility.
 
-        Only INBOUND transportation is tracked by the facility, thus no
-        transportation tracking is done by this method.
+        Only INBOUND transportation is tracked, thus no transportation
+        tracking is done by this method.
 
         Parameters
         ----------
-        env
+        env: simpy.Environment
+            The environment in which this process is running.
 
-        loc
-            Current facility ID
+        loc: int
+            Current facility ID.
         
         amt : float
             Number of components being moved. Defaults to 1.
         """
 
-        self.context.count_facility_inventories[loc].increment_quantity(self.kind, -amt, env.now)
+        self.context.count_facility_inventories[loc].increment_quantity(
+            self.kind, -amt, env.now
+        )
 
         for _mat, _mass in self.mass_tonnes.items():
-            self.context.mass_facility_inventories[loc].increment_quantity(_mat, -amt * _mass, env.now)
+            self.context.mass_facility_inventories[loc].increment_quantity(
+                _mat, -amt * _mass, env.now
+            )
+

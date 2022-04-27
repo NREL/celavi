@@ -10,8 +10,8 @@ def filter_locations(loc_filename,
         based on the list of states to include provided in the
         scenario-specific config file.
 
-        The filtered datasets overwrite the original datasets (CSV files).
-
+        Data is not returned; the filtered datasets overwrite the original datasets
+        (CSV files).
 
         Parameters
         ----------
@@ -23,10 +23,6 @@ def filter_locations(loc_filename,
         
         states: list
             List of states to include in the filtered datasets.
-
-        Returns
-        -------
-        None
         """
 
         locations = pd.read_csv(loc_filename)
@@ -66,10 +62,6 @@ def filter_routes(filtered_locations_filename, routes_filename):
             Path to the unfiltered routes dataset. Either the computed routes
             dataset provided by the Router or a custom routes dataset may be
             used.
-        
-        Returns
-        -------
-        None
         """
 
         facility_id_included = list(

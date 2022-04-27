@@ -79,7 +79,7 @@ class Scenario:
 
         # Start at model run 0
         self.run = 0
-        # Record start time of this (set of) model run(s)
+        # Record start time of this scenario
         self.start = self.simtime(0.0)
         # Create a random number generator with a user-defined seed
         self.rng = np.random.default_rng(self.scen["scenario"]["seed"])
@@ -126,6 +126,14 @@ class Scenario:
             Raises exception if necessary filepaths do not exist.
         """
         for _dir, _fdict in self.case["files"].items():
+            # Create the directory if it doesn't exist
+            if not os.path.isdir(
+                os.path.join(self.args.data, self.case["directories"][_dir])
+            ):
+                os.makedirs(
+                    os.path.join(self.args.data, self.case["directories"][_dir])
+                )
+
             for _n, _f in _fdict.items():
                 # Capacity projection file is a scenario parameter and must be
                 # processed separately
@@ -213,7 +221,7 @@ class Scenario:
         print(f"Run routes completed in {self.simtime(self.start)} s", flush=True)
 
     def setup(self):
-        """Initialize CostGraph, DES (Context and Components) and PyLCIA."""
+        """Create instances of CostGraph, DES (Context and Components) and PyLCIA."""
         start_year = self.case["model_run"].get("start_year")
 
         component_material_mass = pd.read_csv(self.files["component_material_mass"])
@@ -309,7 +317,7 @@ class Scenario:
         )
 
     def execute(self):
-        """Execute the CELAVI simulation."""
+        """Execute one model run within the scenario."""
         start_year = self.case["model_run"].get("start_year")
 
         component_material_mass = pd.read_csv(self.files["component_material_mass"])
@@ -446,7 +454,7 @@ class Scenario:
         self.context.run()
 
     def postprocess(self):
-        """Post-process and visualize results of one simulation."""
+        """Post-process, visualize, and save results of one model run."""
         # Plot the cumulative count levels of the count inventories
         possible_component_list = list(
             self.scen["technology_components"].get("component_list", []).keys()
@@ -608,7 +616,7 @@ class Scenario:
             )
 
     def clear_results(self):
-        """Move existing CSV results files to a sub-directory."""
+        """Move old CSV results files to a timestamped sub-directory."""
         # If the user wants to remove old results from the results directory,
         if self.scen["flags"].get("clear_results", True):
             # Define the new directory name uniquely using a timestamp.
@@ -642,10 +650,17 @@ class Scenario:
         """
         Record the current simulation time to one decimal point.
 
+        The simulation time does not reset for additional model runs.
+
         Parameters
         ----------
         starttime : float
-            Time that the model run began.
+            Time that the simulation began.
+        
+        Return
+        ------
+        [float]
+            Time since simulation began.
         """
         if starttime == 0.0:
             return int(np.round(time.time()))
