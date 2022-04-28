@@ -60,13 +60,25 @@ class CostMethods:
             Landfill tipping fee in USD/metric ton
         """
         _year = path_dict['year']
-        _fee = 8.0E-30 * np.exp(0.0352 * _year)
+        _fee = 1.5921*_year - 3155.3 # deterministic national average
 
-        if path_dict['cost_uncertainty']['landfilling']:
+        if path_dict['cost_uncertainty']['landfilling'] == 'random':
             _c = path_dict['cost_uncertainty']['landfilling']['c']
             _loc = path_dict['cost_uncertainty']['landfilling']['loc']
             _scale = path_dict['cost_uncertainty']['landfilling']['scale']
             return st.triang.rvs(c=_c,loc=_loc*_fee,scale=_scale*_fee, random_state=self.seed)
+        elif path_dict['cost_uncertainty']['landfilling'] == 'array':
+            # in post-2020 (last historical data point)
+            if _year >= 2021:
+                # use an array of parameter values from config
+                # model run is the index
+                # parse as float value (defaults to string)
+                _param = float(path_dict['cost_uncertainty']['landfilling']['param'][self.run])
+                # fee model = point-slope form of a line
+                return _param(_year - 2020) + 59.23
+            else:
+                # if the year is 2020 or earlier, just return the historical model
+                return _fee
         else:
             return _fee
 
