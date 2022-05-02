@@ -237,6 +237,10 @@ class Scenario:
         )
 
         if self.scen["flags"].get("initialize_costgraph", True):
+            # @TODO Check that all Cost Method uncertainty types in Scenario.yaml 
+            # are random, array, or blank
+            # @TODO Run length check on all cost models with array uncertainty type
+
             # Initialize the CostGraph using these parameter settings
             print(f"CostGraph starts at {self.simtime(self.start)} s", flush=True)
             self.netw = CostGraph(

@@ -15,13 +15,19 @@ class CostMethods:
 
     def __init__(self, seed, run):
         """
-        Provide a random number generator to all uncertain CostMethods.
+        Provide a random number generator and model run to all uncertain
+        CostMethods.
 
+        Parameters
+        ----------
+        seed : np.random.default_rng
+            Instantiated random number generator for uncertainty analysis.
+
+        run : int
+            Model run number.
         """
         self.seed = seed
         self.run = run
-        # @TODO Check that all uncertainty types are random, array, or blank
-        # @TODO Run length check on all cost models with array uncertainty type
 
 
     @staticmethod
@@ -31,7 +37,7 @@ class CostMethods:
 
         Parameters
         ----------
-        path_dict
+        path_dict : dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes.
