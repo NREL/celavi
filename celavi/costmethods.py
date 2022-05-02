@@ -81,8 +81,7 @@ class CostMethods:
                 # use an array of parameter values from config
                 # model run is the index
                 # parse as float value (defaults to string)
-                # @NOTE Way to avoid using eval?
-                _m = eval(path_dict['cost_uncertainty']['landfilling']['m'][self.run])
+                _m = float(path_dict['cost_uncertainty']['landfilling']['m'][self.run])
                 # fee model = point-slope form of a line
                 return _m * (_year - 2020) + 59.23
             else:
