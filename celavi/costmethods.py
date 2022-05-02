@@ -13,12 +13,15 @@ class CostMethods:
 
     """
 
-    def __init__(self, seed):
+    def __init__(self, seed, run):
         """
         Provide a random number generator to all uncertain CostMethods.
 
         """
         self.seed = seed
+        self.run = run
+        # @TODO Check that all uncertainty types are random, array, or blank
+        # @TODO Run length check on all cost models with array uncertainty type
 
 
     @staticmethod
@@ -44,38 +47,38 @@ class CostMethods:
 
     def landfilling(self, path_dict):
         """
-        Tipping fee model based on national average tipping fees and year-over-
-        year percent increase of 3.5%.
+        Linear tipping fee model based on historical national average 
+        tipping fees.
 
         Parameters
         ----------
-        path_dict
+        path_dict : dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
 
         Returns
         -------
-        _fee
+        _fee : float
             Landfill tipping fee in USD/metric ton
         """
         _year = path_dict['year']
         _fee = 1.5921*_year - 3155.3 # deterministic national average
-
-        if path_dict['cost_uncertainty']['landfilling'] == 'random':
+        if path_dict['cost_uncertainty']['landfilling']['uncertainty'] == 'random':
             _c = path_dict['cost_uncertainty']['landfilling']['c']
             _loc = path_dict['cost_uncertainty']['landfilling']['loc']
             _scale = path_dict['cost_uncertainty']['landfilling']['scale']
             return st.triang.rvs(c=_c,loc=_loc*_fee,scale=_scale*_fee, random_state=self.seed)
-        elif path_dict['cost_uncertainty']['landfilling'] == 'array':
+        elif path_dict['cost_uncertainty']['landfilling']['uncertainty'] == 'array':
             # in post-2020 (last historical data point)
             if _year >= 2021:
                 # use an array of parameter values from config
                 # model run is the index
                 # parse as float value (defaults to string)
-                _param = float(path_dict['cost_uncertainty']['landfilling']['param'][self.run])
+                # @NOTE Way to avoid using eval?
+                _m = eval(path_dict['cost_uncertainty']['landfilling']['m'][self.run])
                 # fee model = point-slope form of a line
-                return _param(_year - 2020) + 59.23
+                return _m * (_year - 2020) + 59.23
             else:
                 # if the year is 2020 or earlier, just return the historical model
                 return _fee
