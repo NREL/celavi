@@ -101,14 +101,14 @@ class CostMethods:
 
         Parameters
         ----------
-        path_dict
+        path_dict : dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
 
         Returns
         -------
-        _cost
+        _cost : float
             Cost in USD per metric ton of removing a blade from an
             in-use turbine. Equivalent to 1/3 the rotor teardown cost divided
             by the blade mass.
@@ -116,15 +116,19 @@ class CostMethods:
 
         _year = path_dict['year']
         _mass = path_dict['component mass']
-        _cost = (42.6066109 * _year ** 2 -
-                 170135.7518957 * _year +
-                 169851728.663209) / _mass
+        _cost = 1467.08 * _year - 2933875.40 # Linear national average cost model
 
-        if path_dict['cost_uncertainty']['rotor_teardown']:
+        if path_dict['cost_uncertainty']['rotor_teardown']['uncertainty'] == 'random':
             _c = path_dict['cost_uncertainty']['rotor_teardown']['c']
             _loc = path_dict['cost_uncertainty']['rotor_teardown']['loc']
             _scale = path_dict['cost_uncertainty']['rotor_teardown']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
+        elif path_dict['cost_uncertainty']['rotor_teardown']['uncertainty'] == 'array':
+            if _year >= 2021:
+                _m = float(path_dict['cost_uncertainty']['rotor_teardown']['m'][self.run])
+                return _m * (_year - 2020) + 27749.82
+            else:
+                return _cost
         else:
             return _cost
 
