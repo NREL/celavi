@@ -28,7 +28,7 @@ class CostMethods:
         """
         self.seed = seed
         self.run = run
-
+    
 
     @staticmethod
     def zero_method(path_dict):
@@ -151,11 +151,20 @@ class CostMethods:
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
         """
         _cost = 27.56
-        if path_dict['cost_uncertainty']['segmenting']:
+        _year = path_dict['year']
+        # the segmenting cost is a flat rate and doesn't change with time
+        _m = path_dict['cost_uncertainty']['segmenting']['m']
+        _b = path_dict['cost_uncertainty']['segmenting']['b'][self.run]
+        if path_dict['cost_uncertainty']['segmenting']['uncertainty'] == 'random':
             _c = path_dict['cost_uncertainty']['segmenting']['c']
             _loc = path_dict['cost_uncertainty']['segmenting']['loc']
             _scale = path_dict['cost_uncertainty']['segmenting']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
+        elif path_dict['cost_uncertainty']['segmenting']['uncertainty'] == 'array':
+            if _year > 2021:
+                return _m * (_year - 2020) + _b
+            else:
+                return _cost
         else:
             return _cost
 
@@ -166,6 +175,17 @@ class CostMethods:
         Cost method for coarsely grinding turbine blades onsite at a wind
         power plant. This calculation uses industrial learning-by-doing
         to gradually reduce costs over time.
+        
+        The coarse grinding, coarse grinding onsite, and fine grinding cost models
+        allow for array uncertainty in the initial cost or in the learning rate, 
+        or random uncertainty in the actual cost which depends on cumulative mass
+        processed. The logic for applying array uncertainty in these cost models
+        is as follows: IF the uncertainty type is 'array' AND there are no
+        parameter arrays in the cost_uncertainty dictionary, THEN the learning rate
+        must have an array of values which are applied separately to each model run.
+        This logic is different from the uncertainty logic applied to all other cost
+        models, which do not have parameters stored outside the cost_uncertainty
+        dictionary.
 
         Parameters
         ----------
@@ -179,27 +199,42 @@ class CostMethods:
             Current cost of coarse grinding one metric ton of segmented blade
             material onsite at a wind power plant.
         """
-        _dict = path_dict['learning']['coarse grinding']
+        _learn_dict = path_dict['learning']['coarse grinding']
+        _learn_rate_ind = 0
+
+        # Implement uncertainty on initial cost before applying learning model
+        if path_dict['cost_uncertainty']['coarse_grinding_onsite']['uncertainty'] == 'array':
+            # Array uncertainty is applied to the initial cost or to the learning rate
+            # (array uncertainty for the actual cost is implemented through the learning rate)
+            # If the initial cost does not have an uncertainty array,
+            if len(path_dict['cost_uncertainty']['coarse_grinding_onsite']['initial cost']) == 1:
+                # Then the learn rate must, and self.run is used to pull out the applicable value
+                _learn_rate_ind = self.run
+            else:
+                _initial_cost = path_dict['cost_uncertainty']['coarse_grinding_onsite']['initial cost'][self.run]
+        else:
+            # Random uncertainty applied to the actual cost, or no uncertainty
+            _initial_cost = path_dict['cost_uncertainty']['coarse_grinding_onsite']['initial cost']
 
         # If the "cumul" value is None, then there has been no processing
         # through coarse grinding and the initial cumul value from the config
         # file is used
 
-        if _dict['cumul'] is not None:
+        if _learn_dict['cumul'] is not None:
             coarsegrind_cumul = max(
                 1,
-                _dict['cumul']
+                _learn_dict['cumul']
             )
         else:
-            coarsegrind_cumul = _dict['initial cumul']
+            coarsegrind_cumul = _learn_dict['initial cumul']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        coarsegrind_learning = coarsegrind_cumul ** _dict['learn rate']
+        coarsegrind_learning = coarsegrind_cumul ** _learn_dict['learn rate'][_learn_rate_ind]
 
-        _cost = _dict['initial cost'] * coarsegrind_learning
+        _cost = _initial_cost * coarsegrind_learning
 
-        if path_dict['cost_uncertainty']['coarse_grinding_onsite']:
+        if path_dict['cost_uncertainty']['coarse_grinding_onsite']['uncertainty'] == 'random':
             _c = path_dict['cost_uncertainty']['coarse_grinding_onsite']['c']
             _loc = path_dict['cost_uncertainty']['coarse_grinding_onsite']['loc']
             _scale = path_dict['cost_uncertainty']['coarse_grinding_onsite']['scale']
@@ -215,6 +250,17 @@ class CostMethods:
         recycling facility. This calculation uses industrial learning-by-doing
         to gradually reduce costs over time.
 
+        The coarse grinding, coarse grinding onsite, and fine grinding cost models
+        allow for array uncertainty in the initial cost or in the learning rate, 
+        or random uncertainty in the actual cost which depends on cumulative mass
+        processed. The logic for applying array uncertainty in these cost models
+        is as follows: IF the uncertainty type is 'array' AND there are no
+        parameter arrays in the cost_uncertainty dictionary, THEN the learning rate
+        must have an array of values which are applied separately to each model run.
+        This logic is different from the uncertainty logic applied to all other cost
+        models, which do not have parameters stored outside the cost_uncertainty
+        dictionary.
+
         Parameters
         ----------
         path_dict
@@ -227,27 +273,42 @@ class CostMethods:
             Current cost of coarse grinding one metric ton of segmented blade
             material in a mechanical recycling facility.
         """
-        _dict = path_dict['learning']['coarse grinding']
+        _learn_dict = path_dict['learning']['coarse grinding']
+        _learn_rate_ind = 0
+
+        # Implement uncertainty on initial cost before applying learning model
+        if path_dict['cost_uncertainty']['coarse_grinding']['uncertainty'] == 'array':
+            # Array uncertainty is applied to the initial cost or to the learning rate
+            # (array uncertainty for the actual cost is implemented through the learning rate)
+            # If the initial cost does not have an uncertainty array,
+            if len(path_dict['cost_uncertainty']['coarse_grinding']['initial cost']) == 1:
+                # Then the learn rate must, and self.run is used to pull out the applicable value
+                _learn_rate_ind = self.run
+            else:
+                _initial_cost = path_dict['cost_uncertainty']['coarse_grinding']['initial cost'][self.run]
+        else:
+            # Random uncertainty applied to the actual cost, or no uncertainty
+            _initial_cost = path_dict['cost_uncertainty']['coarse_grinding']['initial cost']
 
         # If the "cumul" value is None, then there has been no processing
         # through coarse grinding and the initial cumul value from the config
         # file is used
 
-        if _dict['cumul'] is not None:
+        if _learn_dict['cumul'] is not None:
             coarsegrind_cumul = max(
                 1,
-                _dict['cumul']
+                _learn_dict['cumul']
             )
         else:
-            coarsegrind_cumul = _dict['initial cumul']
+            coarsegrind_cumul = _learn_dict['initial cumul']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        coarsegrind_learning = coarsegrind_cumul ** _dict['learn rate']
+        coarsegrind_learning = coarsegrind_cumul ** _learn_dict['learn rate'][_learn_rate_ind]
 
-        _cost = _dict['initial cost'] * coarsegrind_learning
+        _cost = _initial_cost * coarsegrind_learning
 
-        if path_dict['cost_uncertainty']['coarse_grinding']:
+        if path_dict['cost_uncertainty']['coarse_grinding']['uncertainty'] == 'random':
             _c = path_dict['cost_uncertainty']['coarse_grinding']['c']
             _loc = path_dict['cost_uncertainty']['coarse_grinding']['loc']
             _scale = path_dict['cost_uncertainty']['coarse_grinding']['scale']
@@ -262,6 +323,17 @@ class CostMethods:
         Cost method for finely grinding turbine blades at a mechanical
         recycling facility. This calculation uses industrial learning-by-doing
         to gradually reduce costs over time.
+        
+        The coarse grinding, coarse grinding onsite, and fine grinding cost models
+        allow for array uncertainty in the initial cost or in the learning rate, 
+        or random uncertainty in the actual cost which depends on cumulative mass
+        processed. The logic for applying array uncertainty in these cost models
+        is as follows: IF the uncertainty type is 'array' AND there are no
+        parameter arrays in the cost_uncertainty dictionary, THEN the learning rate
+        must have an array of values which are applied separately to each model run.
+        This logic is different from the uncertainty logic applied to all other cost
+        models, which do not have parameters stored outside the cost_uncertainty
+        dictionary.
 
         Parameters
         ----------
@@ -276,47 +348,42 @@ class CostMethods:
             grinding one metric ton of blade material at a mechanical recycling
             facility and disposing of material losses in a landfill.
         """
-        _dict = path_dict['learning']['fine grinding']
+        _learn_dict = path_dict['learning']['fine grinding']
         _loss = path_dict['path_split']['fine grinding']['fraction']
         _year = path_dict['year']
 
         # If the "cumul" value is None, then there has been no processing
         # through fine grinding and the initial cumul value from the config
         # file is used
-        if _dict['cumul'] is not None:
+        if _learn_dict['cumul'] is not None:
             _finegrind_cumul = max(
                 1,
-                _dict['cumul']
+                _learn_dict['cumul']
             )
         else:
-            _finegrind_cumul = _dict['initial cumul']
+            _finegrind_cumul = _learn_dict['initial cumul']
 
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        _finegrind_learning = _finegrind_cumul ** _dict['learn rate']
+        _finegrind_learning = _finegrind_cumul ** _learn_dict['learn rate']
 
         # calculate process cost based on total input mass (no material loss
         # yet) (USD/metric ton)
-        _cost = _dict['initial cost'] * _finegrind_learning
+        _cost = _learn_dict['initial cost'] * _finegrind_learning
 
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
-        _revenue = (1 - _loss) * _dict['revenue']
+        _revenue = (1 - _loss) * _learn_dict['revenue']
 
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
-        # see the landfilling method - this cost model is identical
-        _landfill = _loss * 8.0E-30 * np.exp(0.0352 * _year)
+        _landfill = self.landfilling(path_dict)
 
         if path_dict['cost_uncertainty']['fine_grinding']:
             # Parameters for fine grinding cost
             _c_fg = path_dict['cost_uncertainty']['fine_grinding']['c']
             _loc_fg = path_dict['cost_uncertainty']['fine_grinding']['loc']
             _scale_fg = path_dict['cost_uncertainty']['fine_grinding']['scale']
-            # Parameters for landfilling cost
-            _c_lf = path_dict['cost_uncertainty']['landfilling']['c']
-            _loc_lf = path_dict['cost_uncertainty']['landfilling']['loc']
-            _scale_lf = path_dict['cost_uncertainty']['landfilling']['scale']
             # Parameters for fine grinding revenue
             _c_fgr = path_dict['cost_uncertainty']['fine_grinding_revenue']['c']
             _loc_fgr = path_dict['cost_uncertainty']['fine_grinding_revenue']['loc']
@@ -324,9 +391,7 @@ class CostMethods:
 
             _cost_unc = st.triang.rvs(
                 c=_c_fg, loc=_loc_fg * _cost, scale=_scale_fg * _cost, random_state=self.seed
-            ) + st.triang.rvs(
-                c=_c_lf, loc=_loc_lf * _landfill, scale=_scale_lf * _landfill, random_state=self.seed
-            ) - st.triang.rvs(
+            ) + _landfill - st.triang.rvs(
                 c=_c_fgr, loc=_loc_fgr * _revenue, scale=_scale_fgr * _revenue, random_state=self.seed
             )
 
