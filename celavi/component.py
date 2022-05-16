@@ -241,14 +241,14 @@ class Component:
                     self.move_component_to(
                         env,
                         loc=_split_facility_1[0],
-                        amt=self.split_dict[factype]["fraction"],
+                        amt=self.split_dict[factype]["fraction"], # @TODO uncertainty
                         dist=_split_facility_1[1],
                         route_id=_split_facility_1[2],
                     )
                     self.move_component_to(
                         env,
                         loc=_split_facility_2[0],
-                        amt=1 - self.split_dict[factype]["fraction"],
+                        amt=1 - self.split_dict[factype]["fraction"], # @TODO uncertainty
                         dist=_split_facility_2[1],
                         route_id=_split_facility_2[2],
                     )

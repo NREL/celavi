@@ -2,6 +2,7 @@ import numpy as np
 import scipy.stats as st
 import warnings
 
+from celavi.scenario import apply_array_uncertainty
 
 class CostMethods:
     """

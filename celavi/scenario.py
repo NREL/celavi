@@ -116,6 +116,14 @@ class Scenario:
         # Print run finish message
         print(f"FINISHED RUN at {self.simtime(self.start)} s", flush=True)
 
+    @staticmethod
+    def apply_array_uncertainty(run, quantity):
+        """Use model run number to access one element in a parameter list."""
+        if not isinstance(quantity, list):
+            return quantity
+        else:
+            return quantity[run]
+
     def get_filepaths(self):
         """
         Check that input files exist and assemble paths.
@@ -329,7 +337,7 @@ class Scenario:
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
-            substitution_rate=self.scen["technology_components"].get(
+            substitution_rate=self.scen["technology_components"].get( # @TODO uncertainty
                 "substitution_rates"
             ),
             run=self.run,
@@ -434,7 +442,7 @@ class Scenario:
         for component in (
             self.scen["technology_components"].get("component_list").keys()
         ):
-            lifespan_fns[component] = (
+            lifespan_fns[component] = ( # @TODO uncertainty
                 lambda steps=self.scen["technology_components"].get(
                     "component_fixed_lifetimes"
                 )[component], convert=timesteps_per_year: steps
