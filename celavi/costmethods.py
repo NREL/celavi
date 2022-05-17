@@ -2,7 +2,6 @@ import numpy as np
 import scipy.stats as st
 import warnings
 
-from celavi.scenario import apply_array_uncertainty
 
 class CostMethods:
     """
@@ -30,6 +29,13 @@ class CostMethods:
         self.seed = seed
         self.run = run
     
+    @staticmethod
+    def apply_array_uncertainty(quantity, run):
+        """Use model run number to access one element in a parameter list."""
+        if not isinstance(quantity, list):
+            return float(quantity)
+        else:
+            return float(quantity[run])
 
     @staticmethod
     def zero_method(path_dict):
@@ -82,7 +88,7 @@ class CostMethods:
                 # use an array of parameter values from config
                 # model run is the index
                 # parse as float value (defaults to string)
-                _m = apply_array_uncertainty(
+                _m = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['landfilling']['m'],
                     self.run
                     )
@@ -129,7 +135,7 @@ class CostMethods:
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         elif path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'array':
             if _year >= 2021:
-                _m = apply_array_uncertainty(
+                _m = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['rotor teardown']['m'],
                     self.run
                     )
@@ -167,7 +173,7 @@ class CostMethods:
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         elif path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'array':
             if _year >= 2021:
-                return apply_array_uncertainty(
+                return self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['segmenting']['b'],
                     self.run
                     )
@@ -213,11 +219,11 @@ class CostMethods:
         if path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'array':
             # Array uncertainty is applied to the initial cost or to the learning rate
             # (array uncertainty for the actual cost is implemented through the learning rate)
-            _learn_rate = apply_array_uncertainty(
+            _learn_rate = self.apply_array_uncertainty(
                 _learn_dict['learn rate'],
                 self.run
                 )
-            _initial_cost = apply_array_uncertainty(
+            _initial_cost = self.apply_array_uncertainty(
                 path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],
                 self.run
                 )
@@ -289,11 +295,11 @@ class CostMethods:
         if path_dict['cost uncertainty']['coarse grinding']['uncertainty'] == 'array':
             # Array uncertainty is applied to the initial cost or to the learning rate
             # (array uncertainty for the actual cost is implemented through the learning rate)
-            _learn_rate = apply_array_uncertainty(
+            _learn_rate = self.apply_array_uncertainty(
                 _learn_dict['learn rate'],
                 self.run
                 )
-            _initial_cost = apply_array_uncertainty(
+            _initial_cost = self.apply_array_uncertainty(
                 path_dict['cost uncertainty']['coarse grinding']['initial cost'],
                 self.run
                 )
@@ -364,19 +370,19 @@ class CostMethods:
 
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'array':
-            _loss = apply_array_uncertainty(
+            _loss = self.apply_array_uncertainty(
                 path_dict['path_split']['fine grinding']['fraction'],
                 self.run
             )
-            _learn_rate = apply_array_uncertainty(
+            _learn_rate = self.apply_array_uncertainty(
                 _learn_dict['learn rate'],
                 self.run
             )
-            _initial_cost = apply_array_uncertainty(
+            _initial_cost = self.apply_array_uncertainty(
                path_dict['cost uncertainty']['fine grinding']['initial cost'],
                self.run
             )
-            _revenue = apply_array_uncertainty(
+            _revenue = self.apply_array_uncertainty(
                 path_dict['cost uncertainty']['fine grinding']['revenue']['b'],
                 self.run
             )
@@ -469,7 +475,7 @@ class CostMethods:
             _scale = path_dict['cost uncertainty']['coprocessing']['scale']
             return -1.0 * st.triang.rvs(c=_c, loc = _loc*_revenue, scale=_scale*_revenue, random_state=self.seed)
         elif path_dict['cost uncertainty']['coprocessing']['uncertainty'] == 'array':
-            return -1.0 * apply_array_uncertainty(
+            return -1.0 * self.apply_array_uncertainty(
                 path_dict['cost uncertainty']['coprocessing']['b'],
                 self.run
                 )
@@ -502,34 +508,34 @@ class CostMethods:
             return 0.0
         else:
             if _year < 2001.0 or 2002.0 <= _year < 2003.0:
-                _cost = apply_array_uncertainty(
+                _cost = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['segment transpo']['cost 1'],
                     self.run
                 )
             elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
-                _cost = apply_array_uncertainty(
+                _cost = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['segment transpo']['cost 2'],
                     self.run
                 )
             elif 2019.0 <= _year < 2031.0:
-                _cost = apply_array_uncertainty(
+                _cost = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['segment transpo']['cost 3'],
                     self.run
                 )
             elif 2031.0 <= _year < 2044.0:
-                _cost = apply_array_uncertainty(
+                _cost = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['segment transpo']['cost 4'],
                     self.run
                 )
             elif 2044.0 <= _year <= 2050.0:
-                _cost = apply_array_uncertainty(
+                _cost = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['segment transpo']['cost 5'],
                     self.run
                 )
             else:
                 warnings.warn(
                     'Year out of range for segment transport; using cost 4')
-                _cost = apply_array_uncertainty(
+                _cost = self.apply_array_uncertainty(
                     path_dict['cost uncertainty']['segment transpo']['cost 4'],
                     self.run
                 )
@@ -571,7 +577,7 @@ class CostMethods:
         else:
             if path_dict['cost uncertainty']['shred transpo'] == 'array':
                 if _year >= 2021.0:
-                    _m = apply_array_uncertainty(
+                    _m = self.apply_array_uncertainty(
                         path_dict['cost uncertainty']['shred transpo']['m'],
                         self.run
                         )
@@ -612,7 +618,7 @@ class CostMethods:
         """
         _cost = 11440.0
         if path_dict['cost uncertainty']['manufacturing']['uncertainty'] == 'array' and path_dict['year'] > 2021.0:
-            _cost = apply_array_uncertainty(
+            _cost = self.apply_array_uncertainty(
                 path_dict['cost uncertainty']['manufacturing']['b'],
                 self.run
                 )
@@ -623,7 +629,6 @@ class CostMethods:
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         else:
             return _cost
-
 
 
     def blade_transpo(self, path_dict):

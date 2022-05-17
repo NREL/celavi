@@ -116,14 +116,6 @@ class Scenario:
         # Print run finish message
         print(f"FINISHED RUN at {self.simtime(self.start)} s", flush=True)
 
-    @staticmethod
-    def apply_array_uncertainty(quantity, run):
-        """Use model run number to access one element in a parameter list."""
-        if not isinstance(quantity, list):
-            return float(quantity)
-        else:
-            return float(quantity[run])
-
     def get_filepaths(self):
         """
         Check that input files exist and assemble paths.
@@ -247,7 +239,7 @@ class Scenario:
         if self.scen["flags"].get("initialize_costgraph", True):
             _array_len = []
             _array_methods = []
-            for _cost, _unc_type in self.scen["circular_pathways"]["cost_uncertainty"].items():
+            for _cost, _unc_type in self.scen["circular_pathways"]["cost uncertainty"].items():
                 # Check that all Cost Method uncertainty types in Scenario.yaml 
                 # are random, array, or blank (None)
                 if _unc_type["uncertainty"] not in ['random', 'array', None]:
