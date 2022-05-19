@@ -90,7 +90,7 @@ class CostMethods:
                     self.run
                     )
                 # fee model = point-slope form of a line
-                return _m * _year + _b
+                return _m * (_year - 2020.0) + _b
             else:
                 # if the year is 2020 or earlier, just return the historical model
                 return _fee
