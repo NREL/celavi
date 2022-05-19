@@ -405,7 +405,6 @@ class CostMethods:
         else:
             # No uncertainty
             _loss = path_dict['path_split']['fine grinding']['fraction']
-            _learn_rate = _learn_dict['learn rate']
             _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
             _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']['b']
 
