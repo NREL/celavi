@@ -244,24 +244,24 @@ class Scenario:
         )
 
         if self.scen["flags"].get("initialize_costgraph", True):
-            _array_len = []
-            _array_methods = []
-            for _cost, _unc_type in self.scen["circular_pathways"]["cost uncertainty"].items():
-                # Check that all Cost Method uncertainty types in Scenario.yaml 
-                # are random, array, or blank (None)
-                if _unc_type["uncertainty"] not in ['random', 'array', None]:
-                    print(f"{_cost} uncertainty type is {_unc_type}: must be one of ['random', 'array', None]")
-                    raise NotImplementedError
-                # Assemble the parameter arrays for a length check
-                if _unc_type["uncertainty"] == 'array':
-                    _array_methods.append(_cost)
-                    _array_len.append(len(_unc_type["m"]) if _unc_type["m"] is not None else None)
-                    _array_len.append(len(_unc_type["b"]) if _unc_type["b"] is not None else None)
+            # _array_len = []
+            # _array_methods = []
+            # for _cost, _unc_type in self.scen["circular_pathways"]["cost uncertainty"].items():
+            #     # Check that all Cost Method uncertainty types in Scenario.yaml 
+            #     # are random, array, or blank (None)
+            #     if _unc_type["uncertainty"] not in ['random', 'array', None]:
+            #         print(f"{_cost} uncertainty type is {_unc_type}: must be one of ['random', 'array', None]")
+            #         raise NotImplementedError
+            #     # Assemble the parameter arrays for a length check
+            #     if _unc_type["uncertainty"] == 'array':
+            #         _array_methods.append(_cost)
+            #         _array_len.append(len(_unc_type["m"]) if _unc_type["m"] is not None else None)
+            #         _array_len.append(len(_unc_type["b"]) if _unc_type["b"] is not None else None)
 
-            # Run length check on all cost models with array uncertainty type
-            if len(set([i for i in _array_len if i])) not in [0, 1]:
-                print(f"Parameters with array type uncertainty must have arrays of identical length: {_array_methods}")
-                raise NotImplementedError
+            # # Run length check on all cost models with array uncertainty type
+            # if len(set([i for i in _array_len if i])) not in [0, 1]:
+            #     print(f"Parameters with array type uncertainty must have arrays of identical length: {_array_methods}")
+            #     raise NotImplementedError
 
             # Initialize the CostGraph using these parameter settings
             print(f"CostGraph starts at {self.simtime(self.start)} s", flush=True)
@@ -336,9 +336,10 @@ class Scenario:
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
-            substitution_rate=self.scen["technology_components"].get( # @TODO uncertainty
-                "substitution_rates"
-            ),
+            substitution_rate={
+                mat : apply_array_uncertainty(rate, self.run) 
+                for mat, rate in self.scen["technology_components"].get("substitution_rates").items()
+                },
             run=self.run,
         )
 
@@ -441,10 +442,13 @@ class Scenario:
         for component in (
             self.scen["technology_components"].get("component_list").keys()
         ):
-            lifespan_fns[component] = ( # @TODO uncertainty
-                lambda steps=self.scen["technology_components"].get(
-                    "component_fixed_lifetimes"
-                )[component], convert=timesteps_per_year: steps
+            lifespan_fns[component] = ( 
+                lambda steps=apply_array_uncertainty(
+                    self.scen["technology_components"].get(
+                        "component_fixed_lifetimes"
+                        )[component],
+                        self.run),
+                        convert=timesteps_per_year: steps
                 * convert
             )
 

@@ -85,8 +85,12 @@ class CostMethods:
                     path_dict['cost uncertainty']['landfilling']['m'],
                     self.run
                     )
+                _b = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['landfilling']['b'],
+                    self.run
+                    )
                 # fee model = point-slope form of a line
-                return _m * _year - 3155.3
+                return _m * _year + _b
             else:
                 # if the year is 2020 or earlier, just return the historical model
                 return _fee
@@ -125,18 +129,22 @@ class CostMethods:
             _c = path_dict['cost uncertainty']['rotor teardown']['c']
             _loc = path_dict['cost uncertainty']['rotor teardown']['loc']
             _scale = path_dict['cost uncertainty']['rotor teardown']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
+            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed) / _mass
         elif path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'array':
             if _year >= 2021:
                 _m = apply_array_uncertainty(
                     path_dict['cost uncertainty']['rotor teardown']['m'],
                     self.run
                     )
-                return _m * _year - 2933875.40
+                _b = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['rotor teardown']['b'],
+                    self.run
+                    )
+                return (_m * _year  + _b) / _mass
             else:
-                return _cost
+                return _cost / _mass
         else:
-            return _cost
+            return _cost / _mass
 
 
 
@@ -208,14 +216,15 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['coarse grinding']
 
+        _learn_rate = apply_array_uncertainty(
+            _learn_dict['learn rate'],
+            self.run
+            )        
+
         # Implement uncertainty on initial cost before applying learning model
         if path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'array':
             # Array uncertainty is applied to the initial cost or to the learning rate
             # (array uncertainty for the actual cost is implemented through the learning rate)
-            _learn_rate = apply_array_uncertainty(
-                _learn_dict['learn rate'],
-                self.run
-                )
             _initial_cost = apply_array_uncertainty(
                 path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],
                 self.run
@@ -223,7 +232,6 @@ class CostMethods:
         else:
             # Random uncertainty applied to the actual cost, or no uncertainty
             _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']
-            _learn_rate = _learn_dict['learn rate']
 
         # If the "cumul" value is None, then there has been no processing
         # through coarse grinding and the initial cumul value from the config
@@ -284,14 +292,15 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['coarse grinding']
 
+        _learn_rate = apply_array_uncertainty(
+            _learn_dict['learn rate'],
+            self.run
+            )
+
         # Implement uncertainty on initial cost before applying learning model
         if path_dict['cost uncertainty']['coarse grinding']['uncertainty'] == 'array':
             # Array uncertainty is applied to the initial cost or to the learning rate
             # (array uncertainty for the actual cost is implemented through the learning rate)
-            _learn_rate = apply_array_uncertainty(
-                _learn_dict['learn rate'],
-                self.run
-                )
             _initial_cost = apply_array_uncertainty(
                 path_dict['cost uncertainty']['coarse grinding']['initial cost'],
                 self.run
@@ -299,7 +308,6 @@ class CostMethods:
         else:
             # Random uncertainty applied to the actual cost, or no uncertainty
             _initial_cost = path_dict['cost uncertainty']['coarse grinding']['initial cost']
-            _learn_rate = _learn_dict['learn rate']
 
         # If the "cumul" value is None, then there has been no processing
         # through coarse grinding and the initial cumul value from the config
@@ -361,14 +369,15 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['fine grinding']
 
+        _learn_rate = apply_array_uncertainty(
+            _learn_dict['learn rate'],
+            self.run
+            )
+
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'array':
             _loss = apply_array_uncertainty(
                 path_dict['path_split']['fine grinding']['fraction'],
-                self.run
-            )
-            _learn_rate = apply_array_uncertainty(
-                _learn_dict['learn rate'],
                 self.run
             )
             _initial_cost = apply_array_uncertainty(
@@ -382,7 +391,6 @@ class CostMethods:
         elif path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'random':
             # Random uncertainty applies only to the revenue
             _loss = path_dict['path_split']['fine grinding']['fraction']
-            _learn_rate = _learn_dict['learn rate']
             _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
             # Parameters for fine grinding revenue
             _c_fgr = path_dict['cost uncertainty']['fine grinding']['revenue']['c']
@@ -430,9 +438,9 @@ class CostMethods:
 
         if path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'random':
             # Parameters for fine grinding cost
-            _c_fg = path_dict['cost uncertainty']['fine grinding']['c']
-            _loc_fg = path_dict['cost uncertainty']['fine grinding']['loc']
-            _scale_fg = path_dict['cost uncertainty']['fine grinding']['scale']
+            _c_fg = path_dict['cost uncertainty']['fine grinding']['actual cost']['c']
+            _loc_fg = path_dict['cost uncertainty']['fine grinding']['actual cost']['loc']
+            _scale_fg = path_dict['cost uncertainty']['fine grinding']['actual cost']['scale']
             _cost_unc = st.triang.rvs(
                 c=_c_fg, loc=_loc_fg * _cost, scale=_scale_fg * _cost, random_state=self.seed
             ) + _landfill - _revenue
@@ -574,7 +582,13 @@ class CostMethods:
                         path_dict['cost uncertainty']['shred transpo']['m'],
                         self.run
                         )
-                    _cost = _m * _year - 2.1912399
+                    _b = apply_array_uncertainty(
+                        path_dict['cost uncertainty']['shred transpo']['b'],
+                        self.run
+                        )                        
+                    return (_m * _year + _b) * _vkmt
+                else:
+                    return _cost * _vkmt
 
             if path_dict['cost uncertainty']['shred transpo'] == 'random':
                 _c = path_dict['cost uncertainty']['shred transpo']['c']
