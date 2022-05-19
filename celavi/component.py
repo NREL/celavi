@@ -245,7 +245,7 @@ class Component:
                         loc=_split_facility_1[0],
                         amt=apply_array_uncertainty(
                             self.split_dict[factype]["fraction"],
-                            self.context.run
+                            self.context.model_run
                             ),
                         dist=_split_facility_1[1],
                         route_id=_split_facility_1[2],
@@ -255,7 +255,7 @@ class Component:
                         loc=_split_facility_2[0],
                         amt=1 - apply_array_uncertainty(
                             self.split_dict[factype]["fraction"],
-                            self.context.run
+                            self.context.model_run
                             ),
                         dist=_split_facility_2[1],
                         route_id=_split_facility_2[2],

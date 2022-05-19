@@ -408,7 +408,7 @@ class Scenario:
             min_year=start_year,
             max_timesteps=des_timesteps,
             timesteps_per_year=timesteps_per_year,
-            run=self.run
+            model_run=self.run
         )
 
         print(f"Context initialized at {self.simtime(self.start)} s", flush=True)
