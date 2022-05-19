@@ -140,7 +140,7 @@ class CostMethods:
                     path_dict['cost uncertainty']['rotor teardown']['b'],
                     self.run
                     )
-                return (_m * _year  + _b) / _mass
+                return (_m * (_year - 2020.0)  + _b) / _mass
             else:
                 return _cost / _mass
         else:
