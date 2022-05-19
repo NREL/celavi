@@ -40,6 +40,7 @@ class Context:
         end_year: int = 2050,
         max_timesteps: int = 600,
         timesteps_per_year: int = 12,
+        run : int = 0
     ):
         """
         Parameters
@@ -89,8 +90,12 @@ class Context:
         timesteps_per_year: int
             The number of timesteps in one simulation year. Default value is 12
             timesteps per year, corresponding to a monthly model resolution.
+
+        run : int
+            Model run identifier
         """
 
+        self.run = run
         self.path_dict = path_dict
         self.max_timesteps = max_timesteps
         self.min_year = min_year
