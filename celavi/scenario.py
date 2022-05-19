@@ -359,13 +359,15 @@ class Scenario:
         # from scratch.
         if self.run > 0:
             self.netw.run = self.run
-            self.lca.run = self.run
+            self.netw.cost_methods.run = self.run
             self.netw.year = start_year
             self.netw.path_dict["year"] = start_year
             self.netw.path_dict["component mass"] = component_total_mass.loc[
                 component_total_mass.year == start_year, "mass_tonnes"
             ].values[0]
             self.netw.pathway_crit_history = list()
+
+            self.lca.run = self.run
 
         timesteps_per_year = self.case["model_run"].get("timesteps_per_year")
         des_timesteps = int(
@@ -406,6 +408,7 @@ class Scenario:
             min_year=start_year,
             max_timesteps=des_timesteps,
             timesteps_per_year=timesteps_per_year,
+            run=self.run
         )
 
         print(f"Context initialized at {self.simtime(self.start)} s", flush=True)
