@@ -575,7 +575,7 @@ class CostMethods:
         if _vkmt is None:
             return 0.0
         else:
-            if path_dict['cost uncertainty']['shred transpo'] == 'array':
+            if path_dict['cost uncertainty']['shred transpo']['uncertainty'] == 'array':
                 if _year >= 2021.0:
                     _m = apply_array_uncertainty(
                         path_dict['cost uncertainty']['shred transpo']['m'],
@@ -584,8 +584,8 @@ class CostMethods:
                     _b = apply_array_uncertainty(
                         path_dict['cost uncertainty']['shred transpo']['b'],
                         self.run
-                        )                        
-                    return (_m * _year + _b) * _vkmt
+                        )
+                    return (_m * (_year - 2020.0) + _b) * _vkmt
                 else:
                     return _cost * _vkmt
 
