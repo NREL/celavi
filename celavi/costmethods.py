@@ -373,13 +373,12 @@ class CostMethods:
             _learn_dict['learn rate'],
             self.run
             )
-
+        _loss = apply_array_uncertainty(
+            path_dict['path_split']['fine grinding']['fraction'],
+            self.run
+        )        
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'array':
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['fine grinding']['fraction'],
-                self.run
-            )
             _initial_cost = apply_array_uncertainty(
                path_dict['cost uncertainty']['fine grinding']['initial cost'],
                self.run
@@ -390,7 +389,6 @@ class CostMethods:
             )
         elif path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'random':
             # Random uncertainty applies only to the revenue
-            _loss = path_dict['path_split']['fine grinding']['fraction']
             _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
             # Parameters for fine grinding revenue
             _c_fgr = path_dict['cost uncertainty']['fine grinding']['revenue']['c']
@@ -404,7 +402,6 @@ class CostMethods:
             )            
         else:
             # No uncertainty
-            _loss = path_dict['path_split']['fine grinding']['fraction']
             _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
             _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']['b']
 
