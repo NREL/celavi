@@ -97,6 +97,8 @@ Case Study Config Template
 Scenario Config Template
 ------------------------
 
+The `cost uncertainty` dictionary (an element of the `circular_pathways` dictionary) structure can be adjusted based on the modeling requirements of a particular case study. The structure here can apply to cost models that depend linearly on time and can take on random or array-based uncertainty.
+
 .. code-block:: yaml
 
 	flags:
@@ -132,15 +134,17 @@ Scenario Config Template
 				revenue:        # Revenue (USD/mass) from this processing step (may be zero).
 				learn rate:     # Rate at which industrial learning-by-doing reduces costs. Must be negative.
 				steps:          # List of processing steps where this cost model is applied.
-		cost_uncertainty:       # Dictionary of probability distribution parameters for cost models.
+		cost uncertainty:       # Dictionary of probability distribution parameters for cost models.
 			[process step]:     # Name of process step for the cost model. 
-				uncertainty:    # Boolean (True/False): whether to implement uncertainty for this process step.
-				c:              # c, loc, scale: Probability distribution parameter(s); can be re-named depending on distribution. See https://docs.scipy.org/doc/scipy/reference/stats.html.
+				uncertainty:    # random or array to implement uncertainty; leave blank for no uncertainty.
+				c:              # c, loc, scale: Probability distribution parameter(s) for random uncertainty type; can be re-named depending on distribution. See https://docs.scipy.org/doc/scipy/reference/stats.html.
 				loc: 
 				scale: 
+				m:              # m, b: Cost model parameter(s) for array uncertainty type; can be scalars or lists of equal length.
+				b:
 		path_split:             # Dictionary defining any process steps where the material stream splits, e.g. for material losses.
 			[process step]:     # Name of process step where split occurs.
-				fraction: 0.3   # Float; fraction of material sent to facility_1 type
+				fraction:       # Float or list of floats; fraction of material sent to facility_1 type
 				facility_1:     # Downstream facility type where fraction of material is sent.
 				facility_2:     # Downstream facility type where 1 - fraction of material is sent.
 			pass:               # Facility type(s) to ignore in DES because material was sent there during the split.
