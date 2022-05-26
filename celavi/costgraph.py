@@ -89,7 +89,7 @@ class CostGraph:
         random_state : np.random.default_rng
             Instantiated random number generator for uncertainty analysis.
         """
-        self.cost_methods = CostMethods(seed=random_state)
+        self.cost_methods = CostMethods(seed=random_state, run=run)
 
         self.start_time = time()
         self.step_costs = pd.read_csv(step_costs_file)

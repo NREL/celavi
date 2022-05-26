@@ -14,6 +14,13 @@ import pandas as pd
 
 from scipy.stats import weibull_min
 
+def apply_array_uncertainty(quantity, run):
+    """Use model run number to access one element in a parameter list."""
+    if not isinstance(quantity, list):
+        return float(quantity)
+    else:
+        return float(quantity[run])
+
 from celavi.routing import Router
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
@@ -203,7 +210,7 @@ class Scenario:
                 )
             if not self.scen["flags"].get("run_routes", True):
                 print(f"Filtering routes: {states_to_filter}", flush=True)
-                filter_routes(self.files["locations.computed"], _routefile)
+                filter_routes(self.files["locations_computed"], _routefile)
 
         if self.scen["flags"].get("run_routes", True):
             Router.get_all_routes(
@@ -271,7 +278,7 @@ class Scenario:
                 pickle.dump(self.netw, open(self.files["costgraph_pickle"], "wb"))
 
         else:
-            self.netw = pickle.load(open(self.files["costgraph_pickle"], "wb"))
+            self.netw = pickle.load(open(self.files["costgraph_pickle"], "rb"))
             print(f"CostGraph read in at {self.simtime(self.start)}", flush=True)
 
         # Electricity spatial mix level. Defaults to 'state' when not provided.
@@ -310,9 +317,10 @@ class Scenario:
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
-            substitution_rate=self.scen["technology_components"].get(
-                "substitution_rates"
-            ),
+            substitution_rate={
+                mat : apply_array_uncertainty(rate, self.run) 
+                for mat, rate in self.scen["technology_components"].get("substitution_rates").items()
+                },
             run=self.run,
         )
 
@@ -332,13 +340,15 @@ class Scenario:
         # from scratch.
         if self.run > 0:
             self.netw.run = self.run
-            self.lca.run = self.run
+            self.netw.cost_methods.run = self.run
             self.netw.year = start_year
             self.netw.path_dict["year"] = start_year
             self.netw.path_dict["component mass"] = component_total_mass.loc[
                 component_total_mass.year == start_year, "mass_tonnes"
             ].values[0]
             self.netw.pathway_crit_history = list()
+
+            self.lca.run = self.run
 
         timesteps_per_year = self.case["model_run"].get("timesteps_per_year")
         des_timesteps = int(
@@ -379,6 +389,7 @@ class Scenario:
             min_year=start_year,
             max_timesteps=des_timesteps,
             timesteps_per_year=timesteps_per_year,
+            model_run=self.run
         )
 
         print(f"Context initialized at {self.simtime(self.start)} s", flush=True)
@@ -415,10 +426,13 @@ class Scenario:
         for component in (
             self.scen["technology_components"].get("component_list").keys()
         ):
-            lifespan_fns[component] = (
-                lambda steps=self.scen["technology_components"].get(
-                    "component_fixed_lifetimes"
-                )[component], convert=timesteps_per_year: steps
+            lifespan_fns[component] = ( 
+                lambda steps=apply_array_uncertainty(
+                    self.scen["technology_components"].get(
+                        "component_fixed_lifetimes"
+                        )[component],
+                        self.run),
+                        convert=timesteps_per_year: steps
                 * convert
             )
 
