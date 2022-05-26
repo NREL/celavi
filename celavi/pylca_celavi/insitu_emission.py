@@ -123,7 +123,7 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     from pyomo.opt import SolverFactory
     import pyomo.environ
 
-    opt = SolverFactory("ipopt")
+    opt = SolverFactory("glpk")
     results = opt.solve(model)
     solution = pyomo_postprocess(None, model, results)
     scaling_vector = pd.DataFrame()
@@ -269,10 +269,20 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
     chksum = np.sum(final_dem['flow quantity'])
     if chksum != 0:
         F = final_dem['flow quantity']
-        # Dividing by scaling value to solve scaling issues
-        F = F / 100000
 
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, 100000, process, df_with_all_other_flows)
+        if chksum > 100000:
+            final_demand_scaler = 10000
+        elif chksum > 10000:
+            final_demand_scaler = 1000
+        elif chksum > 100:
+            final_demand_scaler = 10
+        else:
+            final_demand_scaler = 1
+
+        # Dividing by scaling value to solve scaling issues
+        F = F / final_demand_scaler
+
+        res = runner(tech_matrix, F, yr, fac_id, stage, material, final_demand_scaler, process, df_with_all_other_flows)
         # r es.columns = ['flow name', 'unit', 'flow quantity', 'year', 'stage', 'material']
         # res = model_celavi_lci_background(res, yr, stage, material)
         res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id']
