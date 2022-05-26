@@ -210,7 +210,7 @@ class Scenario:
                 )
             if not self.scen["flags"].get("run_routes", True):
                 print(f"Filtering routes: {states_to_filter}", flush=True)
-                filter_routes(self.files["locations.computed"], _routefile)
+                filter_routes(self.files["locations_computed"], _routefile)
 
         if self.scen["flags"].get("run_routes", True):
             Router.get_all_routes(
@@ -278,7 +278,7 @@ class Scenario:
                 pickle.dump(self.netw, open(self.files["costgraph_pickle"], "wb"))
 
         else:
-            self.netw = pickle.load(open(self.files["costgraph_pickle"], "wb"))
+            self.netw = pickle.load(open(self.files["costgraph_pickle"], "rb"))
             print(f"CostGraph read in at {self.simtime(self.start)}", flush=True)
 
         # Electricity spatial mix level. Defaults to 'state' when not provided.
