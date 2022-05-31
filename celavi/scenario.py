@@ -210,7 +210,7 @@ class Scenario:
                 )
             if not self.scen["flags"].get("run_routes", True):
                 print(f"Filtering routes: {states_to_filter}", flush=True)
-                filter_routes(self.files["locations_computed"], _routefile)
+                filter_routes(self.files["locs"], _routefile)
 
         if self.scen["flags"].get("run_routes", True):
             Router.get_all_routes(
