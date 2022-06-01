@@ -4,8 +4,8 @@ class ReedsImporter:
     """    
     The ReedsImporter class 
 
-    - Provides an object which stores the files names required for modifying ReEDS output datasets 
-    for compatibility with pyLCIA.
+    - Provides an object which stores the files names required for modifying ReEDS
+      output datasets for compatibility with pyLCIA.
     - Calls the data manipulation methods.
 
     Parameters
