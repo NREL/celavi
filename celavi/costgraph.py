@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-import pdb
+
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities

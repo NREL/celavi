@@ -571,7 +571,6 @@ class CostMethods:
                     path_dict['cost uncertainty']['shred transpo']['b'],
                     self.run
                     )
-                print(f"Year {_year}, shred transpo {_m * (_year - 2000.0) + _b}")
                 return (_m * (_year - 2000.0) + _b) * _vkmt
             elif path_dict['cost uncertainty']['shred transpo'] == 'random':
                 _c = path_dict['cost uncertainty']['shred transpo']['c']
