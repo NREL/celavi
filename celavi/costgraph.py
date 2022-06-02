@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-
+import pdb
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -305,18 +305,20 @@ class CostGraph:
             )
 
             for i in self.sc_end:
+                _dest = [key for key, value in subdict.items() if i in key]
                 _crit = [value for key, value in subdict.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
                             "year": self.year,
-                            "facility_id": _fac_id,
+                            "source_facility_id": _fac_id,
+                            "destination_facility_id": _dest,
                             "region_id_1": _loc_line.region_id_1.values[0],
                             "region_id_2": _loc_line.region_id_2.values[0],
                             "region_id_3": _loc_line.region_id_3.values[0],
                             "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": min(_crit),
+                            "eol_pathway_criterion": _crit,
                             "bol_pathway_criterion": _bol_crit,
                         }
                     )
@@ -1043,9 +1045,13 @@ class CostGraph:
         Performs postprocessing on CostGraph outputs being saved to file and
         saves to user-specified filenames and directories
         """
-        _out = pd.DataFrame(self.pathway_crit_history).drop_duplicates(
-            ignore_index=True
-        )
+        _out = pd.DataFrame(
+            self.pathway_crit_history
+            ).explode(
+                column=['destination_facility_id','eol_pathway_criterion']
+                ).drop_duplicates(
+                    ignore_index=True
+                    )
         _out["run"] = self.run
         with open(self.pathway_crit_history_filename, "a") as f:
             _out.to_csv(
