@@ -3,6 +3,7 @@ Created January 27, 2022.
 
 @author: rhanes
 """
+import re
 import os
 import sys
 import time
@@ -66,8 +67,9 @@ class Scenario:
             )
             raise
         try:
+            self.scenario_filename = os.path.join(self.args.data, self.args.scenario)
             with open(
-                os.path.join(self.args.data, self.args.scenario), "r", encoding="utf-8"
+                self.scenario_filename, "r", encoding="utf-8"
             ) as f:
                 self.scen = yaml.load(f, Loader=yaml.FullLoader)
         except IOError:
@@ -469,6 +471,15 @@ class Scenario:
 
     def postprocess(self):
         """Post-process, visualize, and save results of one model run."""
+            
+        # Create a name for the scenario, based either on a key in the original
+        # scneario YAML or, if the key is not found, the filename of the scenario.
+
+        default_scenario_identifier = self.scenario_filename.split("/")[-1].replace(".yaml", "")
+        scenario_identifier = self.scen["scenario"].get("name", default_scenario_identifier)
+        seed = self.scen["scenario"]["seed"]
+        run = self.run
+
         # Plot the cumulative count levels of the count inventories
         possible_component_list = list(
             self.scen["technology_components"].get("component_list", []).keys()
@@ -624,10 +635,59 @@ class Scenario:
             )
         )
 
+        # The central summary
+        central_summary = []
+        for _, row in lcia_locations_df.iterrows():
+            impact, units = self.impact_and_units(row["impact"])
+
+            summary_row = {
+                "units": units,
+                "name": impact,
+                "value": row["impact_value"],
+            }
+            central_summary.append(summary_row)
+
+        central_summary = pd.DataFrame(central_summary)
+        central_summary = central_summary.groupby(["units", "name"]).sum().reset_index()
+        central_summary["seed"] = seed
+        central_summary["run"] = run
+        central_summary["scenario"] = scenario_identifier
+
         with open(self.files["lcia_transpo_results"], "a") as f:
             lcia_transpo_agg.to_csv(
                 f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
             )
+
+        with open(self.files["lcia_transpo_results"], "a") as f:
+            lcia_transpo_agg.to_csv(
+                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+            )
+
+        with open(self.files["central_summary"], "a") as f:
+            central_summary.to_csv(f, index=False, mode="a", header=f.tell()==0, line_terminator="\n")
+
+    @staticmethod
+    def impact_and_units(line_item):
+        p_paren = re.compile("\(.*\)")
+        p_square = re.compile("\[.*\]")
+        
+        all_paren = p_paren.findall(line_item)
+        all_square = p_square.findall(line_item)
+
+        if len(all_paren) > 0:
+            units = all_paren[0]
+            impact = line_item.replace(units, "")
+        elif len(all_square) > 0:
+            units = all_square[0]
+            impact = line_item.replace(units, "")
+        else:
+            units = "unitless"
+            impact = line_item
+        
+        impact = " ".join(impact.split())
+        impact = impact.replace(" , ", ", ")
+
+        return impact, units        
 
     def clear_results(self):
         """Move old CSV results files to a timestamped sub-directory."""
