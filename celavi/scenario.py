@@ -15,6 +15,7 @@ import pandas as pd
 from scipy.stats import weibull_min
 
 from celavi.routing import Router
+from celavi.uncertainty_methods import apply_array_uncertainty
 from celavi.costgraph import CostGraph
 from celavi.compute_locations import ComputeLocations
 from celavi.data_filtering import filter_locations, filter_routes
@@ -23,12 +24,6 @@ from celavi.reeds_importer import ReedsImporter
 from celavi.des import Context
 from celavi.diagnostic_viz import DiagnosticViz
 
-def apply_array_uncertainty(quantity, run):
-    """Use model run number to access one element in a parameter list."""
-    if not isinstance(quantity, list):
-        return float(quantity)
-    else:
-        return float(quantity[run])
 
 class Scenario:
     """
