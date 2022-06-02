@@ -168,7 +168,7 @@ Scenario Flags
 The set of Boolean flags at the top of the scenario configuration file control much of the preprocessing done to set up a CELAVI simulation. Additional explanations for each flag are provided here.
 
 * `clear_results`
-    * When CELAVI is executed multiple times on the same machine, it will produce one or more sets of output files in the `results` directory (one set of results files is produced per model run). Set `clear_results` to True if you expect to be executing CELAVI more than once and do not want the results of each execution to be overwritten.
+	* When CELAVI is executed multiple times on the same machine, it will produce one or more sets of output files in the `results` directory (one set of results files is produced per model run). Set `clear_results` to True if you expect to be executing CELAVI more than once and do not want the results of each execution to be overwritten.
 	* Results from the most recent CELAVI execution are always found in the `results` directory.
 	* When `clear_results` is True, every CELAVI execution after the first one will produce an additional directory of results files, with "results-" and the current timestamp in the directory name. The contents of the new `results` directory is the output files from the *previous* CELAVI execution.
 * `compute_locations`
