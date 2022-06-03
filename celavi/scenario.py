@@ -3,6 +3,7 @@ Created January 27, 2022.
 
 @author: rhanes
 """
+from dataclasses import replace
 import re
 import os
 import sys
@@ -521,10 +522,7 @@ class Scenario:
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
         )
-        with open(self.files["mass_cumulative_histories"], "a") as f:
-            mass_cumulative_histories.to_csv(
-                f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
-            )
+        
         diagnostic_viz_mass.generate_plots()
 
         # Postprocess and save CostGraph outputs
@@ -635,8 +633,13 @@ class Scenario:
             )
         )
 
-        # The central summary
-        central_summary = []
+        # Summarize log files into one place.
+
+        # The summary for mass flows
+        mass_cumulative_histories
+
+        # The summary for LCIA
+        lcia_summary = []
         for _, row in lcia_locations_df.iterrows():
             impact, units = self.impact_and_units(row["impact"])
 
@@ -645,13 +648,35 @@ class Scenario:
                 "name": impact,
                 "value": row["impact_value"],
             }
-            central_summary.append(summary_row)
+            lcia_summary.append(summary_row)
 
-        central_summary = pd.DataFrame(central_summary)
-        central_summary = central_summary.groupby(["units", "name"]).sum().reset_index()
-        central_summary["seed"] = seed
-        central_summary["run"] = run
-        central_summary["scenario"] = scenario_identifier
+        lcia_summary = pd.DataFrame(lcia_summary)
+        lcia_summary = lcia_summary.groupby(["units", "name"]).sum().reset_index()
+        lcia_summary["seed"] = seed
+        lcia_summary["run"] = run
+        lcia_summary["scenario"] = scenario_identifier
+        lcia_summary["category"] = "environmental impact"
+
+        # Mass flow summary
+
+        mass_summary = mass_cumulative_histories.loc[:, ["facility_type", "tonnes"]]
+        mass_summary = mass_summary.groupby("facility_type").sum().reset_index()
+        mass_summary = mass_summary.rename(columns={"facility_type": "name", "tonnes": "value"})
+        mass_summary["seed"] = seed
+        mass_summary["run"] = run
+        mass_summary["scenario"] = scenario_identifier
+        mass_summary["category"] = "mass flow"
+        mass_summary["units"] = "tonnes"
+
+        # Collect all summaries
+        central_summary = pd.concat([lcia_summary, mass_summary])
+
+        # Write all postprocessed log files.
+
+        with open(self.files["mass_cumulative_histories"], "a") as f:
+            mass_cumulative_histories.to_csv(
+                f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
+            )
 
         with open(self.files["lcia_transpo_results"], "a") as f:
             lcia_transpo_agg.to_csv(
@@ -686,6 +711,12 @@ class Scenario:
         
         impact = " ".join(impact.split())
         impact = impact.replace(" , ", ", ")
+
+        units = units\
+            .replace("(", "")\
+            .replace(")", "")\
+            .replace("[", "")\
+            .replace("]", "")
 
         return impact, units        
 
