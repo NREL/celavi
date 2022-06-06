@@ -1,7 +1,7 @@
 from typing import Deque, Tuple, Dict
 from collections import deque
 
-from celavi.scenario import apply_array_uncertainty
+from celavi.uncertainty_methods import apply_array_uncertainty
 
 
 class Component:

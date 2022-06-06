@@ -3,7 +3,9 @@ import scipy.stats as st
 import warnings
 
 from typing import Dict
-from celavi.scenario import apply_array_uncertainty
+
+from celavi.uncertainty_methods import apply_array_uncertainty
+
 
 class CostMethods:
     """
@@ -77,24 +79,18 @@ class CostMethods:
             _scale = path_dict['cost uncertainty']['landfilling']['scale']
             return st.triang.rvs(c=_c,loc=_loc*_fee,scale=_scale*_fee, random_state=self.seed)
         elif path_dict['cost uncertainty']['landfilling']['uncertainty'] == 'array':
-            # in post-2020 (last historical data point)
-            if _year >= 2021:
-                # use an array of parameter values from config
-                # model run is the index
-                # parse as float value (defaults to string)
-                _m = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['landfilling']['m'],
-                    self.run
-                    )
-                _b = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['landfilling']['b'],
-                    self.run
-                    )
-                # fee model = point-slope form of a line
-                return _m * (_year - 2020.0) + _b
-            else:
-                # if the year is 2020 or earlier, just return the historical model
-                return _fee
+            # use an array of parameter values from config
+            # model run is the index
+            _m = apply_array_uncertainty(
+                path_dict['cost uncertainty']['landfilling']['m'],
+                self.run
+                )
+            _b = apply_array_uncertainty(
+                path_dict['cost uncertainty']['landfilling']['b'],
+                self.run
+                )
+            # fee model = point-slope form of a line
+            return _m * (_year - 2000.0) + _b
         else:
             return _fee
 
@@ -132,18 +128,15 @@ class CostMethods:
             _scale = path_dict['cost uncertainty']['rotor teardown']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed) / _mass
         elif path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'array':
-            if _year >= 2021:
-                _m = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['rotor teardown']['m'],
-                    self.run
-                    )
-                _b = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['rotor teardown']['b'],
-                    self.run
-                    )
-                return (_m * (_year - 2020.0)  + _b) / _mass
-            else:
-                return _cost / _mass
+            _m = apply_array_uncertainty(
+                path_dict['cost uncertainty']['rotor teardown']['m'],
+                self.run
+                )
+            _b = apply_array_uncertainty(
+                path_dict['cost uncertainty']['rotor teardown']['b'],
+                self.run
+                )
+            return (_m * (_year - 2000.0)  + _b) / _mass
         else:
             return _cost / _mass
 
@@ -166,7 +159,6 @@ class CostMethods:
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
         """
         _cost = 27.56
-        _year = path_dict['year']
 
         if path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'random':
             _c = path_dict['cost uncertainty']['segmenting']['c']
@@ -174,13 +166,10 @@ class CostMethods:
             _scale = path_dict['cost uncertainty']['segmenting']['scale']
             return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
         elif path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'array':
-            if _year >= 2021:
-                return apply_array_uncertainty(
-                    path_dict['cost uncertainty']['segmenting']['b'],
-                    self.run
-                    )
-            else:
-                return _cost
+            return apply_array_uncertainty(
+                path_dict['cost uncertainty']['segmenting']['b'],
+                self.run
+                )
         else:
             return _cost
 
@@ -574,20 +563,16 @@ class CostMethods:
             return 0.0
         else:
             if path_dict['cost uncertainty']['shred transpo']['uncertainty'] == 'array':
-                if _year >= 2021.0:
-                    _m = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['shred transpo']['m'],
-                        self.run
-                        )
-                    _b = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['shred transpo']['b'],
-                        self.run
-                        )
-                    return (_m * (_year - 2020.0) + _b) * _vkmt
-                else:
-                    return _cost * _vkmt
-
-            if path_dict['cost uncertainty']['shred transpo'] == 'random':
+                _m = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['shred transpo']['m'],
+                    self.run
+                    )
+                _b = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['shred transpo']['b'],
+                    self.run
+                    )
+                return (_m * (_year - 2000.0) + _b) * _vkmt
+            elif path_dict['cost uncertainty']['shred transpo'] == 'random':
                 _c = path_dict['cost uncertainty']['shred transpo']['c']
                 _loc = path_dict['cost uncertainty']['shred transpo']['loc']
                 _scale = path_dict['cost uncertainty']['shred transpo']['scale']
