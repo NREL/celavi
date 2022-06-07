@@ -696,7 +696,8 @@ class Scenario:
     def impact_and_units(line_item):
         """
         Cleans up an impact name to return the units and the name of the impact
-        as separate strings
+        as separate strings. It removes "(", ")", "[", "]" and thw word
+        "substance" from units.
 
         Parameters
         ----------
@@ -731,7 +732,8 @@ class Scenario:
             .replace("(", "")\
             .replace(")", "")\
             .replace("[", "")\
-            .replace("]", "")
+            .replace("]", "")\
+            .replace("substance", "")
 
         return impact, units        
 
