@@ -638,11 +638,9 @@ class Scenario:
         # The summary for mass flows
         mass_cumulative_histories
 
-        # The summary for LCIA
         lcia_summary = []
         for _, row in lcia_locations_df.iterrows():
             impact, units = self.impact_and_units(row["impact"])
-
             summary_row = {
                 "units": units,
                 "name": impact,
@@ -657,9 +655,10 @@ class Scenario:
         lcia_summary["scenario"] = scenario_identifier
         lcia_summary["category"] = "environmental impact"
 
-        # Mass flow summary
+        # Mass flow summary. Filter out zero tonne mass flows.
 
         mass_summary = mass_cumulative_histories.loc[:, ["facility_type", "tonnes"]]
+        mass_summary = mass_summary.query("tonnes > 0")
         mass_summary = mass_summary.groupby("facility_type").sum().reset_index()
         mass_summary = mass_summary.rename(columns={"facility_type": "name", "tonnes": "value"})
         mass_summary["seed"] = seed
@@ -695,6 +694,20 @@ class Scenario:
 
     @staticmethod
     def impact_and_units(line_item):
+        """
+        Cleans up an impact name to return the units and the name of the impact
+        as separate strings
+
+        Parameters
+        ----------
+        line_item: str
+            Impact and unit mixed together from the LCIA.
+
+        Returns
+        -------
+        str, str
+            Tuple of impact name and units of that impact.
+        """
         p_paren = re.compile("\(.*\)")
         p_square = re.compile("\[.*\]")
         
