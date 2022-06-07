@@ -16,12 +16,14 @@ import pandas as pd
 
 from scipy.stats import weibull_min
 
+
 def apply_array_uncertainty(quantity, run):
     """Use model run number to access one element in a parameter list."""
     if not isinstance(quantity, list):
         return float(quantity)
     else:
         return float(quantity[run])
+
 
 from celavi.routing import Router
 from celavi.costgraph import CostGraph
@@ -69,9 +71,7 @@ class Scenario:
             raise
         try:
             self.scenario_filename = os.path.join(self.args.data, self.args.scenario)
-            with open(
-                self.scenario_filename, "r", encoding="utf-8"
-            ) as f:
+            with open(self.scenario_filename, "r", encoding="utf-8") as f:
                 self.scen = yaml.load(f, Loader=yaml.FullLoader)
         except IOError:
             print(
@@ -129,7 +129,7 @@ class Scenario:
     def get_filepaths(self):
         """
         Check that input files exist and assemble paths.
-        
+
         Raises
         ------
         Exception
@@ -209,7 +209,9 @@ class Scenario:
             else:
                 print(f"Filtering locations: {states_to_filter}", flush=True)
                 filter_locations(
-                    self.files["locs"], self.files["technology_data"], states_to_filter,
+                    self.files["locs"],
+                    self.files["technology_data"],
+                    states_to_filter,
                 )
             if not self.scen["flags"].get("run_routes", True):
                 print(f"Filtering routes: {states_to_filter}", flush=True)
@@ -321,9 +323,11 @@ class Scenario:
                 "use_lcia_shortcut", True
             ),
             substitution_rate={
-                mat : apply_array_uncertainty(rate, self.run) 
-                for mat, rate in self.scen["technology_components"].get("substitution_rates").items()
-                },
+                mat: apply_array_uncertainty(rate, self.run)
+                for mat, rate in self.scen["technology_components"]
+                .get("substitution_rates")
+                .items()
+            },
             run=self.run,
         )
 
@@ -392,7 +396,7 @@ class Scenario:
             min_year=start_year,
             max_timesteps=des_timesteps,
             timesteps_per_year=timesteps_per_year,
-            model_run=self.run
+            model_run=self.run,
         )
 
         print(f"Context initialized at {self.simtime(self.start)} s", flush=True)
@@ -429,13 +433,13 @@ class Scenario:
         for component in (
             self.scen["technology_components"].get("component_list").keys()
         ):
-            lifespan_fns[component] = ( 
+            lifespan_fns[component] = (
                 lambda steps=apply_array_uncertainty(
-                    self.scen["technology_components"].get(
-                        "component_fixed_lifetimes"
-                        )[component],
-                        self.run),
-                        convert=timesteps_per_year: steps
+                    self.scen["technology_components"].get("component_fixed_lifetimes")[
+                        component
+                    ],
+                    self.run,
+                ), convert=timesteps_per_year: steps
                 * convert
             )
 
@@ -472,12 +476,16 @@ class Scenario:
 
     def postprocess(self):
         """Post-process, visualize, and save results of one model run."""
-            
+
         # Create a name for the scenario, based either on a key in the original
         # scneario YAML or, if the key is not found, the filename of the scenario.
 
-        default_scenario_identifier = self.scenario_filename.split("/")[-1].replace(".yaml", "")
-        scenario_identifier = self.scen["scenario"].get("name", default_scenario_identifier)
+        default_scenario_identifier = self.scenario_filename.split("/")[-1].replace(
+            ".yaml", ""
+        )
+        scenario_identifier = self.scen["scenario"].get(
+            "name", default_scenario_identifier
+        )
         seed = self.scen["scenario"]["seed"]
         run = self.run
 
@@ -522,7 +530,7 @@ class Scenario:
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
         )
-        
+
         diagnostic_viz_mass.generate_plots()
 
         # Postprocess and save CostGraph outputs
@@ -659,7 +667,9 @@ class Scenario:
         mass_summary = mass_cumulative_histories.loc[:, ["facility_type", "tonnes"]]
         mass_summary = mass_summary.query("tonnes > 0")
         mass_summary = mass_summary.groupby("facility_type").sum().reset_index()
-        mass_summary = mass_summary.rename(columns={"facility_type": "name", "tonnes": "value"})
+        mass_summary = mass_summary.rename(
+            columns={"facility_type": "name", "tonnes": "value"}
+        )
         mass_summary["seed"] = seed
         mass_summary["run"] = run
         mass_summary["scenario"] = scenario_identifier
@@ -667,15 +677,17 @@ class Scenario:
         mass_summary["units"] = "tonnes"
 
         # Calculate outflow circularity
-        outflow_circularity_row = [{
-            "value": self.calculate_outflow_circularity(mass_cumulative_histories),
-            "name": "Outflow Circularity",
-            "units": "unitless",
-            "scenario": scenario_identifier,
-            "run": run,
-            "seed": seed,
-            "category": "circularity metric"
-        }]
+        outflow_circularity_row = [
+            {
+                "value": self.calculate_outflow_circularity(mass_cumulative_histories),
+                "name": "Outflow Circularity",
+                "units": "unitless",
+                "scenario": scenario_identifier,
+                "run": run,
+                "seed": seed,
+                "category": "circularity metric",
+            }
+        ]
         outflow_circularity = pd.DataFrame(outflow_circularity_row)
 
         # Collect all summaries and reorder the columns.
@@ -701,7 +713,9 @@ class Scenario:
             )
 
         with open(self.files["central_summary"], "a") as f:
-            central_summary.to_csv(f, index=False, mode="a", header=f.tell()==0, line_terminator="\n")
+            central_summary.to_csv(
+                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+            )
 
     @staticmethod
     def impact_and_units(line_item):
@@ -722,7 +736,7 @@ class Scenario:
         """
         p_paren = re.compile("\(.*\)")
         p_square = re.compile("\[.*\]")
-        
+
         all_paren = p_paren.findall(line_item)
         all_square = p_square.findall(line_item)
 
@@ -735,16 +749,17 @@ class Scenario:
         else:
             units = "unitless"
             impact = line_item
-        
+
         impact = " ".join(impact.split())
         impact = impact.replace(" , ", ", ")
 
-        units = units\
-            .replace("(", "")\
-            .replace(")", "")\
-            .replace("[", "")\
-            .replace("]", "")\
+        units = (
+            units.replace("(", "")
+            .replace(")", "")
+            .replace("[", "")
+            .replace("]", "")
             .replace("substance", "")
+        )
 
         return impact, units
 
@@ -764,22 +779,25 @@ class Scenario:
         float
             The outflow circularity metric.
         """
-        
-        mass['scenario'] = 'scenario'  # A dummy value only used for the pivot.
-        tonnes_pivot = mass\
-            .loc[:, ['scenario', 'facility_type', 'tonnes']]\
-            .groupby(['scenario',  'facility_type'])\
-            .sum()\
-            .reset_index()\
-            .pivot(index=['scenario'], columns='facility_type', values='tonnes')\
+
+        mass["scenario"] = "scenario"  # A dummy value only used for the pivot.
+        tonnes_pivot = (
+            mass.loc[:, ["scenario", "facility_type", "tonnes"]]
+            .groupby(["scenario", "facility_type"])
+            .sum()
             .reset_index()
+            .pivot(index=["scenario"], columns="facility_type", values="tonnes")
+            .reset_index()
+        )
 
-        next_use = tonnes_pivot['next use']
-        cement_coprocessing = tonnes_pivot['cement co-processing']
-        landfilling = tonnes_pivot['landfilling']
-        tonnes_pivot['outflow_circularity'] = (next_use + cement_coprocessing) / (next_use + cement_coprocessing + landfilling)
+        next_use = tonnes_pivot["next use"]
+        cement_coprocessing = tonnes_pivot["cement co-processing"]
+        landfilling = tonnes_pivot["landfilling"]
+        tonnes_pivot["outflow_circularity"] = (next_use + cement_coprocessing) / (
+            next_use + cement_coprocessing + landfilling
+        )
 
-        outflow_circularity = tonnes_pivot.loc[0, 'outflow_circularity']
+        outflow_circularity = tonnes_pivot.loc[0, "outflow_circularity"]
 
         return outflow_circularity
 
@@ -824,7 +842,7 @@ class Scenario:
         ----------
         starttime : float
             Time that the simulation began.
-        
+
         Return
         ------
         [float]
