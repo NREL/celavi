@@ -656,7 +656,6 @@ class Scenario:
         lcia_summary["category"] = "environmental impact"
 
         # Mass flow summary. Filter out zero tonne mass flows.
-
         mass_summary = mass_cumulative_histories.loc[:, ["facility_type", "tonnes"]]
         mass_summary = mass_summary.query("tonnes > 0")
         mass_summary = mass_summary.groupby("facility_type").sum().reset_index()
@@ -667,9 +666,21 @@ class Scenario:
         mass_summary["category"] = "mass flow"
         mass_summary["units"] = "tonnes"
 
+        # Calculate outflow circularity
+        outflow_circularity_row = [{
+            "value": self.calculate_outflow_circularity(mass_cumulative_histories),
+            "name": "Outflow Circularity",
+            "units": "unitless",
+            "scenario": scenario_identifier,
+            "run": run,
+            "seed": seed,
+            "category": "circularity metric"
+        }]
+        outflow_circularity = pd.DataFrame(outflow_circularity_row)
+
         # Collect all summaries and reorder the columns.
         cols = ["seed", "run", "scenario", "category", "name", "value", "units"]
-        central_summary = pd.concat([lcia_summary, mass_summary])
+        central_summary = pd.concat([lcia_summary, mass_summary, outflow_circularity])
         central_summary = central_summary.loc[:, cols]
 
         # Write all postprocessed log files.
@@ -735,7 +746,42 @@ class Scenario:
             .replace("]", "")\
             .replace("substance", "")
 
-        return impact, units        
+        return impact, units
+
+    @staticmethod
+    def calculate_outflow_circularity(mass):
+        """
+        Calculates the outflow circularity metric from the mass flow dataframe
+        provided.
+
+        Parameters
+        ----------
+        mass: pandas.DataFrame
+            The mass flow cumulative history from the scenario run
+
+        Returns
+        -------
+        float
+            The outflow circularity metric.
+        """
+        
+        mass['scenario'] = 'scenario'  # A dummy value only used for the pivot.
+        tonnes_pivot = mass\
+            .loc[:, ['scenario', 'facility_type', 'tonnes']]\
+            .groupby(['scenario',  'facility_type'])\
+            .sum()\
+            .reset_index()\
+            .pivot(index=['scenario'], columns='facility_type', values='tonnes')\
+            .reset_index()
+
+        next_use = tonnes_pivot['next use']
+        cement_coprocessing = tonnes_pivot['cement co-processing']
+        landfilling = tonnes_pivot['landfilling']
+        tonnes_pivot['outflow_circularity'] = (next_use + cement_coprocessing) / (next_use + cement_coprocessing + landfilling)
+
+        outflow_circularity = tonnes_pivot.loc[0, 'outflow_circularity']
+
+        return outflow_circularity
 
     def clear_results(self):
         """Move old CSV results files to a timestamped sub-directory."""
