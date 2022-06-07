@@ -668,8 +668,10 @@ class Scenario:
         mass_summary["category"] = "mass flow"
         mass_summary["units"] = "tonnes"
 
-        # Collect all summaries
+        # Collect all summaries and reorder the columns.
+        cols = ["seed", "run", "scenario", "category", "name", "value", "units"]
         central_summary = pd.concat([lcia_summary, mass_summary])
+        central_summary = central_summary.loc[:, cols]
 
         # Write all postprocessed log files.
 
