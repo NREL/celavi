@@ -27,8 +27,10 @@ class CostGraph:
         circular_components: list,
         component_initial_mass: float,
         path_dict: dict,
-        sc_begin: str = "manufacturing",
-        sc_end=("landfilling", "cement co-processing", "next use"),
+        sc_begin : List[str] = ["manufacturing"],
+        sc_end : List[str]=["landfilling"],
+        sc_in_circ : List[str]=[],
+        sc_out_circ : List[str]=[],
         year: float = 2000.0,
         verbose: int = 0,
         save_copy=False,
@@ -66,10 +68,14 @@ class CostGraph:
             Dictionary of case-study-specific parameters to be passed into
             the cost methods. Can be of any structure as defined in the
             scenario config file.
-        sc_begin : str
+        sc_begin : List[str]
             List of processing step(s) where supply chain paths begin.
-        sc_end : tuple
+        sc_end : List[str]
             List of processing step(s) where supply chain paths terminate.
+        sc_in_circ : List[str]
+            Facility type(s) that process material for re-circulation within the supply chain.
+        sc_out_circ: List[str]
+            Facility type(s) that process material for re-circulation outside the supply chain
         year : float
             Simulation year provided by the DES at CostGraph instantiation.
         verbose : int
@@ -104,8 +110,9 @@ class CostGraph:
         # find_nearest
         self.loc_df = pd.read_csv(locations_file)
 
-        self.sc_end = sc_end
-        self.sc_begin = sc_begin
+        self.sc_end = sc_end + sc_out_circ
+        self.sc_begin = sc_begin + sc_in_circ
+        
         if len(circular_components) == 1:
             self.circular_components = circular_components[0]
         else:
