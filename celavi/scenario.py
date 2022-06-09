@@ -675,11 +675,22 @@ class Scenario:
         mass_summary["category"] = "mass flow"
         mass_summary["units"] = "tonnes"
 
-        # Calculate outflow circularity
-        outflow_circularity_row = [
+        # Store outflow and inflow circularity
+        outflow_circularity, inflow_circularity = self.calculate_outflow_circularity(mass_cumulative_histories)
+
+        circularity_rows = [
             {
-                "value": self.calculate_outflow_circularity(mass_cumulative_histories),
+                "value": outflow_circularity,
                 "name": "Outflow Circularity",
+                "units": "unitless",
+                "scenario": scenario_identifier,
+                "run": run,
+                "seed": seed,
+                "category": "circularity metric",
+            },
+            {
+                "value": inflow_circularity,
+                "name": "Inflow Circularity",
                 "units": "unitless",
                 "scenario": scenario_identifier,
                 "run": run,
@@ -687,11 +698,12 @@ class Scenario:
                 "category": "circularity metric",
             }
         ]
-        outflow_circularity = pd.DataFrame(outflow_circularity_row)
+
+        circularity = pd.DataFrame(circularity_rows)
 
         # Collect all summaries and reorder the columns.
         cols = ["seed", "run", "scenario", "category", "name", "value", "units"]
-        central_summary = pd.concat([lcia_summary, mass_summary, outflow_circularity])
+        central_summary = pd.concat([lcia_summary, mass_summary, circularity])
         central_summary = central_summary.loc[:, cols]
 
         # Write all postprocessed log files.
@@ -762,8 +774,7 @@ class Scenario:
 
         return impact, units
 
-    @staticmethod
-    def calculate_outflow_circularity(mass):
+    def calculate_outflow_circularity(self, mass):
         """
         Calculates the outflow circularity metric from the mass flow dataframe
         provided.
@@ -775,10 +786,14 @@ class Scenario:
 
         Returns
         -------
-        float
-            The outflow circularity metric.
+        Tuple[float, float]
+            A tuple of the outflow circularity metric and the inflow 
+            circularity metric.
         """
 
+        # Pivot the mass flows. Proper behavior results in a dataframe with a
+        # single row.
+        
         mass["scenario"] = "scenario"  # A dummy value only used for the pivot.
         tonnes_pivot = (
             mass.loc[:, ["scenario", "facility_type", "tonnes"]]
@@ -789,16 +804,72 @@ class Scenario:
             .reset_index()
         )
 
-        next_use = tonnes_pivot["next use"]
-        cement_coprocessing = tonnes_pivot["cement co-processing"]
-        landfilling = tonnes_pivot["landfilling"]
-        tonnes_pivot["outflow_circularity"] = (next_use + cement_coprocessing) / (
-            next_use + cement_coprocessing + landfilling
-        )
+        # Get the facility types for circularity metric calculation.
+        circular_pathways = self.scen.get("circular_pathways", {})
 
-        outflow_circularity = tonnes_pivot.loc[0, "outflow_circularity"]
+        # If the circular pathways are not in the config, report this and return 0s
+        # for circularity metrics.
 
-        return outflow_circularity
+        if not circular_pathways:
+            print("circular_pathways not found in scenario. Defaulting circularity metrics to 0.")
+            outflow_circularity = 0.0
+            inflow_circularity = 0.0
+            return outflow_circularity, inflow_circularity
+
+        # Get the lists of pathway facility types, defaulting to empty
+        # lists so this method does not crash.
+        #
+        # Place any strings into their own lists.
+
+        sc_begin = circular_pathways.get("sc_begin", [])
+        sc_end = circular_pathways.get("sc_end", [])
+        sc_in_circ = circular_pathways.get("sc_in_circ", [])
+        sc_out_circ = circular_pathways.get("sc_out_circ", [])
+
+        print(sc_end)
+
+        sc_begin = sc_begin if type(sc_begin) == list else [sc_begin]
+        sc_end = sc_end if type(sc_end) == list else [sc_end]
+        sc_in_circ = sc_in_circ if type(sc_in_circ) == list else [sc_in_circ]
+        sc_out_circ = sc_out_circ if type(sc_out_circ) == list else [sc_out_circ]
+
+        # Outflow circularity
+
+        outflow_numerator = 0.0
+        for facility_type in sc_out_circ:
+            if facility_type in tonnes_pivot:
+                outflow_numerator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        outflow_denominator = 1.0 if len(sc_end + sc_out_circ) == 0 else 0.0
+        for facility_type in sc_out_circ + sc_end:
+            if facility_type in tonnes_pivot:
+                outflow_denominator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        outflow_circularity = outflow_numerator / outflow_denominator
+
+        # Inflow circularity
+
+        inflow_numerator = 0.0
+        for facility_type in sc_in_circ:
+            if facility_type in tonnes_pivot:
+                inflow_numerator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        inflow_denominator = 1.0 if len(sc_begin + sc_in_circ) == 0 else 0.0
+        for facility_type in sc_in_circ + sc_begin:
+            if facility_type in tonnes_pivot:
+                inflow_denominator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        inflow_circularity = inflow_numerator / inflow_denominator
+
+        return outflow_circularity, inflow_circularity
 
     def clear_results(self):
         """Move old CSV results files to a timestamped sub-directory."""
