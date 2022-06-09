@@ -643,9 +643,6 @@ class Scenario:
 
         # Summarize log files into one place.
 
-        # The summary for mass flows
-        mass_cumulative_histories
-
         lcia_summary = []
         for _, row in lcia_locations_df.iterrows():
             impact, units = self.impact_and_units(row["impact"])
