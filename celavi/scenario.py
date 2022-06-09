@@ -263,6 +263,8 @@ class Scenario:
                 else self.files["routes_custom"],
                 sc_begin=self.scen["circular_pathways"].get("sc_begin"),
                 sc_end=self.scen["circular_pathways"].get("sc_end"),
+                sc_in_circ=self.scen["circular_pathways"].get("sc_in_circ", []),
+                sc_out_circ=self.scen["circular_pathways"].get("sc_out_circ", []),
                 year=start_year,
                 verbose=self.case["model_run"].get("cg_verbose", 1),
                 save_copy=self.case["model_run"].get("save_cg_csv", True),
