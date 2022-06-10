@@ -676,7 +676,7 @@ class Scenario:
         mass_summary["units"] = "tonnes"
 
         # Store outflow and inflow circularity
-        outflow_circularity, inflow_circularity = self.calculate_outflow_circularity(mass_cumulative_histories)
+        outflow_circularity, inflow_circularity = self.calculate_circularity_metrics(mass_cumulative_histories)
 
         circularity_rows = [
             {
@@ -774,9 +774,9 @@ class Scenario:
 
         return impact, units
 
-    def calculate_outflow_circularity(self, mass):
+    def calculate_circularity_metrics(self, mass):
         """
-        Calculates the outflow circularity metric from the mass flow dataframe
+        Calculates the inflow and outflow circularity metrics from the mass flow dataframe
         provided.
 
         Parameters
@@ -818,15 +818,12 @@ class Scenario:
 
         # Get the lists of pathway facility types, defaulting to empty
         # lists so this method does not crash.
-        #
         # Place any strings into their own lists.
 
         sc_begin = circular_pathways.get("sc_begin", [])
         sc_end = circular_pathways.get("sc_end", [])
         sc_in_circ = circular_pathways.get("sc_in_circ", [])
         sc_out_circ = circular_pathways.get("sc_out_circ", [])
-
-        print(sc_end)
 
         sc_begin = sc_begin if type(sc_begin) == list else [sc_begin]
         sc_end = sc_end if type(sc_end) == list else [sc_end]
