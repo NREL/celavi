@@ -3,12 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to celavi's documentation!
+Welcome to CELAVI's documentation!
 ==================================
 
+**CELAVI** (pron: c'est la vie) is the Circular Economy Lifecycle Analysis and VIsualization modeling framework.
+
 .. toctree::
-   doc_main
-   doc_state_machine_units_model
+   doc_config
+   doc_preprocessing
+   doc_scenario
+   doc_des
+   doc_costgraph
+   doc_pylcia
+   doc_diagnostic_viz
 
 
 

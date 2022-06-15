@@ -34,6 +34,7 @@ setuptools.setup(
         "plotly",
         "kaleido",
         "scikit-learn",
-        "PyYAML"
+        "PyYAML",
+        "sphinx-rtd-theme"
     ]
 )

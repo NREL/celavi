@@ -7,7 +7,7 @@ import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
+def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci_filename,
                                 lci_activity_locations):
 
     """
@@ -27,6 +27,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
       stage of analysis
     material: str
       material of LCA analysis
+    route_id: str
+        Unique identifier for transportation route.
     uslci_filename: str
       filename for the USLCI inventory
     lci_activity_locations
@@ -195,9 +197,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
         for i in processes:
             for j in processes[i].exchanges:
                 if j.input == True:
-                    #if exch[k].flow.location == None:
-                    #    flows_without_location.append(exch[k].flow.name)
-                    #else:
                     try:
                         from_p_list.append(j.default_provider.name)
                         p_list.append(processes[i].name  + '@' + str(processes[i].location.name))
@@ -215,17 +214,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
     
     process_input_with_process = process_input_refine()
     
-    #process_input_with_process  =  list(pd.unique(process_product['inputs']))
-    #process_input['indicator'] = process_input['product'].isin(process_input_with_process)
-    #process_input_corr = process_input[process_input['indicator'] == True]
     removed_flows = process_input.merge(process_input_with_process,on = ['process', 'inputs', 'unit', 'value', 'input'], how = 'left',indicator = True)
     removed_flows = removed_flows[removed_flows['_merge'] == 'left_only']
-    del removed_flows['_merge']
-    
-    #use this to display the list of flows that are removed from the technology matrix and thus not considered in the analysis.
-    #for i in list(pd.unique(removed_flows['product'])):
-    #    print(i)
-     
+    del removed_flows['_merge']     
     
     #We would like to account for sequestration of emissions (input of flows) in the processes. For that reason, we are updating
     #the process emissions database with emission flows that are consumed in the processes. 
@@ -257,22 +248,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
     process_emissions = pd.concat(frames)
     process_emissions = process_emissions.groupby(by = ['process','product','unit'])['value'].agg('sum').reset_index()
     del process_emission, process_emission_input,process_input,processes
-       
-    '''
-    In the new version of the database, there are some challenges. 
-    1. Process and product names are different
-    2. Same Products can be produced from different processes. Previously we had solved this by removing multiple providers except the first one.
-    3. The new database actually tells which exact process the input flow is coming from using default provider
-    
-    In this version we take into account all this information and try to create a better model. 
-    The way to solve this problem is 
-    
-    1. Create unique products for every process. Join the process and product names in the process_product database 
-    2. In the process input database, join the input flow name and from process name. 
-    3. These new columns created should be used to create the technology matrix. 
-    4. The new input as well as product flows will be unique because process names are added to them. 
-    5. Check the unique ness
-    '''
     
     process_product['conjoined_flownames'] = process_product['product'] + '@'+ process_product['process']
     #uniquechk = list(pd.unique(process_product['conjoined_flownames']))
@@ -303,8 +278,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
     
     #Creating the technoology matrix for performing LCA caluclations
     tech_matrix = process_df.pivot(index = 'conjoined_flownames', columns = 'process', values = 'value')
-    
-    #tech_matrix.to_csv('tech_matrix.csv')
     tech_matrix = tech_matrix.fillna(0)
     
     #This list of products and processes essentially help to determine the indexes and the products and processes
@@ -417,7 +390,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
         return emissions_results_total,product_results_total
             
     
-    def runner(tech_matrix, F,i,l,j,k,final_demand_scaler):
+    def runner(tech_matrix, F,i,l,j,k,route_id,final_demand_scaler):
 
         """
         Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
@@ -436,6 +409,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
             stage
         k: str
             material
+        route_id: str
+            Unique identifier for transportation route.
         final_demand_scaler: int
             scaling variable number to ease optimization
 
@@ -456,6 +431,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
           res.loc[:,'facility_id'] =  l
           res.loc[:,'stage'] = j
           res.loc[:,'material'] = k
+          res.loc[:, 'route_id'] = route_id
     
           print(str(i) +' - '+j + ' - ' + k)
     
@@ -468,6 +444,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
           res2.loc[:,'facility_id'] =  l
           res2.loc[:,'stage'] = j
           res2.loc[:,'material'] = k
+          res2.loc[:, 'route_id'] = route_id
     
         else:
            print(f"optimization pylca-opt-background emission failed for {k} at {j} in {i}")
@@ -490,15 +467,10 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
 
     uslci_product_df[0] = uslci_product_df[0].str.lower()
     f_d['flow name'] = f_d['flow name'].str.lower()
-    #print dataframe to debug connecting between foreground and background
-    uslci_product_df.to_csv('uslci_process_df.csv')
-     
 
     final_dem = uslci_product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
-    #f_d.to_csv('demand_of_foreground.csv')
-    print(f'The total final demand sum is {chksum}')
     #To make the optimization easier
     if chksum > 100000:
         final_demand_scaler = 100000
@@ -511,9 +483,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, uslci_filename,
 
     #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
-    final_dem.to_csv('final_demand_from_background.csv')
     #To make the optimization easier
     F = final_dem['flow quantity']
-    res2 = runner(tech_matrix,F,yr,fac_id,stage,material,final_demand_scaler)
+    res2 = runner(tech_matrix,F,yr,fac_id,stage,material,route_id,final_demand_scaler)
     
     return res2

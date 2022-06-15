@@ -10,14 +10,14 @@ warnings.simplefilter('error', UserWarning)
 class ComputeLocations:
     """
     The ComputeLocations class performs preprocessing that ingests raw facility
-     location data and returns a formatted, aggregated dataset of all
-     facilities involved in a circular supply chain.
+    location data and returns a formatted, aggregated dataset of all
+    facilities involved in a circular supply chain.
 
-     The specific preprocessing steps will need to be adjusted for different
-     raw data sources to allow for variations in column names, data types, and
-     the number of files ingested. The output format of the processed dataset
-     must remain as it is defined in this code for the remainder of the CELAVI
-     code base to function.
+    The specific preprocessing steps will need to be adjusted for different
+    raw data sources to allow for variations in column names, data types, and
+    the number of files ingested. The output format of the processed dataset
+    must remain as it is defined in this code for the remainder of the CELAVI
+    code base to function.
     """
 
     def __init__(self,
@@ -33,35 +33,38 @@ class ComputeLocations:
         """
         Parameters
         ----------
+        start_year : int
+            Calendar year when the simulation begins.
+
         power_plant_locations
             Data set of renewable energy power plant locations including lat,
             long, region identifier columns, and other power-plant-specific
-            information as needed
+            information as needed.
 
         landfill_locations
-            Data set of landfill locations
+            Data set of landfill locations.
 
         other_facility_locations
-            Data set of all other facility types involved in the case study
+            Data set of all other facility types involved in the case study.
 
         transportation_graph
-            Transportation network data
+            Transportation network data.
 
         node_locations
-            Node locations within transportation graph
+            Node locations within transportation graph.
 
         lookup_facility_type
-            File defining the allowable set of facility types in the case study
+            File defining the allowable set of facility types in the case study.
 
         technology_data_filename
             File with technology-specific installation data, including year
             installed, location (lat, long, and region identifiers), and any
             technology-specific data required to model material flows into
-            power plants
+            power plants.
 
         standard_scenarios_filename
-            File of output from NREL's REEDS model, used for capacity expansion
-            projections past the current year
+            File of output from NREL's ReEDS model, used for capacity expansion
+            projections past the current year.
         """
 
         self.start_year = start_year
@@ -114,14 +117,14 @@ class ComputeLocations:
             identifiers (country, state, county, etc.)
 
             Columns:
-                facility_id : int
-                facility_type : str
-                lat : float
-                long : float
-                region_id_1 : str
-                region_id_2 : str
-                region_id_3 : str
-                region_id_4 : str
+                - facility_id : int
+                - facility_type : str
+                - lat : float
+                - long : float
+                - region_id_1 : str
+                - region_id_2 : str
+                - region_id_3 : str
+                - region_id_4 : str
         """
 
         # Process data for wind power plants - from USWTDB
@@ -211,9 +214,6 @@ class ComputeLocations:
         U.S. See the LandfillLocations child class of the Data class for
         column names and download location.
 
-        Parameters
-        ----------
-
         Returns
         -------
         landfill_locations_no_nulls : pd.DataFrame
@@ -222,14 +222,14 @@ class ComputeLocations:
             identifiers (country, state, county, etc.)
 
             Columns:
-                facility_id : int
-                facility_type : str
-                lat : float
-                long : float
-                region_id_1 : str
-                region_id_2 : str
-                region_id_3 : str
-                region_id_4 : str
+                - facility_id : int
+                - facility_type : str
+                - lat : float
+                - long : float
+                - region_id_1 : str
+                - region_id_2 : str
+                - region_id_3 : str
+                - region_id_4 : str
 
         """
 
@@ -277,25 +277,22 @@ class ComputeLocations:
         If using this method, the location dataset being read in must already
         be in the same format as the Return value.
 
-        Parameters
-        ----------
-
         Returns
         -------
         facility_locations: pd.DataFrame
             Dataset of generic facility locations including unique facility ID,
-             the facility type identifier, a lat/long pair, and four generic
-             region identifiers (country, state, county, etc.)
+            the facility type identifier, a lat/long pair, and four generic
+            region identifiers (country, state, county, etc.)
 
             Columns:
-                facility_id : int
-                facility_type : str
-                lat : float
-                long : float
-                region_id_1 : str
-                region_id_2 : str
-                region_id_3 : str
-                region_id_4 : str
+                - facility_id : int
+                - facility_type : str
+                - lat : float
+                - long : float
+                - region_id_1 : str
+                - region_id_2 : str
+                - region_id_3 : str
+                - region_id_4 : str
         """
 
         facility_locations = Data.OtherFacilityLocations(fpath=self.other_facility_locations, backfill=self.backfill)
@@ -327,16 +324,14 @@ class ComputeLocations:
     def capacity_projections(self):
         """
         Use NREL's Standard Scenarios for electricity grid mix projections to
-        calculate future technology unit installations. See the
-        StandardScenarios child class of the Data parent class for additional
-        information on obtaining and formatting the input dataset.
+        calculate future technology unit installations. See the StandardScenarios
+        child class of the Data parent class for additional information on
+        obtaining and formatting the input dataset.
 
-        Parameters
-        ----------
-
-        Returns
-        -------
-
+        Future technology unit installations do not have locations defined in the
+        input datasets. Locations for these installations are calculated by U.S.
+        state (region_id_2) by averaging the locations of previously installed
+        technology units.
         """
 
         # Read in the standard scenario data
@@ -505,10 +500,6 @@ class ComputeLocations:
         ----------
         locations_output_file : str
             Path where the processed and aggregated locations dataset is saved
-
-        Returns
-        -------
-        None
         """
 
         wind_plant_locations = ComputeLocations.wind_power_plant(self)
