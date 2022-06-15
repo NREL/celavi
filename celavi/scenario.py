@@ -656,8 +656,8 @@ class Scenario:
         lcia_summary["category"] = "environmental impact"
 
         # Mass flow summary. Filter out zero tonne mass flows.
-        mass_summary = mass_cumulative_histories.loc[:, ["facility_type", "tonnes"]]
-        mass_summary = mass_summary.query("tonnes > 0")
+        mass_summary = mass_cumulative_histories.loc[:, ["facility_type", "tonnes"]].reset_index()
+        mass_summary = mass_summary[mass_summary.facility_type.isin(self.scen.get("circular_pathways", {}).get("sc_end") + self.scen.get("circular_pathways", {}).get("sc_out_circ"))]
         mass_summary = mass_summary.groupby("facility_type").sum().reset_index()
         mass_summary = mass_summary.rename(
             columns={"facility_type": "name", "tonnes": "value"}
