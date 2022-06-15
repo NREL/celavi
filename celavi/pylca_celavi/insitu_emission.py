@@ -1,6 +1,3 @@
-
-# INSITU EMISSION CALCULATOR
-
 import warnings
 import pandas as pd
 warnings.filterwarnings("ignore")

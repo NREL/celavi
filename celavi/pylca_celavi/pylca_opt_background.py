@@ -488,4 +488,3 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     res2 = runner(tech_matrix,F,yr,fac_id,stage,material,route_id,final_demand_scaler)
     
     return res2
-

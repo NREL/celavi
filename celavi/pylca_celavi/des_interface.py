@@ -353,4 +353,3 @@ class PylcaCelavi:
         res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
         # This is the result that needs to be analyzed every timestep.
         return res_df
-
