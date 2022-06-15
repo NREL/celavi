@@ -3,6 +3,8 @@ Created January 27, 2022.
 
 @author: rhanes
 """
+from dataclasses import replace
+import re
 import os
 import sys
 import time
@@ -13,6 +15,7 @@ import numpy as np
 import pandas as pd
 
 from scipy.stats import weibull_min
+
 
 from celavi.routing import Router
 from celavi.uncertainty_methods import apply_array_uncertainty
@@ -60,9 +63,8 @@ class Scenario:
             )
             raise
         try:
-            with open(
-                os.path.join(self.args.data, self.args.scenario), "r", encoding="utf-8"
-            ) as f:
+            self.scenario_filename = os.path.join(self.args.data, self.args.scenario)
+            with open(self.scenario_filename, "r", encoding="utf-8") as f:
                 self.scen = yaml.load(f, Loader=yaml.FullLoader)
         except IOError:
             print(
@@ -120,7 +122,7 @@ class Scenario:
     def get_filepaths(self):
         """
         Check that input files exist and assemble paths.
-        
+
         Raises
         ------
         Exception
@@ -200,7 +202,9 @@ class Scenario:
             else:
                 print(f"Filtering locations: {states_to_filter}", flush=True)
                 filter_locations(
-                    self.files["locs"], self.files["technology_data"], states_to_filter,
+                    self.files["locs"],
+                    self.files["technology_data"],
+                    states_to_filter,
                 )
             if not self.scen["flags"].get("run_routes", True):
                 print(f"Filtering routes: {states_to_filter}", flush=True)
@@ -252,6 +256,8 @@ class Scenario:
                 else self.files["routes_custom"],
                 sc_begin=self.scen["circular_pathways"].get("sc_begin"),
                 sc_end=self.scen["circular_pathways"].get("sc_end"),
+                sc_in_circ=self.scen["circular_pathways"].get("sc_in_circ", []),
+                sc_out_circ=self.scen["circular_pathways"].get("sc_out_circ", []),
                 year=start_year,
                 verbose=self.case["model_run"].get("cg_verbose", 1),
                 save_copy=self.case["model_run"].get("save_cg_csv", True),
@@ -312,9 +318,11 @@ class Scenario:
                 "use_lcia_shortcut", True
             ),
             substitution_rate={
-                mat : apply_array_uncertainty(rate, self.run) 
-                for mat, rate in self.scen["technology_components"].get("substitution_rates").items()
-                },
+                mat: apply_array_uncertainty(rate, self.run)
+                for mat, rate in self.scen["technology_components"]
+                .get("substitution_rates")
+                .items()
+            },
             run=self.run,
         )
 
@@ -383,7 +391,7 @@ class Scenario:
             min_year=start_year,
             max_timesteps=des_timesteps,
             timesteps_per_year=timesteps_per_year,
-            model_run=self.run
+            model_run=self.run,
         )
 
         print(f"Context initialized at {self.simtime(self.start)} s", flush=True)
@@ -420,13 +428,13 @@ class Scenario:
         for component in (
             self.scen["technology_components"].get("component_list").keys()
         ):
-            lifespan_fns[component] = ( 
+            lifespan_fns[component] = (
                 lambda steps=apply_array_uncertainty(
-                    self.scen["technology_components"].get(
-                        "component_fixed_lifetimes"
-                        )[component],
-                        self.run),
-                        convert=timesteps_per_year: steps
+                    self.scen["technology_components"].get("component_fixed_lifetimes")[
+                        component
+                    ],
+                    self.run,
+                ), convert=timesteps_per_year: steps
                 * convert
             )
 
@@ -463,6 +471,19 @@ class Scenario:
 
     def postprocess(self):
         """Post-process, visualize, and save results of one model run."""
+
+        # Create a name for the scenario, based either on a key in the original
+        # scneario YAML or, if the key is not found, the filename of the scenario.
+
+        default_scenario_identifier = self.scenario_filename.split("/")[-1].replace(
+            ".yaml", ""
+        )
+        scenario_identifier = self.scen["scenario"].get(
+            "name", default_scenario_identifier
+        )
+        seed = self.scen["scenario"]["seed"]
+        run = self.run
+
         # Plot the cumulative count levels of the count inventories
         possible_component_list = list(
             self.scen["technology_components"].get("component_list", []).keys()
@@ -504,10 +525,7 @@ class Scenario:
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
         )
-        with open(self.files["mass_cumulative_histories"], "a") as f:
-            mass_cumulative_histories.to_csv(
-                f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
-            )
+
         diagnostic_viz_mass.generate_plots()
 
         # Postprocess and save CostGraph outputs
@@ -618,10 +636,230 @@ class Scenario:
             )
         )
 
+        # Summarize log files into one place.
+
+        lcia_summary = []
+        for _, row in lcia_locations_df.iterrows():
+            impact, units = self.impact_and_units(row["impact"])
+            summary_row = {
+                "units": units,
+                "name": impact,
+                "value": row["impact_value"],
+            }
+            lcia_summary.append(summary_row)
+
+        lcia_summary = pd.DataFrame(lcia_summary)
+        lcia_summary = lcia_summary.groupby(["units", "name"]).sum().reset_index()
+        lcia_summary["seed"] = seed
+        lcia_summary["run"] = run
+        lcia_summary["scenario"] = scenario_identifier
+        lcia_summary["category"] = "environmental impact"
+
+        # Mass flow summary. Filter out zero tonne mass flows.
+        mass_summary = mass_cumulative_histories.loc[:, ["facility_type", "tonnes"]]
+        mass_summary = mass_summary.query("tonnes > 0")
+        mass_summary = mass_summary.groupby("facility_type").sum().reset_index()
+        mass_summary = mass_summary.rename(
+            columns={"facility_type": "name", "tonnes": "value"}
+        )
+        mass_summary["seed"] = seed
+        mass_summary["run"] = run
+        mass_summary["scenario"] = scenario_identifier
+        mass_summary["category"] = "mass flow"
+        mass_summary["units"] = "tonnes"
+
+        # Store outflow and inflow circularity
+        outflow_circularity, inflow_circularity = self.calculate_circularity_metrics(mass_cumulative_histories)
+
+        circularity_rows = [
+            {
+                "value": outflow_circularity,
+                "name": "Outflow Circularity",
+                "units": "unitless",
+                "scenario": scenario_identifier,
+                "run": run,
+                "seed": seed,
+                "category": "circularity metric",
+            },
+            {
+                "value": inflow_circularity,
+                "name": "Inflow Circularity",
+                "units": "unitless",
+                "scenario": scenario_identifier,
+                "run": run,
+                "seed": seed,
+                "category": "circularity metric",
+            }
+        ]
+
+        circularity = pd.DataFrame(circularity_rows)
+
+        # Collect all summaries and reorder the columns.
+        cols = ["seed", "run", "scenario", "category", "name", "value", "units"]
+        central_summary = pd.concat([lcia_summary, mass_summary, circularity])
+        central_summary = central_summary.loc[:, cols]
+
+        # Write all postprocessed log files.
+
+        with open(self.files["mass_cumulative_histories"], "a") as f:
+            mass_cumulative_histories.to_csv(
+                f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
+            )
+
         with open(self.files["lcia_transpo_results"], "a") as f:
             lcia_transpo_agg.to_csv(
                 f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
             )
+
+        with open(self.files["lcia_transpo_results"], "a") as f:
+            lcia_transpo_agg.to_csv(
+                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+            )
+
+        with open(self.files["central_summary"], "a") as f:
+            central_summary.to_csv(
+                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+            )
+
+    @staticmethod
+    def impact_and_units(line_item):
+        """
+        Cleans up an impact name to return the units and the name of the impact
+        as separate strings. It removes "(", ")", "[", "]" and thw word
+        "substance" from units.
+
+        Parameters
+        ----------
+        line_item: str
+            Impact and unit mixed together from the LCIA.
+
+        Returns
+        -------
+        str, str
+            Tuple of impact name and units of that impact.
+        """
+        p_paren = re.compile("\(.*\)")
+        p_square = re.compile("\[.*\]")
+
+        all_paren = p_paren.findall(line_item)
+        all_square = p_square.findall(line_item)
+
+        if len(all_paren) > 0:
+            units = all_paren[0]
+            impact = line_item.replace(units, "")
+        elif len(all_square) > 0:
+            units = all_square[0]
+            impact = line_item.replace(units, "")
+        else:
+            units = "unitless"
+            impact = line_item
+
+        impact = " ".join(impact.split())
+        impact = impact.replace(" , ", ", ")
+
+        units = (
+            units.replace("(", "")
+            .replace(")", "")
+            .replace("[", "")
+            .replace("]", "")
+            .replace("substance", "")
+        )
+
+        return impact, units
+
+    def calculate_circularity_metrics(self, mass):
+        """
+        Calculates the inflow and outflow circularity metrics from the mass flow dataframe
+        provided.
+
+        Parameters
+        ----------
+        mass: pandas.DataFrame
+            The mass flow cumulative history from the scenario run
+
+        Returns
+        -------
+        Tuple[float, float]
+            A tuple of the outflow circularity metric and the inflow 
+            circularity metric.
+        """
+
+        # Pivot the mass flows. Proper behavior results in a dataframe with a
+        # single row.
+        
+        mass["scenario"] = "scenario"  # A dummy value only used for the pivot.
+        tonnes_pivot = (
+            mass.loc[:, ["scenario", "facility_type", "tonnes"]]
+            .groupby(["scenario", "facility_type"])
+            .sum()
+            .reset_index()
+            .pivot(index=["scenario"], columns="facility_type", values="tonnes")
+            .reset_index()
+        )
+
+        # Get the facility types for circularity metric calculation.
+        circular_pathways = self.scen.get("circular_pathways", {})
+
+        # If the circular pathways are not in the config, report this and return 0s
+        # for circularity metrics.
+
+        if not circular_pathways:
+            print("circular_pathways not found in scenario. Defaulting circularity metrics to 0.")
+            outflow_circularity = 0.0
+            inflow_circularity = 0.0
+            return outflow_circularity, inflow_circularity
+
+        # Get the lists of pathway facility types, defaulting to empty
+        # lists so this method does not crash.
+        # Place any strings into their own lists.
+
+        sc_begin = circular_pathways.get("sc_begin", [])
+        sc_end = circular_pathways.get("sc_end", [])
+        sc_in_circ = circular_pathways.get("sc_in_circ", [])
+        sc_out_circ = circular_pathways.get("sc_out_circ", [])
+
+        sc_begin = sc_begin if type(sc_begin) == list else [sc_begin]
+        sc_end = sc_end if type(sc_end) == list else [sc_end]
+        sc_in_circ = sc_in_circ if type(sc_in_circ) == list else [sc_in_circ]
+        sc_out_circ = sc_out_circ if type(sc_out_circ) == list else [sc_out_circ]
+
+        # Outflow circularity
+
+        outflow_numerator = 0.0
+        for facility_type in sc_out_circ:
+            if facility_type in tonnes_pivot:
+                outflow_numerator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        outflow_denominator = 1.0 if len(sc_end + sc_out_circ) == 0 else 0.0
+        for facility_type in sc_out_circ + sc_end:
+            if facility_type in tonnes_pivot:
+                outflow_denominator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        outflow_circularity = outflow_numerator / outflow_denominator
+
+        # Inflow circularity
+
+        inflow_numerator = 0.0
+        for facility_type in sc_in_circ:
+            if facility_type in tonnes_pivot:
+                inflow_numerator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        inflow_denominator = 1.0 if len(sc_begin + sc_in_circ) == 0 else 0.0
+        for facility_type in sc_in_circ + sc_begin:
+            if facility_type in tonnes_pivot:
+                inflow_denominator += tonnes_pivot.loc[0, facility_type]
+            else:
+                print(f'Circular pathway facility type {facility_type} in config not found in pivot, skipping.')
+
+        inflow_circularity = inflow_numerator / inflow_denominator
+
+        return outflow_circularity, inflow_circularity
 
     def clear_results(self):
         """Move old CSV results files to a timestamped sub-directory."""
@@ -664,7 +902,7 @@ class Scenario:
         ----------
         starttime : float
             Time that the simulation began.
-        
+
         Return
         ------
         [float]
