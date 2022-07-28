@@ -129,7 +129,7 @@ ENV/
 .Rproj.user
 .Rhistory
 *.Rproj
-*.html
+
 
 # mypy
 .mypy_cache/
