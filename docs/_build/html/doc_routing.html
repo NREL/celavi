@@ -1,0 +1,292 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>routing &mdash; CELAVI  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="des" href="doc_des.html" />
+    <link rel="prev" title="reeds_importer" href="doc_reeds_importer.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CELAVI
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="doc_component.html">component</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_compute_locations.html">compute_locations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_costmethods.html">costmethods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_costgraph.html">costgraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_data_filtering.html">data_filtering</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_data_manager.html">data_manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_diagnostic_viz.html">diagnostic_viz</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_inventory.html">inventory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_reeds_importer.html">reeds_importer</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_des.html">des</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CELAVI</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>routing</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/doc_routing.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-celavi.routing">
+<span id="routing"></span><h1>routing<a class="headerlink" href="#module-celavi.routing" title="Permalink to this headline">¶</a></h1>
+<p>Created on Fri Jan 22 08:03:13 2021</p>
+<p>routing.py uses Dijkstra’s algorithm to compute distances between vertices on a network</p>
+<p>Developed using code from Feedstock Production Emissions to Air Model (FPEAM) Copyright (c) 2018
+Alliance for Sustainable Energy, LLC; Noah Fisher.
+Builds on functionality in the FPEAM’s Router.py and Data.py.
+Unmodified FPEAM code is available at <a class="reference external" href="https://github.com/NREL/fpeam">https://github.com/NREL/fpeam</a>.</p>
+<p>&#64;author: aeberle</p>
+<dl class="py class">
+<dt id="celavi.routing.Router">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.routing.</code><code class="sig-name descname">Router</code><span class="sig-paren">(</span><em class="sig-param">edges</em>, <em class="sig-param">node_map</em>, <em class="sig-param">memory=None</em>, <em class="sig-param">algorithm=&lt;function bidirectional_dijkstra&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.routing.Router" title="Permalink to this definition">¶</a></dt>
+<dd><p>Discover routing between nodes</p>
+<dl class="py method">
+<dt id="celavi.routing.Router.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">edges</em>, <em class="sig-param">node_map</em>, <em class="sig-param">memory=None</em>, <em class="sig-param">algorithm=&lt;function bidirectional_dijkstra&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.routing.Router.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>edges</strong> (<em>[</em><em>DataFrame</em><em>]</em>) – </p></li>
+<li><p><strong>node_map</strong> (<em>[</em><em>DataFrame</em><em>]</em>) – </p></li>
+<li><p><strong>[</strong><strong>joblib.Memory</strong><strong>]</strong> (<em>memory</em>) – </p></li>
+<li><p><strong>algorithm</strong> (<em>[</em><em>function</em><em>]</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.routing.Router.get_all_routes">
+<em class="property">static </em><code class="sig-name descname">get_all_routes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">locations_file</span></em>, <em class="sig-param"><span class="n">route_pair_file</span></em>, <em class="sig-param"><span class="n">distance_filtering</span></em>, <em class="sig-param"><span class="n">transportation_graph</span></em>, <em class="sig-param"><span class="n">node_locations</span></em>, <em class="sig-param"><span class="n">routes_output_file</span></em>, <em class="sig-param"><span class="n">routing_output_folder</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.routing.Router.get_all_routes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates distances traveled between all locations in the locations_file.
+Includes distance traveled through each transportation region (e.g., county FIPS) and road class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>locations_file</strong> – Dataset of facility locations</p></li>
+<li><p><strong>route_pair_file</strong> – Dataset of allowable facility pairs to connect with routes</p></li>
+<li><p><strong>distance_filtering</strong> – Dataset of distance-based router filtering</p></li>
+<li><p><strong>transportation_graph</strong> – Transportation network data</p></li>
+<li><p><strong>node_locations</strong> – Node locations within transportation graph</p></li>
+<li><p><strong>routes_output_file</strong> – Path to file where complete routes dataset is saved.</p></li>
+<li><p><strong>routing_output_folder</strong> – Path to directory for routing outputs</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.routing.Router.get_route">
+<code class="sig-name descname">get_route</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start</span></em>, <em class="sig-param"><span class="n">end</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.routing.Router.get_route" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find route from &lt;start&gt; to &lt;end&gt;, if exists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>start</strong> (<em>[</em><em>list</em><em>] </em><em>[</em><em>long</em><em>, </em><em>lat</em><em>]</em>) – </p></li>
+<li><p><strong>end</strong> (<em>[</em><em>list</em><em>] </em><em>[</em><em>long</em><em>, </em><em>lat</em><em>]</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[DataFrame]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="doc_des.html" class="btn btn-neutral float-right" title="des" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="doc_reeds_importer.html" class="btn btn-neutral float-left" title="reeds_importer" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, NREL
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

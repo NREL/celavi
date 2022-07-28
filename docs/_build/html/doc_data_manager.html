@@ -1,0 +1,483 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>data_manager &mdash; CELAVI  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="diagnostic_viz" href="doc_diagnostic_viz.html" />
+    <link rel="prev" title="data_filtering" href="doc_data_filtering.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CELAVI
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="doc_component.html">component</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_compute_locations.html">compute_locations</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_costmethods.html">costmethods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_costgraph.html">costgraph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_data_filtering.html">data_filtering</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">data_manager</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_diagnostic_viz.html">diagnostic_viz</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_inventory.html">inventory</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_reeds_importer.html">reeds_importer</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_routing.html">routing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_des.html">des</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CELAVI</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>data_manager</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/doc_data_manager.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-celavi.data_manager">
+<span id="data-manager"></span><h1>data_manager<a class="headerlink" href="#module-celavi.data_manager" title="Permalink to this headline">¶</a></h1>
+<p>Created on Fri Jan 22 08:05:13 2021</p>
+<p>Uses code from Feedstock Production Emissions to Air Model (FPEAM) Copyright (c) 2018
+Alliance for Sustainable Energy, LLC; Noah Fisher.
+Builds on functionality in the FPEAM’s Data.py.
+Unmodified FPEAM code is available at <a class="reference external" href="https://github.com/NREL/fpeam">https://github.com/NREL/fpeam</a>.</p>
+<p>&#64;author: aeberle</p>
+<dl class="py class">
+<dt id="celavi.data_manager.Data">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">Data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fpath</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">columns</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">backfill</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.Data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Data representation. Specific datasets are created as child classes with
+defined column names, data types, and backfilling values. Creating child
+classes removes the need to define column names etc when the classes are
+called to read data from files.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.Data.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">fpath</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">columns</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">backfill</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.Data.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.data_manager.Data.backfill">
+<code class="sig-name descname">backfill</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">column</span></em>, <em class="sig-param"><span class="n">value</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.Data.backfill" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace NaNs in &lt;column&gt; with &lt;value&gt;.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>column</strong> (<em>[</em><em>string</em><em>]</em>) – Name of column with NaNs to be backfilled</p></li>
+<li><p><strong>value</strong> (<em>[</em><em>any</em><em>]</em>) – Value for backfill</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>DataFrame with [column] backfilled with [value]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.data_manager.Data.load">
+<code class="sig-name descname">load</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fpath</span></em>, <em class="sig-param"><span class="n">columns</span></em>, <em class="sig-param"><span class="n">memory_map</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">header</span><span class="o">=</span><span class="default_value">0</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.Data.load" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load data from a text file at &lt;fpath&gt;. Check and set column names.</p>
+<p>See pandas.read_table() help for additional arguments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fpath</strong> (<em>[</em><em>string</em><em>]</em>) – file path to CSV file or SQLite database file</p></li>
+<li><p><strong>columns</strong> (<em>[</em><em>dict</em><em>]</em>) – {name: type, …}</p></li>
+<li><p><strong>memory_map</strong> (<em>[</em><em>bool</em><em>]</em>) – load directly to memory for improved performance</p></li>
+<li><p><strong>header</strong> (<em>[</em><em>int</em><em>]</em>) – 0-based row index containing column names</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p></p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.data_manager.Data.validate">
+<code class="sig-name descname">validate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.Data.validate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check that data are not empty.</p>
+<p>Return False if empty and True otherwise.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p></p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>Boolean flag</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.LandfillLocations">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">LandfillLocations</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'City': &lt;class 'str'&gt;</em>, <em class="sig-param">'County': &lt;class 'str'&gt;</em>, <em class="sig-param">'Current Landfill Status': &lt;class 'str'&gt;</em>, <em class="sig-param">'Landfill Closure Year': &lt;class 'str'&gt;</em>, <em class="sig-param">'Landfill ID': &lt;class 'int'&gt;</em>, <em class="sig-param">'Latitude': &lt;class 'float'&gt;</em>, <em class="sig-param">'Longitude': &lt;class 'float'&gt;</em>, <em class="sig-param">'State': &lt;class 'str'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.LandfillLocations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process raw landfill facility locations dataset from the U.S.
+EPA’s LMOP database at <a class="reference external" href="https://www.epa.gov/lmop">https://www.epa.gov/lmop</a>.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.LandfillLocations.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'City': &lt;class 'str'&gt;</em>, <em class="sig-param">'County': &lt;class 'str'&gt;</em>, <em class="sig-param">'Current Landfill Status': &lt;class 'str'&gt;</em>, <em class="sig-param">'Landfill Closure Year': &lt;class 'str'&gt;</em>, <em class="sig-param">'Landfill ID': &lt;class 'int'&gt;</em>, <em class="sig-param">'Latitude': &lt;class 'float'&gt;</em>, <em class="sig-param">'Longitude': &lt;class 'float'&gt;</em>, <em class="sig-param">'State': &lt;class 'str'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.LandfillLocations.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.Locations">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">Locations</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'facility_id': &lt;class 'int'&gt;</em>, <em class="sig-param">'facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'lat': &lt;class 'float'&gt;</em>, <em class="sig-param">'long': &lt;class 'float'&gt;</em>, <em class="sig-param">'region_id_1': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_2': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_3': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_4': &lt;class 'str'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.Locations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process raw facility locations (other than power plants)
+datasets.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.Locations.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'facility_id': &lt;class 'int'&gt;</em>, <em class="sig-param">'facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'lat': &lt;class 'float'&gt;</em>, <em class="sig-param">'long': &lt;class 'float'&gt;</em>, <em class="sig-param">'region_id_1': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_2': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_3': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_4': &lt;class 'str'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.Locations.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.OtherFacilityLocations">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">OtherFacilityLocations</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'facility_id': &lt;class 'int'&gt;</em>, <em class="sig-param">'facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'lat': &lt;class 'float'&gt;</em>, <em class="sig-param">'long': &lt;class 'float'&gt;</em>, <em class="sig-param">'region_id_1': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_2': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_3': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_4': &lt;class 'str'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.OtherFacilityLocations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process additional, miscellaneous facility location datasets.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.OtherFacilityLocations.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'facility_id': &lt;class 'int'&gt;</em>, <em class="sig-param">'facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'lat': &lt;class 'float'&gt;</em>, <em class="sig-param">'long': &lt;class 'float'&gt;</em>, <em class="sig-param">'region_id_1': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_2': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_3': &lt;class 'str'&gt;</em>, <em class="sig-param">'region_id_4': &lt;class 'str'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.OtherFacilityLocations.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.RoutePairs">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">RoutePairs</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'destination_facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'in_state_only': &lt;class 'bool'&gt;</em>, <em class="sig-param">'source_facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'vkmt_max': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.RoutePairs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process the dataset defining allowable facility pairs for the
+Router.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.RoutePairs.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'destination_facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'in_state_only': &lt;class 'bool'&gt;</em>, <em class="sig-param">'source_facility_type': &lt;class 'str'&gt;</em>, <em class="sig-param">'vkmt_max': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.RoutePairs.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.StandardScenarios">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">StandardScenarios</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'state': &lt;class 'str'&gt;</em>, <em class="sig-param">'t': &lt;class 'int'&gt;</em>, <em class="sig-param">'wind-ons_MW': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.StandardScenarios" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process Standard Scenarios electricity grid mix datasets,
+viewable and downloadable at
+<a class="reference external" href="https://cambium.nrel.gov/?project=c3fec8d8-6243-4a8a-9bff-66af71889958">https://cambium.nrel.gov/?project=c3fec8d8-6243-4a8a-9bff-66af71889958</a> .
+More information on the Standard Scenarios project is available from
+<a class="reference external" href="https://www.nrel.gov/analysis/standard-scenarios.html">https://www.nrel.gov/analysis/standard-scenarios.html</a> .</p>
+<p>This class is set up to use the annual, state-level datasets, with file
+names that end in: “_annual_state.csv”. Using any other type of dataset
+will produce an error.</p>
+<p>USER NOTE: Delete the first line of the raw Standard Scenarios file before
+reading in to CELAVI.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.StandardScenarios.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'state': &lt;class 'str'&gt;</em>, <em class="sig-param">'t': &lt;class 'int'&gt;</em>, <em class="sig-param">'wind-ons_MW': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.StandardScenarios.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.TechUnitLocations">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">TechUnitLocations</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'eia_id': &lt;class 'float'&gt;</em>, <em class="sig-param">'p_cap': &lt;class 'float'&gt;</em>, <em class="sig-param">'p_name': &lt;class 'str'&gt;</em>, <em class="sig-param">'p_tnum': &lt;class 'float'&gt;</em>, <em class="sig-param">'p_year': &lt;class 'float'&gt;</em>, <em class="sig-param">'t_cap': &lt;class 'float'&gt;</em>, <em class="sig-param">'t_county': &lt;class 'str'&gt;</em>, <em class="sig-param">'t_fips': &lt;class 'int'&gt;</em>, <em class="sig-param">'t_model': &lt;class 'str'&gt;</em>, <em class="sig-param">'t_state': &lt;class 'str'&gt;</em>, <em class="sig-param">'xlong': &lt;class 'float'&gt;</em>, <em class="sig-param">'ylat': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.TechUnitLocations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process raw power plant locations dataset.</p>
+<p>Dataset is downloadable at <a class="reference external" href="https://eerscmap.usgs.gov/uswtdb/">https://eerscmap.usgs.gov/uswtdb/</a></p>
+<p>No manual changes are needed to the raw dataset before it is processed.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.TechUnitLocations.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'eia_id': &lt;class 'float'&gt;</em>, <em class="sig-param">'p_cap': &lt;class 'float'&gt;</em>, <em class="sig-param">'p_name': &lt;class 'str'&gt;</em>, <em class="sig-param">'p_tnum': &lt;class 'float'&gt;</em>, <em class="sig-param">'p_year': &lt;class 'float'&gt;</em>, <em class="sig-param">'t_cap': &lt;class 'float'&gt;</em>, <em class="sig-param">'t_county': &lt;class 'str'&gt;</em>, <em class="sig-param">'t_fips': &lt;class 'int'&gt;</em>, <em class="sig-param">'t_model': &lt;class 'str'&gt;</em>, <em class="sig-param">'t_state': &lt;class 'str'&gt;</em>, <em class="sig-param">'xlong': &lt;class 'float'&gt;</em>, <em class="sig-param">'ylat': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.TechUnitLocations.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.TransportationGraph">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">TransportationGraph</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'countyfp': &lt;class 'str'&gt;</em>, <em class="sig-param">'edge_id': &lt;class 'int'&gt;</em>, <em class="sig-param">'fclass': &lt;class 'int'&gt;</em>, <em class="sig-param">'statefp': &lt;class 'str'&gt;</em>, <em class="sig-param">'u_of_edge': &lt;class 'int'&gt;</em>, <em class="sig-param">'v_of_edge': &lt;class 'int'&gt;</em>, <em class="sig-param">'weight': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.TransportationGraph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process the underlying transportation network for the Router
+module.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.TransportationGraph.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'countyfp': &lt;class 'str'&gt;</em>, <em class="sig-param">'edge_id': &lt;class 'int'&gt;</em>, <em class="sig-param">'fclass': &lt;class 'int'&gt;</em>, <em class="sig-param">'statefp': &lt;class 'str'&gt;</em>, <em class="sig-param">'u_of_edge': &lt;class 'int'&gt;</em>, <em class="sig-param">'v_of_edge': &lt;class 'int'&gt;</em>, <em class="sig-param">'weight': &lt;class 'float'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.TransportationGraph.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="celavi.data_manager.TransportationNodeLocations">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.data_manager.</code><code class="sig-name descname">TransportationNodeLocations</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'lat': &lt;class 'float'&gt;</em>, <em class="sig-param">'long': &lt;class 'float'&gt;</em>, <em class="sig-param">'node_id': &lt;class 'int'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.TransportationNodeLocations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read in and process the node locations in the transportation graph.</p>
+<dl class="py method">
+<dt id="celavi.data_manager.TransportationNodeLocations.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">df=None</em>, <em class="sig-param">fpath=None</em>, <em class="sig-param">columns={'lat': &lt;class 'float'&gt;</em>, <em class="sig-param">'long': &lt;class 'float'&gt;</em>, <em class="sig-param">'node_id': &lt;class 'int'&gt;}</em>, <em class="sig-param">backfill=True</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.data_manager.TransportationNodeLocations.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> – Initial data frame</p></li>
+<li><p><strong>fpath</strong> – Filepath location of data to be read in</p></li>
+<li><p><strong>columns</strong> – List of columns to backfill</p></li>
+<li><p><strong>backfill</strong> – Boolean flag: perform backfilling with datatype-specific value</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="doc_diagnostic_viz.html" class="btn btn-neutral float-right" title="diagnostic_viz" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="doc_data_filtering.html" class="btn btn-neutral float-left" title="data_filtering" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, NREL
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
