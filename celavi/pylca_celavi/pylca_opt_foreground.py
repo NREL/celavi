@@ -73,7 +73,7 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
     return process_df,df_with_all_other_flows
 
 
-def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
+def solver(tech_matrix,F,process, df_with_all_other_flows):
 
     """
     This function houses the optimizer for solve Xs = F. 
@@ -98,54 +98,13 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
         LCA results
     """
 
-    X_matrix = tech_matrix.to_numpy()
-    # Creation of a Concrete Model
-    model = ConcreteModel()
+    tm= tech_matrix.to_numpy()
+    det = np.linalg.det(tm)
+    scv = np.linalg.solve(tm, F)
 
-    def set_create(a, b):
-        i_list = []
-        for i in range(a, b):
-            i_list.append(i)
-        return i_list
-
-    model.i = Set(initialize=set_create(0, X_matrix.shape[0]), doc='indices')
-    model.j = Set(initialize=set_create(0, X_matrix.shape[1]), doc='indices')
-
-    def x_init(model, i, j):
-        return X_matrix[i, j]
-    model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
-
-    def f_init(model, i):
-        return F[i]
-
-    model.f = Param(model.i, initialize=f_init, doc='Final demand')
-
-    model.s = Var(model.j, bounds=(0, None), doc='Scaling Factor')
-
-    def supply_rule(model, i):
-        return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
-    model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
-
-
-    def objective_rule(model):
-      return sum(model.s[j] for j in model.j)
-    model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
-
-    def pyomo_postprocess(options=None, instance=None, results=None):
-        df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
-        return df
-
-    # This is an optional code path that allows the script to be run outside of
-    # pyomo command-line.  For example:  python transport.py
-
-    opt = SolverFactory("glpk")
-    results = opt.solve(model)
-    solution = pyomo_postprocess(None, model, results)
-    if all(solution.s == 0):
-        print('Solver found all-zero scaling vector', flush=True)
     scaling_vector = pd.DataFrame()
     scaling_vector['process'] = process
-    scaling_vector['scaling_factor'] = solution['s']
+    scaling_vector['scaling_factor'] = scv
 
     results_df = df_with_all_other_flows.merge(scaling_vector, on=['process'], how='left')
 
@@ -214,8 +173,9 @@ def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_
     """
 
     res = pd.DataFrame()
-    res = solver_optimization(tech_matrix, F, process, df_with_all_other_flows)        
+    res = solver(tech_matrix, F, process, df_with_all_other_flows)         
     res['value'] = res['value'] * final_demand_scaler
+    res = res[res['value'] > 1e-07]
     if not res.empty:
 
        res.loc[:, 'year'] = yr

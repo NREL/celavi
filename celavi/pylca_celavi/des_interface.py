@@ -25,7 +25,9 @@ class PylcaCelavi:
         dynamic_lci_filename,
         electricity_grid_spatial_level,
         static_lci_filename,
-        uslci_filename,
+        uslci_tech_filename,
+        uslci_emission_filename,
+        uslci_process_filename,
         lci_activity_locations,
         stock_filename,
         emissions_lci_filename,
@@ -96,7 +98,9 @@ class PylcaCelavi:
         self.dynamic_lci_filename = dynamic_lci_filename
         self.electricity_grid_spatial_level = electricity_grid_spatial_level
         self.static_lci_filename = static_lci_filename
-        self.uslci_filename = uslci_filename
+        self.uslci_tech_filename = uslci_tech_filename
+        self.uslci_emission_filename = uslci_emission_filename
+        self.uslci_process_filename = uslci_process_filename
         self.lci_activity_locations = lci_activity_locations
         self.stock_filename = stock_filename
         self.emissions_lci_filename = emissions_lci_filename
@@ -290,7 +294,7 @@ class PylcaCelavi:
                                 df_emissions,
                             )
                             if not res.empty:                                
-                                res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,self.uslci_filename,self.lci_activity_locations)
+                                res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,self.uslci_tech_filename,self.uslci_emission_filename,self.uslci_process_filename,self.lci_activity_locations)
                                 lci = postprocessing(res,emission)
                                 res = impact_calculations(lci,self.traci_lci_filename)
                                 res_df = pd.concat([res_df,res])
