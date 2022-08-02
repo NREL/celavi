@@ -165,7 +165,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
        res.loc[:,'stage'] = j
        res.loc[:,'material'] = k
     else:        
-       print(f"Insitu emission optimization failed for {k} at {j} in {yr}")
+       print(f"Insitu emission calculation failed for {k} at {j} in {yr}")
     
     res = electricity_corrector_before20(res)
     res['route_id'] = None
@@ -227,7 +227,7 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
-        print('LCA emissions inventory does not exist for %s %s %s' % (str(yr), stage, material))
+        #print('LCA emissions inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
 
     if chksum != 0:

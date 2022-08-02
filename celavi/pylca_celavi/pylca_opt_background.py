@@ -146,6 +146,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     #Creating the technology matrix for performing LCA caluclations
     tech_matrix = pd.read_csv(uslci_tech_filename,index_col ='conjoined_flownames')
     process_adder = pd.read_csv(uslci_process_filename)
+    process_adder['product'] = process_adder['product'].str.lower()
+    f_d['flow name'] = f_d['flow name'].str.lower()
     f_d = f_d.merge(process_adder, left_on = "flow name", right_on = "product")
     #This list of products and processes essentially help to determine the indexes and the products and processes
     #to which they belong. 
@@ -154,18 +156,18 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
 
 
     #Have to edit this final demand to match the results from CELAVI
-    f_d['flow name'] = f_d['flow name'] +'@' + f_d['flow name']
-    f_d['flow name'] = f_d['flow name'].str.lower()
+    #f_d['flow name'] = f_d['flow name'] +'@' + f_d['flow name']
+    #f_d['flow name'] = f_d['flow name'].str.lower()
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
 
     #Replace electricity    
-    f_d  = f_d .replace(to_replace='electricity@electricity', value='electricity, at grid@electricity, at grid, us, 2010')
-    f_d['flow name'] = f_d['flow name'] +'@' + f_d['location']
-    f_d['flow name'] = f_d['flow name'].str.lower()
+    #f_d  = f_d .replace(to_replace='electricity@electricity', value='electricity, at grid, us, 2010@electricity, at grid, us, 2010')
+    #f_d['flow name'] = f_d['flow name'] +'@' + f_d['location']
+    #f_d['flow name'] = f_d['flow name'].str.lower()
     f_d['conjoined_flownames'] = f_d['conjoined_flownames'].str.lower()  
-
+    f_d.to_csv('../../celavi-data/generated/intermediate_demand_foreground_uslci_data.csv', mode = 'a')
     #dataframe to debug connecting between foreground and background  
     uslci_products['conjoined_flownames'] = uslci_products['conjoined_flownames'].str.lower()  
     final_dem = uslci_products.merge(f_d, left_on='conjoined_flownames', right_on='conjoined_flownames', how='left')
@@ -175,9 +177,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
         print('Final demand construction failed. No value. csv file for error checking created. /n Check the intermediate demand file and final demand check file')
-        final_dem.to_csv('Final_demand_check_file.csv')
-        uslci_products.to_csv('uslciproducts_file.csv')
-        f_d.to_csv('demandforeground.csv')
+        final_dem.to_csv('../../celavi-data/generated/Final_demand_check_file.csv')
+        uslci_products.to_csv('../../celavi-data/generated/uslciproducts_file.csv')
+        f_d.to_csv('../../celavi-data/generated/demandforeground.csv')
         sys.exit(1)
 
     #To make the solution easier

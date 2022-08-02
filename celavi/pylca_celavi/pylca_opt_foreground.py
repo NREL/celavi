@@ -188,7 +188,7 @@ def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_
        return res
     
     else:        
-       print(f"optimization pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
+       print(f"pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
 
 
 def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
