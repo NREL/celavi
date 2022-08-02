@@ -293,7 +293,7 @@ class PylcaCelavi:
                                 material,
                                 df_emissions,
                             )
-                            if not res.empty:                                
+                            if not res.empty:                            
                                 res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,self.uslci_tech_filename,self.uslci_emission_filename,self.uslci_process_filename,self.lci_activity_locations)
                                 lci = postprocessing(res,emission)
                                 res = impact_calculations(lci,self.traci_lci_filename)

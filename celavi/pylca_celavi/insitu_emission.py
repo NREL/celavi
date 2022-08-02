@@ -5,7 +5,6 @@ import warnings
 import pandas as pd
 warnings.filterwarnings("ignore")
 import numpy as np
-from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
 
 # The following two lines are needed for execution on HPC
 # import pyutilib.subprocess.GlobalData
@@ -57,10 +56,10 @@ def preprocessing(year,df_static):
     return process_df, df_with_all_other_flows
 
 
-def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
+def solver(tech_matrix,F,process, df_with_all_other_flows):
 
     """
-    This function houses the optimizer for solve Xs = F. 
+    This function houses the calculator to solve Xs = F. 
     Solves the Xs=F equation. 
     Solves the scaling vector.  
 
@@ -70,7 +69,7 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
          technology matrix from the process inventory
     F : vector
          Final demand vector 
-    process: str
+    process: list
          filename for the dynamic inventory   
     df_with_all_other_flows: pd.DataFrame
          lca inventory with no product flows
@@ -79,56 +78,16 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
     Returns
     -------
     pd.DataFrame
-       LCA results
+        LCA results
     """
 
-    X_matrix = tech_matrix.to_numpy()
-    # Creation of a Concrete Model
-    model = ConcreteModel()
+    tm= tech_matrix.to_numpy()
+    det = np.linalg.det(tm)
+    scv = np.linalg.solve(tm, F)
 
-    def set_create(a, b):
-        i_list = []
-        for i in range(a, b):
-            i_list.append(i)
-        return i_list
-
-    model.i = Set(initialize=set_create(0, X_matrix.shape[0]), doc='indices')
-    model.j = Set(initialize=set_create(0, X_matrix.shape[1]), doc='indices')
-
-    def x_init(model, i, j):
-        return X_matrix[i, j]
-    model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
-
-    def f_init(model, i):
-        return F[i]
-
-    model.f = Param(model.i, initialize=f_init, doc='Final demand')
-    model.s = Var(model.j, bounds=(0, None), doc='Scaling Factor')
-
-    def supply_rule(model, i):
-      return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
-    model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
-
-    def objective_rule(model):
-      return sum(model.s[j] for j in model.j)
-    model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
-
-    def pyomo_postprocess(options=None, instance=None, results=None):
-        df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
-        return df
-
-
-
-    # This emulates what the pyomo command-line tools does
-    from pyomo.opt import SolverFactory
-    import pyomo.environ
-
-    opt = SolverFactory("glpk")
-    results = opt.solve(model)
-    solution = pyomo_postprocess(None, model, results)
     scaling_vector = pd.DataFrame()
     scaling_vector['process'] = process
-    scaling_vector['scaling_factor'] = solution['s']
+    scaling_vector['scaling_factor'] = scv
 
     results_df = df_with_all_other_flows.merge(scaling_vector, on=['process'], how='left')
 
@@ -198,7 +157,7 @@ def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_
 
     
     res = pd.DataFrame()
-    res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
+    res = solver(tech_matrix, F, process, df_with_all_other_flows) 
     res['value'] = res['value']*final_demand_scaler
     if  not res.empty:        
        res.loc[:,'year'] =  yr
@@ -267,6 +226,10 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
     final_dem = product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
+    if chksum == 0:
+        print('LCA emissions inventory does not exist for %s %s %s' % (str(yr), stage, material))
+        return pd.DataFrame()
+
     if chksum != 0:
         F = final_dem['flow quantity']
 
@@ -285,7 +248,10 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
         res = runner(tech_matrix, F, yr, fac_id, stage, material, final_demand_scaler, process, df_with_all_other_flows)
         # r es.columns = ['flow name', 'unit', 'flow quantity', 'year', 'stage', 'material']
         # res = model_celavi_lci_background(res, yr, stage, material)
-        res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id']
-        return res
-    else:
-        return pd.DataFrame()
+        if len(res.columns) != 8:
+            print(f'model_celavi_lci: res has {len(res.columns)}; needs 9 columns',
+                  flush=True)
+            return pd.DataFrame(columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id'])
+        else:
+            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id']
+            return res

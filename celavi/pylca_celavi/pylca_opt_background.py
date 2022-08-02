@@ -145,7 +145,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     process_emissions = pd.read_csv(uslci_emission_filename)
     #Creating the technology matrix for performing LCA caluclations
     tech_matrix = pd.read_csv(uslci_tech_filename,index_col ='conjoined_flownames')
-    
     process_adder = pd.read_csv(uslci_process_filename)
     f_d = f_d.merge(process_adder, left_on = "flow name", right_on = "product")
     #This list of products and processes essentially help to determine the indexes and the products and processes
