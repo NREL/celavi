@@ -7,10 +7,7 @@ import time
 import os
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
 
-# This emulates what the pyomo command-line tools does
-from pyomo.opt import SolverFactory
 
 #Reading in static and dynamics lca databases
 
@@ -76,7 +73,7 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
 def solver(tech_matrix,F,process, df_with_all_other_flows):
 
     """
-    This function houses the optimizer for solve Xs = F. 
+    This function houses the calculator to solve Xs = F. 
     Solves the Xs=F equation. 
     Solves the scaling vector.  
 
@@ -86,7 +83,7 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
          technology matrix from the process inventory
     F : vector
          Final demand vector 
-    process: str
+    process: list
          filename for the dynamic inventory   
     df_with_all_other_flows: pd.DataFrame
          lca inventory with no product flows
@@ -197,9 +194,9 @@ def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_
 def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
 
     """
-    Main function of this module which received information from DES interface and runs the suppoeting optimization functions. 
+    Main function of this module which received information from DES interface and runs the supporting LCA functions. 
     Creates the technology matrix and the final demand vector based on input data. 
-    Performs necessary checks before and after the LCA optimization calculation. 
+    Performs necessary checks before and after the LCA calculation. 
     
     Parameters
     ----------
@@ -250,7 +247,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
         return pd.DataFrame()
     
     else:
-        #To make the optimization easier
+        #To make the calculation easier
         if chksum > 100000:
             final_demand_scaler = 10000
         elif chksum > 10000:

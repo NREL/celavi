@@ -2,6 +2,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import time
+import sys
 from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize, SolverFactory
 import pyutilib.subprocess.GlobalData
 pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
@@ -13,7 +14,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     """
     Main function of this module which receives information from DES interface and runs the suppoeting optimization functions. 
     Creates the technology matrix and the final demand vector based on input data. 
-    Performs necessary checks before and after the LCA optimization calculation. 
+    Performs necessary checks before and after the LCA  calculation. 
     
     Parameters
     ----------
@@ -29,8 +30,13 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
       material of LCA analysis
     route_id: str
         Unique identifier for transportation route.
-    uslci_filename: str
+    uslci_tech_filename: str
       filename for the USLCI inventory
+    uslci_process_filename: str
+      filename for the USLCI process
+    uslci_emission_filename: str
+      filename for the USLCI emissions
+
     lci_activity_locations
         Path to file that provides a correspondence between location
         identifiers in the US LCI.
@@ -45,7 +51,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     def solver(tech_matrix,F,process_emissions):
         
         """
-        This function houses the optimizer for solve Xs = F. 
+        This function houses the solver to solve Xs = F. 
         Solves the Xs=F equation. 
         Solves the scaling vector.  
 
@@ -55,11 +61,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
              technology matrix from the process inventory
         F : vector
              Final demand vector 
-        process: str
-             filename for the dynamic inventory   
-        df_with_all_other_flows: pd.DataFrame
-             lca inventory with no product flows
-
+        process_emissions: str
+             filename for the emissions dataframe
         
         Returns
         -------
@@ -88,7 +91,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     def runner(tech_matrix, F,i,l,j,k,route_id,final_demand_scaler,process_emissions):
 
         """
-        Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
+        Calls the solver function and arranges and stores the results into a proper pandas dataframe. 
         
         Parameters
         ----------
@@ -174,9 +177,11 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     if chksum == 0:
         print('Final demand construction failed. No value. csv file for error checking created. /n Check the intermediate demand file and final demand check file')
         final_dem.to_csv('Final_demand_check_file.csv')
+        uslci_products.to_csv('uslciproducts_file.csv')
+        f_d.to_csv('demandforeground.csv')
         sys.exit(1)
 
-    #To make the optimization easier
+    #To make the solution easier
     if chksum > 100000:
         final_demand_scaler = 100000
     elif chksum > 10000:
