@@ -32,6 +32,7 @@ class CostGraph:
         sc_in_circ : List[str]=[],
         sc_out_circ : List[str]=[],
         year: float = 2000.0,
+        start_year: float = 2000.0,
         verbose: int = 0,
         save_copy=False,
         save_name="netw.csv",
@@ -78,6 +79,8 @@ class CostGraph:
             Facility type(s) that process material for re-circulation outside the supply chain
         year : float
             Simulation year provided by the DES at CostGraph instantiation.
+        start_year : float
+            Year at beginning of the model run.
         verbose : int
             Integer specifying how much info CostGraph should provide as it
             works.
@@ -95,7 +98,7 @@ class CostGraph:
         random_state : np.random.default_rng
             Instantiated random number generator for uncertainty analysis.
         """
-        self.cost_methods = CostMethods(seed=random_state, run=run)
+        self.cost_methods = CostMethods(start_year = start_year, seed=random_state, run=run)
 
         self.start_time = time()
         self.step_costs = pd.read_csv(step_costs_file)

@@ -1,10 +1,9 @@
-import numpy as np
 import scipy.stats as st
 import warnings
 
 from typing import Dict
 
-from celavi.uncertainty_methods import apply_array_uncertainty
+from celavi.uncertainty_methods import apply_array_uncertainty, apply_stoch_uncertainty
 
 
 class CostMethods:
@@ -17,7 +16,7 @@ class CostMethods:
 
     """
 
-    def __init__(self, seed, run):
+    def __init__(self, start_year, seed, run):
         """
         Provide a random number generator and model run to all uncertain
         CostMethods.
@@ -30,6 +29,7 @@ class CostMethods:
         run : int
             Model run number.
         """
+        self.start_year = start_year
         self.seed = seed
         self.run = run
 
@@ -72,12 +72,27 @@ class CostMethods:
             Landfill tipping fee in USD/metric ton
         """
         _year = path_dict['year']
-        _fee = 1.5921*_year - 3155.3 # deterministic national average
-        if path_dict['cost uncertainty']['landfilling']['uncertainty'] == 'random':
-            _c = path_dict['cost uncertainty']['landfilling']['c']
-            _loc = path_dict['cost uncertainty']['landfilling']['loc']
-            _scale = path_dict['cost uncertainty']['landfilling']['scale']
-            return st.triang.rvs(c=_c,loc=_loc*_fee,scale=_scale*_fee, random_state=self.seed)
+
+        if path_dict['cost uncertainty']['landfilling']['uncertainty'] == 'stochastic':
+            # get draws from probability distributions if the model run just started
+            # otherwise, use the stored values that were already drawn
+            if _year == self.start_year:
+                _m = apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['landfilling']['m'],
+                    seed=self.seed
+                    )
+                if isinstance(path_dict['cost uncertainty']['landfilling']['m'], dict):
+                    path_dict['cost uncertainty']['landfilling']['m']['value'] = _m
+                
+                _b = apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['landfilling']['b'],
+                    seed=self.seed
+                )
+                if isinstance(path_dict['cost uncertainty']['landfilling']['b'],dict):
+                    path_dict['cost uncertainty']['landfilling']['b']['value'] = _b
+            else:
+                _m = path_dict['cost uncertainty']['landfilling']['m']['value']
+                _b = path_dict['cost uncertainty']['landfilling']['b']['value']
         elif path_dict['cost uncertainty']['landfilling']['uncertainty'] == 'array':
             # use an array of parameter values from config
             # model run is the index
@@ -89,10 +104,12 @@ class CostMethods:
                 path_dict['cost uncertainty']['landfilling']['b'],
                 self.run
                 )
-            # fee model = point-slope form of a line
-            return _m * (_year - 2000.0) + _b
         else:
-            return _fee
+            # with no uncertainty
+            _m = path_dict['cost uncertainty']['landfilling']['m']
+            _b = path_dict['cost uncertainty']['landfilling']['b']
+        # fee model = point-slope form of a line
+        return _m * (_year - 2000.0) + _b
 
 
 
@@ -120,13 +137,25 @@ class CostMethods:
 
         _year = path_dict['year']
         _mass = path_dict['component mass']
-        _cost = 1467.08 * _year - 2933875.40 # Linear national average cost model
 
-        if path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'random':
-            _c = path_dict['cost uncertainty']['rotor teardown']['c']
-            _loc = path_dict['cost uncertainty']['rotor teardown']['loc']
-            _scale = path_dict['cost uncertainty']['rotor teardown']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed) / _mass
+        if path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'stochastic':
+            if _year == self.start_year:
+                _m = apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['rotor teardown']['m'],
+                    seed=self.seed
+                )
+                if isinstance(path_dict['cost uncertainty']['rotor teardown']['m'],dict):
+                    path_dict['cost uncertainty']['rotor teardown']['m']['value'] = _m
+                
+                _b = apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['rotor teardown']['b'],
+                    seed=self.seed
+                )
+                if isinstance(path_dict['cost uncertainty']['rotor teardown']['b'], dict):
+                    path_dict['cost uncertainty']['rotor teardown']['b']['value'] = _b
+            else:
+                _m = path_dict['cost uncertainty']['rotor teardown']['m']['value']
+                _b = path_dict['cost uncertainty']['rotor teardown']['b']['value']
         elif path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'array':
             _m = apply_array_uncertainty(
                 path_dict['cost uncertainty']['rotor teardown']['m'],
@@ -136,9 +165,13 @@ class CostMethods:
                 path_dict['cost uncertainty']['rotor teardown']['b'],
                 self.run
                 )
-            return (_m * (_year - 2000.0)  + _b) / _mass
+            return 
         else:
-            return _cost / _mass
+            # with no uncertainty
+            _m = path_dict['cost uncertainty']['rotor teardown']['m']
+            _b = path_dict['cost uncertainty']['rotor teardown']['b']
+        
+        return (_m * (_year - 2000.0)  + _b) / _mass
 
 
 
@@ -158,20 +191,25 @@ class CostMethods:
         -------
             Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
         """
-        _cost = 27.56
-
-        if path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'random':
-            _c = path_dict['cost uncertainty']['segmenting']['c']
-            _loc = path_dict['cost uncertainty']['segmenting']['loc']
-            _scale = path_dict['cost uncertainty']['segmenting']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
+        if path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'stochastic':
+            if path_dict['year'] == self.start_year:
+                _b = apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['segmenting']['b'],
+                    seed=self.seed
+                )
+                if isinstance(path_dict['cost uncertainty']['segmenting']['b'],dict):
+                    path_dict['cost uncertainty']['segmenting']['b']['value'] = _b
+            else:
+                _b = path_dict['cost uncertainty']['segmenting']['b']['value']
         elif path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'array':
-            return apply_array_uncertainty(
+            _b = apply_array_uncertainty(
                 path_dict['cost uncertainty']['segmenting']['b'],
                 self.run
                 )
         else:
-            return _cost
+            _b = path_dict['cost uncertainty']['segmenting']['b']
+        
+        return _b
 
 
 
@@ -204,23 +242,34 @@ class CostMethods:
             Current cost of coarse grinding one metric ton of segmented blade
             material onsite at a wind power plant.
         """
-        _learn_dict = path_dict['learning']['coarse grinding']
-
-        _learn_rate = apply_array_uncertainty(
-            _learn_dict['learn rate'],
-            self.run
-            )        
+        _learn_dict = path_dict['learning']['coarse grinding']      
 
         # Implement uncertainty on initial cost before applying learning model
         if path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'array':
+            _learn_rate = apply_array_uncertainty(
+                _learn_dict['learn rate'],
+                self.run
+                )  
             # Array uncertainty is applied to the initial cost or to the learning rate
             # (array uncertainty for the actual cost is implemented through the learning rate)
             _initial_cost = apply_array_uncertainty(
                 path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],
                 self.run
                 )
+        elif path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'stochastic':
+            _learn_rate = _learn_dict['learn rate']
+            if path_dict['year'] == self.start_year:
+                    _initial_cost = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],dict):
+                        path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']['value'] = _initial_cost
+            else:
+                _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']['value']
         else:
-            # Random uncertainty applied to the actual cost, or no uncertainty
+            # with no uncertainty
+            _learn_rate = _learn_dict['learn rate']
             _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']
 
         # If the "cumul" value is None, then there has been no processing
@@ -234,20 +283,11 @@ class CostMethods:
             )
         else:
             coarsegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        coarsegrind_learning = coarsegrind_cumul ** _learn_rate
-
-        _cost = _initial_cost * coarsegrind_learning
-
-        if path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'random':
-            _c = path_dict['cost uncertainty']['coarse grinding onsite']['c']
-            _loc = path_dict['cost uncertainty']['coarse grinding onsite']['loc']
-            _scale = path_dict['cost uncertainty']['coarse grinding onsite']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
-        else:
-            return _cost
+        # apply cost reduction to initial cost
+        return _initial_cost * coarsegrind_cumul ** _learn_rate
 
 
 
@@ -280,23 +320,34 @@ class CostMethods:
             Current cost of coarse grinding one metric ton of segmented blade
             material in a mechanical recycling facility.
         """
-        _learn_dict = path_dict['learning']['coarse grinding']
-
-        _learn_rate = apply_array_uncertainty(
-            _learn_dict['learn rate'],
-            self.run
-            )
+        _learn_dict = path_dict['learning']['coarse grinding']      
 
         # Implement uncertainty on initial cost before applying learning model
         if path_dict['cost uncertainty']['coarse grinding']['uncertainty'] == 'array':
+            _learn_rate = apply_array_uncertainty(
+                _learn_dict['learn rate'],
+                self.run
+                )  
             # Array uncertainty is applied to the initial cost or to the learning rate
             # (array uncertainty for the actual cost is implemented through the learning rate)
             _initial_cost = apply_array_uncertainty(
                 path_dict['cost uncertainty']['coarse grinding']['initial cost'],
                 self.run
                 )
+        elif path_dict['cost uncertainty']['coarse grinding']['uncertainty'] == 'stochastic':
+            _learn_rate = _learn_dict['learn rate']
+            if path_dict['year'] == self.start_year:
+                    _initial_cost = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['coarse grinding']['initial cost'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['coarse grinding']['initial cost'],dict):
+                        path_dict['cost uncertainty']['coarse grinding']['initial cost']['value'] = _initial_cost
+            else:
+                _initial_cost = path_dict['cost uncertainty']['coarse grinding']['initial cost']['value']
         else:
-            # Random uncertainty applied to the actual cost, or no uncertainty
+            # with no uncertainty
+            _learn_rate = _learn_dict['learn rate']
             _initial_cost = path_dict['cost uncertainty']['coarse grinding']['initial cost']
 
         # If the "cumul" value is None, then there has been no processing
@@ -310,20 +361,11 @@ class CostMethods:
             )
         else:
             coarsegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
-        coarsegrind_learning = coarsegrind_cumul ** _learn_rate
-
-        _cost = _initial_cost * coarsegrind_learning
-
-        if path_dict['cost uncertainty']['coarse grinding']['uncertainty'] == 'random':
-            _c = path_dict['cost uncertainty']['coarse grinding']['c']
-            _loc = path_dict['cost uncertainty']['coarse grinding']['loc']
-            _scale = path_dict['cost uncertainty']['coarse grinding']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
-        else:
-            return _cost
+        # apply cost reduction to initial cost
+        return _initial_cost * coarsegrind_cumul ** _learn_rate
 
 
 
@@ -359,41 +401,57 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['fine grinding']
 
-        _learn_rate = apply_array_uncertainty(
-            _learn_dict['learn rate'],
-            self.run
-            )
-        _loss = apply_array_uncertainty(
-            path_dict['path_split']['fine grinding']['fraction'],
-            self.run
-        )        
+       
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'array':
+            _learn_rate = apply_array_uncertainty(
+                _learn_dict['learn rate'],
+                self.run
+                )
+            _loss = apply_array_uncertainty(
+                path_dict['path_split']['fine grinding']['fraction'],
+                self.run
+                )
             _initial_cost = apply_array_uncertainty(
                path_dict['cost uncertainty']['fine grinding']['initial cost'],
                self.run
-            )
+               )
             _revenue = apply_array_uncertainty(
-                path_dict['cost uncertainty']['fine grinding']['revenue']['b'],
+                path_dict['cost uncertainty']['fine grinding']['revenue'],
                 self.run
-            )
-        elif path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'random':
-            # Random uncertainty applies only to the revenue
-            _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
-            # Parameters for fine grinding revenue
-            _c_fgr = path_dict['cost uncertainty']['fine grinding']['revenue']['c']
-            _loc_fgr = path_dict['cost uncertainty']['fine grinding']['revenue']['loc']
-            _scale_fgr = path_dict['cost uncertainty']['fine grinding']['revenue']['scale']
-            _revenue = st.triang.rvs(
-                c=_c_fgr,
-                loc=_loc_fgr * path_dict['cost uncertainty']['fine grinding']['revenue']['b'],
-                scale=_scale_fgr * path_dict['cost uncertainty']['fine grinding']['revenue']['b'],
-                random_state=self.seed
-            )            
+                )
+
+        elif path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'stochastic':
+            _learn_rate = _learn_dict['learn rate']
+            if path_dict['year'] == self.start_year:
+                _loss = apply_stoch_uncertainty(
+                    path_dict['path_split']['fine grinding']['fraction'],
+                    seed=self.seed
+                    )
+                if isinstance(path_dict['path_split']['fine grinding']['fraction'],dict):
+                    path_dict['path_split']['fine grinding']['fraction']['value'] = _loss
+                _initial_cost = apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['fine grinding']['initial cost'],
+                    seed=self.seed
+                    )
+                if isinstance(path_dict['cost uncertainty']['fine grinding']['initial cost'],dict):
+                    path_dict['cost uncertainty']['fine grinding']['initial cost']['value'] = _initial_cost
+                _revenue = apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['fine grinding']['revenue'],
+                    seed=self.seed
+                    )
+                if isinstance(path_dict['cost uncertainty']['fine grinding']['revenue'], dict):
+                    path_dict['cost uncertainty']['fine grinding']['revenue']['value'] = _revenue
+            else:
+                _loss = path_dict['path_split']['fine grinding']['fraction']['value']
+                _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']['value']
+                _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']['value']
         else:
             # No uncertainty
+            _learn_rate = _learn_dict['learn rate']
+            _loss = path_dict['path_split']['fine grinding']['fraction']
             _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
-            _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']['b']
+            _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']
 
         # If the "cumul" value is None, then there has been no processing
         # through fine grinding and the initial cumul value from the config
@@ -420,21 +478,9 @@ class CostMethods:
         
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
-        _landfill = self.landfilling(path_dict)
+        _landfill = _loss * self.landfilling(path_dict)
 
-        if path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'random':
-            # Parameters for fine grinding cost
-            _c_fg = path_dict['cost uncertainty']['fine grinding']['actual cost']['c']
-            _loc_fg = path_dict['cost uncertainty']['fine grinding']['actual cost']['loc']
-            _scale_fg = path_dict['cost uncertainty']['fine grinding']['actual cost']['scale']
-            _cost_unc = st.triang.rvs(
-                c=_c_fg, loc=_loc_fg * _cost, scale=_scale_fg * _cost, random_state=self.seed
-            ) + _landfill - _revenue
-            return _cost_unc
-        else:
-            # returns processing cost, reduced by learning, minus revenue which
-            # stays constant over time (USD/metric ton)
-            return _cost + _landfill - _revenue
+        return _cost + _landfill - _revenue
 
 
 
@@ -455,18 +501,24 @@ class CostMethods:
             Revenue (USD/metric ton) from selling 1 metric ton of ground blade
             to cement co-processing plant
         """
-        if path_dict['cost uncertainty']['coprocessing']['uncertainty'] == 'random':
-            _revenue = path_dict['cost uncertainty']['coprocessing']['b']
-            _c = path_dict['cost uncertainty']['coprocessing']['c']
-            _loc = path_dict['cost uncertainty']['coprocessing']['loc']
-            _scale = path_dict['cost uncertainty']['coprocessing']['scale']
-            return -1.0 * st.triang.rvs(c=_c, loc = _loc*_revenue, scale=_scale*_revenue, random_state=self.seed)
+        if path_dict['cost uncertainty']['coprocessing']['uncertainty'] == 'stochastic':
+            if path_dict['year'] == self.start_year:
+                _out = -1.0 * apply_stoch_uncertainty(
+                    path_dict['cost uncertainty']['coprocessing']['b'],
+                    seed=self.seed
+                    )
+                if isinstance(path_dict['cost uncertainty']['coprocessing']['b'],dict):
+                    path_dict['cost uncertainty']['coprocessing']['b']['value'] = _out
+            else:
+                _out = path_dict['cost uncertainty']['coprocessing']['b']['value']
+            return _out
         elif path_dict['cost uncertainty']['coprocessing']['uncertainty'] == 'array':
             return -1.0 * apply_array_uncertainty(
                 path_dict['cost uncertainty']['coprocessing']['b'],
                 self.run
                 )
         else:
+            # with no uncertainty
             return -1.0 * path_dict['cost uncertainty']['coprocessing']['b']
 
 
@@ -494,48 +546,101 @@ class CostMethods:
         if _vkmt is None or _mass is None:
             return 0.0
         else:
-            if _year < 2001.0 or 2002.0 <= _year < 2003.0:
-                _cost = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['segment transpo']['cost 1'],
-                    self.run
-                )
-            elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
-                _cost = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['segment transpo']['cost 2'],
-                    self.run
-                )
-            elif 2019.0 <= _year < 2031.0:
-                _cost = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['segment transpo']['cost 3'],
-                    self.run
-                )
-            elif 2031.0 <= _year < 2044.0:
-                _cost = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['segment transpo']['cost 4'],
-                    self.run
-                )
-            elif 2044.0 <= _year <= 2050.0:
-                _cost = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['segment transpo']['cost 5'],
-                    self.run
-                )
+            if path_dict['cost uncertainty']['segment transpo']['uncertainty'] == 'array':
+                if _year < 2001.0 or 2002.0 <= _year < 2003.0:
+                    _cost = apply_array_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 1'],
+                        self.run
+                    )
+                elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
+                    _cost = apply_array_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 2'],
+                        self.run
+                    )
+                elif 2019.0 <= _year < 2031.0:
+                    _cost = apply_array_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 3'],
+                        self.run
+                    )
+                elif 2031.0 <= _year < 2044.0:
+                    _cost = apply_array_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 4'],
+                        self.run
+                    )
+                elif 2044.0 <= _year <= 2050.0:
+                    _cost = apply_array_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 5'],
+                        self.run
+                    )
+                else:
+                    warnings.warn(
+                        'Year out of range for segment transport; using cost 4')
+                    _cost = apply_array_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 4'],
+                        self.run
+                    )
+            elif path_dict['cost uncertainty']['segment transpo']['uncertainty'] == 'stochastic':
+                # when the model run begins, draw random values for all 5 costs and store them
+                if _year == self.start_year:
+                    path_dict['cost uncertainty']['segment transpo']['cost 1']['value'] = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 1'],
+                        seed=self.seed
+                    )
+                    path_dict['cost uncertainty']['segment transpo']['cost 2']['value'] = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 2'],
+                        seed=self.seed
+                    )
+                    path_dict['cost uncertainty']['segment transpo']['cost 3']['value'] = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 3'],
+                        seed=self.seed
+                    )
+                    path_dict['cost uncertainty']['segment transpo']['cost 4']['value'] = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 4'],
+                        seed=self.seed
+                    )
+                    path_dict['cost uncertainty']['segment transpo']['cost 5']['value'] = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['segment transpo']['cost 5'],
+                        seed=self.seed
+                    )
+                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 1']['value']
+                else:
+                    if _year < 2001.0 or 2002.0 <= _year < 2003.0:
+                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 1']['value']
+                    elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
+                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 2']['value']
+                    elif 2019.0 <= _year < 2031.0:
+                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 3']['value']
+                    elif 2031.0 <= _year < 2044.0:
+                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 4']['value']
+                    elif 2044.0 <= _year <= 2050.0:
+                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 5']['value']
+                    else:
+                        warnings.warn(
+                            'Year out of range for segment transport; using cost 4'
+                            )
+                        _cost = apply_stoch_uncertainty(
+                            path_dict['cost uncertainty']['segment transpo']['cost 4'],
+                            seed=self.seed
+                        )
             else:
-                warnings.warn(
-                    'Year out of range for segment transport; using cost 4')
-                _cost = apply_array_uncertainty(
-                    path_dict['cost uncertainty']['segment transpo']['cost 4'],
-                    self.run
-                )
+                # with no uncertainty
+                if _year < 2001.0 or 2002.0 <= _year < 2003.0:
+                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 1']
+                elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
+                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 2']
+                elif 2019.0 <= _year < 2031.0:
+                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 3']
+                elif 2031.0 <= _year < 2044.0:
+                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 4']
+                elif 2044.0 <= _year <= 2050.0:
+                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 5']
+                else:
+                    warnings.warn(
+                        'Year out of range for segment transport; using cost 4'
+                        )
+                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 4']
 
-            if path_dict['cost uncertainty']['segment transpo']['uncertainty'] == 'random':
-                _c = path_dict['cost uncertainty']['segment transpo']['c']
-                _loc = path_dict['cost uncertainty']['segment transpo']['loc']
-                _scale = path_dict['cost uncertainty']['segment transpo']['scale']
-                return st.triang.rvs(
-                    c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
-                ) * _vkmt / _mass
-            else:
-                return _cost * _vkmt / _mass
+            return _cost * _vkmt / _mass
 
 
 
@@ -558,7 +663,7 @@ class CostMethods:
         """
         _vkmt = path_dict['vkmt']
         _year = path_dict['year']
-        _cost = 0.0011221 * _year - 2.1912399
+
         if _vkmt is None:
             return 0.0
         else:
@@ -571,16 +676,29 @@ class CostMethods:
                     path_dict['cost uncertainty']['shred transpo']['b'],
                     self.run
                     )
-                return (_m * (_year - 2000.0) + _b) * _vkmt
-            elif path_dict['cost uncertainty']['shred transpo'] == 'random':
-                _c = path_dict['cost uncertainty']['shred transpo']['c']
-                _loc = path_dict['cost uncertainty']['shred transpo']['loc']
-                _scale = path_dict['cost uncertainty']['shred transpo']['scale']
-                return st.triang.rvs(
-                    c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed
-                ) * _vkmt
+            elif path_dict['cost uncertainty']['shred transpo']['uncertainty'] == 'stochastic':
+                if _year == self.start_year:
+                    _m = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['shred transpo']['m'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['shred transpo']['m'],dict):
+                        path_dict['cost uncertainty']['shred transpo']['m']['value'] = _m
+                    _b = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['shred transpo']['b'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['shred transpo']['b'],dict):
+                        path_dict['cost uncertainty']['shred transpo']['b']['value'] = _b
+                else:
+                    _m = path_dict['cost uncertainty']['shred transpo']['m']['value']
+                    _b = path_dict['cost uncertainty']['shred transpo']['b']['value']
             else:
-                return _cost * _vkmt
+                # with no uncertainty
+                _m = path_dict['cost uncertainty']['shred transpo']['m']
+                _b = path_dict['cost uncertainty']['shred transpo']['b']
+        
+            return (_m * (_year - 2000.0) + _b) * _vkmt
 
 
 
@@ -611,7 +729,7 @@ class CostMethods:
                 path_dict['cost uncertainty']['manufacturing']['b'],
                 self.run
                 )
-        if path_dict['cost uncertainty']['manufacturing']['uncertainty'] == 'random':
+        if path_dict['cost uncertainty']['manufacturing']['uncertainty'] == 'stochastic':
             _c = path_dict['cost uncertainty']['manufacturing']['c']
             _loc = path_dict['cost uncertainty']['manufacturing']['loc']
             _scale = path_dict['cost uncertainty']['manufacturing']['scale']
