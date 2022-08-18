@@ -489,7 +489,7 @@ class Context:
                         f"{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA"
                     )
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
-                self.lca.pylca_run_main(df_for_pylca_interface)
+                self.lca.pylca_run_main(df_for_pylca_interface, self.verbose)
             else:
                 if self.verbose == 1:
                   print(f"{datetime.now()} pylca_interface_process(): All Masses are 0")

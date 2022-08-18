@@ -320,7 +320,7 @@ class Scenario:
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
-            verbose = 0,
+            verbose = self.case["model_run"].get("lcia_verbose"),
             substitution_rate={
                 mat: apply_array_uncertainty(rate, self.run)
                 for mat, rate in self.scen["technology_components"]
