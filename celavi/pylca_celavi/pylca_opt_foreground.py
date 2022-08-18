@@ -1,12 +1,6 @@
-import warnings
 import pandas as pd
 import numpy as np
-import sys
-import multiprocessing
-import time
-import os
-import pyutilib.subprocess.GlobalData
-pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+import warnings
 
 
 #Reading in static and dynamics lca databases
@@ -92,11 +86,12 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
     Returns
     -------
     pd.DataFrame
-        LCA results
+        LCA results for foreground system in the form of a dataframe after performing LCA calculations
+        columns=['product', 'unit', 'value']
+        These are mass input flows to USLCI calculated for demand of material. No emission flows are included in this calculation. 
     """
 
     tm= tech_matrix.to_numpy()
-    det = np.linalg.det(tm)
     scv = np.linalg.solve(tm, F)
 
     scaling_vector = pd.DataFrame()
@@ -133,9 +128,9 @@ def electricity_corrector_before20(df):
     return df
 
 
-def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):    
+def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):    
     """
-    Calls the optimization function and arranges and stores the results into a proper pandas dataframe. 
+    Calls the LCA solver function and arranges and stores the results into a proper pandas dataframe. 
     
     Parameters
     ----------
@@ -153,10 +148,10 @@ def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_
         material
     route_id: str
         UUID identifying the transportation route
-    stage: str
-        stata
+    state: str
+        state in which LCA calculations are taking place
     final_demand_scaler: int
-        scaling variable number to ease optimization
+        scaling variable number to ease calculation
     process: list
         list of processes included in the technology matrix
     df_with_all_other_flows: pd.DataFrame
@@ -166,6 +161,10 @@ def runner(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_
     -------
     pd.DataFrame
         Returns the final LCA reults in a properly arranged dataframe with all supplemental information
+        LCA results in the form of a dataframe.
+        columns=['product', 'unit', 'value',
+                 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        These are mass input flows to USLCI calculated for demand of material at a certain stage and from a facility. No emission flows are included in this calculation. 
 
     """
 
@@ -197,6 +196,9 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
     Main function of this module which received information from DES interface and runs the supporting LCA functions. 
     Creates the technology matrix and the final demand vector based on input data. 
     Performs necessary checks before and after the LCA calculation. 
+    Checks performed 
+    1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
+    2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking. 
     
     Parameters
     ----------
@@ -212,23 +214,26 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
       material of LCA analysis
     route_id: str
         Unique identifier for transportation route.
+    state: str
+        state in which LCA calculations are taking place
     df_static: pd.Dataframe
       static foreground LCA inventory
     dynamic_lci_filename: str
       filename for the dynamic LCA inventory
-    
+
     Returns
     -------
     pd.DataFrame
-        Final LCA results in the form of a dataframe after performing after calculation checks
+       Final LCA results in the form of a dataframe after performing calculation checks
+       columns=['flow name', 'flow unit', 'flow quantity',
+                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+       These are mass input flows to USLCI calculated for demand of material at a certain stage and from a facility. No emission flows are included in this calculation. 
 
     """
 
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-    final_lci_result = pd.DataFrame()
     # Running LCA for all years as obtained from CELAVI
-
     #Incorporating dynamics lci database
     process_df,df_with_all_other_flows = preprocessing(int(yr),state,df_static,dynamic_lci_filename,electricity_grid_spatial_level)
     #Creating the technoology matrix for performing LCA caluclations
@@ -242,33 +247,31 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
     final_dem = product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
-    if chksum == 0:
-        print('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
+    if chksum <= 0:
+        warnings.warn('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
-    
+    #To make the calculation easier
+    elif chksum > 100000:
+        final_demand_scaler = 10000
+    elif chksum > 10000:
+        final_demand_scaler = 1000
+    elif chksum > 100:
+        final_demand_scaler = 10
     else:
-        #To make the calculation easier
-        if chksum > 100000:
-            final_demand_scaler = 10000
-        elif chksum > 10000:
-            final_demand_scaler = 1000
-        elif chksum > 100:
-            final_demand_scaler = 10
-        else:
-            final_demand_scaler = 1
-            
-        F = final_dem['flow quantity']
-        # Dividing by scaling value to solve scaling issues
-        F = F / final_demand_scaler
+        final_demand_scaler = 1
         
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, route_id, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
-        if len(res.columns) != 9:
-            print(f'model_celavi_lci: res has {len(res.columns)}; needs 9 columns',
-                  flush=True)
-            return pd.DataFrame(
-                columns=['flow name', 'unit', 'flow quantity',
-                         'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-            )
-        else:
-            res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-            return res
+    F = final_dem['flow quantity']
+    # Dividing by scaling value to solve scaling issues
+    F = F / final_demand_scaler
+    
+    res2 = lca_runner_foreground(tech_matrix, F, yr, fac_id, stage, material, route_id, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
+    if len(res2.columns) != 9:
+        print(f'model_celavi_lci: res has {len(res2.columns)}; needs 9 columns',
+              flush=True)
+        return pd.DataFrame(
+            columns=['flow name', 'flow unit', 'flow quantity',
+                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        )
+    else:
+        res2.columns = ['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        return res2

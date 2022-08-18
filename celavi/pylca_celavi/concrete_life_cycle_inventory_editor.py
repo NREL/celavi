@@ -86,7 +86,7 @@ def concrete_life_cycle_inventory_updater(d_f,
 
         sand_can_be_substituted = required_sand * substitution_rate['sand']
 
-        # if less GFrp is available than what can be substituted then complete GFRP can be used to substitute
+        # if less gfrp is available than what can be substituted then complete GFRP can be used to substitute
         if available_gfrp <= sand_can_be_substituted:
             sand_substituted = available_gfrp
         else:

@@ -40,7 +40,8 @@ class Context:
         end_year: int = 2050,
         max_timesteps: int = 600,
         timesteps_per_year: int = 12,
-        model_run : int = 0
+        model_run : int = 0,
+        verbose : int = 0
     ):
         """
         Parameters
@@ -93,6 +94,10 @@ class Context:
 
         model_run : int
             Model run identifier
+
+        verbose: int
+           toggle print statements of LCA mass available and calculation steps   
+           0 = no prints. 1 = all prints. 
         """
 
         self.model_run = model_run
@@ -185,6 +190,7 @@ class Context:
         self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
 
         self.data_for_lci: List[Dict[str, float]] = []
+        self.verbose = verbose
 
     def years_to_timesteps(self, year: float) -> int:
         """
@@ -478,13 +484,15 @@ class Context:
                             annual_data_for_lci.append(row)
 
             if annual_data_for_lci:
-                print(
-                    f"{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA"
-                )
+                if self.verbose == 1:
+                    print(
+                        f"{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA"
+                    )
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface)
             else:
-                print(f"{datetime.now()} pylca_interface_process(): All Masses are 0")
+                if self.verbose == 1:
+                  print(f"{datetime.now()} pylca_interface_process(): All Masses are 0")
 
     def average_total_component_mass_for_year(self, year):
         """

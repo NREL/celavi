@@ -1,20 +1,19 @@
-import pickle
 import pandas as pd
 import numpy as np
 import time
-import sys
-from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize, SolverFactory
-import pyutilib.subprocess.GlobalData
-pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+import warnings
 
-
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci_tech_filename,uslci_emission_filename,uslci_process_filename,
-                                lci_activity_locations):
+def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state, uslci_tech_filename,uslci_emission_filename,uslci_process_filename,verbose
+                                ):
 
     """
-    Main function of this module which receives information from DES interface and runs the suppoeting optimization functions. 
+    Main function of this module which receives information from DES interface and runs the suppoeting calculation functions. 
     Creates the technology matrix and the final demand vector based on input data. 
     Performs necessary checks before and after the LCA  calculation. 
+    
+    Checks performed 
+    1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
+    2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking.
     
     Parameters
     ----------
@@ -30,22 +29,25 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
       material of LCA analysis
     route_id: str
         Unique identifier for transportation route.
+    state: str
+        State in which LCA calculations are taking place.
     uslci_tech_filename: str
-      filename for the USLCI inventory
+      filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
     uslci_process_filename: str
-      filename for the USLCI process
+      filename for the USLCI process list matrix. It contains the list of processes in the USLCI.
     uslci_emission_filename: str
-      filename for the USLCI emissions
-
-    lci_activity_locations
-        Path to file that provides a correspondence between location
-        identifiers in the US LCI.
+      filename for the USLCI emissions list matrix. It contains the list of emissions from acttivities in the USLCI. 
+    verbose: int
+      verbose parameter for toggling print of LCA calculation steps. Default 0 no printout
     
     Returns
     -------
     pd.DataFrame
-       Final LCA results in the form of a dataframe after performing after calculation checks
-
+       Final LCA results in the form of a dataframe after performing calculation checks
+       columns=['product', 'unit', 'value',
+                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+       These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+      
     """
 
     def solver(tech_matrix,F,process_emissions):
@@ -67,11 +69,12 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
         Returns
         -------
         pd.DataFrame
-            LCA results
+            LCA results in the form of a dataframe after performing LCA calculations
+            columns=['product', 'unit', 'value']
+            These are mass pollutant flows calculated from USLCI for demand of material. 
+
         """
         tm = tech_matrix.to_numpy()
-        det = np.linalg.det(tm)
-
         scv = np.linalg.solve(tm, F)
         scv_df = pd.DataFrame()
         scv_df['scaling vector'] = scv
@@ -82,13 +85,15 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
         final_result['total_emission'] = final_result['scaling vector'] * final_result['value']
         final_result['value'] = final_result['total_emission']
         em_result = final_result[['product','value','process','unit']]
-        co2 = em_result[em_result['product'] == 'Carbon dioxide']
         emissions_results_total = final_result.groupby(['product','unit'])['value'].agg('sum').reset_index()
       
-        return emissions_results_total
+        if not emissions_results_total.empty:
+            return emissions_results_total
+        else:
+            return pd.DataFrame()
 
     
-    def runner(tech_matrix, F,i,l,j,k,route_id,final_demand_scaler,process_emissions):
+    def lca_runner_background(tech_matrix, F,i,l,j,k,route_id,state, final_demand_scaler,process_emissions,verbose):
 
         """
         Calls the solver function and arranges and stores the results into a proper pandas dataframe. 
@@ -109,36 +114,42 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
             material
         route_id: str
             Unique identifier for transportation route.
+        state: str
+            state in which LCA calculations are taking place
         final_demand_scaler: int
-            scaling variable number to ease optimization
+            scaling variable number to ease calculation
 
 
         Returns
         -------
         pd.DataFrame
-            Returns the final LCA reults in a properly arranged dataframe with all supplemental information
+            Returns the LCA reults in a properly arranged dataframe with all supplemental information
+            LCA results in the form of a dataframe.
+            columns=['flow name','flow unit','flow quantity',
+                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+            These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
 
         """
         tim0 = time.time()
-        res = pd.DataFrame()
         res = solver(tech_matrix, F,process_emissions)
         res['value'] = res['value']*final_demand_scaler
         if not res.empty:
+          
           res.loc[:,'year'] =  i
           res.loc[:,'facility_id'] =  l
           res.loc[:,'stage'] = j
           res.loc[:,'material'] = k
           res.loc[:,'route_id'] = route_id
-    
-          print(str(i) +' - '+j + ' - ' + k, flush = True)
+          res.loc[:, 'state'] = state
+          if verbose == 1:
+            print(str(i) +' - '+j + ' - ' + k, flush = True)
     
         else:                
-          print(f"pylca-opt-background emission failed for {k} at {j} in {i}", flush = True) 
+          warnings.warn(f"pylca-opt-background emission failed for {k} at {j} in {i}", flush = True) 
           pass       
         
-    
-        print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)
-    
+        if verbose == 1:
+            print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)    
         return res
     
 
@@ -155,19 +166,12 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
     uslci_process = list(tech_matrix.columns)
 
 
-    #Have to edit this final demand to match the results from CELAVI
-    #f_d['flow name'] = f_d['flow name'] +'@' + f_d['flow name']
-    #f_d['flow name'] = f_d['flow name'].str.lower()
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
 
 
     #Replace electricity    
-    #f_d  = f_d .replace(to_replace='electricity@electricity', value='electricity, at grid, us, 2010@electricity, at grid, us, 2010')
-    #f_d['flow name'] = f_d['flow name'] +'@' + f_d['location']
-    #f_d['flow name'] = f_d['flow name'].str.lower()
     f_d['conjoined_flownames'] = f_d['conjoined_flownames'].str.lower()  
-    f_d.to_csv('../../celavi-data/generated/intermediate_demand_foreground_uslci_data.csv', mode = 'a')
     #dataframe to debug connecting between foreground and background  
     uslci_products['conjoined_flownames'] = uslci_products['conjoined_flownames'].str.lower()  
     final_dem = uslci_products.merge(f_d, left_on='conjoined_flownames', right_on='conjoined_flownames', how='left')
@@ -176,14 +180,10 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
 
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
-        print('Final demand construction failed. No value. csv file for error checking created. /n Check the intermediate demand file and final demand check file')
-        final_dem.to_csv('../../celavi-data/generated/Final_demand_check_file.csv')
-        uslci_products.to_csv('../../celavi-data/generated/uslciproducts_file.csv')
-        f_d.to_csv('../../celavi-data/generated/demandforeground.csv')
-        sys.exit(1)
-
+        warnings.warn('Final demand construction failed. No value. csv file for error checking created. /n Check the intermediate demand file and final demand check file')
+        return pd.DataFrame()
     #To make the solution easier
-    if chksum > 100000:
+    elif chksum > 100000:
         final_demand_scaler = 100000
     elif chksum > 10000:
         final_demand_scaler = 10000
@@ -194,9 +194,17 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, uslci
 
     #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
-    #To make the optimization easier
+    #To make the calculation easier
     F = final_dem['flow quantity'].to_numpy()
-    res2 = runner(tech_matrix,F,yr,fac_id,stage,material,route_id,final_demand_scaler,process_emissions)
-    
-    return res2
+    res2 = lca_runner_background(tech_matrix,F,yr,fac_id,stage,material,route_id,state,final_demand_scaler,process_emissions,verbose)
+    if len(res2.columns) != 9:
+        print(f'model_celavi_lci: res has {len(res2.columns)}; needs 9 columns',
+              flush=True)
+        return pd.DataFrame(
+            columns=['flow name','flow unit','flow quantity',
+                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        )
+    else:
+        res2.columns = ['flow name','flow unit','flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        return res2
 

@@ -302,6 +302,8 @@ class Scenario:
             dynamic_lci_filename = self.files["national_electricity_lci"]
 
         # Prepare LCIA code
+        #verbose = 0 means no print statements. 
+        #verbose = 1 prints detailed LCA calculation steps
         self.lca = PylcaCelavi(
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
@@ -312,13 +314,13 @@ class Scenario:
             uslci_tech_filename=self.files["uslci_tech"],
             uslci_emission_filename=self.files["uslci_emission"],
             uslci_process_filename=self.files["uslci_process_adder"],
-            lci_activity_locations=self.files["lci_activity_locations"],
             stock_filename=self.files["stock_filename"],
             emissions_lci_filename=self.files["emissions_lci"],
             traci_lci_filename=self.files["traci_lci"],
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
+            verbose = 0,
             substitution_rate={
                 mat: apply_array_uncertainty(rate, self.run)
                 for mat, rate in self.scen["technology_components"]
@@ -541,6 +543,7 @@ class Scenario:
             "material",
             "route_id",
             "stage",
+            "state",
             "impact",
             "impact_value",
             "run",
