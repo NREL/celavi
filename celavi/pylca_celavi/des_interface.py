@@ -25,12 +25,14 @@ class PylcaCelavi:
         dynamic_lci_filename,
         electricity_grid_spatial_level,
         static_lci_filename,
-        uslci_filename,
-        lci_activity_locations,
+        uslci_tech_filename,
+        uslci_emission_filename,
+        uslci_process_filename,
         stock_filename,
         emissions_lci_filename,
         traci_lci_filename,
         use_shortcut_lca_calculations,
+        verbose,
         substitution_rate,
         run=0,
     ):
@@ -65,10 +67,6 @@ class PylcaCelavi:
         uslci_filename: str
             Path to the U.S. LCI dataset pickle file.
 
-        lci_activity_locations
-            Path to file that provides a correspondence between location
-            identifiers in the U.S. LCI.
-
         stock_filename: str
             filename for storage pickle variable
 
@@ -96,12 +94,14 @@ class PylcaCelavi:
         self.dynamic_lci_filename = dynamic_lci_filename
         self.electricity_grid_spatial_level = electricity_grid_spatial_level
         self.static_lci_filename = static_lci_filename
-        self.uslci_filename = uslci_filename
-        self.lci_activity_locations = lci_activity_locations
+        self.uslci_tech_filename = uslci_tech_filename
+        self.uslci_emission_filename = uslci_emission_filename
+        self.uslci_process_filename = uslci_process_filename
         self.stock_filename = stock_filename
         self.emissions_lci_filename = emissions_lci_filename
         self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
+        self.verbose = verbose
         self.substitution_rate = substitution_rate
         self.run = run
 
@@ -109,9 +109,11 @@ class PylcaCelavi:
         # Thus if there is a chance it exists we need to delete it
         try:
             os.remove(self.lcia_des_filename)
-            print(f"PylcaCelavi: Deleted {self.lcia_des_filename}")
+            if self.verbose == 1:
+                print(f"PylcaCelavi: Deleted {self.lcia_des_filename}")
         except FileNotFoundError:
-            print(f"PyLCIA: {self.lcia_des_filename} not found")
+            if self.verbose == 1:
+                print(f"PyLCIA: {self.lcia_des_filename} not found")
 
     def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
         """
@@ -189,14 +191,15 @@ class PylcaCelavi:
                 df_with_no_lca_entry = df_with_no_lca_entry[['year', 'facility_id', 'flow quantity', 'stage', 'material', 'flow unit']]  
 
             df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
-            df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id']]
+            df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id','state']]
             result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
             
             return df_with_no_lca_entry, result_shortcut
 
         except FileNotFoundError:
 
-            print("No existing shortcut LCA file:" + self.shortcutlca_filename)
+            if self.verbose == 1:
+                print("No existing shortcut LCA file:" + self.shortcutlca_filename)
             return df, pd.DataFrame()
 
     def pylca_run_main(self, df, verbose=0):
@@ -278,6 +281,7 @@ class PylcaCelavi:
                                 self.dynamic_lci_filename,
                                 self.electricity_grid_spatial_level,
                                 self.intermediate_demand_filename,
+                                self.verbose,
                             )
                             # model_celavi_lci_insitu() calculating direct emissions from foreground
                             # processes.
@@ -287,11 +291,13 @@ class PylcaCelavi:
                                 facility_id,
                                 stage,
                                 material,
+                                state,
                                 df_emissions,
+                                self.verbose,
                             )
-                            if not res.empty:                                
-                                res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,self.uslci_filename,self.lci_activity_locations)
-                                lci = postprocessing(res,emission)
+                            if not res.empty:                            
+                                res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,state,self.uslci_tech_filename,self.uslci_emission_filename,self.uslci_process_filename,self.verbose)
+                                lci = postprocessing(res,emission,self.verbose)
                                 res = impact_calculations(lci,self.traci_lci_filename)
                                 res_df = pd.concat([res_df,res])
 
@@ -300,7 +306,7 @@ class PylcaCelavi:
                                 del lcia_mass_flow['route_id']
                                 
                                 df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material'])
+                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material','state'])
                                 lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']  
                                 
                                 if self.electricity_grid_spatial_level == 'state':
@@ -331,7 +337,8 @@ class PylcaCelavi:
                                 )
 
                 else:
-                    print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
+                    if self.verbose == 1:
+                        print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
     
                 res_df = pd.concat([res_df,result_shortcut])
 
