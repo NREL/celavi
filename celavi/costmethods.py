@@ -269,7 +269,7 @@ class CostMethods:
                 _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']['value']
         else:
             # with no uncertainty
-            _learn_rate = _learn_dict['learn rate']
+            _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
             _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']
 
         # If the "cumul" value is None, then there has been no processing
@@ -347,7 +347,7 @@ class CostMethods:
                 _initial_cost = path_dict['cost uncertainty']['coarse grinding']['initial cost']['value']
         else:
             # with no uncertainty
-            _learn_rate = _learn_dict['learn rate']
+            _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
             _initial_cost = path_dict['cost uncertainty']['coarse grinding']['initial cost']
 
         # If the "cumul" value is None, then there has been no processing
@@ -448,7 +448,7 @@ class CostMethods:
                 _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']['value']
         else:
             # No uncertainty
-            _learn_rate = _learn_dict['learn rate']
+            _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
             _loss = path_dict['path_split']['fine grinding']['fraction']
             _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
             _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']
