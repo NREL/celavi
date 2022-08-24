@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import time
-import warnings
 
 def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state, uslci_tech_filename,uslci_emission_filename,uslci_process_filename,verbose
                                 ):
@@ -144,12 +143,13 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
           if verbose == 1:
             print(str(i) +' - '+j + ' - ' + k, flush = True)
     
-        else:                
-          warnings.warn(f"pylca-opt-background emission failed for {k} at {j} in {i}", flush = True) 
+        else:  
+          print(f"pylca-opt-background emission failed for {k} at {j} in {i}", flush = True) 
           pass       
         
         if verbose == 1:
             print(str(time.time() - tim0) + ' ' + 'taken to do this run',flush=True)    
+        
         return res
     
 
@@ -180,7 +180,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
 
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:
-        warnings.warn('Final demand construction failed. No value. csv file for error checking created. /n Check the intermediate demand file and final demand check file')
+        if verbose == 1:
+            print('Final demand construction failed. No value. csv file for error checking created. /n Check the intermediate demand file and final demand check file')
         return pd.DataFrame()
     #To make the solution easier
     elif chksum > 100000:

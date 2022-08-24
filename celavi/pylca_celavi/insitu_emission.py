@@ -1,5 +1,4 @@
 # INSITU EMISSION CALCULATOR
-import warnings
 import pandas as pd
 import numpy as np
 def preprocessing(year,df_static):
@@ -160,14 +159,14 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
        res.loc[:,'material'] = k
        res.loc[:,'state'] = state
     else:        
-       warnings.warn(f"Insitu emission calculation failed for {k} at {j} in {yr}")
+       print(f"Insitu emission calculation failed for {k} at {j} in {yr}")
     
     res = electricity_corrector_before20(res)
     res['route_id'] = None
     return res
 
 
-def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emissions):
+def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emissions, verbose):
 
 
     """
@@ -224,7 +223,8 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
     chksum = np.sum(final_dem['flow quantity'])
     F = final_dem['flow quantity']
     if chksum <= 0:
-        warnings.warn('LCA emissions inventory does not exist for %s %s %s' % (str(yr), stage, material))
+        if verbose == 1:
+            print('LCA emissions inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
         #Returns blank dataframe if not inventory is present
     

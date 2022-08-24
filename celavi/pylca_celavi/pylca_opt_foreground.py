@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-import warnings
 
 
 #Reading in static and dynamics lca databases
@@ -128,7 +127,7 @@ def electricity_corrector_before20(df):
     return df
 
 
-def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename):    
+def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename,verbose):    
     """
     Calls the LCA solver function and arranges and stores the results into a proper pandas dataframe. 
     
@@ -190,7 +189,7 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
        print(f"pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename):
+def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename,verbose):
 
     """
     Main function of this module which received information from DES interface and runs the supporting LCA functions. 
@@ -248,7 +247,8 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
     if chksum <= 0:
-        warnings.warn('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
+        if verbose == 1:
+            print('LCA inventory does not exist for %s %s %s' % (str(yr), stage, material))
         return pd.DataFrame()
     #To make the calculation easier
     elif chksum > 100000:
@@ -264,7 +264,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
     # Dividing by scaling value to solve scaling issues
     F = F / final_demand_scaler
     
-    res2 = lca_runner_foreground(tech_matrix, F, yr, fac_id, stage, material, route_id, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename)
+    res2 = lca_runner_foreground(tech_matrix, F, yr, fac_id, stage, material, route_id, state, final_demand_scaler, process, df_with_all_other_flows,intermediate_demand_filename,verbose)
     if len(res2.columns) != 9:
         print(f'model_celavi_lci: res has {len(res2.columns)}; needs 9 columns',
               flush=True)

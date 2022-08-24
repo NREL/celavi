@@ -1,5 +1,5 @@
 import pandas as pd
-import warnings
+
 
 
 
@@ -28,7 +28,8 @@ def postprocessing(final_res,insitu, verbose):
 
     """
     if final_res.empty:
-        warnings.warn('pylca_celavi_background_postprocess: final_res is empty')
+        if verbose == 1:
+            print('pylca_celavi_background_postprocess: final_res is empty')
     else:
         pass
     

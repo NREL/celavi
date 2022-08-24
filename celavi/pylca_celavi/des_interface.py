@@ -1,8 +1,6 @@
 import pandas as pd
 from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
 from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
-import warnings
-warnings.filterwarnings("ignore")
 import os
 from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
 
@@ -111,9 +109,11 @@ class PylcaCelavi:
         # Thus if there is a chance it exists we need to delete it
         try:
             os.remove(self.lcia_des_filename)
-            print(f"PylcaCelavi: Deleted {self.lcia_des_filename}")
+            if self.verbose == 1:
+                print(f"PylcaCelavi: Deleted {self.lcia_des_filename}")
         except FileNotFoundError:
-            print(f"PyLCIA: {self.lcia_des_filename} not found")
+            if self.verbose == 1:
+                print(f"PyLCIA: {self.lcia_des_filename} not found")
 
     def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
         """
@@ -281,6 +281,7 @@ class PylcaCelavi:
                                 self.dynamic_lci_filename,
                                 self.electricity_grid_spatial_level,
                                 self.intermediate_demand_filename,
+                                self.verbose,
                             )
                             # model_celavi_lci_insitu() calculating direct emissions from foreground
                             # processes.
@@ -292,6 +293,7 @@ class PylcaCelavi:
                                 material,
                                 state,
                                 df_emissions,
+                                self.verbose,
                             )
                             if not res.empty:                            
                                 res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,state,self.uslci_tech_filename,self.uslci_emission_filename,self.uslci_process_filename,self.verbose)
