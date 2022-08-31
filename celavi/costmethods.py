@@ -449,7 +449,10 @@ class CostMethods:
         else:
             # No uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = path_dict['path_split']['fine grinding']['fraction']
+            _loss = apply_array_uncertainty(
+                path_dict['path_split']['fine grinding']['fraction'],
+                self.run
+                )
             _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']
             _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']
 
