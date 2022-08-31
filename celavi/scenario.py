@@ -104,6 +104,7 @@ class Scenario:
         # Subtract one from the number of runs in the config file because
         # arange includes zero in the list
         for i in np.arange(self.scen["scenario"]["runs"]):
+            time0 = time.time()
             self.run = i
             self.execute()
 
@@ -114,9 +115,10 @@ class Scenario:
 
             # Postprocess and save the output of a single model run
             self.postprocess()
+            print(f'Run {i} took {str(time.time()-time0)} seconds', flush = True)
 
         # Print run finish message
-        print(f"FINISHED RUN at {self.simtime(self.start)} s", flush=True)
+        print(f"FINISHED SIMULATION at {self.simtime(self.start)} s", flush=True)
 
     def get_filepaths(self):
         """
