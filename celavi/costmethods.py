@@ -165,7 +165,6 @@ class CostMethods:
                 path_dict['cost uncertainty']['rotor teardown']['b'],
                 self.run
                 )
-            return 
         else:
             # with no uncertainty
             _m = path_dict['cost uncertainty']['rotor teardown']['m']
@@ -732,6 +731,7 @@ class CostMethods:
                 path_dict['cost uncertainty']['manufacturing']['b'],
                 self.run
                 )
+            return _cost
         if path_dict['cost uncertainty']['manufacturing']['uncertainty'] == 'stochastic':
             _c = path_dict['cost uncertainty']['manufacturing']['c']
             _loc = path_dict['cost uncertainty']['manufacturing']['loc']
