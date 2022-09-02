@@ -719,10 +719,13 @@ class CostGraph:
 
             # Year and component mass are defined when CostGraph is instantiated
             # and do not need to be updated during supply chain generation
-
-            self.supply_chain.edges[edge]["cost"] = sum(
-                [f(_edge_dict) for f in self.supply_chain.edges[edge]["cost_method"]]
-            )
+            try:
+                self.supply_chain.edges[edge]["cost"] = sum(
+                    [f(_edge_dict) for f in self.supply_chain.edges[edge]["cost_method"]]
+                )
+            except TypeError:
+                print(f'CostGraph: A cost method assigned to {edge} is returning None', flush=True)
+                raise TypeError 
 
         if self.verbose > 0:
             print(
