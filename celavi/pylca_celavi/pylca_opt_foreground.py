@@ -29,6 +29,8 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
         cleaned process inventory merged with dynamic data
     pd.DataFrame    
         inventory with no product flows
+    columns=['flow name', 'flow unit', 'flow quantity',
+                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
 
     """
     
@@ -122,6 +124,8 @@ def electricity_corrector_before20(df):
     pd.DataFrame
         process inventory with electricity flows before 2020 converted to the base electricity
         mix flow in USLCI. 
+    columns=['flow name', 'flow unit', 'flow quantity',
+                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
     """
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
