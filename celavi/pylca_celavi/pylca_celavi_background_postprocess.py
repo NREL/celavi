@@ -24,7 +24,8 @@ def postprocessing(final_res,insitu, verbose):
     Returns
     -------
     pd.DataFrame
-       final combined total emissions dataframe   
+       final combined total emissions dataframe with individual pollutant information
+       columns = ['flow name', 'flow unit', 'year', 'facility_id', 'stage', 'material', 'route_id','state','flow quantity']  
 
     """
     if final_res.empty:
@@ -69,7 +70,8 @@ def impact_calculations(final_res,traci_lci_filename):
     Returns
     -------
     pd.DataFrame
-        dataframe wih LCIA impact results    
+        dataframe wih LCIA impact results
+        columns = ['year', 'facility_id', 'material', 'route_id', 'state', 'stage', 'impacts', 'impact']    
     """     
    
     traci = pd.read_csv(traci_lci_filename)
