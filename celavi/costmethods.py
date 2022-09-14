@@ -1,3 +1,4 @@
+from random import seed
 import scipy.stats as st
 import warnings
 
@@ -256,16 +257,23 @@ class CostMethods:
                 self.run
                 )
         elif path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'stochastic':
-            _learn_rate = _learn_dict['learn rate']
             if path_dict['year'] == self.start_year:
                     _initial_cost = apply_stoch_uncertainty(
                         path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],
                         seed=self.seed
                     )
+                    # Because the triangular distribution has to be positive, apply a negative here
+                    _learn_rate = -1.0 * apply_stoch_uncertainty(
+                        _learn_dict['learn rate'],
+                        seed=self.seed
+                    )                    
                     if isinstance(path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],dict):
                         path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']['value'] = _initial_cost
+                    if isinstance(_learn_dict['learn rate'], dict):
+                        _learn_dict['learn rate']['value'] = _learn_rate
             else:
                 _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']['value']
+                _learn_rate = _learn_dict['learn rate']['value']
         else:
             # with no uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
@@ -319,7 +327,7 @@ class CostMethods:
             Current cost of coarse grinding one metric ton of segmented blade
             material in a mechanical recycling facility.
         """
-        _learn_dict = path_dict['learning']['coarse grinding']      
+        _learn_dict = path_dict['learning']['coarse grinding']
 
         # Implement uncertainty on initial cost before applying learning model
         if path_dict['cost uncertainty']['coarse grinding']['uncertainty'] == 'array':
@@ -334,16 +342,22 @@ class CostMethods:
                 self.run
                 )
         elif path_dict['cost uncertainty']['coarse grinding']['uncertainty'] == 'stochastic':
-            _learn_rate = _learn_dict['learn rate']
             if path_dict['year'] == self.start_year:
                     _initial_cost = apply_stoch_uncertainty(
                         path_dict['cost uncertainty']['coarse grinding']['initial cost'],
                         seed=self.seed
                     )
+                    _learn_rate = -1.0 * apply_stoch_uncertainty(
+                        _learn_dict['learn rate'],
+                        seed=self.seed
+                    )                    
                     if isinstance(path_dict['cost uncertainty']['coarse grinding']['initial cost'],dict):
                         path_dict['cost uncertainty']['coarse grinding']['initial cost']['value'] = _initial_cost
+                    if isinstance(_learn_dict['learn rate'], dict):
+                        _learn_dict['learn rate']['value'] = _learn_rate                    
             else:
                 _initial_cost = path_dict['cost uncertainty']['coarse grinding']['initial cost']['value']
+                _learn_rate = _learn_dict['learn rate']['value']
         else:
             # with no uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
@@ -421,28 +435,34 @@ class CostMethods:
                 )
 
         elif path_dict['cost uncertainty']['fine grinding']['uncertainty'] == 'stochastic':
-            _learn_rate = _learn_dict['learn rate']
             if path_dict['year'] == self.start_year:
                 _loss = apply_stoch_uncertainty(
                     path_dict['path_split']['fine grinding']['fraction'],
                     seed=self.seed
                     )
-                if isinstance(path_dict['path_split']['fine grinding']['fraction'],dict):
-                    path_dict['path_split']['fine grinding']['fraction']['value'] = _loss
+                _learn_rate = -1.0 * apply_stoch_uncertainty(
+                    _learn_dict['learn rate'],
+                    seed=self.seed
+                    )
                 _initial_cost = apply_stoch_uncertainty(
                     path_dict['cost uncertainty']['fine grinding']['initial cost'],
                     seed=self.seed
                     )
-                if isinstance(path_dict['cost uncertainty']['fine grinding']['initial cost'],dict):
-                    path_dict['cost uncertainty']['fine grinding']['initial cost']['value'] = _initial_cost
                 _revenue = apply_stoch_uncertainty(
                     path_dict['cost uncertainty']['fine grinding']['revenue'],
                     seed=self.seed
                     )
+                if isinstance(path_dict['path_split']['fine grinding']['fraction'],dict):
+                    path_dict['path_split']['fine grinding']['fraction']['value'] = _loss
+                if isinstance(_learn_dict['learn rate'], dict):
+                    _learn_dict['learn rate']['value'] = _learn_rate
+                if isinstance(path_dict['cost uncertainty']['fine grinding']['initial cost'],dict):
+                    path_dict['cost uncertainty']['fine grinding']['initial cost']['value'] = _initial_cost
                 if isinstance(path_dict['cost uncertainty']['fine grinding']['revenue'], dict):
                     path_dict['cost uncertainty']['fine grinding']['revenue']['value'] = _revenue
             else:
                 _loss = path_dict['path_split']['fine grinding']['fraction']['value']
+                _learn_rate = _learn_dict['learn rate']['value']
                 _initial_cost = path_dict['cost uncertainty']['fine grinding']['initial cost']['value']
                 _revenue = path_dict['cost uncertainty']['fine grinding']['revenue']['value']
         else:
