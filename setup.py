@@ -1,7 +1,7 @@
 import setuptools
 
 name = "celavi"
-version = "0.0.4"
+version = "1.2.0"
 
 with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
