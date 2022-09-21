@@ -15,6 +15,7 @@ Welcome to CELAVI's documentation!
    doc_des
    doc_costgraph
    doc_pylcia
+   doc_uncertainty
    doc_diagnostic_viz
 
 
