@@ -2,76 +2,108 @@ import pandas as pd
 import numpy as np
 import time
 
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state, uslci_tech_filename,uslci_emission_filename,uslci_process_filename,verbose
-                                ):
+def model_celavi_lci_background(
+    f_d,
+    yr,
+    fac_id,
+    stage,
+    material,
+    route_id,
+    state,
+    uslci_tech_filename,
+    uslci_emission_filename,
+    uslci_process_filename,
+    verbose
+    ):
 
     """
-    Main function of this module which receives information from DES interface and runs the suppoeting calculation functions. 
-    Creates the technology matrix and the final demand vector based on input data. 
-    Performs necessary checks before and after the LCA  calculation. 
+    Runs the pollutant inventory calculations based on information provided by the DES interface.
+
+    Creates the technology matrix and the final demand vector based on input data.
+    Performs necessary checks before and after the LCA  calculation.
     
-    Checks performed 
-    1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
-    2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking.
+    Checks performed:
+        1. Final demand by the foreground system is not zero. If the final demand is zero, this method
+        returns an empty DataFrame and the simulation continues.
+        2. Checks the LCA solver returned a non-empty DataFrame. If an empty DataFrame is returned,
+        this method attaches column names to the DataFrame and the simulation continues.
     
     Parameters
     ----------
-    f_d: pd.Dataframe
-      Dataframe from DES interface containing material flow information
+    f_d: pandas.DataFrame
+        Dataframe from DES interface containing material flow information
     yr: int
-      year of analysis
+        Model year
     fac_id: int
-      facility id
+        Facility id
     stage: str
-      stage of analysis
+        Supply chain stage
     material: str
-      material of LCA analysis
+        Material being processed
     route_id: str
         Unique identifier for transportation route.
     state: str
         State in which LCA calculations are taking place.
     uslci_tech_filename: str
-      filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
+        Filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
     uslci_process_filename: str
-      filename for the USLCI process list matrix. It contains the list of processes in the USLCI.
+        Filename for the USLCI process list matrix. It contains the list of processes in the USLCI.
     uslci_emission_filename: str
-      filename for the USLCI emissions list matrix. It contains the list of emissions from acttivities in the USLCI. 
+        Filename for the USLCI emissions list matrix. It contains the list of emissions from acttivities in the background process inventory. 
     verbose: int
-      verbose parameter for toggling print of LCA calculation steps. Default 0 no printout
+        Toggles level of progress reporting provided by this method. Defaults to 0 (no reporting).
     
     Returns
     -------
     pd.DataFrame
-       Final LCA results in the form of a dataframe after performing calculation checks
-       columns=['product', 'unit', 'value',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-       These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
-      
+        Mass pollutant flows for demand of material from a facility.
+        Columns:
+            - product: str
+                Name of pollutant.
+            - unit: str
+                Pollutant flow units.
+            - value: float
+                Pollutant flow value.
+            - year: int
+                Model year.
+            - facility_id: int
+                Facility ID.
+            - stage: str
+                Supply chain stage at this facility.
+            - material: str
+                Name of material being processed.
+            - route_id: str
+                UUID for transportation route
+            - state: str
+                State in which facility is located.
     """
 
     def solver(tech_matrix,F,process_emissions):
-        
         """
-        This function houses the solver to solve Xs = F. 
-        Solves the Xs=F equation. 
-        Solves the scaling vector.  
+        Calculates the process scaling vector s by solving the Xs = F material balance equations. 
 
         Parameters
         ----------
-        tech_matrix : numpy matrix
-             technology matrix from the process inventory
-        F : vector
-             Final demand vector 
+        tech_matrix: Matrix
+            Technology matrix generated from the background inventory.
+        F: vector
+            Final demand vector representing supply chain material and energy inputs.
+        process: list
+            List of process names corresponding to the scaling vector s.  
         process_emissions: str
-             filename for the emissions dataframe
+            Filename for the process-level emissions dataframe
         
         Returns
         -------
         pd.DataFrame
-            LCA results in the form of a dataframe after performing LCA calculations
-            columns=['product', 'unit', 'value']
-            These are mass pollutant flows calculated from USLCI for demand of material. 
-
+            Mass pollutant flows calculated from the background process inventory for the final demand F.
+            Columns:
+                - product: int
+                    Name of pollutant.
+                - unit: int
+                    Unit of pollutant flow.
+                - value: float
+                    Value of pollutant flow.
         """
         tm = tech_matrix.to_numpy()
         scv = np.linalg.solve(tm, F)
@@ -95,39 +127,47 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     def lca_runner_background(tech_matrix, F,i,l,j,k,route_id,state, final_demand_scaler,process_emissions,verbose):
 
         """
-        Calls the solver function and arranges and stores the results into a proper pandas dataframe. 
+        Calls the solver function to perform LCIA calculations.
+        
+        Arranges and returns the pollutant results as a DataFrame. 
         
         Parameters
         ----------
         tech matrix: pd.Dataframe
-             technology matrix built from the process inventory. 
+            Technology materix representing the background inventory.
         F: final demand series vector
-             final demand of the LCA problem
+            Final demand vector of the supply chain material and energy inputs.
         yr: int
-             year of analysis
+            Model year.
         i: int
-             facility ID
+            Facility ID.
         j: str
-            stage
+            Supply chain stage.
         k: str
-            material
+            Material being processed.
         route_id: str
             Unique identifier for transportation route.
         state: str
-            state in which LCA calculations are taking place
+            State in which facility is located.
         final_demand_scaler: int
-            scaling variable number to ease calculation
-
-
+            Scaling integer to avoid badly-scaled matrix calculations.
+        verbose: int
+            Controls the level of progress reporting from this method.
+        
         Returns
         -------
         pd.DataFrame
-            Returns the LCA reults in a properly arranged dataframe with all supplemental information
-            LCA results in the form of a dataframe.
-            columns=['flow name','flow unit','flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-            These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
-
+            Mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility.
+            Columns:
+                - flow name
+                - flow unit
+                - flow quantity
+                - year
+                - facility_id
+                - stage
+                - material
+                - route_id
+                - state
         """
         tim0 = time.time()
         res = solver(tech_matrix, F,process_emissions)
@@ -165,10 +205,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     uslci_products = pd.DataFrame(tech_matrix.index)
     uslci_process = list(tech_matrix.columns)
 
-
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
-
 
     #Replace electricity    
     f_d['conjoined_flownames'] = f_d['conjoined_flownames'].str.lower()  
@@ -176,7 +214,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     uslci_products['conjoined_flownames'] = uslci_products['conjoined_flownames'].str.lower()  
     final_dem = uslci_products.merge(f_d, left_on='conjoined_flownames', right_on='conjoined_flownames', how='left')
     final_dem = final_dem.fillna(0)
-
 
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:

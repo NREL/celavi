@@ -36,55 +36,42 @@ class PylcaCelavi:
         substitution_rate,
         run=0,
     ):
-
         """
-        Stores filenames in self and deletes old interface file if they exist.
+        Stores filenames in self and deletes old interface file if it exists.
         
         Parameters
         ----------
-        lcia_des_filename : str
+        lcia_des_filename: str
             Path to file that stores calculated impacts for passing back to the
             discrete event simulation.
-
         shortcutlca_filename: str
             Path to file where previously calculated impacts are stored. This file
             can be used instead of re-calculating impacts from the inventory.
-
-        intermediate_demand_filename : str
+        intermediate_demand_filename: str
             Path to file that stores the final demand vector every time the LCIA 
             calculations are run. For debugging purposes only.
-
         dynamic_lci_filename: str
             Path to the LCI dataset which changes with time.
-            
         electricity_grid_spatial_level: str
             Specification of grid spatial level used for lca calculations. Must be
             "state" or "national".
-
         static_lci_filename: str
             Path to the LCI dataset which does not change with time.
-
         uslci_filename: str
             Path to the U.S. LCI dataset pickle file.
-
         stock_filename: str
-            filename for storage pickle variable
-
+            Filename for storage pickle variable.
         emissions_lci_filename: str
-            filename for emissions inventory
-
+            Filename for emissions inventory.
         traci_lci_filename: str
-           Path to TRACI 2.0 characterization factor dataset.
-
-        use_shortcut_lca_calculations: bool
+           Filename for TRACI 2.0 characterization factor dataset.
+        use_shortcut_lca_calculations: Boolean
             Boolean flag for using previously calculating impact data or running the
             optimization code to re-calculate impacts.
-            
         substitution_rate: Dict
             Dictionary of material name: substitution rates for materials displaced by the
             circular component.
-        
-        run : int
+        run: int
             Model run. Defaults to zero.
         """
         # filepaths for files used in the pylca calculations
@@ -118,54 +105,69 @@ class PylcaCelavi:
     def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
         """
         This function is used to bypass optimization based pylca celavi calculations
-        It reads emission factor data from previous runs stored in a file
-        and performs lca rapidly.
+        It reads emission factor data from previous runs stored in a shortcut LCA file
+        and performs LCIA rapidly.
 
-        Needs to be reset after any significant update to data.
+        The emission factor data file should be deleted and re-generated after any
+        significant updates to the input datasets or scenario definition.
 
         Parameters
         ----------
         df: pandas.DataFrame
             Material flow and process information provided by the DES.
-
             Columns:
                 - year: int
-                    Simulation year.
+                    Model year.
                 - stage: str
+                    Supply chain stage
                 - material: str
+                    Material name
                 - state: str
                     Optional state identifier. Required only if electricity_grid_spatial_level is "state".
                 - route_id: str
                     UUID for the route along which transportation occurs. None for non-transportation activities.
         
         state : str
-            State identifier.
+            State identifier. Currently not used
 
         electricity_grid_spatial_level : str
-            Specification of grid spatial level used for lca calculations. Must be
-            "state" or "national".
+            Specification of grid spatial level used for lca calculations. Must be "state" or "national".
         
         Returns
         -------
-        pandas.DataFrame, pandas.DataFrame
-            df provided to method and impacts from the shortcut LCA file, or an empty data frame if the file doesn't exist.
-
+        pandas.DataFrame
+            Material flow and process information provided by the DES.
             Columns:
                 - year: int
+                    Model year.
                 - stage: str
+                    Supply chain stage.
                 - material: str
+                    Material being processed.
                 - state: str
+                    State in which process exists.
                 - route_id: str
+                    UUID of transportation route.
 
+        pandas.DataFrame
+            Pollutant flows from the shortcut LCA file, or an empty DataFrame if the shortcut file doesn't exist
             Columns:
                 - flow name: str
+                    Pollutant name.
                 - flow unit: str
+                    Unit of pollutant flow.
                 - flow quantity: float
+                    Pollutant flow quantity.
                 - year: int
+                    Model year.
                 - facility_id: int
+                    Facility ID.
                 - stage: str
+                    Supply chain stage.
                 - material: str
+                    Material being processed.
                 - route_id: str
+                    UUID of transportation route.
         """
         try:
             if electricity_grid_spatial_level != 'state':
@@ -204,17 +206,23 @@ class PylcaCelavi:
 
     def pylca_run_main(self, df, verbose=0):
         """
-        This function runs the individual pylca celavi functions for performing various calculations
+        Runs all LCIA calculations (insitue, background, foreground, and postprocessing).
+        
+        Returns LCIA results as a DataFrame, and appends the LCIA results to a CSV file for debugging.
         
         Parameters
         ----------
-        df: pd.DataFrame
-             Material flows from DES
+        df: pandas.DataFrame
+            Material flows from DES.
+            Columns:
+                - ?
         
         Returns
         -------
-        pd.DataFrame
-            LCIA results (also appends to csv file)
+        pandas.DataFrame
+            Environmental impact quantities (TRACI).
+            Columns:
+                - ?
         """
         df = df[df["flow quantity"] != 0]
         res_df = pd.DataFrame()
@@ -341,9 +349,7 @@ class PylcaCelavi:
                         print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
     
                 res_df = pd.concat([res_df,result_shortcut])
-
-        import time
-        time0 = time.time()
+        
         #Correcting the units for LCIA results. 
         for index,row in res_df.iterrows():
             a = row['impacts']

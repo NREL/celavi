@@ -1,27 +1,27 @@
-# INSITU EMISSION CALCULATOR
+"""
+Methods for calculating insitu or process-level emissions.
+"""
+
 import pandas as pd
 import numpy as np
-def preprocessing(year,df_static):
 
+def preprocessing(df_static):
     """
-    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
-    inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
+    Preprocesses the process material and energy input inventory before the LCA calculations are performed 
+    and removes dummy processes with no output from the background inventory.
 
     Parameters
     ----------
-    year : str
-        year of LCA calculation
     df_static : pd.DataFrame
-        lca inventory static 
-
+        Static insitu inventory. Columns are derived from the processes with insitu emissions.
     
     Returns
     -------
     pd.DataFrame
-       cleaned process inventory merged with dynamic data
+        Preprocessed background inventory. Columns are derived from the background LCI database being used.
+    
     pd.DataFrame   
-       inventory with no product flows
-
+        Background inventory with no product flows. Columns are derived from the background LCI database being used.
     """
     df = df_static
     df_input = df[df['input'] == True]
@@ -44,34 +44,34 @@ def preprocessing(year,df_static):
     return process_df, df_with_all_other_flows
 
 
-def solver(tech_matrix,F,process, df_with_all_other_flows):
-
+def solver(tech_matrix, F, process, df_with_all_other_flows):
     """
-    This function houses the calculator to solve Xs = F. 
-    Solves the Xs=F equation. 
-    Solves the scaling vector.  
+    Calculates the process scaling vector s by solving the Xs = F material balance equations.
 
     Parameters
     ----------
-    tech_matrix : numpy matrix
-         technology matrix from the process inventory
-    F : vector
-         Final demand vector 
+    tech_matrix: array
+        Technology matrix (two-dimensional array) generated from the background inventory. Columns are derived from the background LCI database being used.
+    F: array
+        Final demand vector (one-dimensional array) representing supply chain material and energy inputs.
     process: list
-         filename for the dynamic inventory   
-    df_with_all_other_flows: pd.DataFrame
-         lca inventory with no product flows
+        List of process names corresponding to the scaling vector s.  
+    df_with_all_other_flows: pandas.DataFrame
+        Background process inventory with no product flows. Columns are derived from the background LCI database being used.
 
-    
     Returns
     -------
-    pd.DataFrame
-        LCA results in the form of a dataframe after performing LCA calculations
-        columns=['product', 'unit', 'value']
-        These are mass pollutant flows calculated from USLCI for demand of material. 
+    pandas.DataFrame
+        LCIA results: Mass pollutant flows associated with the supply chain's material and energy inputs.
+        Columns:
+            - product: str
+                Name of pollutant.
+            - unit: str
+                Unit for pollutant flow.
+            - value: float
+                Pollutant flow quantity.
     """
-
-    tm= tech_matrix.to_numpy()
+    tm = tech_matrix.to_numpy()
     scv = np.linalg.solve(tm, F)
 
     scaling_vector = pd.DataFrame()
@@ -92,63 +92,73 @@ def electricity_corrector_before20(df):
     This function is used to replace pre 2020 electricity flows with the base electricity mix flow
     in the USLCI inventory Electricity, at Grid, US, 2010'
     
-
     Parameters
     ----------
     df: pd.DataFrame
-        process inventory
+        Background process inventory. Columns are derived from the background LCI database being used.
 
     Returns
     -------
     pd.DataFrame
-       process inventory with electricity flows before 2020 converted to the base electricity
-       mix flow in USLCI. 
+       Background process inventory with electricity flows before 2020 converted to the base electricity
+       mix flow in USLCI. Columns are derived from the background LCI database being used.
     """
-
-    
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
-def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_other_flows):
-
+def runner_insitu(
+    tech_matrix,
+    F,
+    yr,
+    i,
+    j,
+    k,
+    state,
+    final_demand_scaler,
+    process,
+    df_with_all_other_flows
+    ):
     """
     Runs the solver function and creates final data frame in proper format
 
     Parameters
     ----------
     tech matrix: pd.Dataframe
-         technology matrix built from the process inventory. 
-    F: final demand series vector
-         final demand of the LCA problem
+        Technology matrix form of the background process inventory. 
+    F: pd.Series
+        Final demand vector with supply chain material and energy inputs.
     yr: int
-         year of analysis
+        Model year
     i: int
-         facility ID
+        facility ID
     j: str
-        stage
+        Name of supply chain stage
     k: str
-        material
+        Name of material
     state: str
-        state in which LCA calculations are taking place
+        State where the facility is located.
     final_demand_scaler: int
-        scaling variable number to ease lca calculation
+        Integer for scaling final demand and avoiding badly scaled matrix calculations.
     process: list
-        list of processes included in the technology matrix
+        List of processes included in the technology matrix
     df_with_all_other_flows: pd.DataFrame
         Dataframe with flows in the inventory which do not have a production process. 
     
-
     Returns
     -------
     pd.DataFrame
-        Returns the LCA reults in a properly arranged dataframe with all supplemental information
-        LCA results in the form of a dataframe.
-        columns=['product', 'unit', 'value',
-                 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-        These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+        Returns the pollutant inventory (pollutant mass flows) for processing material k through facility i in year yr.
+        Columns:
+            - product: str
+            - unit: str
+            - value: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: str
+            - state: str
     """
-
-    
     res = pd.DataFrame()
     res = solver(tech_matrix, F, process, df_with_all_other_flows) 
     res['value'] = res['value']*final_demand_scaler
@@ -167,44 +177,56 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
 
 
 def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emissions, verbose):
-
-
     """
-    This is used for calculating insitu emissions
-    Creates technology matrix and final demand vector from inventory data
-    Runs the PyLCA solver to perform LCA calculations
-    Conforms results to a dataframe 
+    Calculate insitu (process-level or Scope 1) emissions.
+
+    Creates technology matrix and final demand vector from the background inventory. 
+    Runs the PyLCA solver to calculate pollutant mass flows.
+    Returns insitue pollutant mass flows as a DataFrame.
 
     Parameters
     ----------
-    f_d: Dataframe 
-    Dataframe from DES 
-    
+    f_d: pandas.DataFrame 
+        Final demand for the process with insitu emissions.
     yr: int
-    Year of calculation
-
+        Model year.
     fac_id: int
-    Facility ID of facility being evaluated
-
+        Facility ID of facility being evaluated
     stage: str 
-    Stage of facility being evaluated
-
+        Supply chain stage.
     material: str
-    material being evaluated
-
-    df_emission: df
-    Emissons inventory
+        Material being processed.
+    df_emission: pandas.DataFrame
+        Insitu emissons inventory.
+        Columns:
+            - ?
+    verbose: int
+        Controls the level of progress reporting from this method.
 
     Returns
     -------
     pd.DataFrame
-       Returns INSITU Final LCA results in the form of a dataframe after performing calculation checks
-       columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-       These are insitu mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+        Insitu mass pollutant flows for processing "material" through "fac_id".
+        Columns:
+            - flow name: str
+                Name of pollutant
+            - flow unit: str
+                Pollutant unit
+            - flow quantity: float
+                Quantity of pollutant produced
+            - year: int
+                Model year
+            - facility_id: int
+                ID of supply chain facility producing these pollutants
+            - stage: str
+                Supply chain stage at this facility
+            - material: str
+                Material being processed
+            - route_id: str
+                UUID for route, for transportation calculations
+            - state: str
+                State in which facility is located
     """
-
-
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
     # Running LCA for all years as obtained from CELAVI

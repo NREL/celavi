@@ -2,36 +2,55 @@ import pandas as pd
 import numpy as np
 
 
-#Reading in static and dynamics lca databases
-
-
-#We are integrating static lca with dynamics lca over here. 
-def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level):
-
+def preprocessing(
+    year,
+    state,
+    df_static,
+    dynamic_lci_filename,
+    electricity_grid_spatial_level
+    ):
     """
-    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
-    inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
+    Preprocesses the foreground process inventory, joins the dynamic and static inventories, and
+    removes dummy processes with no output from the inventory. 
 
     Parameters
     ----------
     year : str
-         year of LCA calculation
+        Model year.
     state : str
-         state of Facility
+        State in which calculations are taking place.
     df_static : pd.DataFrame
-         lca inventory static 
+        Static foreground LCI.
     dynamic_lci_filename: str
-         filename for the dynamic inventory   
+        Dynamic foreground LCI.
     
     Returns
     -------
     pd.DataFrame
-        cleaned process inventory merged with dynamic data
+        Cleaned foreground inventory merged with dynamic data.
+        Columns:
+            - flow name
+            - flow unit
+            - flow quantity
+            - year
+            - facility_id
+            - stage
+            - material
+            - route_id
+            - state
+    
     pd.DataFrame    
-        inventory with no product flows
-    columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-
+        Foreground inventory with no product flows.
+        Columns:
+            - flow name
+            - flow unit
+            - flow quantity
+            - year
+            - facility_id
+            - stage
+            - material
+            - route_id
+            - state
     """
     
     #Reading in dynamics LCA databases
@@ -68,28 +87,29 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
 def solver(tech_matrix,F,process, df_with_all_other_flows):
 
     """
-    This function houses the calculator to solve Xs = F. 
-    Solves the Xs=F equation. 
-    Solves the scaling vector.  
+    Calculates the process scaling vector s by solving the Xs = F material balance equations.
 
     Parameters
     ----------
-    tech_matrix : numpy matrix
-         technology matrix from the process inventory
-    F : vector
-         Final demand vector 
+    tech_matrix: Matrix
+        Technology matrix generated from the background inventory.
+    F: vector
+        Final demand vector representing supply chain material and energy inputs.
     process: list
-         filename for the dynamic inventory   
+        List of process names corresponding to the scaling vector s.
     df_with_all_other_flows: pd.DataFrame
-         lca inventory with no product flows
+        Foreground inventory with no product flows.
 
     
     Returns
     -------
     pd.DataFrame
-        LCA results for foreground system in the form of a dataframe after performing LCA calculations
-        columns=['product', 'unit', 'value']
-        These are mass input flows to USLCI calculated for demand of material. No emission flows are included in this calculation. 
+        Mass input flows to background inventory calculated for demand of material. No emission flows are
+        included in this DataFrame. 
+        Columns:
+            - product
+            - unit
+            - value
     """
 
     tm= tech_matrix.to_numpy()
@@ -111,27 +131,48 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
 
 def electricity_corrector_before20(df):
     """
-    This function is used to replace pre 2020 electricity flows with the base electricity mix flow
-    in the USLCI inventory Electricity, at Grid, US, 2010'    
+    Replaces pre-2020 electricity flows with the base electricity mix flow
+    in the USLCI inventory Electricity, at Grid, US, 2010'.
 
     Parameters
     ----------
     df: pd.DataFrame
-        process inventory
+        Foreground inventory.
 
     Returns
     -------
     pd.DataFrame
-        process inventory with electricity flows before 2020 converted to the base electricity
-        mix flow in USLCI. 
-    columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        Foreground inventory with pre-2020 electricity flows converted to the base electricity
+        mix flow in USLCI.
+        Columns:
+            - flow name: str
+            - flow unit: str
+            - flow quantity: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: str
+            - state: str
     """
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
 
-def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename,verbose):    
+def lca_runner_foreground(
+    tech_matrix,
+    F,
+    yr,
+    i,
+    j,
+    k,
+    route_id,
+    state,
+    final_demand_scaler,
+    process,
+    df_with_all_other_flows,
+    intermediate_demand_filename
+    ):    
     """
     Calls the LCA solver function and arranges and stores the results into a proper pandas dataframe. 
     
@@ -193,47 +234,81 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
        print(f"pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename,verbose):
-
+def model_celavi_lci(
+    f_d,
+    yr,
+    fac_id,
+    stage,
+    material,
+    route_id,
+    state,
+    df_static,
+    dynamic_lci_filename,
+    electricity_grid_spatial_level,
+    intermediate_demand_filename,
+    verbose
+    ):
     """
-    Main function of this module which received information from DES interface and runs the supporting LCA functions. 
-    Creates the technology matrix and the final demand vector based on input data. 
-    Performs necessary checks before and after the LCA calculation. 
-    Checks performed 
-    1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
-    2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking. 
+    Creates the foreground technology matrix and final demand vector, performs necessary checks before and after the LCA calculation.
+    
+    Checks performed:
+        1. Final demand by the foreground system is not zero. If the final demand is zero, this method returns an empty DataFrame
+        and the simulation continues. 
+        2. Checks that the solver method returned a non-empty DataFrame. If the solver returns an empty DataFrame, this method 
+        attaches column names to the empty DataFrame, returns it, and the simulation continues. 
     
     Parameters
     ----------
     f_d: pd.Dataframe
-      Dataframe from DES interface containing material flow information
+        Dataframe from DES interface containing foreground material flows.
     yr: int
-      year of analysis
+        Model year.
     fac_id: int
-      facility id
+        Facility id.
     stage: str
-      stage of analysis
+        Supply chain stage.
     material: str
-      material of LCA analysis
+        Material being processed.
     route_id: str
         Unique identifier for transportation route.
     state: str
-        state in which LCA calculations are taking place
-    df_static: pd.Dataframe
-      static foreground LCA inventory
+        State in which calculations are taking place.
+    df_static: pandas.DataFrame
+        Static foreground inventory.
     dynamic_lci_filename: str
-      filename for the dynamic LCA inventory
+        Filename for the dynamic inventory.
+    electricity_grid_spatial_level: str
+        Level at which the electricity grid mix is modeled: state or national.
+    intermediate_demand_filename: str
+        
+    verbose: int
+        Controls the level of progress reporting from this method.
 
     Returns
     -------
     pd.DataFrame
-       Final LCA results in the form of a dataframe after performing calculation checks
-       columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-       These are mass input flows to USLCI calculated for demand of material at a certain stage and from a facility. No emission flows are included in this calculation. 
-
+        Input material and energy flows to the background inventory calculated for a material being processed through a facility.
+        This DataFrame does not include pollutant flows.
+        Columns:
+            - flow name: str
+                Input name.
+            - flow unit: str
+                Input unit.
+            - flow quantity: float
+                Input quantity.
+            - year: int
+                Model year.
+            - facility_id: int
+                Unique facility ID.
+            - stage: str
+                Supply chain stage.
+            - material: str
+                Name of material being processed.
+            - route_id: str
+                Route UUID for transportation calculations.
+            - state: str
+                State in which facility is located.
     """
-
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
     # Running LCA for all years as obtained from CELAVI

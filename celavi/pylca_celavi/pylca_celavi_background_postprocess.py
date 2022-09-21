@@ -1,32 +1,42 @@
 import pandas as pd
 
 
-
-
-def postprocessing(final_res,insitu, verbose):
+def postprocessing(final_res, insitu, verbose):
     """
-    This function is used for post processing of final results dataframe
-    It adds the insitu emissions with the background emissions. 
+    Combines the insitu and background pollutant flows.
 
     Parameters
     ----------
-    final_res: Dataframe
-       dataframe with background LCA results
-    
-    insitu: Dataframe
-       dataframe with insitu emissions
-
+    final_res: pandas.DataFrame
+       Background pollutant flow quantities.
+    insitu: pandas.DataFrame
+        Insitu pollutant flow quantities.
     verbose: int
-      toggle print of insitu emissions postprocessing statement when emissions are missing
-    
-    
+        Controls the level of progress reporting from this method.
     
     Returns
     -------
-    pd.DataFrame
-       final combined total emissions dataframe with individual pollutant information
-       columns = ['flow name', 'flow unit', 'year', 'facility_id', 'stage', 'material', 'route_id','state','flow quantity']  
-
+    pandas.DataFrame
+        Total pollutant flows for a material being processed through a facility.
+        Columns:
+            - flow name: str
+                Pollutant name.
+            - flow unit: str
+                Unit of pollutant flow.
+            - year: int
+                Model year.
+            - facility_id: int
+                Facility ID.
+            - stage: str
+                Supply chain stage.
+            - material: str
+                Name of material.
+            - route_id: str
+                UUID of transportation route.
+            - state: str
+                State in which facility is located.
+            - flow quantity: float
+                Pollutant quantity.
     """
     if final_res.empty:
         if verbose == 1:
@@ -51,27 +61,38 @@ def postprocessing(final_res,insitu, verbose):
 
 
 def impact_calculations(final_res,traci_lci_filename):    
-   
     """
-    This function is used for LCIA post processing of final results dataframe
-    It converts mass flow of pollutants to Environmental impacts based on TRACI 2.1
-    characterization method
+    Converts pollutant mass flows to environmental impacts using the TRACI 2.1 midpoint characterization method.
 
     Parameters
     ----------
-    final_res: Dataframe
-       dataframe with total LCA results
+    final_res: pandas.DataFrame
+       Total (insitu and background) pollutant mass flows.
     
     traci_lci_filename: str
-       name of the traci characerization file
-    
-    
+       Filename where the TRACI characterization factors are stored.
     
     Returns
     -------
-    pd.DataFrame
-        dataframe wih LCIA impact results
-        columns = ['year', 'facility_id', 'material', 'route_id', 'state', 'stage', 'impacts', 'impact']    
+    pandas.DataFrame
+        Total environmental impacts.
+        Columns:
+            - year: int
+                Model year.
+            - facility_id: int
+                Facility ID.
+            - material: str
+                Name of material being processed.
+            - route_id: str
+                UUID of transportation route.
+            - state: str
+                State in which facility is located.
+            - stage: str
+                Supply chain stage.
+            - impacts: str
+                Name of environmental impact.
+            - impact: float
+                Environmental impact quantity.
     """     
    
     traci = pd.read_csv(traci_lci_filename)
