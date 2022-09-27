@@ -213,7 +213,7 @@ Cost Uncertainty Modeling
 
 There is a great deal of flexibility in how uncertainty is defined within the cost models. This leads to many possible versions of the "cost uncertainty" dictionary within the Scenario YAML file. This section discusses the three main options for implementing uncertainty and gives examples of how to define each type of uncertainty within CELAVI.
 
-*No uncertainty*: In this case, there is no uncertainty represented in a cost model. Scalar values are defined for each cost model parameter, and a single run is sufficient to quantify the results. In this case, the `uncertainty` key within the cost model dictionary will be left blank, and whatever parameters the cost model requires are defined as floats. For example, the landfilling cost model, which is represented as a linear equation with slope *m* and y-intercept *b*, has the following dictionary when no uncertainty is represented:
+**No uncertainty**: In this case, there is no uncertainty represented in a cost model. Scalar values are defined for each cost model parameter, and a single run is sufficient to quantify the results. In this case, the `uncertainty` key within the cost model dictionary will be left blank, and whatever parameters the cost model requires are defined as floats. For example, the landfilling cost model, which is represented as a linear equation with slope *m* and y-intercept *b*, has the following dictionary when no uncertainty is represented:
 
 .. code-block:: yaml
 
@@ -223,7 +223,7 @@ There is a great deal of flexibility in how uncertainty is defined within the co
 			m: 1.5921    # Single, scalar value for slope parameter
 			b: 28.9      # Single, scalar value for y-intercept parameter
 
-*Array- or range-based uncertainty*: In this case, parameters with uncertainty are defined with lists of floats, and one model run is executed per element of that list. When modeling this type of uncertainty in multiple parameters simultaneously, care must be taken that the lists of parameter values are all of the same length *and* that the number of runs to execute is equal to this length. An error will be thrown if more runs are executed than there are elements in the parameter lists or if the lists are of unequal length, and the simulation will not completed. The landfilling cost model dictionary has the following structure when array-based uncertainty is implemented for the slope parameter *m*:
+**Array- or range-based uncertainty**: In this case, parameters with uncertainty are defined with lists of floats, and one model run is executed per element of that list. When modeling this type of uncertainty in multiple parameters simultaneously, care must be taken that the lists of parameter values are all of the same length *and* that the number of runs to execute is equal to this length. An error will be thrown if more runs are executed than there are elements in the parameter lists or if the lists are of unequal length, and the simulation will not completed. The landfilling cost model dictionary has the following structure when array-based uncertainty is implemented for the slope parameter *m*:
 
 .. code-block:: yaml
 
@@ -261,7 +261,7 @@ If both the *m* and *b* parameters are modeled with array-based uncertainty, the
             - 46.24
             - 57.8
 			
-*Stochastic uncertainty*: Using this type of uncertainty requires defining probability distributions on the cost model parameters. By default, CELAVI uses triangular distributions with parameters `c`, `loc`, and `scale`. These distribution parameters must be defined as scalars, and a blank key called `value` must also be included. The cost model parameter value, once drawn from the distribution, is stored under `value` for the duration of a model run. The landfilling cost model dictionary with stochastic uncertainty on both *m* and *b* has the following structure:
+**Stochastic uncertainty**: Using this type of uncertainty requires defining probability distributions on the cost model parameters. By default, CELAVI uses triangular distributions with parameters `c`, `loc`, and `scale`. These distribution parameters must be defined as scalars, and a blank key called `value` must also be included. The cost model parameter value, once drawn from the distribution, is stored under `value` for the duration of a model run. The landfilling cost model dictionary with stochastic uncertainty on both *m* and *b* has the following structure:
 
 .. code-block:: yaml
 
