@@ -93,6 +93,7 @@
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="doc_pylcia.html">Python Life Cycle Inventory Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_uncertainty.html">Uncertainty Methods</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc_diagnostic_viz.html">Postprocessing and Diagnostic Visualizations</a></li>
 </ul>
 
@@ -163,13 +164,13 @@
 <p>The Cost Graph is a directed network-based representation of the supply chain superstructure. It is used to store information about the supply chain such as costs and distances. During simulation, the Cost Graph is queried by the DES to calculate pathway characteristics and determine the preferred end-of-life pathway for technology components.</p>
 <span class="target" id="module-celavi.costgraph"></span><dl class="py class">
 <dt id="celavi.costgraph.CostGraph">
-<em class="property">class </em><code class="sig-prename descclassname">celavi.costgraph.</code><code class="sig-name descname">CostGraph</code><span class="sig-paren">(</span><em class="sig-param">step_costs_file: str, fac_edges_file: str, transpo_edges_file: str, locations_file: str, routes_file: str, pathway_crit_history_filename: str, circular_components: list, component_initial_mass: float, path_dict: dict, sc_begin: List[str] = ['manufacturing'], sc_end: List[str] = ['landfilling'], sc_in_circ: List[str] = [], sc_out_circ: List[str] = [], year: float = 2000.0, verbose: int = 0, save_copy=False, save_name='netw.csv', run=0, random_state=Generator(PCG64) at 0x238CF936E40</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costgraph.CostGraph" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">celavi.costgraph.</code><code class="sig-name descname">CostGraph</code><span class="sig-paren">(</span><em class="sig-param">step_costs_file: str, fac_edges_file: str, transpo_edges_file: str, locations_file: str, routes_file: str, pathway_crit_history_filename: str, circular_components: list, component_initial_mass: float, path_dict: dict, sc_begin: List[str] = ['manufacturing'], sc_end: List[str] = ['landfilling'], sc_in_circ: List[str] = [], sc_out_circ: List[str] = [], year: float = 2000.0, start_year: float = 2000.0, verbose: int = 0, save_copy=False, save_name='netw.csv', run=0, random_state=Generator(PCG64) at 0x24AB19D5BA0</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costgraph.CostGraph" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reads in supply chain data, creates a network of processing steps and facilities
 in a circular supply chain, identifies preferred end-of-life pathways through the
 supply chain, calculates supply chain characteristics such as pathway cost.</p>
 <dl class="py method">
 <dt id="celavi.costgraph.CostGraph.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">step_costs_file: str, fac_edges_file: str, transpo_edges_file: str, locations_file: str, routes_file: str, pathway_crit_history_filename: str, circular_components: list, component_initial_mass: float, path_dict: dict, sc_begin: List[str] = ['manufacturing'], sc_end: List[str] = ['landfilling'], sc_in_circ: List[str] = [], sc_out_circ: List[str] = [], year: float = 2000.0, verbose: int = 0, save_copy=False, save_name='netw.csv', run=0, random_state=Generator(PCG64) at 0x238CF936E40</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costgraph.CostGraph.__init__" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param">step_costs_file: str, fac_edges_file: str, transpo_edges_file: str, locations_file: str, routes_file: str, pathway_crit_history_filename: str, circular_components: list, component_initial_mass: float, path_dict: dict, sc_begin: List[str] = ['manufacturing'], sc_end: List[str] = ['landfilling'], sc_in_circ: List[str] = [], sc_out_circ: List[str] = [], year: float = 2000.0, start_year: float = 2000.0, verbose: int = 0, save_copy=False, save_name='netw.csv', run=0, random_state=Generator(PCG64) at 0x24AB19D5BA0</em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costgraph.CostGraph.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Reads in small datasets to DataFrames and stores the path to the large
 locations dataset for later use.</p>
 <dl class="field-list simple">
@@ -195,6 +196,7 @@ scenario config file.</p></li>
 <li><p><strong>sc_in_circ</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – Facility type(s) that process material for re-circulation within the supply chain.</p></li>
 <li><p><strong>sc_out_circ</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – Facility type(s) that process material for re-circulation outside the supply chain</p></li>
 <li><p><strong>year</strong> (<em>float</em>) – Simulation year provided by the DES at CostGraph instantiation.</p></li>
+<li><p><strong>start_year</strong> (<em>float</em>) – Year at beginning of the model run.</p></li>
 <li><p><strong>verbose</strong> (<em>int</em>) – Integer specifying how much info CostGraph should provide as it
 works.
 0 = No information other than return values
@@ -513,14 +515,14 @@ saves to user-specified filenames and directories</p>
 <p>Cost Methods are user-defined functions for calculating process costs.</p>
 <span class="target" id="module-celavi.costmethods"></span><dl class="py class">
 <dt id="celavi.costmethods.CostMethods">
-<em class="property">class </em><code class="sig-prename descclassname">celavi.costmethods.</code><code class="sig-name descname">CostMethods</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seed</span></em>, <em class="sig-param"><span class="n">run</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costmethods.CostMethods" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="sig-prename descclassname">celavi.costmethods.</code><code class="sig-name descname">CostMethods</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start_year</span></em>, <em class="sig-param"><span class="n">seed</span></em>, <em class="sig-param"><span class="n">run</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costmethods.CostMethods" title="Permalink to this definition">¶</a></dt>
 <dd><p>Functions for calculating processing and transportation costs throughout
 the supply chain. The methods in this Class must be re-written to
 correspond to each case study; in general, these methods are not reusable
 across different supply chains or technologies.</p>
 <dl class="py method">
 <dt id="celavi.costmethods.CostMethods.__init__">
-<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">seed</span></em>, <em class="sig-param"><span class="n">run</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costmethods.CostMethods.__init__" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">start_year</span></em>, <em class="sig-param"><span class="n">seed</span></em>, <em class="sig-param"><span class="n">run</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.costmethods.CostMethods.__init__" title="Permalink to this definition">¶</a></dt>
 <dd><p>Provide a random number generator and model run to all uncertain
 CostMethods.</p>
 <dl class="field-list simple">

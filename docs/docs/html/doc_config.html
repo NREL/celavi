@@ -85,6 +85,7 @@
 <li class="toctree-l2"><a class="reference internal" href="#case-study-config-template">Case Study Config Template</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#scenario-config-template">Scenario Config Template</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#scenario-flags">Scenario Flags</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cost-uncertainty-modeling">Cost Uncertainty Modeling</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#case-study-config-example">Case Study Config Example</a></li>
@@ -96,6 +97,7 @@
 <li class="toctree-l1"><a class="reference internal" href="doc_des.html">Discrete Event Simulation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc_costgraph.html">Cost Graph</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc_pylcia.html">Python Life Cycle Inventory Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_uncertainty.html">Uncertainty Methods</a></li>
 <li class="toctree-l1"><a class="reference internal" href="doc_diagnostic_viz.html">Postprocessing and Diagnostic Visualizations</a></li>
 </ul>
 
@@ -179,19 +181,14 @@
 
 <span class="nt">directories</span><span class="p">:</span>
         <span class="c1"># The required directories should all exist in the same directory where the config files are located.</span>
-        <span class="nt">quality_checks</span><span class="p">:</span>          <span class="c1"># Not required</span>
         <span class="nt">inputs_to_preprocessing</span><span class="p">:</span> <span class="c1"># Required</span>
         <span class="nt">inputs_optional</span><span class="p">:</span>         <span class="c1"># Not required</span>
         <span class="nt">inputs</span><span class="p">:</span>                  <span class="c1"># Required</span>
-        <span class="nt">generated</span><span class="p">:</span>               <span class="c1"># Required; Empty</span>
-        <span class="nt">results</span><span class="p">:</span>                 <span class="c1"># Required; Empty</span>
+        <span class="nt">generated</span><span class="p">:</span>               <span class="c1"># Not required</span>
+        <span class="nt">results</span><span class="p">:</span>                 <span class="c1"># Not required</span>
 
 <span class="nt">files</span><span class="p">:</span>
         <span class="c1"># All file names must include the extension, which is &quot;.csv&quot; unless otherwise noted.</span>
-
-        <span class="c1"># Information used for internal data checks.</span>
-        <span class="nt">quality_checks</span><span class="p">:</span>
-                <span class="nt">quality_check</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">data-quality-checks.csv</span>
 
         <span class="c1"># Datasets that are preprocessed and/or used to generate input datasets.</span>
         <span class="nt">inputs_to_preprocessing</span><span class="p">:</span>
@@ -220,7 +217,9 @@
                 <span class="nt">route_pairs</span><span class="p">:</span>
                 <span class="nt">component_material_mass</span><span class="p">:</span>
                 <span class="nt">static_lci</span><span class="p">:</span>
-                <span class="nt">uslci</span><span class="p">:</span> <span class="c1"># .p</span>
+                <span class="nt">uslci_tech</span><span class="p">:</span>
+                <span class="nt">uslci_emission</span><span class="p">:</span>
+                <span class="nt">uslci_process_adder</span><span class="p">:</span>
                 <span class="nt">lci_activity_locations</span><span class="p">:</span>
                 <span class="nt">emissions_lci</span><span class="p">:</span>
                 <span class="nt">traci_lci</span><span class="p">:</span>
@@ -250,6 +249,7 @@
                 <span class="nt">mass_cumulative_histories</span><span class="p">:</span>
                 <span class="nt">lcia_facility_results</span><span class="p">:</span>
                 <span class="nt">lcia_transpo_results</span><span class="p">:</span>
+                <span class="nt">central_summary</span><span class="p">:</span>
 </pre></div>
 </div>
 </div>
@@ -257,20 +257,20 @@
 <h2>Scenario Config Template<a class="headerlink" href="#scenario-config-template" title="Permalink to this headline">¶</a></h2>
 <p>The <cite>cost uncertainty</cite> dictionary (an element of the <cite>circular_pathways</cite> dictionary) structure can be adjusted based on the modeling requirements of a particular case study. The structure here can apply to cost models that depend linearly on time and can take on random or array-based uncertainty.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">flags</span><span class="p">:</span>
-        <span class="c1"># Each parameter here should be a Boolean (True/False)</span>
-        <span class="nt">clear_results         </span><span class="p">:</span>    <span class="c1"># Move existing results files to a sub-directory to avoid overwriting.</span>
-        <span class="nt">compute_locations     </span><span class="p">:</span>    <span class="c1"># Compute locations from raw input files (e.g., LMOP, US Wind Turbine Database).</span>
-        <span class="nt">run_routes            </span><span class="p">:</span>    <span class="c1"># Compute routing distances between connected facilities.</span>
-        <span class="nt">use_computed_routes   </span><span class="p">:</span>    <span class="c1"># Read in a pre-assembled routes file instead of generating a new one.</span>
-        <span class="nt">initialize_costgraph  </span><span class="p">:</span>    <span class="c1"># Initialize Cost Graph from input data.</span>
-        <span class="nt">location_filtering    </span><span class="p">:</span>    <span class="c1"># Filter facility locations based on states_included parameter.</span>
-        <span class="nt">distance_filtering    </span><span class="p">:</span>    <span class="c1"># Filter computed routes and Cost Graph edges based on max distances in route_pairs file.</span>
-        <span class="nt">pickle_costgraph      </span><span class="p">:</span>    <span class="c1"># Save the Cost Graph instance as a pickle file.</span>
-        <span class="nt">generate_step_costs   </span><span class="p">:</span>    <span class="c1"># Programmatically generate step_costs file; set to False if supply chain costs for a facility type vary regionally.</span>
-        <span class="nt">use_fixed_lifetime    </span><span class="p">:</span>    <span class="c1"># Use fixed technology component lifetime instead of drawing from Weibull distribution.</span>
-        <span class="nt">use_lcia_shortcut     </span><span class="p">:</span>    <span class="c1"># Use precomputed LCI file where possible to speed up LCIA calculations.</span>
+        <span class="nt">clear_results         </span><span class="p">:</span>   <span class="c1"># If True and results files already exist, move them to a sub-directory to avoid overwriting.</span>
+        <span class="nt">compute_locations     </span><span class="p">:</span>   <span class="c1"># If True, generate a locations datafile from raw input files (e.g., LMOP, US Wind Turbine Database).</span>
+        <span class="nt">run_routes            </span><span class="p">:</span>   <span class="c1"># If True, compute routing distances between all input locations.</span>
+        <span class="nt">use_computed_routes   </span><span class="p">:</span>   <span class="c1"># If True, read in a pre-assembled routes file INSTEAD of generating a new routes file.</span>
+        <span class="nt">initialize_costgraph  </span><span class="p">:</span>   <span class="c1"># If True, create a CostGraph instance from input data or an imported pickle file.</span>
+        <span class="nt">location_filtering    </span><span class="p">:</span>   <span class="c1"># If True, all datasets will be filtered to include only the states listed below.</span>
+        <span class="nt">distance_filtering    </span><span class="p">:</span>   <span class="c1"># If True, filter computed routes based on max distances in route_pairs file.</span>
+        <span class="nt">pickle_costgraph      </span><span class="p">:</span>   <span class="c1"># If True, saves the CostGraph instance as a pickle file.</span>
+        <span class="nt">generate_step_costs   </span><span class="p">:</span>   <span class="c1"># If True, supply chain costs for a facility type do not vary regionally.</span>
+        <span class="nt">use_fixed_lifetime    </span><span class="p">:</span>   <span class="c1"># If True, fixed lifetimes are used instead of stochastic Weibull draws.</span>
+        <span class="nt">use_lcia_shortcut     </span><span class="p">:</span>   <span class="c1"># If True, use the lca_db emission factors file instead of performing LCIA calculations where possible.</span>
 
 <span class="nt">scenario</span><span class="p">:</span>
+        <span class="nt">name</span><span class="p">:</span>                    <span class="c1"># Scenario name</span>
         <span class="nt">capacity_projection</span><span class="p">:</span>     <span class="c1"># Name of file with scenario-specific capacity projection data.</span>
         <span class="nt">states_included</span><span class="p">:</span>         <span class="c1"># List of U.S. states to optionally filter facility locations.</span>
         <span class="nt">seed</span><span class="p">:</span>                    <span class="c1"># Random number generator seed</span>
@@ -280,13 +280,14 @@
 <span class="nt">circular_pathways</span><span class="p">:</span>
         <span class="nt">sc_begin</span><span class="p">:</span>               <span class="c1"># Facility type where the supply chain &quot;begins&quot;. Typically manufacturing or resource extraction.</span>
         <span class="nt">sc_end</span><span class="p">:</span>                 <span class="c1"># List of facility types where the supply chain &quot;ends&quot;.</span>
+        <span class="nt">sc_in_circ</span><span class="p">:</span>             <span class="c1"># List of inflow circularity facility types that provide secondary material to the supply chain.</span>
+        <span class="nt">sc_out_circ</span><span class="p">:</span>            <span class="c1"># List of outflow circularity facility types that take in secondary material for recirculation.</span>
         <span class="nt">learning</span><span class="p">:</span>               <span class="c1"># Dictionary of parameters for industrial learning-by-doing parameters.</span>
-                <span class="p p-Indicator">[</span><span class="nv">facility type</span><span class="p p-Indicator">]:</span>    <span class="c1"># Facility type to which this learning cost model applies.</span>
+                <span class="p p-Indicator">[</span><span class="nv">facility type</span><span class="p p-Indicator">]:</span>    <span class="c1"># Facility type to which this learning cost model applies. Repeat this block for every facility type with a learning model.</span>
                         <span class="nt">component </span><span class="p">:</span>     <span class="c1"># String; component type(s).</span>
                         <span class="nt">initial cumul</span><span class="p">:</span>  <span class="c1"># Initial cumulative production for this technology.</span>
                         <span class="nt">cumul</span><span class="p">:</span>          <span class="c1"># Leave blank: this value is filled in and updated during simulation.</span>
                         <span class="nt">initial cost</span><span class="p">:</span>   <span class="c1"># Processing cost (USD/mass) at the beginning of the model run.</span>
-                        <span class="nt">revenue</span><span class="p">:</span>        <span class="c1"># Revenue (USD/mass) from this processing step (may be zero).</span>
                         <span class="nt">learn rate</span><span class="p">:</span>     <span class="c1"># Rate at which industrial learning-by-doing reduces costs. Must be negative.</span>
                         <span class="nt">steps</span><span class="p">:</span>          <span class="c1"># List of processing steps where this cost model is applied.</span>
         <span class="nt">cost uncertainty</span><span class="p">:</span>       <span class="c1"># Dictionary of probability distribution parameters for cost models.</span>
@@ -295,6 +296,7 @@
                         <span class="nt">c</span><span class="p">:</span>              <span class="c1"># c, loc, scale: Probability distribution parameter(s) for random uncertainty type; can be re-named depending on distribution. See https://docs.scipy.org/doc/scipy/reference/stats.html.</span>
                         <span class="nt">loc</span><span class="p">:</span>
                         <span class="nt">scale</span><span class="p">:</span>
+                        <span class="nt">value</span><span class="p">:</span>          <span class="c1"># Leave blank: random draws are stored here during each model run.</span>
                         <span class="nt">m</span><span class="p">:</span>              <span class="c1"># m, b: Cost model parameter(s) for array uncertainty type; can be scalars or lists of equal length.</span>
                         <span class="nt">b</span><span class="p">:</span>
         <span class="nt">path_split</span><span class="p">:</span>             <span class="c1"># Dictionary defining any process steps where the material stream splits, e.g. for material losses.</span>
@@ -417,21 +419,84 @@
 </li>
 </ul>
 </div>
+<div class="section" id="cost-uncertainty-modeling">
+<h3>Cost Uncertainty Modeling<a class="headerlink" href="#cost-uncertainty-modeling" title="Permalink to this headline">¶</a></h3>
+<p>There is a great deal of flexibility in how uncertainty is defined within the cost models. This leads to many possible versions of the “cost uncertainty” dictionary within the Scenario YAML file. This section discusses the three main options for implementing uncertainty and gives examples of how to define each type of uncertainty within CELAVI.</p>
+<p><strong>No uncertainty</strong>: In this case, there is no uncertainty represented in a cost model. Scalar values are defined for each cost model parameter, and a single run is sufficient to quantify the results. In this case, the <cite>uncertainty</cite> key within the cost model dictionary will be left blank, and whatever parameters the cost model requires are defined as floats. For example, the landfilling cost model, which is represented as a linear equation with slope <em>m</em> and y-intercept <em>b</em>, has the following dictionary when no uncertainty is represented:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cost uncertainty</span><span class="p">:</span>
+        <span class="nt">landfilling</span><span class="p">:</span>
+                <span class="nt">uncertainty</span><span class="p">:</span> <span class="c1"># Left blank</span>
+                <span class="nt">m</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1.5921</span>    <span class="c1"># Single, scalar value for slope parameter</span>
+                <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">28.9</span>      <span class="c1"># Single, scalar value for y-intercept parameter</span>
+</pre></div>
+</div>
+<p><strong>Array- or range-based uncertainty</strong>: In this case, parameters with uncertainty are defined with lists of floats, and one model run is executed per element of that list. When modeling this type of uncertainty in multiple parameters simultaneously, care must be taken that the lists of parameter values are all of the same length <em>and</em> that the number of runs to execute is equal to this length. An error will be thrown if more runs are executed than there are elements in the parameter lists or if the lists are of unequal length, and the simulation will not completed. The landfilling cost model dictionary has the following structure when array-based uncertainty is implemented for the slope parameter <em>m</em>:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cost uncertainty</span><span class="p">:</span>
+        <span class="nt">landfilling</span><span class="p">:</span>
+<span class=" -Error">    </span><span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
+    <span class="nt">m</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.64</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.27</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.91</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">2.55</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">3.18</span>
+    <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">28.9</span>
+</pre></div>
+</div>
+<p>If both the <em>m</em> and <em>b</em> parameters are modeled with array-based uncertainty, the dictionary would be as follows. Note that both parameters have value lists of length 6. The <cite>runs</cite> parameter under the <cite>scenario</cite> dictionary in this case would have to be set to 6 as well.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cost uncertainty</span><span class="p">:</span>
+        <span class="nt">landfilling</span><span class="p">:</span>
+<span class=" -Error">    </span><span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
+    <span class="nt">m</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.64</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.27</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.91</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">2.55</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">3.18</span>
+    <span class="nt">b</span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">11.56</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">23.12</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">34.68</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">46.24</span>
+    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">57.8</span>
+</pre></div>
+</div>
+<p><strong>Stochastic uncertainty</strong>: Using this type of uncertainty requires defining probability distributions on the cost model parameters. By default, CELAVI uses triangular distributions with parameters <cite>c</cite>, <cite>loc</cite>, and <cite>scale</cite>. These distribution parameters must be defined as scalars, and a blank key called <cite>value</cite> must also be included. The cost model parameter value, once drawn from the distribution, is stored under <cite>value</cite> for the duration of a model run. The landfilling cost model dictionary with stochastic uncertainty on both <em>m</em> and <em>b</em> has the following structure:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cost uncertainty</span><span class="p">:</span>
+    <span class="nt">landfilling</span><span class="p">:</span>
+        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">stochastic</span>
+        <span class="nt">m</span><span class="p">:</span>
+            <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.430</span>
+            <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+            <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">3.704</span>
+            <span class="nt">value</span><span class="p">:</span>
+        <span class="nt">b</span><span class="p">:</span>
+            <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.430</span>
+            <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+            <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">67.244</span>
+            <span class="nt">value</span><span class="p">:</span>
+</pre></div>
+</div>
+<p>Note that the <em>m</em> and <em>b</em> parameters are no longer defined explicitly when using stochastic uncertainty.</p>
+</div>
 </div>
 <div class="section" id="case-study-config-example">
 <h2>Case Study Config Example<a class="headerlink" href="#case-study-config-example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">model_run</span><span class="p">:</span>
         <span class="nt">start_year</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2000</span>
-        <span class="nt">end_year</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2050</span>
+        <span class="nt">end_year</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">2051</span>
         <span class="nt">timesteps_per_year</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">12</span>
         <span class="nt">min_lifespan</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">120</span> <span class="c1"># timesteps</span>
         <span class="nt">lcia_update</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">12</span> <span class="c1"># timesteps</span>
+        <span class="nt">lcia_verbose</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
         <span class="nt">cg_update</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">12</span> <span class="c1">#timesteps</span>
         <span class="nt">cg_verbose</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
         <span class="nt">save_cg_csv</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
 
 <span class="nt">directories</span><span class="p">:</span>
-        <span class="nt">quality_checks</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">quality_checks/</span>
         <span class="nt">inputs_to_preprocessing</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">inputs_to_preprocessing/</span>
         <span class="nt">inputs_optional</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">inputs_optional/</span>
         <span class="nt">inputs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">inputs/</span>
@@ -439,10 +504,6 @@
         <span class="nt">results</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">results/</span>
 
 <span class="nt">files</span><span class="p">:</span>
-        <span class="c1"># Files used for input dataset validation</span>
-        <span class="nt">quality_checks</span><span class="p">:</span>
-                <span class="nt">quality_check</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">data-quality-checks.csv</span>
-
         <span class="c1"># Files that must be processed to create CELAVI input files</span>
         <span class="nt">inputs_to_preprocessing</span><span class="p">:</span>
                 <span class="nt">transportation_graph</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">transportation_graph.csv</span>
@@ -450,7 +511,7 @@
                 <span class="nt">power_plant_locs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">uswtdb_v4_1_20210721.csv</span>
                 <span class="nt">landfill_locs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">landfilllmopdata.csv</span>
                 <span class="nt">other_facility_locs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">other_facility_locations_all_us.csv</span>
-                <span class="nt">capacity_projection</span><span class="p">:</span> <span class="c1">#leave this blank</span>
+                <span class="nt">capacity_projection</span><span class="p">:</span>
 
         <span class="c1"># Inputs that are alternatives to programmatically generated inputs</span>
         <span class="nt">inputs_optional</span><span class="p">:</span>
@@ -470,7 +531,9 @@
                 <span class="nt">route_pairs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">route_pairs.csv</span>
                 <span class="nt">component_material_mass</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">avgmass.csv</span>
                 <span class="nt">static_lci</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">foreground_process_inventory.csv</span>
-                <span class="nt">uslci</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">usnrellci_processesv2017_loc_debugged.p</span>
+                <span class="nt">uslci_tech</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">tech_matrix_corr.csv</span>
+                <span class="nt">uslci_emission</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">process_emissions_corr.csv</span>
+                <span class="nt">uslci_process_adder</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">process_names_adder.csv</span>
                 <span class="nt">lci_activity_locations</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">location.csv</span>
                 <span class="nt">emissions_lci</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">emissions_inventory.csv</span>
                 <span class="nt">traci_lci</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">traci21.csv</span>
@@ -500,37 +563,41 @@
                 <span class="nt">mass_cumulative_histories</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">mass_cumulative_histories.csv</span>
                 <span class="nt">lcia_facility_results</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">lcia_locations_join.csv</span>
                 <span class="nt">lcia_transpo_results</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">lcia_transportation.csv</span>
+                <span class="nt">central_summary</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">central_summary.csv</span>
 </pre></div>
 </div>
 </div>
 <div class="section" id="scenario-config-example">
 <h2>Scenario Config Example<a class="headerlink" href="#scenario-config-example" title="Permalink to this headline">¶</a></h2>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">flags</span><span class="p">:</span>
-        <span class="nt">clear_results         </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span> <span class="c1"># If results files already exist, move them to a sub-directory to avoid overwriting</span>
-        <span class="nt">compute_locations     </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>  <span class="c1"># if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)</span>
-        <span class="nt">run_routes            </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>  <span class="c1"># if run_routes is enabled (True), compute routing distances between all input locations</span>
-        <span class="nt">use_computed_routes   </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>  <span class="c1"># if use_computed_routes is enabled, read in a pre-assembled routes file instead of generating a new one</span>
-        <span class="nt">initialize_costgraph  </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>  <span class="c1"># create cost graph fresh or use an imported version</span>
-        <span class="nt">location_filtering    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>  <span class="c1"># If true, dataset will be filtered to the states below</span>
-        <span class="nt">distance_filtering    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span> <span class="c1"># if true, filter computed routes based on max distances in route_pairs file</span>
-        <span class="nt">pickle_costgraph      </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>  <span class="c1"># save the newly initialized costgraph as a pickle file</span>
-        <span class="nt">generate_step_costs   </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span> <span class="c1"># set to False if supply chain costs for a facility type vary regionally</span>
-        <span class="nt">use_fixed_lifetime    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span> <span class="c1"># set to False to use Weibull distribution for lifetimes</span>
-        <span class="nt">use_lcia_shortcut     </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span> <span class="c1"># set to False to re-generate the lca_db file</span>
+  <span class="nt">clear_results         </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True and results files already exist, move them to a sub-directory to avoid overwriting.</span>
+  <span class="nt">compute_locations     </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, generate a locations datafile from raw input files (e.g., LMOP, US Wind Turbine Database).</span>
+  <span class="nt">run_routes            </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, compute routing distances between all input locations.</span>
+  <span class="nt">use_computed_routes   </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, read in a pre-assembled routes file INSTEAD of generating a new routes file.</span>
+  <span class="nt">initialize_costgraph  </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, create a CostGraph instance from input data or an imported pickle file.</span>
+  <span class="nt">location_filtering    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span>  <span class="c1"># If True, all datasets will be filtered to include only the states listed below.</span>
+  <span class="nt">distance_filtering    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span>  <span class="c1"># If True, filter computed routes based on max distances in route_pairs file.</span>
+  <span class="nt">pickle_costgraph      </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, saves the CostGraph instance as a pickle file.</span>
+  <span class="nt">generate_step_costs   </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, supply chain costs for a facility type do not vary regionally.</span>
+  <span class="nt">use_fixed_lifetime    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, fixed lifetimes are used instead of stochastic Weibull draws.</span>
+  <span class="nt">use_lcia_shortcut     </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>   <span class="c1"># If True, use the lca_db emission factors file instead of performing LCIA calculations where possible.</span>
+
 
 <span class="nt">scenario</span><span class="p">:</span>
+        <span class="nt">name</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">Wind Blade EOL Management, National</span>
         <span class="nt">capacity_projection</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">StScen20A_MidCase_annual_state.csv</span>
         <span class="nt">states_included</span><span class="p">:</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">IA</span>
-        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">MO</span>
         <span class="nt">seed</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">13</span>
         <span class="nt">electricity_mix_level </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">state</span>
-        <span class="nt">runs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">3</span>
+        <span class="nt">runs</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1</span>
 
 <span class="nt">circular_pathways</span><span class="p">:</span>
-        <span class="nt">sc_begin</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">manufacturing</span>
+        <span class="nt">sc_begin</span><span class="p">:</span>
+        <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">manufacturing</span>
         <span class="nt">sc_end</span><span class="p">:</span>
         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">landfilling</span>
+        <span class="c1">#sc_in_circ:</span>
+        <span class="nt">sc_out_circ</span><span class="p">:</span>
         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">cement co-processing</span>
         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">next use</span>
         <span class="nt">learning</span><span class="p">:</span>
@@ -538,8 +605,6 @@
                         <span class="nt">component </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">blade</span>
                         <span class="nt">initial cumul</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1.0</span>
                         <span class="nt">cumul</span><span class="p">:</span>
-                        <span class="nt">initial cost</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">121.28</span>
-                        <span class="nt">revenue</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0</span>
                         <span class="nt">learn rate</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">-0.05</span>
                         <span class="nt">steps</span><span class="p">:</span>
                         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">coarse grinding</span>
@@ -548,71 +613,48 @@
                         <span class="nt">component </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">blade</span>
                         <span class="nt">initial cumul</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1.0</span>
                         <span class="nt">cumul</span><span class="p">:</span>
-                        <span class="nt">initial cost</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">100.38</span>
-                        <span class="nt">revenue</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">242.56</span>
                         <span class="nt">learn rate</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">-0.05</span>
                         <span class="nt">steps</span><span class="p">:</span>
                         <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">fine grinding</span>
-        <span class="nt">cost_uncertainty</span><span class="p">:</span>
+        <span class="nt">cost uncertainty</span><span class="p">:</span>
                 <span class="nt">landfilling</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">rotor_teardown</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">m</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1.5921</span>
+                        <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">28.9</span>
+                <span class="nt">rotor teardown</span><span class="p">:</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">m</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">1467.08</span>
+                        <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">285.0</span>
                 <span class="nt">segmenting</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">coarse_grinding_onsite</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">coarse_grinding</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">fine_grinding</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">fine_grinding_revenue</span><span class="p">:</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">27.56</span>
+                <span class="nt">coarse grinding onsite</span><span class="p">:</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">initial cost</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">106</span>
+                <span class="nt">coarse grinding</span><span class="p">:</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">initial cost</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">106</span>
+                <span class="nt">fine grinding</span><span class="p">:</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">initial cost</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">143</span>
+                        <span class="nt">revenue</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">273</span>
                 <span class="nt">coprocessing</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">segment_transpo</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">shred_transpo</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10.37</span>
+                <span class="nt">segment transpo</span><span class="p">:</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">cost 1</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">4.35</span> <span class="c1"># Before 2001; 2002-2003</span>
+                        <span class="nt">cost 2</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8.70</span> <span class="c1"># 2001-2002; 2003-2019</span>
+                        <span class="nt">cost 3</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">13.05</span> <span class="c1"># 2019-2031</span>
+                        <span class="nt">cost 4</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">17.40</span> <span class="c1"># 2031-2044</span>
+                        <span class="nt">cost 5</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">21.75</span> <span class="c1"># 2044-2050</span>
+                <span class="nt">shred transpo</span><span class="p">:</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">m</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.0011221</span>
+                        <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.0524</span>
                 <span class="nt">manufacturing</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
-                <span class="nt">blade_transpo</span><span class="p">:</span>
-                        <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
-                        <span class="nt">c</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.5</span>
-                        <span class="nt">loc</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.8</span>
-                        <span class="nt">scale</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.4</span>
+                        <span class="nt">uncertainty</span><span class="p">:</span>
+                        <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">11440.0</span>
         <span class="nt">path_split</span><span class="p">:</span>
                 <span class="nt">fine grinding</span><span class="p">:</span>
                         <span class="nt">fraction</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.3</span>

@@ -22,9 +22,11 @@ Insitu Emission Calculations
 
 .. autofunction:: preprocessing
 
-.. autofunction:: solver_optimization
+.. autofunction:: solver
 
-.. autofunction:: runner
+.. autofunction:: electricity_corrector_before20
+
+.. autofunction:: runner_insitu
 
 .. autofunction:: model_celavi_lci_insitu
 
@@ -44,7 +46,7 @@ Background Inventory Optimization
 
 .. autofunction:: model_celavi_lci_background
 
-`model_celavi_lci_background` has functions defined within it that are not accessible to the autodoc.
+Please note: `model_celavi_lci_background` has functions defined within it that are not accessible to the autodoc.
 
 Foreground Inventory Optimization
 ---------------------------------
@@ -53,11 +55,11 @@ Foreground Inventory Optimization
 
 .. autofunction:: preprocessing
 
-.. autofunction:: solver_optimization
+.. autofunction:: solver
 
 .. autofunction:: electricity_corrector_before20
 
-.. autofunction:: runner
+.. autofunction:: lca_runner_foreground
 
 .. autofunction: model_celavi_lci
 
