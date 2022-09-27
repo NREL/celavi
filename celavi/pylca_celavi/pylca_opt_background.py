@@ -208,4 +208,3 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     else:
         res2.columns = ['flow name','flow unit','flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
         return res2
-
