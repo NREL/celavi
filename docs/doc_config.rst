@@ -22,19 +22,14 @@ Case Study Config Template
 
 	directories:
 		# The required directories should all exist in the same directory where the config files are located.
-		quality_checks:          # Not required
 		inputs_to_preprocessing: # Required
 		inputs_optional:         # Not required
 		inputs:                  # Required
-		generated:               # Required; Empty
-		results:                 # Required; Empty
+		generated:               # Not required
+		results:                 # Not required
 
 	files:
 		# All file names must include the extension, which is ".csv" unless otherwise noted.
-		
-		# Information used for internal data checks.
-		quality_checks:
-			quality_check: data-quality-checks.csv
 
 		# Datasets that are preprocessed and/or used to generate input datasets.
 		inputs_to_preprocessing:
@@ -53,22 +48,24 @@ Case Study Config Template
 
 		# Input datasets that do not require preprocessing
 		inputs:
-			lookup_facility_type: 
-			lookup_step_costs: 
-			lookup_steps: 
-			lookup_transpo_cost_methods: 
-			lookup_step_cost_methods: 
-			fac_edges: 
-			transpo_edges: 
-			route_pairs: 
-			component_material_mass: 
-			static_lci: 
-			uslci: # .p
-			lci_activity_locations: 
-			emissions_lci: 
-			traci_lci: 
-			state_reeds_grid_mix: 
-			national_reeds_grid_mix: 
+			lookup_facility_type:
+			lookup_step_costs:
+			lookup_steps:
+			lookup_transpo_cost_methods:
+			lookup_step_cost_methods:
+			fac_edges:
+			transpo_edges:
+			route_pairs:
+			component_material_mass:
+			static_lci:
+			uslci_tech:
+			uslci_emission:
+			uslci_process_adder:
+			lci_activity_locations:
+			emissions_lci:
+			traci_lci:
+			state_reeds_grid_mix:
+			national_reeds_grid_mix:
 
 		# Datasets and files generated internally as data storage and/or used for debugging.
 		generated:
@@ -93,6 +90,7 @@ Case Study Config Template
 			mass_cumulative_histories: 
 			lcia_facility_results: 
 			lcia_transpo_results: 
+			central_summary:
 
 Scenario Config Template
 ------------------------
@@ -102,20 +100,20 @@ The `cost uncertainty` dictionary (an element of the `circular_pathways` diction
 .. code-block:: yaml
 
 	flags:
-		# Each parameter here should be a Boolean (True/False)
-		clear_results         :    # Move existing results files to a sub-directory to avoid overwriting.
-		compute_locations     :    # Compute locations from raw input files (e.g., LMOP, US Wind Turbine Database).
-		run_routes            :    # Compute routing distances between connected facilities.
-		use_computed_routes   :    # Read in a pre-assembled routes file instead of generating a new one.
-		initialize_costgraph  :    # Initialize Cost Graph from input data.
-		location_filtering    :    # Filter facility locations based on states_included parameter.
-		distance_filtering    :    # Filter computed routes and Cost Graph edges based on max distances in route_pairs file.
-		pickle_costgraph      :    # Save the Cost Graph instance as a pickle file.
-		generate_step_costs   :    # Programmatically generate step_costs file; set to False if supply chain costs for a facility type vary regionally.
-		use_fixed_lifetime    :    # Use fixed technology component lifetime instead of drawing from Weibull distribution.
-		use_lcia_shortcut     :    # Use precomputed LCI file where possible to speed up LCIA calculations.
+		clear_results         :   # If True and results files already exist, move them to a sub-directory to avoid overwriting.
+		compute_locations     :   # If True, generate a locations datafile from raw input files (e.g., LMOP, US Wind Turbine Database).
+		run_routes            :   # If True, compute routing distances between all input locations.
+		use_computed_routes   :   # If True, read in a pre-assembled routes file INSTEAD of generating a new routes file.
+		initialize_costgraph  :   # If True, create a CostGraph instance from input data or an imported pickle file.
+		location_filtering    :   # If True, all datasets will be filtered to include only the states listed below.
+		distance_filtering    :   # If True, filter computed routes based on max distances in route_pairs file.
+		pickle_costgraph      :   # If True, saves the CostGraph instance as a pickle file.
+		generate_step_costs   :   # If True, supply chain costs for a facility type do not vary regionally.
+		use_fixed_lifetime    :   # If True, fixed lifetimes are used instead of stochastic Weibull draws.
+		use_lcia_shortcut     :   # If True, use the lca_db emission factors file instead of performing LCIA calculations where possible.
 	
 	scenario:
+		name:                    # Scenario name
 		capacity_projection:     # Name of file with scenario-specific capacity projection data.
 		states_included:         # List of U.S. states to optionally filter facility locations.
 		seed:                    # Random number generator seed
@@ -125,13 +123,14 @@ The `cost uncertainty` dictionary (an element of the `circular_pathways` diction
 	circular_pathways:
 		sc_begin:               # Facility type where the supply chain "begins". Typically manufacturing or resource extraction.
 		sc_end:                 # List of facility types where the supply chain "ends".
+		sc_in_circ:             # List of inflow circularity facility types that provide secondary material to the supply chain.
+		sc_out_circ:            # List of outflow circularity facility types that take in secondary material for recirculation.
 		learning:               # Dictionary of parameters for industrial learning-by-doing parameters.
-			[facility type]:    # Facility type to which this learning cost model applies.
+			[facility type]:    # Facility type to which this learning cost model applies. Repeat this block for every facility type with a learning model.
 				component :     # String; component type(s).
 				initial cumul:  # Initial cumulative production for this technology.
 				cumul:          # Leave blank: this value is filled in and updated during simulation.
 				initial cost:   # Processing cost (USD/mass) at the beginning of the model run.
-				revenue:        # Revenue (USD/mass) from this processing step (may be zero).
 				learn rate:     # Rate at which industrial learning-by-doing reduces costs. Must be negative.
 				steps:          # List of processing steps where this cost model is applied.
 		cost uncertainty:       # Dictionary of probability distribution parameters for cost models.
@@ -140,6 +139,7 @@ The `cost uncertainty` dictionary (an element of the `circular_pathways` diction
 				c:              # c, loc, scale: Probability distribution parameter(s) for random uncertainty type; can be re-named depending on distribution. See https://docs.scipy.org/doc/scipy/reference/stats.html.
 				loc: 
 				scale: 
+				value:          # Leave blank: random draws are stored here during each model run.
 				m:              # m, b: Cost model parameter(s) for array uncertainty type; can be scalars or lists of equal length.
 				b:
 		path_split:             # Dictionary defining any process steps where the material stream splits, e.g. for material losses.
@@ -161,6 +161,7 @@ The `cost uncertainty` dictionary (an element of the `circular_pathways` diction
 		component_fixed_lifetimes: # Dictionary with fixed lifetimes (years) of each component.
 		component_weibull_params:  # Dictionary with Weibull distribution parameters (L, K) of each component lifetime.
 		substitution_rates:        # Dictionary of materials substituted by circular components/materials and the substitution rates (kg/kg).
+
 
 Scenario Flags
 ^^^^^^^^^^^^^^
@@ -207,6 +208,80 @@ The set of Boolean flags at the top of the scenario configuration file control m
 	* After changes to the scenario parameters or to the input datasets, it is recommended to delete the local emission factors file to avoid using incorrect factors.
 
 
+Cost Uncertainty Modeling
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+There is a great deal of flexibility in how uncertainty is defined within the cost models. This leads to many possible versions of the "cost uncertainty" dictionary within the Scenario YAML file. This section discusses the three main options for implementing uncertainty and gives examples of how to define each type of uncertainty within CELAVI.
+
+*No uncertainty*: In this case, there is no uncertainty represented in a cost model. Scalar values are defined for each cost model parameter, and a single run is sufficient to quantify the results. In this case, the `uncertainty` key within the cost model dictionary will be left blank, and whatever parameters the cost model requires are defined as floats. For example, the landfilling cost model, which is represented as a linear equation with slope *m* and y-intercept *b*, has the following dictionary when no uncertainty is represented:
+
+.. code-block:: yaml
+
+	cost uncertainty:
+		landfilling:
+			uncertainty: # Left blank
+			m: 1.5921    # Single, scalar value for slope parameter
+			b: 28.9      # Single, scalar value for y-intercept parameter
+
+*Array- or range-based uncertainty*: In this case, parameters with uncertainty are defined with lists of floats, and one model run is executed per element of that list. When modeling this type of uncertainty in multiple parameters simultaneously, care must be taken that the lists of parameter values are all of the same length *and* that the number of runs to execute is equal to this length. An error will be thrown if more runs are executed than there are elements in the parameter lists or if the lists are of unequal length, and the simulation will not completed. The landfilling cost model dictionary has the following structure when array-based uncertainty is implemented for the slope parameter *m*:
+
+.. code-block:: yaml
+
+	cost uncertainty:
+		landfilling:
+            uncertainty: array
+            m:
+            - 0.0
+            - 0.64
+            - 1.27
+            - 1.91
+            - 2.55
+            - 3.18
+            b: 28.9
+
+If both the *m* and *b* parameters are modeled with array-based uncertainty, the dictionary would be as follows. Note that both parameters have value lists of length 6. The `runs` parameter under the `scenario` dictionary in this case would have to be set to 6 as well.
+
+.. code-block:: yaml
+
+	cost uncertainty:
+		landfilling:
+            uncertainty: array
+            m:
+            - 0.0
+            - 0.64
+            - 1.27
+            - 1.91
+            - 2.55
+            - 3.18
+            b:
+            - 0.0
+            - 11.56
+            - 23.12
+            - 34.68
+            - 46.24
+            - 57.8
+			
+*Stochastic uncertainty*: Using this type of uncertainty requires defining probability distributions on the cost model parameters. By default, CELAVI uses triangular distributions with parameters `c`, `loc`, and `scale`. These distribution parameters must be defined as scalars, and a blank key called `value` must also be included. The cost model parameter value, once drawn from the distribution, is stored under `value` for the duration of a model run. The landfilling cost model dictionary with stochastic uncertainty on both *m* and *b* has the following structure:
+
+.. code-block:: yaml
+
+    cost uncertainty:
+        landfilling:
+            uncertainty: stochastic
+            m:
+                c: 0.430
+                loc: 0.0
+                scale: 3.704
+                value: 
+            b:
+                c: 0.430
+                loc: 0.0
+                scale: 67.244
+                value: 
+
+Note that the *m* and *b* parameters are no longer defined explicitly when using stochastic uncertainty.
+
+
 Case Study Config Example
 -------------------------
 
@@ -214,16 +289,16 @@ Case Study Config Example
 
 	model_run:
 		start_year: 2000
-		end_year: 2050
+		end_year: 2051
 		timesteps_per_year: 12
 		min_lifespan: 120 # timesteps
 		lcia_update: 12 # timesteps
+		lcia_verbose: 0
 		cg_update: 12 #timesteps
 		cg_verbose: 1
 		save_cg_csv: True
 
 	directories:
-		quality_checks: quality_checks/
 		inputs_to_preprocessing: inputs_to_preprocessing/
 		inputs_optional: inputs_optional/
 		inputs: inputs/
@@ -231,10 +306,6 @@ Case Study Config Example
 		results: results/
 
 	files:
-		# Files used for input dataset validation
-		quality_checks:
-			quality_check: data-quality-checks.csv
-
 		# Files that must be processed to create CELAVI input files
 		inputs_to_preprocessing:
 			transportation_graph: transportation_graph.csv
@@ -242,7 +313,7 @@ Case Study Config Example
 			power_plant_locs: uswtdb_v4_1_20210721.csv
 			landfill_locs: landfilllmopdata.csv
 			other_facility_locs: other_facility_locations_all_us.csv
-			capacity_projection: #leave this blank
+			capacity_projection: 
 		
 		# Inputs that are alternatives to programmatically generated inputs
 		inputs_optional:
@@ -262,7 +333,9 @@ Case Study Config Example
 			route_pairs: route_pairs.csv
 			component_material_mass: avgmass.csv
 			static_lci: foreground_process_inventory.csv
-			uslci: usnrellci_processesv2017_loc_debugged.p
+			uslci_tech: tech_matrix_corr.csv
+			uslci_emission: process_emissions_corr.csv
+			uslci_process_adder: process_names_adder.csv
 			lci_activity_locations: location.csv
 			emissions_lci: emissions_inventory.csv
 			traci_lci: traci21.csv
@@ -291,7 +364,8 @@ Case Study Config Example
 			count_cumulative_histories: count_cumulative_histories.csv
 			mass_cumulative_histories: mass_cumulative_histories.csv
 			lcia_facility_results: lcia_locations_join.csv
-			lcia_transpo_results: lcia_transportation.csv		
+			lcia_transpo_results: lcia_transportation.csv
+			central_summary: central_summary.csv	
 
 
 Scenario Config Example
@@ -300,31 +374,34 @@ Scenario Config Example
 .. code-block:: yaml
 
 	flags:
-		clear_results         : True # If results files already exist, move them to a sub-directory to avoid overwriting
-		compute_locations     : True  # if compute_locations is enabled (True), compute locations from raw input files (e.g., LMOP, US Wind Turbine Database)
-		run_routes            : True  # if run_routes is enabled (True), compute routing distances between all input locations
-		use_computed_routes   : True  # if use_computed_routes is enabled, read in a pre-assembled routes file instead of generating a new one
-		initialize_costgraph  : True  # create cost graph fresh or use an imported version
-		location_filtering    : True  # If true, dataset will be filtered to the states below
-		distance_filtering    : False # if true, filter computed routes based on max distances in route_pairs file
-		pickle_costgraph      : True  # save the newly initialized costgraph as a pickle file
-		generate_step_costs   : True # set to False if supply chain costs for a facility type vary regionally
-		use_fixed_lifetime    : False # set to False to use Weibull distribution for lifetimes
-		use_lcia_shortcut     : False # set to False to re-generate the lca_db file
-	
+	  clear_results         : True   # If True and results files already exist, move them to a sub-directory to avoid overwriting.
+	  compute_locations     : True   # If True, generate a locations datafile from raw input files (e.g., LMOP, US Wind Turbine Database).
+	  run_routes            : True   # If True, compute routing distances between all input locations.
+	  use_computed_routes   : True   # If True, read in a pre-assembled routes file INSTEAD of generating a new routes file.
+	  initialize_costgraph  : True   # If True, create a CostGraph instance from input data or an imported pickle file.
+	  location_filtering    : False  # If True, all datasets will be filtered to include only the states listed below.
+	  distance_filtering    : False  # If True, filter computed routes based on max distances in route_pairs file.
+	  pickle_costgraph      : True   # If True, saves the CostGraph instance as a pickle file.
+	  generate_step_costs   : True   # If True, supply chain costs for a facility type do not vary regionally.
+	  use_fixed_lifetime    : True   # If True, fixed lifetimes are used instead of stochastic Weibull draws.
+	  use_lcia_shortcut     : True   # If True, use the lca_db emission factors file instead of performing LCIA calculations where possible.
+	  
+
 	scenario:
+		name: Wind Blade EOL Management, National
 		capacity_projection: StScen20A_MidCase_annual_state.csv
 		states_included:
-		- IA
-		- MO
 		seed: 13
 		electricity_mix_level : state
-		runs: 3
+		runs: 1
 
 	circular_pathways:
-		sc_begin: manufacturing
+		sc_begin:
+		- manufacturing
 		sc_end: 
 		- landfilling
+		#sc_in_circ:
+		sc_out_circ:
 		- cement co-processing
 		- next use
 		learning:
@@ -332,8 +409,6 @@ Scenario Config Example
 				component : blade
 				initial cumul: 1.0
 				cumul: 
-				initial cost: 121.28
-				revenue: 0
 				learn rate: -0.05
 				steps:
 				- coarse grinding
@@ -342,71 +417,48 @@ Scenario Config Example
 				component : blade
 				initial cumul: 1.0
 				cumul: 
-				initial cost: 100.38
-				revenue: 242.56
 				learn rate: -0.05
 				steps:
 				- fine grinding
-		cost_uncertainty:
+		cost uncertainty:
 			landfilling:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			rotor_teardown:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			segmenting:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			coarse_grinding_onsite:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			coarse_grinding:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			fine_grinding:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			fine_grinding_revenue:
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
+				uncertainty:
+				m: 1.5921
+				b: 28.9
+			rotor teardown:
+				uncertainty:
+				m: 1467.08
+				b: 285.0
+			segmenting: 
+				uncertainty:
+				b: 27.56
+			coarse grinding onsite:
+				uncertainty:
+				initial cost: 106
+			coarse grinding:
+				uncertainty:
+				initial cost: 106
+			fine grinding:
+				uncertainty:
+				initial cost: 143
+				revenue: 273
 			coprocessing:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			segment_transpo:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			shred_transpo:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
+				uncertainty:
+				b: 10.37
+			segment transpo:
+				uncertainty:
+				cost 1: 4.35 # Before 2001; 2002-2003
+				cost 2: 8.70 # 2001-2002; 2003-2019
+				cost 3: 13.05 # 2019-2031
+				cost 4: 17.40 # 2031-2044
+				cost 5: 21.75 # 2044-2050
+			shred transpo:
+				uncertainty:
+				m: 0.0011221
+				b: 0.0524
 			manufacturing:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
-			blade_transpo:
-				uncertainty: True
-				c: 0.5
-				loc: 0.8
-				scale: 0.4
+				uncertainty:
+				b: 11440.0
 		path_split:
 			fine grinding:
 				fraction: 0.3
