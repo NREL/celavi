@@ -433,35 +433,35 @@
 <p><strong>Array- or range-based uncertainty</strong>: In this case, parameters with uncertainty are defined with lists of floats, and one model run is executed per element of that list. When modeling this type of uncertainty in multiple parameters simultaneously, care must be taken that the lists of parameter values are all of the same length <em>and</em> that the number of runs to execute is equal to this length. An error will be thrown if more runs are executed than there are elements in the parameter lists or if the lists are of unequal length, and the simulation will not completed. The landfilling cost model dictionary has the following structure when array-based uncertainty is implemented for the slope parameter <em>m</em>:</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cost uncertainty</span><span class="p">:</span>
         <span class="nt">landfilling</span><span class="p">:</span>
-<span class=" -Error">    </span><span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
-    <span class="nt">m</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.64</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.27</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.91</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">2.55</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">3.18</span>
-    <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">28.9</span>
+                <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
+                <span class="nt">m</span><span class="p">:</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.64</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.27</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.91</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">2.55</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">3.18</span>
+                <span class="nt">b</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">28.9</span>
 </pre></div>
 </div>
 <p>If both the <em>m</em> and <em>b</em> parameters are modeled with array-based uncertainty, the dictionary would be as follows. Note that both parameters have value lists of length 6. The <cite>runs</cite> parameter under the <cite>scenario</cite> dictionary in this case would have to be set to 6 as well.</p>
 <div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">cost uncertainty</span><span class="p">:</span>
         <span class="nt">landfilling</span><span class="p">:</span>
-<span class=" -Error">    </span><span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
-    <span class="nt">m</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.64</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.27</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.91</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">2.55</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">3.18</span>
-    <span class="nt">b</span><span class="p">:</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">11.56</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">23.12</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">34.68</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">46.24</span>
-    <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">57.8</span>
+                <span class="nt">uncertainty</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">array</span>
+                <span class="nt">m</span><span class="p">:</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.64</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.27</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">1.91</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">2.55</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">3.18</span>
+                <span class="nt">b</span><span class="p">:</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">0.0</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">11.56</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">23.12</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">34.68</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">46.24</span>
+                <span class="p p-Indicator">-</span> <span class="l l-Scalar l-Scalar-Plain">57.8</span>
 </pre></div>
 </div>
 <p><strong>Stochastic uncertainty</strong>: Using this type of uncertainty requires defining probability distributions on the cost model parameters. By default, CELAVI uses triangular distributions with parameters <cite>c</cite>, <cite>loc</cite>, and <cite>scale</cite>. These distribution parameters must be defined as scalars, and a blank key called <cite>value</cite> must also be included. The cost model parameter value, once drawn from the distribution, is stored under <cite>value</cite> for the duration of a model run. The landfilling cost model dictionary with stochastic uncertainty on both <em>m</em> and <em>b</em> has the following structure:</p>

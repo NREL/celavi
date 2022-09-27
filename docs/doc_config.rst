@@ -229,15 +229,15 @@ There is a great deal of flexibility in how uncertainty is defined within the co
 
 	cost uncertainty:
 		landfilling:
-            uncertainty: array
-            m:
-            - 0.0
-            - 0.64
-            - 1.27
-            - 1.91
-            - 2.55
-            - 3.18
-            b: 28.9
+			uncertainty: array
+			m:
+			- 0.0
+			- 0.64
+			- 1.27
+			- 1.91
+			- 2.55
+			- 3.18
+			b: 28.9
 
 If both the *m* and *b* parameters are modeled with array-based uncertainty, the dictionary would be as follows. Note that both parameters have value lists of length 6. The `runs` parameter under the `scenario` dictionary in this case would have to be set to 6 as well.
 
@@ -245,21 +245,21 @@ If both the *m* and *b* parameters are modeled with array-based uncertainty, the
 
 	cost uncertainty:
 		landfilling:
-            uncertainty: array
-            m:
-            - 0.0
-            - 0.64
-            - 1.27
-            - 1.91
-            - 2.55
-            - 3.18
-            b:
-            - 0.0
-            - 11.56
-            - 23.12
-            - 34.68
-            - 46.24
-            - 57.8
+			uncertainty: array
+			m:
+			- 0.0
+			- 0.64
+			- 1.27
+			- 1.91
+			- 2.55
+			- 3.18
+			b:
+			- 0.0
+			- 11.56
+			- 23.12
+			- 34.68
+			- 46.24
+			- 57.8
 			
 **Stochastic uncertainty**: Using this type of uncertainty requires defining probability distributions on the cost model parameters. By default, CELAVI uses triangular distributions with parameters `c`, `loc`, and `scale`. These distribution parameters must be defined as scalars, and a blank key called `value` must also be included. The cost model parameter value, once drawn from the distribution, is stored under `value` for the duration of a model run. The landfilling cost model dictionary with stochastic uncertainty on both *m* and *b* has the following structure:
 
