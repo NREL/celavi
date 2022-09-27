@@ -1,0 +1,633 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Python Life Cycle Inventory Analysis &mdash; CELAVI  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Postprocessing and Diagnostic Visualizations" href="doc_diagnostic_viz.html" />
+    <link rel="prev" title="Cost Graph" href="doc_costgraph.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="main_page.html" class="icon icon-home"> CELAVI
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="doc_config.html">Configuration Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_preprocessing.html">Data Preprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_scenario.html">Scenario</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_des.html">Discrete Event Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_costgraph.html">Cost Graph</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Python Life Cycle Inventory Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-celavi.reeds_importer">ReEDS Data Importer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#discrete-event-simulation-interface">Discrete Event Simulation Interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#insitu-emission-calculations">Insitu Emission Calculations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#concrete-inventory-editor">Concrete Inventory Editor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#background-inventory-optimization">Background Inventory Optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#foreground-inventory-optimization">Foreground Inventory Optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#background-emissions-postprocessing">Background Emissions Postprocessing</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="doc_diagnostic_viz.html">Postprocessing and Diagnostic Visualizations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="main_page.html">CELAVI</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="main_page.html">Docs</a> &raquo;</li>
+        
+      <li>Python Life Cycle Inventory Analysis</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/doc_pylcia.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="python-life-cycle-inventory-analysis">
+<h1>Python Life Cycle Inventory Analysis<a class="headerlink" href="#python-life-cycle-inventory-analysis" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-celavi.reeds_importer">
+<span id="reeds-data-importer"></span><h2>ReEDS Data Importer<a class="headerlink" href="#module-celavi.reeds_importer" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="celavi.reeds_importer.ReedsImporter">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.reeds_importer.</code><code class="sig-name descname">ReedsImporter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">reeds_imported_filename</span></em>, <em class="sig-param"><span class="n">reeds_output_filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.reeds_importer.ReedsImporter" title="Permalink to this definition">¶</a></dt>
+<dd><p>The ReedsImporter class</p>
+<ul class="simple">
+<li><p>Provides an object which stores the files names required for modifying ReEDS
+output datasets for compatibility with pyLCIA.</p></li>
+<li><p>Calls the data manipulation methods.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reeds_imported_filename</strong> (<em>str</em>) – Name of the manually edited ReEDS input file.</p></li>
+<li><p><strong>reeds_output_filename</strong> (<em>str</em>) – Name of the final pyLCIA compatible electricity grid mix file.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="celavi.reeds_importer.ReedsImporter.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">reeds_imported_filename</span></em>, <em class="sig-param"><span class="n">reeds_output_filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.reeds_importer.ReedsImporter.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store the filenames required for ReEDS data manipulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reeds_imported_filename</strong> (<em>str</em>) – Name of the manually edited ReEDS input file</p></li>
+<li><p><strong>reeds_output_filename</strong> (<em>str</em>) – Name of the final pylcia compatible electricity grid mix file.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.reeds_importer.ReedsImporter.state_level_reeds_importer">
+<code class="sig-name descname">state_level_reeds_importer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#celavi.reeds_importer.ReedsImporter.state_level_reeds_importer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Store filenames and performs ReEDS data manipulation at the state
+electricity grid mix level.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.reeds_importer.ReedsImporter.national_level_reeds_importer">
+<code class="sig-name descname">national_level_reeds_importer</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#celavi.reeds_importer.ReedsImporter.national_level_reeds_importer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stores filenames and performs ReEDS data manipulation at the national
+electricity grid mix level.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="discrete-event-simulation-interface">
+<h2>Discrete Event Simulation Interface<a class="headerlink" href="#discrete-event-simulation-interface" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="des_interface.PylcaCelavi">
+<em class="property">class </em><code class="sig-prename descclassname">des_interface.</code><code class="sig-name descname">PylcaCelavi</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lcia_des_filename</span></em>, <em class="sig-param"><span class="n">shortcutlca_filename</span></em>, <em class="sig-param"><span class="n">intermediate_demand_filename</span></em>, <em class="sig-param"><span class="n">dynamic_lci_filename</span></em>, <em class="sig-param"><span class="n">electricity_grid_spatial_level</span></em>, <em class="sig-param"><span class="n">static_lci_filename</span></em>, <em class="sig-param"><span class="n">uslci_tech_filename</span></em>, <em class="sig-param"><span class="n">uslci_emission_filename</span></em>, <em class="sig-param"><span class="n">uslci_process_filename</span></em>, <em class="sig-param"><span class="n">stock_filename</span></em>, <em class="sig-param"><span class="n">emissions_lci_filename</span></em>, <em class="sig-param"><span class="n">traci_lci_filename</span></em>, <em class="sig-param"><span class="n">use_shortcut_lca_calculations</span></em>, <em class="sig-param"><span class="n">verbose</span></em>, <em class="sig-param"><span class="n">substitution_rate</span></em>, <em class="sig-param"><span class="n">run</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#des_interface.PylcaCelavi" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="des_interface.PylcaCelavi.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">lcia_des_filename</span></em>, <em class="sig-param"><span class="n">shortcutlca_filename</span></em>, <em class="sig-param"><span class="n">intermediate_demand_filename</span></em>, <em class="sig-param"><span class="n">dynamic_lci_filename</span></em>, <em class="sig-param"><span class="n">electricity_grid_spatial_level</span></em>, <em class="sig-param"><span class="n">static_lci_filename</span></em>, <em class="sig-param"><span class="n">uslci_tech_filename</span></em>, <em class="sig-param"><span class="n">uslci_emission_filename</span></em>, <em class="sig-param"><span class="n">uslci_process_filename</span></em>, <em class="sig-param"><span class="n">stock_filename</span></em>, <em class="sig-param"><span class="n">emissions_lci_filename</span></em>, <em class="sig-param"><span class="n">traci_lci_filename</span></em>, <em class="sig-param"><span class="n">use_shortcut_lca_calculations</span></em>, <em class="sig-param"><span class="n">verbose</span></em>, <em class="sig-param"><span class="n">substitution_rate</span></em>, <em class="sig-param"><span class="n">run</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#des_interface.PylcaCelavi.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Stores filenames in self and deletes old interface file if they exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lcia_des_filename</strong> (<em>str</em>) – Path to file that stores calculated impacts for passing back to the
+discrete event simulation.</p></li>
+<li><p><strong>shortcutlca_filename</strong> (<em>str</em>) – Path to file where previously calculated impacts are stored. This file
+can be used instead of re-calculating impacts from the inventory.</p></li>
+<li><p><strong>intermediate_demand_filename</strong> (<em>str</em>) – Path to file that stores the final demand vector every time the LCIA
+calculations are run. For debugging purposes only.</p></li>
+<li><p><strong>dynamic_lci_filename</strong> (<em>str</em>) – Path to the LCI dataset which changes with time.</p></li>
+<li><p><strong>electricity_grid_spatial_level</strong> (<em>str</em>) – Specification of grid spatial level used for lca calculations. Must be
+“state” or “national”.</p></li>
+<li><p><strong>static_lci_filename</strong> (<em>str</em>) – Path to the LCI dataset which does not change with time.</p></li>
+<li><p><strong>uslci_filename</strong> (<em>str</em>) – Path to the U.S. LCI dataset pickle file.</p></li>
+<li><p><strong>stock_filename</strong> (<em>str</em>) – filename for storage pickle variable</p></li>
+<li><p><strong>emissions_lci_filename</strong> (<em>str</em>) – filename for emissions inventory</p></li>
+<li><p><strong>traci_lci_filename</strong> (<em>str</em>) – Path to TRACI 2.0 characterization factor dataset.</p></li>
+<li><p><strong>use_shortcut_lca_calculations</strong> (<em>bool</em>) – Boolean flag for using previously calculating impact data or running the
+optimization code to re-calculate impacts.</p></li>
+<li><p><strong>substitution_rate</strong> (<em>Dict</em>) – Dictionary of material name: substitution rates for materials displaced by the
+circular component.</p></li>
+<li><p><strong>run</strong> (<em>int</em>) – Model run. Defaults to zero.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="des_interface.PylcaCelavi.lca_performance_improvement">
+<code class="sig-name descname">lca_performance_improvement</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df</span></em>, <em class="sig-param"><span class="n">state</span></em>, <em class="sig-param"><span class="n">electricity_grid_spatial_level</span></em><span class="sig-paren">)</span><a class="headerlink" href="#des_interface.PylcaCelavi.lca_performance_improvement" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used to bypass optimization based pylca celavi calculations
+It reads emission factor data from previous runs stored in a file
+and performs lca rapidly.</p>
+<p>Needs to be reset after any significant update to data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pandas.DataFrame</em>) – <p>Material flow and process information provided by the DES.</p>
+<dl class="simple">
+<dt>Columns:</dt><dd><ul>
+<li><dl class="simple">
+<dt>year: int</dt><dd><p>Simulation year.</p>
+</dd>
+</dl>
+</li>
+<li><p>stage: str</p></li>
+<li><p>material: str</p></li>
+<li><dl class="simple">
+<dt>state: str</dt><dd><p>Optional state identifier. Required only if electricity_grid_spatial_level is “state”.</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt>route_id: str</dt><dd><p>UUID for the route along which transportation occurs. None for non-transportation activities.</p>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</p></li>
+<li><p><strong>state</strong> (<em>str</em>) – State identifier.</p></li>
+<li><p><strong>electricity_grid_spatial_level</strong> (<em>str</em>) – Specification of grid spatial level used for lca calculations. Must be
+“state” or “national”.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>df provided to method and impacts from the shortcut LCA file, or an empty data frame if the file doesn’t exist.</p>
+<dl class="simple">
+<dt>Columns:</dt><dd><ul class="simple">
+<li><p>year: int</p></li>
+<li><p>stage: str</p></li>
+<li><p>material: str</p></li>
+<li><p>state: str</p></li>
+<li><p>route_id: str</p></li>
+</ul>
+</dd>
+<dt>Columns:</dt><dd><ul class="simple">
+<li><p>flow name: str</p></li>
+<li><p>flow unit: str</p></li>
+<li><p>flow quantity: float</p></li>
+<li><p>year: int</p></li>
+<li><p>facility_id: int</p></li>
+<li><p>stage: str</p></li>
+<li><p>material: str</p></li>
+<li><p>route_id: str</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pandas.DataFrame, pandas.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="des_interface.PylcaCelavi.pylca_run_main">
+<code class="sig-name descname">pylca_run_main</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">0</span></em><span class="sig-paren">)</span><a class="headerlink" href="#des_interface.PylcaCelavi.pylca_run_main" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function runs the individual pylca celavi functions for performing various calculations</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>df</strong> (<em>pd.DataFrame</em>) – Material flows from DES</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>LCIA results (also appends to csv file)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="insitu-emission-calculations">
+<h2>Insitu Emission Calculations<a class="headerlink" href="#insitu-emission-calculations" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="insitu_emission.preprocessing">
+<code class="sig-prename descclassname">insitu_emission.</code><code class="sig-name descname">preprocessing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">year</span></em>, <em class="sig-param"><span class="n">df_static</span></em><span class="sig-paren">)</span><a class="headerlink" href="#insitu_emission.preprocessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
+inventory with the static LCA inventory. Removes dummy processes with no output from the inventory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>year</strong> (<em>str</em>) – year of LCA calculation</p></li>
+<li><p><strong>df_static</strong> (<em>pd.DataFrame</em>) – lca inventory static</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>pd.DataFrame</em> – cleaned process inventory merged with dynamic data</p></li>
+<li><p><em>pd.DataFrame</em> – inventory with no product flows</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="insitu_emission.model_celavi_lci_insitu">
+<code class="sig-prename descclassname">insitu_emission.</code><code class="sig-name descname">model_celavi_lci_insitu</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">f_d</span></em>, <em class="sig-param"><span class="n">yr</span></em>, <em class="sig-param"><span class="n">fac_id</span></em>, <em class="sig-param"><span class="n">stage</span></em>, <em class="sig-param"><span class="n">material</span></em>, <em class="sig-param"><span class="n">state</span></em>, <em class="sig-param"><span class="n">df_emissions</span></em>, <em class="sig-param"><span class="n">verbose</span></em><span class="sig-paren">)</span><a class="headerlink" href="#insitu_emission.model_celavi_lci_insitu" title="Permalink to this definition">¶</a></dt>
+<dd><p>This is used for calculating insitu emissions
+Creates technology matrix and final demand vector from inventory data
+Runs the PyLCA solver to perform LCA calculations
+Conforms results to a dataframe</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f_d</strong> (<em>Dataframe</em>) – </p></li>
+<li><p><strong>from DES</strong> (<em>Dataframe</em>) – </p></li>
+<li><p><strong>yr</strong> (<em>int</em>) – </p></li>
+<li><p><strong>of calculation</strong> (<em>Year</em>) – </p></li>
+<li><p><strong>fac_id</strong> (<em>int</em>) – </p></li>
+<li><p><strong>ID of facility being evaluated</strong> (<em>Facility</em>) – </p></li>
+<li><p><strong>stage</strong> (<em>str</em>) – </p></li>
+<li><p><strong>of facility being evaluated</strong> (<em>Stage</em>) – </p></li>
+<li><p><strong>material</strong> (<em>str</em>) – </p></li>
+<li><p><strong>being evaluated</strong> (<em>material</em>) – </p></li>
+<li><p><strong>df_emission</strong> (<em>df</em>) – </p></li>
+<li><p><strong>inventory</strong> (<em>Emissons</em>) – </p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Returns INSITU Final LCA results in the form of a dataframe after performing calculation checks
+columns=[‘flow name’, ‘flow unit’, ‘flow quantity’,</p>
+<blockquote>
+<div><p>’year’, ‘facility_id’, ‘stage’, ‘material’, ‘route_id’, ‘state’]</p>
+</div></blockquote>
+<p>These are insitu mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="concrete-inventory-editor">
+<h2>Concrete Inventory Editor<a class="headerlink" href="#concrete-inventory-editor" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="concrete_life_cycle_inventory_editor.concrete_life_cycle_inventory_updater">
+<code class="sig-prename descclassname">concrete_life_cycle_inventory_editor.</code><code class="sig-name descname">concrete_life_cycle_inventory_updater</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">d_f</span></em>, <em class="sig-param"><span class="n">yr</span></em>, <em class="sig-param"><span class="n">k</span></em>, <em class="sig-param"><span class="n">stage</span></em>, <em class="sig-param"><span class="n">static_filename</span></em>, <em class="sig-param"><span class="n">stock_filename</span></em>, <em class="sig-param"><span class="n">emissions_filename</span></em>, <em class="sig-param"><span class="n">substitution_rate</span></em><span class="sig-paren">)</span><a class="headerlink" href="#concrete_life_cycle_inventory_editor.concrete_life_cycle_inventory_updater" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function modifies static LCI based on availability of GFRP at the cement processing stage
+and demand of concrete in the system</p>
+<p>GFRP may or may not be available in the system every year. If GFRP is available when
+concrete is not required or does not have a final demand, a stock variable is ceated to store GFRP and used in later years
+for cement co processing</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>d_f</strong> (<em>pd.Dataframe</em>) – dataframe with material flow, stage and facility information from DES</p></li>
+<li><p><strong>yr</strong> (<em>int</em>) – year</p></li>
+<li><p><strong>k</strong> (<em>str</em>) – current material under study</p></li>
+<li><p><strong>stage</strong> (<em>str</em>) – current stage under study</p></li>
+<li><p><strong>static_filename</strong> (<em>str</em>) – filename for the lca fixed inventory</p></li>
+<li><p><strong>stock_filename</strong> (<em>str</em>) – filename for storage pickle variable</p></li>
+<li><p><strong>emissions_filename</strong> (<em>str</em>) – filename for emissions inventory</p></li>
+<li><p><strong>substitution_rate</strong> (<em>Dict</em>) – Dictionary of material: sub rates for materials displaced by the
+circular component</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>pd.DataFrame</em> – updated static inventory with changes due to concrete demand and GFRP availability.</p></li>
+<li><p><em>pd.DataFrame</em> – emissions inventory</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="background-inventory-optimization">
+<h2>Background Inventory Optimization<a class="headerlink" href="#background-inventory-optimization" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pylca_opt_background.model_celavi_lci_background">
+<code class="sig-prename descclassname">pylca_opt_background.</code><code class="sig-name descname">model_celavi_lci_background</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">f_d</span></em>, <em class="sig-param"><span class="n">yr</span></em>, <em class="sig-param"><span class="n">fac_id</span></em>, <em class="sig-param"><span class="n">stage</span></em>, <em class="sig-param"><span class="n">material</span></em>, <em class="sig-param"><span class="n">route_id</span></em>, <em class="sig-param"><span class="n">state</span></em>, <em class="sig-param"><span class="n">uslci_tech_filename</span></em>, <em class="sig-param"><span class="n">uslci_emission_filename</span></em>, <em class="sig-param"><span class="n">uslci_process_filename</span></em>, <em class="sig-param"><span class="n">verbose</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pylca_opt_background.model_celavi_lci_background" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main function of this module which receives information from DES interface and runs the suppoeting calculation functions.
+Creates the technology matrix and the final demand vector based on input data.
+Performs necessary checks before and after the LCA  calculation.</p>
+<p>Checks performed
+1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code.
+2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>f_d</strong> (<em>pd.Dataframe</em>) – Dataframe from DES interface containing material flow information</p></li>
+<li><p><strong>yr</strong> (<em>int</em>) – year of analysis</p></li>
+<li><p><strong>fac_id</strong> (<em>int</em>) – facility id</p></li>
+<li><p><strong>stage</strong> (<em>str</em>) – stage of analysis</p></li>
+<li><p><strong>material</strong> (<em>str</em>) – material of LCA analysis</p></li>
+<li><p><strong>route_id</strong> (<em>str</em>) – Unique identifier for transportation route.</p></li>
+<li><p><strong>state</strong> (<em>str</em>) – State in which LCA calculations are taking place.</p></li>
+<li><p><strong>uslci_tech_filename</strong> (<em>str</em>) – filename for the USLCI technology matrix. It contains the technology matrix from USLCI.</p></li>
+<li><p><strong>uslci_process_filename</strong> (<em>str</em>) – filename for the USLCI process list matrix. It contains the list of processes in the USLCI.</p></li>
+<li><p><strong>uslci_emission_filename</strong> (<em>str</em>) – filename for the USLCI emissions list matrix. It contains the list of emissions from acttivities in the USLCI.</p></li>
+<li><p><strong>verbose</strong> (<em>int</em>) – verbose parameter for toggling print of LCA calculation steps. Default 0 no printout</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><p>Final LCA results in the form of a dataframe after performing calculation checks
+columns=[‘product’, ‘unit’, ‘value’,</p>
+<blockquote>
+<div><p>’year’, ‘facility_id’, ‘stage’, ‘material’, ‘route_id’, ‘state’]</p>
+</div></blockquote>
+<p>These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility.</p>
+</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p><cite>model_celavi_lci_background</cite> has functions defined within it that are not accessible to the autodoc.</p>
+</div>
+<div class="section" id="foreground-inventory-optimization">
+<h2>Foreground Inventory Optimization<a class="headerlink" href="#foreground-inventory-optimization" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pylca_opt_foreground.preprocessing">
+<code class="sig-prename descclassname">pylca_opt_foreground.</code><code class="sig-name descname">preprocessing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">year</span></em>, <em class="sig-param"><span class="n">state</span></em>, <em class="sig-param"><span class="n">df_static</span></em>, <em class="sig-param"><span class="n">dynamic_lci_filename</span></em>, <em class="sig-param"><span class="n">electricity_grid_spatial_level</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pylca_opt_foreground.preprocessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
+inventory with the static LCA inventory. Removes dummy processes with no output from the inventory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>year</strong> (<em>str</em>) – year of LCA calculation</p></li>
+<li><p><strong>state</strong> (<em>str</em>) – state of Facility</p></li>
+<li><p><strong>df_static</strong> (<em>pd.DataFrame</em>) – lca inventory static</p></li>
+<li><p><strong>dynamic_lci_filename</strong> (<em>str</em>) – filename for the dynamic inventory</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>pd.DataFrame</em> – cleaned process inventory merged with dynamic data</p></li>
+<li><p><em>pd.DataFrame</em> – inventory with no product flows</p></li>
+<li><p><em>columns=[‘flow name’, ‘flow unit’, ‘flow quantity’,</em> – ‘year’, ‘facility_id’, ‘stage’, ‘material’, ‘route_id’, ‘state’]</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pylca_opt_foreground.electricity_corrector_before20">
+<code class="sig-prename descclassname">pylca_opt_foreground.</code><code class="sig-name descname">electricity_corrector_before20</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pylca_opt_foreground.electricity_corrector_before20" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used to replace pre 2020 electricity flows with the base electricity mix flow
+in the USLCI inventory Electricity, at Grid, US, 2010’</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>df</strong> (<em>pd.DataFrame</em>) – process inventory</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>pd.DataFrame</em> – process inventory with electricity flows before 2020 converted to the base electricity
+mix flow in USLCI.</p></li>
+<li><p><em>columns=[‘flow name’, ‘flow unit’, ‘flow quantity’,</em> – ‘year’, ‘facility_id’, ‘stage’, ‘material’, ‘route_id’, ‘state’]</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="background-emissions-postprocessing">
+<h2>Background Emissions Postprocessing<a class="headerlink" href="#background-emissions-postprocessing" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pylca_celavi_background_postprocess.postprocessing">
+<code class="sig-prename descclassname">pylca_celavi_background_postprocess.</code><code class="sig-name descname">postprocessing</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">final_res</span></em>, <em class="sig-param"><span class="n">insitu</span></em>, <em class="sig-param"><span class="n">verbose</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pylca_celavi_background_postprocess.postprocessing" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used for post processing of final results dataframe
+It adds the insitu emissions with the background emissions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>final_res</strong> (<em>Dataframe</em>) – dataframe with background LCA results</p></li>
+<li><p><strong>insitu</strong> (<em>Dataframe</em>) – dataframe with insitu emissions</p></li>
+<li><p><strong>verbose</strong> (<em>int</em>) – toggle print of insitu emissions postprocessing statement when emissions are missing</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>final combined total emissions dataframe with individual pollutant information
+columns = [‘flow name’, ‘flow unit’, ‘year’, ‘facility_id’, ‘stage’, ‘material’, ‘route_id’,’state’,’flow quantity’]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pylca_celavi_background_postprocess.impact_calculations">
+<code class="sig-prename descclassname">pylca_celavi_background_postprocess.</code><code class="sig-name descname">impact_calculations</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">final_res</span></em>, <em class="sig-param"><span class="n">traci_lci_filename</span></em><span class="sig-paren">)</span><a class="headerlink" href="#pylca_celavi_background_postprocess.impact_calculations" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used for LCIA post processing of final results dataframe
+It converts mass flow of pollutants to Environmental impacts based on TRACI 2.1
+characterization method</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>final_res</strong> (<em>Dataframe</em>) – dataframe with total LCA results</p></li>
+<li><p><strong>traci_lci_filename</strong> (<em>str</em>) – name of the traci characerization file</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>dataframe wih LCIA impact results
+columns = [‘year’, ‘facility_id’, ‘material’, ‘route_id’, ‘state’, ‘stage’, ‘impacts’, ‘impact’]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="doc_diagnostic_viz.html" class="btn btn-neutral float-right" title="Postprocessing and Diagnostic Visualizations" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="doc_costgraph.html" class="btn btn-neutral float-left" title="Cost Graph" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, NREL
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
