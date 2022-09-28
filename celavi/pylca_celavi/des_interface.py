@@ -132,7 +132,9 @@ class PylcaCelavi:
                 - year: int
                     Simulation year.
                 - stage: str
+                    Activity in the system
                 - material: str
+                    Material flowing through the particular system activity
                 - state: str
                     Optional state identifier. Required only if electricity_grid_spatial_level is "state".
                 - route_id: str
@@ -151,19 +153,13 @@ class PylcaCelavi:
             df provided to method and impacts from the shortcut LCA file, or an empty data frame if the file doesn't exist.
 
             Columns:
-                - year: int
-                - stage: str
-                - material: str
-                - state: str
-                - route_id: str
-
-            Columns:
                 - flow name: str
                 - flow unit: str
                 - flow quantity: float
                 - year: int
                 - facility_id: int
                 - stage: str
+                - state: str
                 - material: str
                 - route_id: str
         """
@@ -213,8 +209,19 @@ class PylcaCelavi:
         
         Returns
         -------
-        pd.DataFrame
+        res_df: pd.DataFrame
             LCIA results (also appends to csv file)
+
+            Columns:
+                - year: int
+                - facility_id: int
+                - material: str
+                - route_id: str
+                - state: str
+                - stage: str
+                - impacts: str
+                - impact: float
+
         """
         df = df[df["flow quantity"] != 0]
         res_df = pd.DataFrame()
