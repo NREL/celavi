@@ -40,7 +40,7 @@ def preprocessing(year,df_emission):
     del product_df['indicator']
     del df_with_all_other_flows['indicator']
     
-    emission.loc[:, 'value'] = emission.loc[:, 'value'].astype(np.float64)
+    product_df.loc[:, 'value'] = product_df.loc[:, 'value'].astype(np.float64)
     return product_df, df_with_all_other_flows
 
 
