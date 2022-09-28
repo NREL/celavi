@@ -4,7 +4,7 @@ import numpy as np
 def preprocessing(year,df_static):
 
     """
-    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
+    This function preprocesses the emissions inventory before the LCA calculation. It joins the dynamic LCA
     inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
 
     Parameters
@@ -17,9 +17,9 @@ def preprocessing(year,df_static):
     
     Returns
     -------
-    pd.DataFrame
+    process_df: pd.DataFrame
        cleaned process inventory merged with dynamic data
-    pd.DataFrame   
+    df_with_all_other_flows: pd.DataFrame   
        inventory with no product flows
 
     """
@@ -47,28 +47,31 @@ def preprocessing(year,df_static):
 def solver(tech_matrix,F,process, df_with_all_other_flows):
 
     """
-    This function houses the calculator to solve Xs = F. 
-    Solves the Xs=F equation. 
-    Solves the scaling vector.  
+    This function houses the calculator to solve Xs = F for calculating insitu emissions. 
+    Solves the Xs=F equation. Solves the scaling vector.  
 
     Parameters
     ----------
     tech_matrix : numpy matrix
-         technology matrix from the process inventory
+         technology matrix from the emissions inventory
     F : vector
          Final demand vector 
     process: list
-         filename for the dynamic inventory   
+         filename for the emissions inventory   
     df_with_all_other_flows: pd.DataFrame
          lca inventory with no product flows
 
     
     Returns
     -------
-    pd.DataFrame
-        LCA results in the form of a dataframe after performing LCA calculations
-        columns=['product', 'unit', 'value']
-        These are mass pollutant flows calculated from USLCI for demand of material. 
+    results_total: pd.DataFrame
+        emissions in the form of a dataframe after performing insitu emissions calculations
+        
+        Columns:
+           - product: str
+           - unit: str
+           - value: float
+        These are insitu mass pollutant flows calculated for demand of material. 
     """
 
     tm= tech_matrix.to_numpy()
@@ -89,7 +92,7 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
 
 def electricity_corrector_before20(df):
     """
-    This function is used to replace pre 2020 electricity flows with the base electricity mix flow
+    This function is used to replace pre 2020 electricity flows in the emissions inventory with the base electricity mix flow
     in the USLCI inventory Electricity, at Grid, US, 2010'
     
 
@@ -100,7 +103,7 @@ def electricity_corrector_before20(df):
 
     Returns
     -------
-    pd.DataFrame
+    df: pd.DataFrame
        process inventory with electricity flows before 2020 converted to the base electricity
        mix flow in USLCI. 
     """
@@ -112,14 +115,14 @@ def electricity_corrector_before20(df):
 def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_other_flows):
 
     """
-    Runs the solver function and creates final data frame in proper format
+    Runs the solver function for the insitu emissions and creates final data frame in proper format
 
     Parameters
     ----------
     tech matrix: pd.Dataframe
-         technology matrix built from the process inventory. 
+         technology matrix built from the emissions inventory. 
     F: final demand series vector
-         final demand of the LCA problem
+         final demand of the foreground system
     yr: int
          year of analysis
     i: int
@@ -140,12 +143,19 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
 
     Returns
     -------
-    pd.DataFrame
-        Returns the LCA reults in a properly arranged dataframe with all supplemental information
-        LCA results in the form of a dataframe.
-        columns=['product', 'unit', 'value',
-                 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-        These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+    res: pd.DataFrame
+        Returns the insitu emissions in a properly arranged dataframe with all supplemental information
+        emission results in the form of a dataframe.
+        Columns:
+            - product: str
+            - unit: str
+            - value: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: int
+            - state: str
     """
 
     
@@ -171,9 +181,9 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
 
     """
     This is used for calculating insitu emissions
-    Creates technology matrix and final demand vector from inventory data
-    Runs the PyLCA solver to perform LCA calculations
-    Conforms results to a dataframe 
+    Creates emissions inventory technology matrix and final demand vector from inventory data
+    Runs the PyLCA solver to perform insitu emissions calculations
+    Conforms emission results to a dataframe 
 
     Parameters
     ----------
@@ -197,11 +207,19 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
 
     Returns
     -------
-    pd.DataFrame
-       Returns INSITU Final LCA results in the form of a dataframe after performing calculation checks
-       columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-       These are insitu mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+    res: pd.DataFrame
+       Returns insitu emission results in the form of a dataframe after performing calculation checks
+       These are insitu mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility.
+       Columns:
+        - flow name: str
+        - flow unit: str
+        - flow quantity: float
+        - year: int
+        - facility_id: int
+        - stage: str
+        - material: str
+        - route_id: int
+        - state: str    
     """
 
 

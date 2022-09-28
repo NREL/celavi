@@ -45,9 +45,9 @@ def concrete_life_cycle_inventory_updater(d_f,
     
     Returns
     -------
-    pd.DataFrame
+    df_static: pd.DataFrame
         updated static inventory with changes due to concrete demand and GFRP availability.
-    pd.DataFrame
+    df_emissions: pd.DataFrame
         emissions inventory
 
     """
