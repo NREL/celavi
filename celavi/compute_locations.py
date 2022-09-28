@@ -445,12 +445,9 @@ class ComputeLocations:
             on='p_name',
             how='outer'
         )
-
-        self.capacity_data.append(
-            capacity_future,
-            ignore_index=True,
-            sort=True
-        ).rename(
+        self.capacity_data = pd.concat([self.capacity_data,capacity_future])
+        self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns))
+        self.capacity_data.rename(
             columns={'n_turbine': 'n_technology'}
         ).to_csv(
             self.technology_data_filename,
@@ -484,10 +481,9 @@ class ComputeLocations:
         # Add the future power plants to the locations dataset stored in self
         # It has to go back into self to get saved at the end of the
         # join_facilities method
-        self.locs = self.locs.append(
-            _new_facility_locs,
-            ignore_index=True,
-            sort=True)
+        self.locs = pd.concat([self.locs,_new_facility_locs])
+        self.locs = self.locs.sort_values(by = list(self.locs.columns))
+
 
     def join_facilities(self, locations_output_file):
         """
