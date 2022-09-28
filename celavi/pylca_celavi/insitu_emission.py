@@ -23,7 +23,7 @@ def preprocessing(year,df_emission):
        inventory with no product flows
 
     """
-    df = df_static
+    df = df_emission
     df_input = df[df['input'] == True]
     df_output = df[df['input'] == False]
     df_input.loc[:, 'value'] = df_input.loc[:, 'value'] * (-1)
