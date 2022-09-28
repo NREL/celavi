@@ -1,11 +1,6 @@
 import pandas as pd
 import numpy as np
 
-
-#Reading in static and dynamics lca databases
-
-
-#We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level):
 
     """
@@ -40,7 +35,7 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
             - stage: str
             - material: str
             - route_id: int
-            - state:str
+            - state: str
 
     """
     
@@ -98,7 +93,7 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
     -------
     results_total: pd.DataFrame
         LCA results for foreground system in the form of a dataframe after performing LCA calculations
-        This method is calculating the output required from the background processes to operate the foreground processes. No emission flows are included in this calculation. 
+        This method calculates the outputs required from the background processes to operate the foreground processes. No emission flows are included in this calculation. 
 
         Columns:
            - product: str
@@ -127,7 +122,7 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
 def electricity_corrector_before20(df):
     """
     This function is used to replace pre 2020 electricity flows in the foreground inventory with the base electricity mix flow
-    from the USLCI inventory "Electricity, at Grid, US, 2010" 
+    from the background USLCI inventory "Electricity, at Grid, US, 2010" 
 
     Parameters
     ----------
@@ -138,7 +133,7 @@ def electricity_corrector_before20(df):
     -------
     df: pd.DataFrame
         process inventory with electricity flows before 2020 converted to the base electricity
-        mix flow in USLCI.
+        mix flow in the background LCA inventory.
 
         Columns:
             - flow name: str
@@ -159,7 +154,7 @@ def electricity_corrector_before20(df):
 def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename,verbose):    
     
     """
-    Calls the LCA solver function for the foreground inventory and arranges and stores the results into a proper pandas dataframe. 
+    Calls the LCA solver function for the foreground inventory and arranges and stores the results in a pandas dataframe. 
     
     Parameters
     ----------
@@ -232,7 +227,7 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
     Creates the technology matrix for the foreground inventory and the final demand vector based on input data. 
     Performs necessary checks before and after the LCA calculation. 
     Checks performed 
-    1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
+    1. Final demand by the foreground system is not zero. If zero, returns empty dataframe and simulation continues without breaking code. 
     2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking. 
     
     Parameters

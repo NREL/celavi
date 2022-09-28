@@ -7,7 +7,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
 
     """
     Creates the technology matrix for the background system inventory and the final demand vector based on input data. 
-    Performs necessary checks before and after the LCA  calculation. 
+    Performs necessary checks before and after the LCA calculations. 
     
     Checks performed 
     1. Final demand to the background LCA system by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
@@ -26,9 +26,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     material: str
       material of LCA analysis
     route_id: str
-        Unique identifier for transportation route.
+      Unique identifier for transportation route.
     state: str
-        State in which LCA calculations are taking place.
+      State in which LCA calculations are taking place.
     uslci_tech_filename: str
       filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
     uslci_process_filename: str
@@ -211,7 +211,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     else:
         final_demand_scaler = 0.1
 
-    #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
     #To make the calculation easier
     F = final_dem['flow quantity'].to_numpy()

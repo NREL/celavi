@@ -9,7 +9,7 @@ from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import (
     concrete_life_cycle_inventory_updater,
 )
 
-# Background LCA runs on the USLCI after the foreground process
+# Postprocessing to perform life cycle impact analysis
 from celavi.pylca_celavi.pylca_celavi_background_postprocess import (
     postprocessing,
     impact_calculations,
@@ -79,6 +79,10 @@ class PylcaCelavi:
         use_shortcut_lca_calculations: bool
             Boolean flag for using previously calculating impact data or running the
             optimization code to re-calculate impacts.
+
+        verbose: int
+            0 to suppress detailed print statements
+            1 to allow print statements
             
         substitution_rate: Dict
             Dictionary of material name: substitution rates for materials displaced by the
@@ -105,8 +109,7 @@ class PylcaCelavi:
         self.substitution_rate = substitution_rate
         self.run = run
 
-        # This is the final LCIA results file. Its created using the append function as CELAVI runs.
-        # Thus if there is a chance it exists we need to delete it
+        # The results file should be removed if present. The LCA results are appended to the results file. 
         try:
             os.remove(self.lcia_des_filename)
             if self.verbose == 1:
@@ -117,11 +120,11 @@ class PylcaCelavi:
 
     def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
         """
-        This function is used to bypass optimization based pylca celavi calculations
+        This function is used to bypass pylca celavi calculations
         It reads emission factor data from previous runs stored in a file
-        and performs lca rapidly.
+        and performs lca faster.
 
-        Needs to be reset after any significant update to data.
+        The stored file needs to be reset after any significant update to data.
 
         Parameters
         ----------
@@ -150,7 +153,7 @@ class PylcaCelavi:
         Returns
         -------
         pandas.DataFrame, pandas.DataFrame
-            df provided to method and impacts from the shortcut LCA file, or an empty data frame if the file doesn't exist.
+            Emission results using the shortcut calculations and another dataframe with the flows that do not have any emission results 
 
             Columns:
                 - flow name: str
@@ -200,7 +203,7 @@ class PylcaCelavi:
 
     def pylca_run_main(self, df, verbose=0):
         """
-        This function runs the individual pylca celavi functions for performing various calculations
+        This function runs the individual pylca celavi functions for performing LCA relevant calculations
         
         Parameters
         ----------

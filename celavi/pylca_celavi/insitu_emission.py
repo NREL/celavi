@@ -4,10 +4,9 @@ import numpy as np
 def preprocessing(year,df_emission):
 
     """
-    This function preprocesses the emissions inventory for foregound system before the LCA calculation. 
+    This function preprocesses the emissions inventory for foregound system before calculation. 
     Removes any dummy flows from the inventory.
-    In this function, an emissions inventory is used to calculate insitu emissions
-    from the foreground system. 
+    In this function, an emissions inventory is used to calculate insitu emissions from the foreground system. 
 
     Parameters
     ----------
@@ -67,13 +66,14 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
     Returns
     -------
     results_total: pd.DataFrame
-        emissions in the form of a dataframe after performing insitu emissions calculations
+        emissions as a dataframe after performing insitu emissions calculations
+        These are insitu mass pollutant flows calculated for demand of material by foreground processes. 
         
         Columns:
            - product: str
            - unit: str
            - value: float
-        These are insitu mass pollutant flows calculated for demand of material. 
+
     """
 
     tm= tech_matrix.to_numpy()
