@@ -3,9 +3,9 @@ import numpy as np
 def preprocessing(year,df_emission):
 
     """
-    This function preprocesses the emissions inventory for foregound system before calculation. 
+    This function preprocesses the emissions database for foregound system before calculation. 
     It creates a product only database for technology matrix construction.
-    Removes any dummy flows from the inventory.
+    Removes any dummy flows from the database.
 
     Parameters
     ----------
@@ -179,8 +179,8 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
 
 
     """
-    Creates emissions inventory technology matrix and final demand vector from inventory data
-    Runs the PyLCA solver to perform insitu emissions calculations. Conforms emission results to a dataframe. Performs column checks and renames columns .
+    Creates a product only technology matrix for scaling vector calculations. 
+    Runs the solver to perform insitu emissions calculations. Conforms emission results to a dataframe. Performs column checks and renames columns .
     Returns the emissions dataframe.
 
     Parameters
