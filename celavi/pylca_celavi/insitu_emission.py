@@ -1,26 +1,25 @@
-# INSITU EMISSION CALCULATOR
 import pandas as pd
 import numpy as np
 def preprocessing(year,df_emission):
 
     """
     This function preprocesses the emissions inventory for foregound system before calculation. 
+    It creates a product only database for technology matrix construction.
     Removes any dummy flows from the inventory.
-    In this function, an emissions inventory is used to calculate insitu emissions from the foreground system. 
 
     Parameters
     ----------
     year : str
         year of LCA calculation
-    df_emission : pd.DataFrame
+    df_emission : pandas dataframe
         emission inventory
 
     
     Returns
     -------
-    emission_df: pd.DataFrame
-       cleaned emission inventory merged with dynamic data
-    df_with_all_other_flows: pd.DataFrame   
+    product_df: pandas dataframe
+        An inventory with only product flows for creating the technology product matrix
+    df_with_all_other_flows: pandas dataframe   
        inventory with no product flows
 
     """
@@ -35,14 +34,14 @@ def preprocessing(year,df_emission):
     # This part removes the dummy flows and flows without any production processes from the X matrix.
     process_input_with_process = pd.unique(df_output['product'])
     df['indicator'] = df['product'].isin(process_input_with_process)
-    emission_df = df[df['indicator'] == True]
+    product_df = df[df['indicator'] == True]
     df_with_all_other_flows = df[df['indicator'] == False]
     
-    del emission_df['indicator']
+    del product_df['indicator']
     del df_with_all_other_flows['indicator']
     
     emission.loc[:, 'value'] = emission.loc[:, 'value'].astype(np.float64)
-    return emission_df, df_with_all_other_flows
+    return product_df, df_with_all_other_flows
 
 
 def solver(tech_matrix,F,process, df_with_all_other_flows):
@@ -53,19 +52,18 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
 
     Parameters
     ----------
-    tech_matrix : numpy matrix
-         technology matrix from the emissions inventory
-    F : vector
+    tech_matrix: numpy matrix
+         technology matrix from the products inventory
+    F: numpy array
          Final demand vector 
     process: list
-         filename for the emissions inventory   
-    df_with_all_other_flows: pd.DataFrame
+         list of processes in the emissions inventory   
+    df_with_all_other_flows: pandas dataFrame
          lca inventory with no product flows
 
-    
     Returns
     -------
-    results_total: pd.DataFrame
+    results_total: pandas dataframe
         emissions as a dataframe after performing insitu emissions calculations
         These are insitu mass pollutant flows calculated for demand of material by foreground processes. 
         
@@ -121,7 +119,7 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
 
     Parameters
     ----------
-    tech matrix: pd.Dataframe
+    tech matrix: pandas dataframe
          technology matrix built from the emissions inventory. 
     F: final demand series vector
          final demand of the foreground system
@@ -145,7 +143,7 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
 
     Returns
     -------
-    res: pd.DataFrame
+    res: pandas dataframe
         Emission results in the form of a dataframe.
         Columns:
             - product: str
@@ -187,7 +185,7 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
 
     Parameters
     ----------
-    f_d: Dataframe 
+    f_d: pandas dataframe 
     Dataframe from DES 
     
     yr: int
@@ -202,12 +200,12 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
     material: str
     material being evaluated
 
-    df_emission: df
+    df_emission: pandas dataframe
     Emissons inventory
 
     Returns
     -------
-    res: pd.DataFrame
+    res: pandas dataframe
        Insitu emissions dataframe with modified column names after checking column number. 
        Columns:
         - flow name: str
