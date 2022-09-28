@@ -98,7 +98,7 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
     -------
     results_total: pd.DataFrame
         LCA results for foreground system in the form of a dataframe after performing LCA calculations
-        These are mass input flows to USLCI calculated for demand of material. No emission flows are included in this calculation. 
+        This method is calculating the output required from the background processes to operate the foreground processes. No emission flows are included in this calculation. 
 
         Columns:
            - product: str
@@ -189,9 +189,7 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
     Returns
     -------
     res: pd.DataFrame
-        Returns the final LCA reults in a properly arranged dataframe with all supplemental information
-        LCA results in the form of a dataframe.
-        These are mass input flows to USLCI calculated for demand of material at a certain stage and from a facility. No emission flows are included in this calculation. 
+        Returns the demand of materials by the foreground system to the background system in a properly arranged dataframe with all supplemental information.
 
         Columns:
             - product: str
@@ -231,7 +229,6 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
 def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename,verbose):
 
     """
-    Main function of this module is to receive information from DES interface and run the supporting LCA functions. 
     Creates the technology matrix for the foreground inventory and the final demand vector based on input data. 
     Performs necessary checks before and after the LCA calculation. 
     Checks performed 
@@ -262,8 +259,8 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
     Returns
     -------
     res2: pd.DataFrame
-       Final LCA results in the form of a dataframe after performing calculation checks
-       These are mass input flows to USLCI calculated for demand of material at a certain stage and from a facility. No emission flows are included in this calculation. 
+       Demand of materials by the foreground system to the background system in a properly arranged dataframe with all supplemental information.
+       Columns are reorganized, column names are changed and column number check is performed before returning. 
        Columns:
             - flow name: str
             - flow unit: str

@@ -6,7 +6,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
                                 ):
 
     """
-    Main function of this module which receives information from DES interface and runs the supporting calculation functions for the LCA backgroung system using the USLCI inventory. 
     Creates the technology matrix for the background system inventory and the final demand vector based on input data. 
     Performs necessary checks before and after the LCA  calculation. 
     
@@ -42,7 +41,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     Returns
     -------
     res2: pd.DataFrame
-       Final LCA results from the background LCA calculation in the form of a dataframe after performing calculation checks
+       Life cycle emissions from the background LCA calculation in the form of a dataframe with modified column names and supplemental information after performing calculation checks.
        These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
        Columns:
             - product: str
@@ -77,8 +76,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
         Returns
         -------
         pd.DataFrame
-            LCA results for the background system in the form of a dataframe after performing LCA calculations
-            These are mass pollutant flows calculated from USLCI for demand of material. 
+            Emissions from the background system in the form of a dataframe after performing LCA calculations
+            These are mass pollutant flows calculated from the background inventory.
 
             Columns:
                - product: str
@@ -108,7 +107,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     def lca_runner_background(tech_matrix, F,i,l,j,k,route_id,state, final_demand_scaler,process_emissions,verbose):
 
         """
-        Calls the solver function for the background system inventory and arranges and stores the results into a proper pandas dataframe. 
+        Calls the solver function for the background system inventory and arranges and stores the background emissions into a pandas dataframe. 
         
         Parameters
         ----------
@@ -135,9 +134,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
         Returns
         -------
         pd.DataFrame
-            Returns the background LCA reults in a properly arranged dataframe with all supplemental information
-            LCA results in the form of a dataframe.
-            These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+            Returns the background emissions in a properly arranged dataframe.
             Columns:
                 - flow name: str
                 - flow unit: str

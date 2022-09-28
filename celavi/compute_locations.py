@@ -446,8 +446,7 @@ class ComputeLocations:
             how='outer'
         )
         self.capacity_data = pd.concat([self.capacity_data,capacity_future])
-        self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns))
-        self.capacity_data.rename(
+        self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns)).rename(
             columns={'n_turbine': 'n_technology'}
         ).to_csv(
             self.technology_data_filename,
