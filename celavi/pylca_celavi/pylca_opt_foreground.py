@@ -85,7 +85,7 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
     Parameters
     ----------
     tech_matrix : numpy matrix
-         technology matrix from the process inventory
+         technology matrix from the foreground process inventory
     F : vector
          Final demand vector 
     process: list
@@ -164,7 +164,7 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
     Parameters
     ----------
     tech matrix: pd.Dataframe
-         technology matrix built from the process inventory. 
+         technology matrix built from the foreground process inventory. 
     F: final demand series vector
          final demand of the LCA problem
     yr: int
