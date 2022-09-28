@@ -6,12 +6,11 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
                                 ):
 
     """
-    Main function of this module which receives information from DES interface and runs the suppoeting calculation functions. 
-    Creates the technology matrix and the final demand vector based on input data. 
-    Performs necessary checks before and after the LCA  calculation. 
+    Creates the technology matrix for the background system inventory and the final demand vector based on input data. 
+    Performs necessary checks before and after the LCA calculations. 
     
     Checks performed 
-    1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
+    1. Final demand to the background LCA system by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
     2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking.
     
     Parameters
@@ -27,9 +26,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     material: str
       material of LCA analysis
     route_id: str
-        Unique identifier for transportation route.
+      Unique identifier for transportation route.
     state: str
-        State in which LCA calculations are taking place.
+      State in which LCA calculations are taking place.
     uslci_tech_filename: str
       filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
     uslci_process_filename: str
@@ -41,25 +40,34 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     
     Returns
     -------
-    pd.DataFrame
-       Final LCA results in the form of a dataframe after performing calculation checks
-       columns=['product', 'unit', 'value',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+    res2: pd.DataFrame
+       Life cycle emissions from the background LCA calculation in the form of a dataframe with modified column names and supplemental information after performing calculation checks.
        These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+       Columns:
+            - product: str
+            - unit: str
+            - value: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: int
+            - state: str
+
       
     """
 
     def solver(tech_matrix,F,process_emissions):
         
         """
-        This function houses the solver to solve Xs = F. 
+        This function houses the LCA solver for the background system to solve Xs = F. 
         Solves the Xs=F equation. 
         Solves the scaling vector.  
 
         Parameters
         ----------
         tech_matrix : numpy matrix
-             technology matrix from the process inventory
+             technology matrix from the background process inventory
         F : vector
              Final demand vector 
         process_emissions: str
@@ -68,9 +76,13 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
         Returns
         -------
         pd.DataFrame
-            LCA results in the form of a dataframe after performing LCA calculations
-            columns=['product', 'unit', 'value']
-            These are mass pollutant flows calculated from USLCI for demand of material. 
+            Emissions from the background system in the form of a dataframe after performing LCA calculations
+            These are mass pollutant flows calculated from the background inventory.
+
+            Columns:
+               - product: str
+               - unit: str
+               - value: float
 
         """
         tm = tech_matrix.to_numpy()
@@ -95,12 +107,12 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     def lca_runner_background(tech_matrix, F,i,l,j,k,route_id,state, final_demand_scaler,process_emissions,verbose):
 
         """
-        Calls the solver function and arranges and stores the results into a proper pandas dataframe. 
+        Calls the solver function for the background system inventory and arranges and stores the background emissions into a pandas dataframe. 
         
         Parameters
         ----------
         tech matrix: pd.Dataframe
-             technology matrix built from the process inventory. 
+             technology matrix built from the backgroud process inventory. 
         F: final demand series vector
              final demand of the LCA problem
         yr: int
@@ -122,11 +134,17 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
         Returns
         -------
         pd.DataFrame
-            Returns the LCA reults in a properly arranged dataframe with all supplemental information
-            LCA results in the form of a dataframe.
-            columns=['flow name','flow unit','flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-            These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+            Returns the background emissions in a properly arranged dataframe.
+            Columns:
+                - flow name: str
+                - flow unit: str
+                - flow quantity: float
+                - year: int
+                - facility_id: int
+                - stage: str
+                - material: str
+                - route_id: int
+                - state: str              
 
         """
         tim0 = time.time()
@@ -193,7 +211,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     else:
         final_demand_scaler = 0.1
 
-    #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
     #To make the calculation easier
     F = final_dem['flow quantity'].to_numpy()

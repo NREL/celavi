@@ -1,15 +1,10 @@
 import pandas as pd
 import numpy as np
 
-
-#Reading in static and dynamics lca databases
-
-
-#We are integrating static lca with dynamics lca over here. 
 def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level):
 
     """
-    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
+    This function preprocesses the foreground process inventory before the LCA calculation. It joins the dynamic LCA
     inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
 
     Parameters
@@ -25,12 +20,22 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
     
     Returns
     -------
-    pd.DataFrame
+    process_df: pd.DataFrame
         cleaned process inventory merged with dynamic data
-    pd.DataFrame    
+    
+    df_with_all_other_flows: pd.DataFrame    
         inventory with no product flows
-    columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        
+        Columns:
+            - flow name: str
+            - flow unit: str
+            - flow quantity: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: int
+            - state: str
 
     """
     
@@ -68,14 +73,14 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
 def solver(tech_matrix,F,process, df_with_all_other_flows):
 
     """
-    This function houses the calculator to solve Xs = F. 
+    This function solves Xs = F where X is the tech matrix for the foreground process inventory.
     Solves the Xs=F equation. 
     Solves the scaling vector.  
 
     Parameters
     ----------
     tech_matrix : numpy matrix
-         technology matrix from the process inventory
+         technology matrix from the foreground process inventory
     F : vector
          Final demand vector 
     process: list
@@ -86,10 +91,15 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
     
     Returns
     -------
-    pd.DataFrame
+    results_total: pd.DataFrame
         LCA results for foreground system in the form of a dataframe after performing LCA calculations
-        columns=['product', 'unit', 'value']
-        These are mass input flows to USLCI calculated for demand of material. No emission flows are included in this calculation. 
+        This method calculates the outputs required from the background processes to operate the foreground processes. No emission flows are included in this calculation. 
+
+        Columns:
+           - product: str
+           - unit: str
+           - value: float
+        
     """
 
     tm= tech_matrix.to_numpy()
@@ -111,8 +121,8 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
 
 def electricity_corrector_before20(df):
     """
-    This function is used to replace pre 2020 electricity flows with the base electricity mix flow
-    in the USLCI inventory Electricity, at Grid, US, 2010'    
+    This function is used to replace pre 2020 electricity flows in the foreground inventory with the base electricity mix flow
+    from the background USLCI inventory "Electricity, at Grid, US, 2010" 
 
     Parameters
     ----------
@@ -121,24 +131,35 @@ def electricity_corrector_before20(df):
 
     Returns
     -------
-    pd.DataFrame
+    df: pd.DataFrame
         process inventory with electricity flows before 2020 converted to the base electricity
-        mix flow in USLCI. 
-    columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
+        mix flow in the background LCA inventory.
+
+        Columns:
+            - flow name: str
+            - flow unit: str
+            - flow quantity: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: int
+            - state: str
+
     """
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
 
 def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename,verbose):    
+    
     """
-    Calls the LCA solver function and arranges and stores the results into a proper pandas dataframe. 
+    Calls the LCA solver function for the foreground inventory and arranges and stores the results in a pandas dataframe. 
     
     Parameters
     ----------
     tech matrix: pd.Dataframe
-         technology matrix built from the process inventory. 
+         technology matrix built from the foreground process inventory. 
     F: final demand series vector
          final demand of the LCA problem
     yr: int
@@ -162,12 +183,19 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
 
     Returns
     -------
-    pd.DataFrame
-        Returns the final LCA reults in a properly arranged dataframe with all supplemental information
-        LCA results in the form of a dataframe.
-        columns=['product', 'unit', 'value',
-                 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-        These are mass input flows to USLCI calculated for demand of material at a certain stage and from a facility. No emission flows are included in this calculation. 
+    res: pd.DataFrame
+        Returns the demand of materials by the foreground system to the background system in a properly arranged dataframe with all supplemental information.
+
+        Columns:
+            - product: str
+            - unit: str
+            - value: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: int
+            - state: str
 
     """
 
@@ -196,11 +224,10 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
 def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename,verbose):
 
     """
-    Main function of this module which received information from DES interface and runs the supporting LCA functions. 
-    Creates the technology matrix and the final demand vector based on input data. 
+    Creates the technology matrix for the foreground inventory and the final demand vector based on input data. 
     Performs necessary checks before and after the LCA calculation. 
     Checks performed 
-    1. Final demand by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
+    1. Final demand by the foreground system is not zero. If zero, returns empty dataframe and simulation continues without breaking code. 
     2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking. 
     
     Parameters
@@ -226,12 +253,20 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
 
     Returns
     -------
-    pd.DataFrame
-       Final LCA results in the form of a dataframe after performing calculation checks
-       columns=['flow name', 'flow unit', 'flow quantity',
-                     'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
-       These are mass input flows to USLCI calculated for demand of material at a certain stage and from a facility. No emission flows are included in this calculation. 
-
+    res2: pd.DataFrame
+       Demand of materials by the foreground system to the background system in a properly arranged dataframe with all supplemental information.
+       Columns are reorganized, column names are changed and column number check is performed before returning. 
+       Columns:
+            - flow name: str
+            - flow unit: str
+            - flow quantity: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: int
+            - state: str              
+       
     """
 
     f_d = f_d.drop_duplicates()

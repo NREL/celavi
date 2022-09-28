@@ -12,7 +12,7 @@ import pickle
 
 import numpy as np
 import pandas as pd
-
+import warnings
 from scipy.stats import weibull_min
 
 
@@ -25,6 +25,8 @@ from celavi.pylca_celavi.des_interface import PylcaCelavi
 from celavi.reeds_importer import ReedsImporter
 from celavi.des import Context
 from celavi.diagnostic_viz import DiagnosticViz
+
+
 
 
 class Scenario:
@@ -306,6 +308,8 @@ class Scenario:
         # Prepare LCIA code
         #verbose = 0 means no print statements. 
         #verbose = 1 prints detailed LCA calculation steps
+        if self.case["model_run"].get("warning_verbose") == 0:
+            warnings.filterwarnings('ignore')
         self.lca = PylcaCelavi(
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
