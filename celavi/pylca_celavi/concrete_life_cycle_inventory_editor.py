@@ -35,14 +35,10 @@ def concrete_life_cycle_inventory_updater(d_f,
     
     Returns
     -------
-    pd.DataFrame
-        Static inventory updated with changes due to concrete demand and blade material availability.
-        Columns:
-            - ?
-    pd.DataFrame
-        Concrete production insitu emissions inventory.
-        Columns:
-            - ?
+    df_static: pd.DataFrame
+        updated static inventory with changes due to concrete demand and GFRP availability.
+    df_emissions: pd.DataFrame
+        emissions inventory
     """
     if k == 'glass fiber reinforced polymer' and stage == 'cement co-processing':
         d_f = d_f.reset_index()
@@ -122,4 +118,3 @@ def concrete_life_cycle_inventory_updater(d_f,
         df_static = pd.read_csv(static_filename)
         df_emissions = pd.read_csv(emissions_filename)
         return df_static,df_emissions
-

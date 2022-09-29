@@ -17,16 +17,12 @@ def model_celavi_lci_background(
     ):
 
     """
-    Runs the pollutant inventory calculations based on information provided by the DES interface.
-
-    Creates the technology matrix and the final demand vector based on input data.
-    Performs necessary checks before and after the LCA  calculation.
+    Creates the technology matrix for the background system inventory and the final demand vector based on input data. 
+    Performs necessary checks before and after the LCA calculations. 
     
-    Checks performed:
-        1. Final demand by the foreground system is not zero. If the final demand is zero, this method
-        returns an empty DataFrame and the simulation continues.
-        2. Checks the LCA solver returned a non-empty DataFrame. If an empty DataFrame is returned,
-        this method attaches column names to the DataFrame and the simulation continues.
+    Checks performed 
+    1. Final demand to the background LCA system by the foreground system is not zero. If zero returns empty dataframe and simulation continues without breaking code. 
+    2. Checks the LCA solver returned a proper dataframe. If empty dataframe is returned, it attaches column names to the dataframe and code continues without breaking.
     
     Parameters
     ----------
@@ -41,9 +37,9 @@ def model_celavi_lci_background(
     material: str
         Material being processed
     route_id: str
-        Unique identifier for transportation route.
+      Unique identifier for transportation route.
     state: str
-        State in which LCA calculations are taking place.
+      State in which LCA calculations are taking place.
     uslci_tech_filename: str
         Filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
     uslci_process_filename: str
@@ -55,55 +51,46 @@ def model_celavi_lci_background(
     
     Returns
     -------
-    pd.DataFrame
-        Mass pollutant flows for demand of material from a facility.
-        Columns:
+    res2: pd.DataFrame
+       Life cycle emissions from the background LCA calculation in the form of a dataframe with modified column names and supplemental information after performing calculation checks.
+       These are mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility. 
+       Columns:
             - product: str
-                Name of pollutant.
             - unit: str
-                Pollutant flow units.
             - value: float
-                Pollutant flow value.
             - year: int
-                Model year.
             - facility_id: int
-                Facility ID.
             - stage: str
-                Supply chain stage at this facility.
             - material: str
-                Name of material being processed.
-            - route_id: str
-                UUID for transportation route
+            - route_id: int
             - state: str
-                State in which facility is located.
     """
 
     def solver(tech_matrix,F,process_emissions):
         """
-        Calculates the process scaling vector s by solving the Xs = F material balance equations. 
+        This function houses the LCA solver for the background system to solve Xs = F. 
+        Solves the Xs=F equation. 
+        Solves the scaling vector.  
 
         Parameters
         ----------
-        tech_matrix: Matrix
-            Technology matrix generated from the background inventory.
-        F: vector
-            Final demand vector representing supply chain material and energy inputs.
-        process: list
-            List of process names corresponding to the scaling vector s.  
+        tech_matrix : numpy matrix
+             technology matrix from the background process inventory
+        F : vector
+             Final demand vector
         process_emissions: str
             Filename for the process-level emissions dataframe
         
         Returns
         -------
         pd.DataFrame
-            Mass pollutant flows calculated from the background process inventory for the final demand F.
+            Emissions from the background system in the form of a dataframe after performing LCA calculations
+            These are mass pollutant flows calculated from the background inventory.
+
             Columns:
-                - product: int
-                    Name of pollutant.
-                - unit: int
-                    Unit of pollutant flow.
-                - value: float
-                    Value of pollutant flow.
+               - product: str
+               - unit: str
+               - value: float
         """
         tm = tech_matrix.to_numpy()
         scv = np.linalg.solve(tm, F)
@@ -127,14 +114,12 @@ def model_celavi_lci_background(
     def lca_runner_background(tech_matrix, F,i,l,j,k,route_id,state, final_demand_scaler,process_emissions,verbose):
 
         """
-        Calls the solver function to perform LCIA calculations.
-        
-        Arranges and returns the pollutant results as a DataFrame. 
+        Calls the solver function for the background system inventory and arranges and stores the background emissions into a pandas dataframe. 
         
         Parameters
         ----------
         tech matrix: pd.Dataframe
-            Technology materix representing the background inventory.
+             technology matrix built from the backgroud process inventory.
         F: final demand series vector
             Final demand vector of the supply chain material and energy inputs.
         yr: int
@@ -157,17 +142,17 @@ def model_celavi_lci_background(
         Returns
         -------
         pd.DataFrame
-            Mass pollutant flows calculated from USLCI for demand of material at a certain stage and from a facility.
+            Returns the background emissions in a properly arranged dataframe.
             Columns:
-                - flow name
-                - flow unit
-                - flow quantity
-                - year
-                - facility_id
-                - stage
-                - material
-                - route_id
-                - state
+                - flow name: str
+                - flow unit: str
+                - flow quantity: float
+                - year: int
+                - facility_id: int
+                - stage: str
+                - material: str
+                - route_id: int
+                - state: str
         """
         tim0 = time.time()
         res = solver(tech_matrix, F,process_emissions)
@@ -230,7 +215,6 @@ def model_celavi_lci_background(
     else:
         final_demand_scaler = 0.1
 
-    #print dataframe to debug connecting between foreground and background
     final_dem['flow quantity']= final_dem['flow quantity']/final_demand_scaler
     #To make the calculation easier
     F = final_dem['flow quantity'].to_numpy()
@@ -245,4 +229,3 @@ def model_celavi_lci_background(
     else:
         res2.columns = ['flow name','flow unit','flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id', 'state']
         return res2
-

@@ -1070,4 +1070,3 @@ class CostGraph:
             _out.to_csv(
                 f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
             )
-
