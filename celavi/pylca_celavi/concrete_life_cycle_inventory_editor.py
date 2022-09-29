@@ -9,39 +9,29 @@ def concrete_life_cycle_inventory_updater(d_f,
                                           emissions_filename,
                                           substitution_rate):
     """
-    This function modifies static LCI based on availability of GFRP at the cement processing stage 
-    and demand of concrete in the system
+    Modify a static concrete production inventory based on availability of ground blade material at the cement processing stage.
     
-    GFRP may or may not be available in the system every year. If GFRP is available when 
-    concrete is not required or does not have a final demand, a stock variable is ceated to store GFRP and used in later years 
-    for cement co processing    
+    If blade material is not available, a stock variable is created to keep track of the amount of material available for
+    use in cement co-processing in later years.
     
     Parameters
     ----------
-    d_f: pd.Dataframe
-        dataframe with material flow, stage and facility information from DES
-
+    d_f: pandas.DataFrame
+        Material flow, stage and facility information from the DES interface.
     yr: int
-        year
-
+        Model year.
     k: str
-        current material under study
-
+        Material being processed.
     stage: str
-            current stage under study
-
+        Supply chain stage.
     static_filename: str
-           filename for the lca fixed inventory 
-
+        Filename for the static concrete production inventory.
     stock_filename: str
-           filename for storage pickle variable
-
-    emissions_filename: str
-           filename for emissions inventory
-
+        Filename for the material stock variable (pickled).
+    emissons_filename: str
+        Filename for concrete production emissions inventory.
     substitution_rate: Dict
-        Dictionary of material: sub rates for materials displaced by the
-        circular component
+        Dictionary of substitution rates for materials displaced by the ground blade material.
     
     Returns
     -------
@@ -49,11 +39,7 @@ def concrete_life_cycle_inventory_updater(d_f,
         updated static inventory with changes due to concrete demand and GFRP availability.
     df_emissions: pd.DataFrame
         emissions inventory
-
     """
-    
-      
-    
     if k == 'glass fiber reinforced polymer' and stage == 'cement co-processing':
         d_f = d_f.reset_index()
         d_f.to_pickle(stock_filename,compression = None)

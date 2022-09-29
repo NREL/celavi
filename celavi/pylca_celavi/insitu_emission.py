@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 def preprocessing(year,df_emission):
-
     """
     This function preprocesses the emissions database for foregound system before calculation. 
     It creates a product only database for technology matrix construction.
@@ -13,7 +12,6 @@ def preprocessing(year,df_emission):
         year of LCA calculation
     df_emission : pandas dataframe
         emission inventory
-
     
     Returns
     -------
@@ -21,7 +19,6 @@ def preprocessing(year,df_emission):
         An inventory with only product flows for creating the technology product matrix
     df_with_all_other_flows: pandas dataframe   
        inventory with no product flows
-
     """
     df = df_emission
     df_input = df[df['input'] == True]
@@ -44,8 +41,7 @@ def preprocessing(year,df_emission):
     return product_df, df_with_all_other_flows
 
 
-def solver(tech_matrix,F,process, df_with_all_other_flows):
-
+def solver(tech_matrix, F, process, df_with_all_other_flows):
     """
     This function houses the calculator to solve Xs = F for calculating insitu emissions. 
     Solves the Xs=F equation. Solves the scaling vector.  
@@ -71,10 +67,8 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
            - product: str
            - unit: str
            - value: float
-
     """
-
-    tm= tech_matrix.to_numpy()
+    tm = tech_matrix.to_numpy()
     scv = np.linalg.solve(tm, F)
 
     scaling_vector = pd.DataFrame()
@@ -95,11 +89,10 @@ def electricity_corrector_before20(df):
     This function is used to replace pre 2020 electricity flows in the emissions inventory with the base electricity mix flow
     in the USLCI inventory Electricity, at Grid, US, 2010'
     
-
     Parameters
     ----------
     df: pd.DataFrame
-        process inventory
+        Background process inventory. Columns are derived from the background LCI database being used.
 
     Returns
     -------
@@ -107,13 +100,21 @@ def electricity_corrector_before20(df):
        process inventory with electricity flows before 2020 converted to the base electricity
        mix flow in USLCI. 
     """
-
-    
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
-def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_with_all_other_flows):
-
+def runner_insitu(
+    tech_matrix,
+    F,
+    yr,
+    i,
+    j,
+    k,
+    state,
+    final_demand_scaler,
+    process,
+    df_with_all_other_flows
+    ):
     """
     Runs the solver function for the insitu emissions and creates foreground emissions data frame in proper format.
 
@@ -124,23 +125,22 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
     F: final demand series vector
          final demand of the foreground system
     yr: int
-         year of analysis
+        Model year
     i: int
-         facility ID
+        facility ID
     j: str
-        stage
+        Name of supply chain stage
     k: str
-        material
+        Name of material
     state: str
-        state in which LCA calculations are taking place
+        State where the facility is located.
     final_demand_scaler: int
-        scaling variable number to ease lca calculation
+        Integer for scaling final demand and avoiding badly scaled matrix calculations.
     process: list
-        list of processes included in the technology matrix
+        List of processes included in the technology matrix
     df_with_all_other_flows: pd.DataFrame
         Dataframe with flows in the inventory which do not have a production process. 
     
-
     Returns
     -------
     res: pandas dataframe
@@ -156,8 +156,6 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
             - route_id: int
             - state: str
     """
-
-    
     res = pd.DataFrame()
     res = solver(tech_matrix, F, process, df_with_all_other_flows) 
     res['value'] = res['value']*final_demand_scaler
@@ -176,8 +174,6 @@ def runner_insitu(tech_matrix,F,yr,i,j,k,state,final_demand_scaler,process,df_wi
 
 
 def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emissions, verbose):
-
-
     """
     Creates a product only technology matrix for scaling vector calculations. 
     Runs the solver to perform insitu emissions calculations. Conforms emission results to a dataframe. Performs column checks and renames columns .
@@ -186,22 +182,17 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
     Parameters
     ----------
     f_d: pandas dataframe 
-    Dataframe from DES 
-    
+        Dataframe from DES 
     yr: int
-    Year of calculation
-
+        Model year.
     fac_id: int
-    Facility ID of facility being evaluated
-
+        Facility ID of facility being evaluated
     stage: str 
-    Stage of facility being evaluated
-
+        Supply chain stage.
     material: str
-    material being evaluated
-
+        material being evaluated
     df_emission: pandas dataframe
-    Emissons inventory
+        Emissons inventory
 
     Returns
     -------
@@ -216,10 +207,8 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emission
         - stage: str
         - material: str
         - route_id: int
-        - state: str    
+        - state: str
     """
-
-
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
     # Running LCA for all years as obtained from CELAVI

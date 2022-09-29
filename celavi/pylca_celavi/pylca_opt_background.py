@@ -2,8 +2,19 @@ import pandas as pd
 import numpy as np
 import time
 
-def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state, uslci_tech_filename,uslci_emission_filename,uslci_process_filename,verbose
-                                ):
+def model_celavi_lci_background(
+    f_d,
+    yr,
+    fac_id,
+    stage,
+    material,
+    route_id,
+    state,
+    uslci_tech_filename,
+    uslci_emission_filename,
+    uslci_process_filename,
+    verbose
+    ):
 
     """
     Creates the technology matrix for the background system inventory and the final demand vector based on input data. 
@@ -15,28 +26,28 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     
     Parameters
     ----------
-    f_d: pd.Dataframe
-      Dataframe from DES interface containing material flow information
+    f_d: pandas.DataFrame
+        Dataframe from DES interface containing material flow information
     yr: int
-      year of analysis
+        Model year
     fac_id: int
-      facility id
+        Facility id
     stage: str
-      stage of analysis
+        Supply chain stage
     material: str
-      material of LCA analysis
+        Material being processed
     route_id: str
       Unique identifier for transportation route.
     state: str
       State in which LCA calculations are taking place.
     uslci_tech_filename: str
-      filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
+        Filename for the USLCI technology matrix. It contains the technology matrix from USLCI. 
     uslci_process_filename: str
-      filename for the USLCI process list matrix. It contains the list of processes in the USLCI.
+        Filename for the USLCI process list matrix. It contains the list of processes in the USLCI.
     uslci_emission_filename: str
-      filename for the USLCI emissions list matrix. It contains the list of emissions from acttivities in the USLCI. 
+        Filename for the USLCI emissions list matrix. It contains the list of emissions from acttivities in the background process inventory. 
     verbose: int
-      verbose parameter for toggling print of LCA calculation steps. Default 0 no printout
+        Toggles level of progress reporting provided by this method. Defaults to 0 (no reporting).
     
     Returns
     -------
@@ -53,12 +64,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
             - material: str
             - route_id: int
             - state: str
-
-      
     """
 
     def solver(tech_matrix,F,process_emissions):
-        
         """
         This function houses the LCA solver for the background system to solve Xs = F. 
         Solves the Xs=F equation. 
@@ -69,9 +77,9 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
         tech_matrix : numpy matrix
              technology matrix from the background process inventory
         F : vector
-             Final demand vector 
+             Final demand vector
         process_emissions: str
-             filename for the emissions dataframe
+            Filename for the process-level emissions dataframe
         
         Returns
         -------
@@ -83,7 +91,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
                - product: str
                - unit: str
                - value: float
-
         """
         tm = tech_matrix.to_numpy()
         scv = np.linalg.solve(tm, F)
@@ -112,25 +119,26 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
         Parameters
         ----------
         tech matrix: pd.Dataframe
-             technology matrix built from the backgroud process inventory. 
+             technology matrix built from the backgroud process inventory.
         F: final demand series vector
-             final demand of the LCA problem
+            Final demand vector of the supply chain material and energy inputs.
         yr: int
-             year of analysis
+            Model year.
         i: int
-             facility ID
+            Facility ID.
         j: str
-            stage
+            Supply chain stage.
         k: str
-            material
+            Material being processed.
         route_id: str
             Unique identifier for transportation route.
         state: str
-            state in which LCA calculations are taking place
+            State in which facility is located.
         final_demand_scaler: int
-            scaling variable number to ease calculation
-
-
+            Scaling integer to avoid badly-scaled matrix calculations.
+        verbose: int
+            Controls the level of progress reporting from this method.
+        
         Returns
         -------
         pd.DataFrame
@@ -144,8 +152,7 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
                 - stage: str
                 - material: str
                 - route_id: int
-                - state: str              
-
+                - state: str
         """
         tim0 = time.time()
         res = solver(tech_matrix, F,process_emissions)
@@ -183,10 +190,8 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     uslci_products = pd.DataFrame(tech_matrix.index)
     uslci_process = list(tech_matrix.columns)
 
-
     f_d = f_d.drop_duplicates()
     f_d = f_d.sort_values(['year'])
-
 
     #Replace electricity    
     f_d['conjoined_flownames'] = f_d['conjoined_flownames'].str.lower()  
@@ -194,7 +199,6 @@ def model_celavi_lci_background(f_d, yr, fac_id, stage,material, route_id, state
     uslci_products['conjoined_flownames'] = uslci_products['conjoined_flownames'].str.lower()  
     final_dem = uslci_products.merge(f_d, left_on='conjoined_flownames', right_on='conjoined_flownames', how='left')
     final_dem = final_dem.fillna(0)
-
 
     chksum = np.sum(final_dem['flow quantity'])
     if chksum == 0:

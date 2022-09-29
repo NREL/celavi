@@ -7,16 +7,12 @@ def postprocessing(final_res,insitu, verbose):
 
     Parameters
     ----------
-    final_res: Dataframe
-       dataframe with background LCA results
-    
-    insitu: Dataframe
-       dataframe with insitu emissions
-
+    final_res: pandas.DataFrame
+       Background pollutant flow quantities.
+    insitu: pandas.DataFrame
+        Insitu pollutant flow quantities.
     verbose: int
-      toggle print of insitu emissions postprocessing statement when emissions are missing
-    
-    
+        Controls the level of progress reporting from this method.
     
     Returns
     -------
@@ -32,8 +28,7 @@ def postprocessing(final_res,insitu, verbose):
            - material: str
            - route_id: int
            - state: str
-           - flow quantity: float 
-
+           - flow quantity: float
     """
     if final_res.empty:
         if verbose == 1:
@@ -58,7 +53,6 @@ def postprocessing(final_res,insitu, verbose):
 
 
 def impact_calculations(final_res,traci_lci_filename):    
-   
     """
     This function is used for life cycle impact analysis post processing of final results dataframe
     It converts mass flow of pollutants to environmental impacts based on TRACI 2.1 characterization method
@@ -67,7 +61,6 @@ def impact_calculations(final_res,traci_lci_filename):
     ----------
     final_res: pandas dataframe
        Emissions dataframe with foreground and background emissions
-    
     traci_lci_filename: str
        name of the traci characerization file
      
@@ -84,8 +77,7 @@ def impact_calculations(final_res,traci_lci_filename):
            - stage: str
            - impacts: str
            - impact: float
-    """     
-   
+    """
     traci = pd.read_csv(traci_lci_filename)
     traci = traci.fillna(0)
     impacts = list(traci.columns)

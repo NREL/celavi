@@ -1,0 +1,257 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Postprocessing and Diagnostic Visualizations &mdash; CELAVI  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/language_data.js"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Uncertainty Methods" href="doc_uncertainty.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> CELAVI
+          
+
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="doc_config.html">Configuration Files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_preprocessing.html">Data Preprocessing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_scenario.html">Scenario</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_des.html">Discrete Event Simulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_costgraph.html">Cost Graph</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_pylcia.html">Python Life Cycle Inventory Analysis</a></li>
+<li class="toctree-l1"><a class="reference internal" href="doc_uncertainty.html">Uncertainty Methods</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Postprocessing and Diagnostic Visualizations</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CELAVI</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Postprocessing and Diagnostic Visualizations</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/doc_diagnostic_viz.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-celavi.diagnostic_viz">
+<span id="postprocessing-and-diagnostic-visualizations"></span><h1>Postprocessing and Diagnostic Visualizations<a class="headerlink" href="#module-celavi.diagnostic_viz" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="celavi.diagnostic_viz.DiagnosticViz">
+<em class="property">class </em><code class="sig-prename descclassname">celavi.diagnostic_viz.</code><code class="sig-name descname">DiagnosticViz</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">facility_inventories</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span><a class="reference internal" href="doc_des.html#celavi.inventory.FacilityInventory" title="celavi.inventory.FacilityInventory">celavi.inventory.FacilityInventory</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">output_plot_filename</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">keep_cols</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">start_year</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">timesteps_per_year</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">component_count</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>int<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">var_name</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">value_name</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">run</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.diagnostic_viz.DiagnosticViz" title="Permalink to this definition">¶</a></dt>
+<dd><p>This class creates diagnostic visualizations from a context after the
+model run has been executed.</p>
+<dl class="py method">
+<dt id="celavi.diagnostic_viz.DiagnosticViz.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">facility_inventories</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span><a class="reference internal" href="doc_des.html#celavi.inventory.FacilityInventory" title="celavi.inventory.FacilityInventory">celavi.inventory.FacilityInventory</a><span class="p">]</span></span></em>, <em class="sig-param"><span class="n">output_plot_filename</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">keep_cols</span><span class="p">:</span> <span class="n">List<span class="p">[</span>str<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">start_year</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">timesteps_per_year</span><span class="p">:</span> <span class="n">int</span></em>, <em class="sig-param"><span class="n">component_count</span><span class="p">:</span> <span class="n">Dict<span class="p">[</span>str<span class="p">, </span>int<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">var_name</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">value_name</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="n">run</span><span class="p">:</span> <span class="n">int</span></em><span class="sig-paren">)</span><a class="headerlink" href="#celavi.diagnostic_viz.DiagnosticViz.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>facility_inventories</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><a class="reference internal" href="doc_des.html#celavi.inventory.FacilityInventory" title="celavi.inventory.FacilityInventory"><em>FacilityInventory</em></a><em>]</em>) – The dictionary of facility inventories from the Context</p></li>
+<li><p><strong>output_plot_filename</strong> (<em>str</em>) – The absolute path to the filename that will hold the final
+generated plot.</p></li>
+<li><p><strong>keep_cols</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – This is a list of the possible material names (for material
+facility inventories) or a list of the possible component names
+(for count facility inventories)</p></li>
+<li><p><strong>start_year</strong> (<em>int</em>) – The start year for the DES model.</p></li>
+<li><p><strong>timesteps_per_year</strong> (<em>int</em>) – The timesteps per year for the DES model.</p></li>
+<li><p><strong>component_count</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>int</em><em>]</em>) – Dictionary where the keys are component names and the values are
+the number of components in one technology unit.</p></li>
+<li><p><strong>var_name</strong> (<em>str</em>) – The name of the generalized var column, like ‘material’ or ‘unit’.</p></li>
+<li><p><strong>value_name</strong> (<em>str</em>) – The name of the generalized value column, like ‘count’ or ‘tonnes’.</p></li>
+<li><p><strong>run</strong> (<em>int</em>) – Model run identifier for uncertainty runs within a scenario.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.diagnostic_viz.DiagnosticViz.gather_and_melt_cumulative_histories">
+<code class="sig-name descname">gather_and_melt_cumulative_histories</code><span class="sig-paren">(</span><span class="sig-paren">)</span> &#x2192; pandas.core.frame.DataFrame<a class="headerlink" href="#celavi.diagnostic_viz.DiagnosticViz.gather_and_melt_cumulative_histories" title="Permalink to this definition">¶</a></dt>
+<dd><p>This gathers the cumulative histories in a way that they can be plotted</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>A dataframe with the cumulative histories gathered together.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="celavi.diagnostic_viz.DiagnosticViz.generate_plots">
+<code class="sig-name descname">generate_plots</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#celavi.diagnostic_viz.DiagnosticViz.generate_plots" title="Permalink to this definition">¶</a></dt>
+<dd><p>This method generates the history plots.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="doc_uncertainty.html" class="btn btn-neutral float-left" title="Uncertainty Methods" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2022, NREL
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -10,13 +10,13 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
     Parameters
     ----------
     year : str
-         year of LCA calculation
+        Model year.
     state : str
-         state of Facility
+        State in which calculations are taking place.
     df_static : pd.DataFrame
-         lca inventory static 
+        Static foreground LCI.
     dynamic_lci_filename: str
-         filename for the dynamic inventory   
+        Dynamic foreground LCI.
     
     Returns
     -------
@@ -36,7 +36,6 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
             - material: str
             - route_id: int
             - state: str
-
     """
     
     #Reading in dynamics LCA databases
@@ -71,7 +70,6 @@ def preprocessing(year,state,df_static,dynamic_lci_filename,electricity_grid_spa
 
 
 def solver(tech_matrix,F,process, df_with_all_other_flows):
-
     """
     This function solves Xs = F where X is the tech matrix for the foreground process inventory.
     Solves the Xs=F equation. 
@@ -82,11 +80,11 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
     tech_matrix : numpy matrix
          technology matrix from the foreground process inventory
     F : vector
-         Final demand vector 
+         Final demand vector
     process: list
-         filename for the dynamic inventory   
+        List of process names corresponding to the scaling vector s.
     df_with_all_other_flows: pd.DataFrame
-         lca inventory with no product flows
+        Foreground inventory with no product flows.
 
     
     Returns
@@ -99,7 +97,6 @@ def solver(tech_matrix,F,process, df_with_all_other_flows):
            - product: str
            - unit: str
            - value: float
-        
     """
 
     tm= tech_matrix.to_numpy()
@@ -127,14 +124,13 @@ def electricity_corrector_before20(df):
     Parameters
     ----------
     df: pd.DataFrame
-        process inventory
+        Foreground inventory.
 
     Returns
     -------
     df: pd.DataFrame
         process inventory with electricity flows before 2020 converted to the base electricity
         mix flow in the background LCA inventory.
-
         Columns:
             - flow name: str
             - flow unit: str
@@ -145,14 +141,12 @@ def electricity_corrector_before20(df):
             - material: str
             - route_id: int
             - state: str
-
     """
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
 
 def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_scaler,process,df_with_all_other_flows,intermediate_demand_filename,verbose):    
-    
     """
     Calls the LCA solver function for the foreground inventory and arranges and stores the results in a pandas dataframe. 
     
@@ -221,8 +215,20 @@ def lca_runner_foreground(tech_matrix,F,yr,i,j,k,route_id,state,final_demand_sca
        print(f"pylca-opt-foreground emission failed  for {k} at {j} in {yr}")
 
 
-def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynamic_lci_filename,electricity_grid_spatial_level,intermediate_demand_filename,verbose):
-
+def model_celavi_lci(
+    f_d,
+    yr,
+    fac_id,
+    stage,
+    material,
+    route_id,
+    state,
+    df_static,
+    dynamic_lci_filename,
+    electricity_grid_spatial_level,
+    intermediate_demand_filename,
+    verbose
+    ):
     """
     Creates the technology matrix for the foreground inventory and the final demand vector based on input data. 
     Performs necessary checks before and after the LCA calculation. 
@@ -233,23 +239,29 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
     Parameters
     ----------
     f_d: pd.Dataframe
-      Dataframe from DES interface containing material flow information
+        Dataframe from DES interface containing foreground material flows.
     yr: int
-      year of analysis
+        Model year.
     fac_id: int
-      facility id
+        Facility id.
     stage: str
-      stage of analysis
+        Supply chain stage.
     material: str
-      material of LCA analysis
+        Material being processed.
     route_id: str
         Unique identifier for transportation route.
     state: str
-        state in which LCA calculations are taking place
-    df_static: pd.Dataframe
-      static foreground LCA inventory
+        State in which calculations are taking place.
+    df_static: pandas.DataFrame
+        Static foreground inventory.
     dynamic_lci_filename: str
-      filename for the dynamic LCA inventory
+        Filename for the dynamic inventory.
+    electricity_grid_spatial_level: str
+        Level at which the electricity grid mix is modeled: state or national.
+    intermediate_demand_filename: str
+        
+    verbose: int
+        Controls the level of progress reporting from this method.
 
     Returns
     -------
@@ -265,10 +277,8 @@ def model_celavi_lci(f_d,yr,fac_id,stage,material,route_id,state,df_static,dynam
             - stage: str
             - material: str
             - route_id: int
-            - state: str              
-       
+            - state: str
     """
-
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
     # Running LCA for all years as obtained from CELAVI
