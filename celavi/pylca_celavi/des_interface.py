@@ -137,7 +137,7 @@ class PylcaCelavi:
         Returns
         -------
         pandas.DataFrame, pandas.DataFrame
-            Emission results using the shortcut calculations and another dataframe with the flows that do not have any emission results 
+            Emission results using the shortcut calculations and another dataframe with the flows that do not have any emission results.
             Columns:
                 - year: int
                     Model year.
@@ -151,7 +151,7 @@ class PylcaCelavi:
                     UUID of transportation route.
 
         pandas.DataFrame
-            Pollutant flows from the shortcut LCA file, or an empty DataFrame if the shortcut file doesn't exist
+            Pollutant flows from the shortcut LCA file, or an empty DataFrame if the shortcut file doesn't exist.
             Columns:
                 - flow name: str
                     Pollutant name.
@@ -215,8 +215,6 @@ class PylcaCelavi:
         ----------
         df: pandas.DataFrame
             Material flows from DES.
-            Columns:
-                - ?
         
         Returns
         -------
