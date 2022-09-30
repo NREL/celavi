@@ -20,17 +20,6 @@ conda activate celavi
 pip install -e .
 ```
 
-### Installation step 2: conda install
-
-Now you need to install some pakages with `conda`. Run the following commands:
-
-```
-conda config --add channels conda-forge
-conda install glpk
-conda install ipopt
-conda install pyomo
-```
-
 ## Running the package
 
 From the root of the repo, type a command similar to the following. This will execute the costgraph. Note that the paths to the files will need to be changed for your particular folder structure.
