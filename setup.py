@@ -1,7 +1,7 @@
 import setuptools
 
 name = "celavi"
-version = "1.2.0"
+version = "1.3.1"
 
 with open("README.md", "r", encoding="utf8") as fh:
     long_description = fh.read()
@@ -11,7 +11,7 @@ setuptools.setup(
     version=version,
     author="Annika Eberle",
     author_email="annika.eberle@nrel.gov",
-    description="Python model for the CELAVI project",
+    description="Codebase for the Circular Economy Lifecycle Assessment and VIsualization (CELAVI) project",
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=["celavi"],
@@ -23,7 +23,6 @@ setuptools.setup(
         "pandas",
         "matplotlib",
         "numpy",
-        "pysd",
         "networkx",
         "graphviz",
         "simpy",
