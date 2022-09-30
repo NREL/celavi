@@ -63,6 +63,7 @@ instance/
 
 # Sphinx documentation (stored in doc-pages branch)
 docs/_build/
+docs/docs/
 
 # PyBuilder
 target/
