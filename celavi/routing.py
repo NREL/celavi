@@ -259,7 +259,8 @@ class Router:
             # Remove entries from the out-of-state route list where the
             # connections are required to be in-state
             _keep = outstate_routes.in_state_only == False
-            route_list = instate_routes.append(outstate_routes[_keep])
+            #route_list = instate_routes.append(outstate_routes[_keep])
+            route_list = pd.concat([instate_routes,outstate_routes[_keep]])
 
             # if route_list is empty, generate empty data frame for export (e.g., create column for total_vkmt)
             # otherwise, loop through all locations in route_list and compute routing distances
@@ -334,9 +335,9 @@ class Router:
                             _vkmt_by_county_all_routes = _vkmt_by_county
 
                         else:
-                            _vkmt_by_county_all_routes = _vkmt_by_county_all_routes.append(
-                                _vkmt_by_county, ignore_index=True, sort=True
-                            )
+                            _vkmt_by_county_all_routes = pd.concat([_vkmt_by_county_all_routes,_vkmt_by_county])
+                            _vkmt_by_county_all_routes = _vkmt_by_county_all_routes.sort_values(by = list(_vkmt_by_county_all_routes.columns),axis = 0)
+                            
 
                     # after the loop through all routes is complete, merge the data
                     # frame containing all routes with route_list
@@ -384,7 +385,7 @@ class Router:
         data_complete = pd.DataFrame()
         for file in file_output_list:
             data = pd.read_csv(file)
-            data_complete = data_complete.append(data)
+            data_complete = pd.concat([data_complete,data])
 
         data_complete.to_csv(routes_output_file, index=False)
 

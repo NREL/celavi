@@ -135,13 +135,13 @@ class ComputeLocations:
                                                        (turbine_locations['p_year'] != '-1')]
 
         # reformat data for later use
-        turbine_locations_with_eia.rename(columns={"t_state": "region_id_2",
+        turbine_locations_with_eia = turbine_locations_with_eia.rename(columns={"t_state": "region_id_2",
                                                    "t_county": "region_id_3",
                                                    "xlong": "long",
                                                    "ylat": "lat",
                                                    "eia_id": "facility_id",
                                                    "p_year": "year"},
-                                          inplace=True)
+                                          )
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         turbine_locations_with_eia = turbine_locations_with_eia[turbine_locations_with_eia.region_id_2 != 'GU']
@@ -178,7 +178,7 @@ class ComputeLocations:
 
         # determine average lat and long for all turbines by facility_id
         # (this is the plant location for each facility_id)
-        plant_locations = turbine_locations_filtered.groupby(['facility_id', 'region_id_2', "region_id_3"])['long', 'lat'].agg('mean').reset_index()
+        plant_locations = turbine_locations_filtered.groupby(['facility_id', 'region_id_2', "region_id_3"])[['long', 'lat']].agg('mean').reset_index()
         # Dropping duplicates on p year and eia id and keeping only the first county occurences in case spread over multiple counties. Assumption
         plant_locations = plant_locations.drop_duplicates(subset=['facility_id'], keep='first')
         plant_locations = plant_locations.astype({'facility_id': 'int'})  # recast type for facility_id
@@ -351,7 +351,7 @@ class ComputeLocations:
 
         # where total capacity decreases in a year, set the new capacity value
         # to 0
-        stscen['cap_new'][stscen['cap_new'] < 0] = 0
+        stscen.loc[stscen['cap_new'] < 0,'cap_new'] = 0
 
         # .diff() leaves empty values where there is no previous row.
         # replace these NAs with 0
@@ -445,12 +445,8 @@ class ComputeLocations:
             on='p_name',
             how='outer'
         )
-
-        self.capacity_data.append(
-            capacity_future,
-            ignore_index=True,
-            sort=True
-        ).rename(
+        self.capacity_data = pd.concat([self.capacity_data,capacity_future])
+        self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns)).rename(
             columns={'n_turbine': 'n_technology'}
         ).to_csv(
             self.technology_data_filename,
@@ -484,10 +480,9 @@ class ComputeLocations:
         # Add the future power plants to the locations dataset stored in self
         # It has to go back into self to get saved at the end of the
         # join_facilities method
-        self.locs = self.locs.append(
-            _new_facility_locs,
-            ignore_index=True,
-            sort=True)
+        self.locs = pd.concat([self.locs,_new_facility_locs])
+        self.locs = self.locs.sort_values(by = list(self.locs.columns))
+
 
     def join_facilities(self, locations_output_file):
         """
@@ -506,8 +501,9 @@ class ComputeLocations:
         landfill_locations_no_nulls = ComputeLocations.landfill(self)
         facility_locations = ComputeLocations.other_facility(self)
 
-        locations = facility_locations.append(wind_plant_locations)
-        locations = locations.append(landfill_locations_no_nulls)
+
+        locations = pd.concat([facility_locations,wind_plant_locations])
+        locations = pd.concat([locations,landfill_locations_no_nulls])
         locations.reset_index(drop=True, inplace=True)
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska

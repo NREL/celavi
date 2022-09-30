@@ -6,14 +6,13 @@ Created January 27, 2022.
 from dataclasses import replace
 import re
 import os
-import sys
 import time
 import yaml
 import pickle
 
 import numpy as np
 import pandas as pd
-
+import warnings
 from scipy.stats import weibull_min
 
 
@@ -26,6 +25,8 @@ from celavi.pylca_celavi.des_interface import PylcaCelavi
 from celavi.reeds_importer import ReedsImporter
 from celavi.des import Context
 from celavi.diagnostic_viz import DiagnosticViz
+
+
 
 
 class Scenario:
@@ -105,6 +106,7 @@ class Scenario:
         # Subtract one from the number of runs in the config file because
         # arange includes zero in the list
         for i in np.arange(self.scen["scenario"]["runs"]):
+            time0 = time.time()
             self.run = i
             self.execute()
 
@@ -115,9 +117,10 @@ class Scenario:
 
             # Postprocess and save the output of a single model run
             self.postprocess()
+            print(f'Run {i} took {str(time.time()-time0)} seconds', flush = True)
 
         # Print run finish message
-        print(f"FINISHED RUN at {self.simtime(self.start)} s", flush=True)
+        print(f"FINISHED SIMULATION at {self.simtime(self.start)} s", flush=True)
 
     def get_filepaths(self):
         """
@@ -259,6 +262,7 @@ class Scenario:
                 sc_in_circ=self.scen["circular_pathways"].get("sc_in_circ", []),
                 sc_out_circ=self.scen["circular_pathways"].get("sc_out_circ", []),
                 year=start_year,
+                start_year=start_year,
                 verbose=self.case["model_run"].get("cg_verbose", 1),
                 save_copy=self.case["model_run"].get("save_cg_csv", True),
                 save_name=self.files["costgraph_csv"],
@@ -302,6 +306,10 @@ class Scenario:
             dynamic_lci_filename = self.files["national_electricity_lci"]
 
         # Prepare LCIA code
+        #verbose = 0 means no print statements. 
+        #verbose = 1 prints detailed LCA calculation steps
+        if self.case["model_run"].get("warning_verbose") == 0:
+            warnings.filterwarnings('ignore')
         self.lca = PylcaCelavi(
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
@@ -309,14 +317,16 @@ class Scenario:
             dynamic_lci_filename=dynamic_lci_filename,
             electricity_grid_spatial_level=electricity_grid_spatial_level,
             static_lci_filename=self.files["static_lci"],
-            uslci_filename=self.files["uslci"],
-            lci_activity_locations=self.files["lci_activity_locations"],
+            uslci_tech_filename=self.files["uslci_tech"],
+            uslci_emission_filename=self.files["uslci_emission"],
+            uslci_process_filename=self.files["uslci_process_adder"],
             stock_filename=self.files["stock_filename"],
             emissions_lci_filename=self.files["emissions_lci"],
             traci_lci_filename=self.files["traci_lci"],
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
+            verbose = self.case["model_run"].get("lcia_verbose"),
             substitution_rate={
                 mat: apply_array_uncertainty(rate, self.run)
                 for mat, rate in self.scen["technology_components"]
@@ -348,6 +358,7 @@ class Scenario:
             self.netw.path_dict["component mass"] = component_total_mass.loc[
                 component_total_mass.year == start_year, "mass_tonnes"
             ].values[0]
+            self.netw.update_costs(self.netw.path_dict)
             self.netw.pathway_crit_history = list()
 
             self.lca.run = self.run
@@ -539,6 +550,7 @@ class Scenario:
             "material",
             "route_id",
             "stage",
+            "state",
             "impact",
             "impact_value",
             "run",

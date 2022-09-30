@@ -61,8 +61,9 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
+# Sphinx documentation (stored in doc-pages branch)
 docs/_build/
+docs/docs/
 
 # PyBuilder
 target/
@@ -129,13 +130,13 @@ ENV/
 .Rproj.user
 .Rhistory
 *.Rproj
-*.html
+
 
 # mypy
 .mypy_cache/
 
-# Sphinx documentation build
-doc/_build
+
+
 celavi/Eberle - NREL LDRD CELAVI - Overview_jan2021.pptx
 routing/spatialresolutionTexas/Spatial Analysis CELAVI.docx
 routing/spatialresolutionTexas/TexasMap.pdf

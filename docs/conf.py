@@ -41,7 +41,7 @@ extensions = [
     # 'sphinx.ext.mathjax',
     # 'sphinx.ext.ifconfig',
     # 'sphinx.ext.viewcode',
-    # 'sphinx.ext.githubpages'
+    'sphinx.ext.githubpages'
 ]
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -55,7 +55,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 autodoc_member_order = "bysource"
 
 # Change the name of the main doc file to main_page instead of index
-master_doc = "main_page"
+master_doc = "index"
 
 # -- Options for HTML output -------------------------------------------------
 

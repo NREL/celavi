@@ -1,131 +1,79 @@
-import warnings
 import pandas as pd
-warnings.filterwarnings("ignore")
 import numpy as np
-from pyomo.environ import ConcreteModel, Set, Param, Var, Constraint, Objective, minimize
-
-# The following two lines are needed for execution on HPC
-# import pyutilib.subprocess.GlobalData
-# pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
-
-#We are integrating static lca with dynamics lca over here. 
-def preprocessing(year,df_static):
-
+def preprocessing(year,df_emission):
     """
-    This function preprocesses the process inventory before the LCA calculation. It joins the dynamic LCA
-    inventory with the static LCA inventory. Removes dummy processes with no output from the inventory. 
+    This function preprocesses the emissions database for foregound system before calculation. 
+    It creates a product only database for technology matrix construction.
+    Removes any dummy flows from the database.
 
     Parameters
     ----------
     year : str
         year of LCA calculation
-    df_static : pd.DataFrame
-        lca inventory static 
-
+    df_emission : pandas dataframe
+        emission inventory
     
     Returns
     -------
-    pd.DataFrame
-       cleaned process inventory merged with dynamic data
-    pd.DataFrame   
+    product_df: pandas dataframe
+        An inventory with only product flows for creating the technology product matrix
+    df_with_all_other_flows: pandas dataframe   
        inventory with no product flows
-
     """
-    df = df_static
+    df = df_emission
     df_input = df[df['input'] == True]
     df_output = df[df['input'] == False]
     df_input.loc[:, 'value'] = df_input.loc[:, 'value'] * (-1)
     df = pd.concat([df_input, df_output])
     
-    # Removing flows without source because optimization problem becomes infeasible
     # Removing flows without source
-    # For optimization to work, the technology matrix should not have any flows that do not have any production proceses.
     # Dummy flows need to be removed.
     # This part removes the dummy flows and flows without any production processes from the X matrix.
     process_input_with_process = pd.unique(df_output['product'])
     df['indicator'] = df['product'].isin(process_input_with_process)
-    process_df = df[df['indicator'] == True]
+    product_df = df[df['indicator'] == True]
     df_with_all_other_flows = df[df['indicator'] == False]
     
-    del process_df['indicator']
+    del product_df['indicator']
     del df_with_all_other_flows['indicator']
     
-    process_df.loc[:, 'value'] = process_df.loc[:, 'value'].astype(np.float64)
-    return process_df, df_with_all_other_flows
+    product_df.loc[:, 'value'] = product_df.loc[:, 'value'].astype(np.float64)
+    return product_df, df_with_all_other_flows
 
 
-def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
-
+def solver(tech_matrix, F, process, df_with_all_other_flows):
     """
-    This function houses the optimizer for solve Xs = F. 
-    Solves the Xs=F equation. 
-    Solves the scaling vector.  
+    This function houses the calculator to solve Xs = F for calculating insitu emissions. 
+    Solves the Xs=F equation. Solves the scaling vector.  
 
     Parameters
     ----------
-    tech_matrix : numpy matrix
-         technology matrix from the process inventory
-    F : vector
+    tech_matrix: numpy matrix
+         technology matrix from the products inventory
+    F: numpy array
          Final demand vector 
-    process: str
-         filename for the dynamic inventory   
-    df_with_all_other_flows: pd.DataFrame
+    process: list
+         list of processes in the emissions inventory   
+    df_with_all_other_flows: pandas dataFrame
          lca inventory with no product flows
 
-    
     Returns
     -------
-    pd.DataFrame
-       LCA results
+    results_total: pandas dataframe
+        emissions as a dataframe after performing insitu emissions calculations
+        These are insitu mass pollutant flows calculated for demand of material by foreground processes. 
+        
+        Columns:
+           - product: str
+           - unit: str
+           - value: float
     """
+    tm = tech_matrix.to_numpy()
+    scv = np.linalg.solve(tm, F)
 
-    X_matrix = tech_matrix.to_numpy()
-    # Creation of a Concrete Model
-    model = ConcreteModel()
-
-    def set_create(a, b):
-        i_list = []
-        for i in range(a, b):
-            i_list.append(i)
-        return i_list
-
-    model.i = Set(initialize=set_create(0, X_matrix.shape[0]), doc='indices')
-    model.j = Set(initialize=set_create(0, X_matrix.shape[1]), doc='indices')
-
-    def x_init(model, i, j):
-        return X_matrix[i, j]
-    model.x = Param(model.i, model.j, initialize=x_init, doc='technology matrix')
-
-    def f_init(model, i):
-        return F[i]
-
-    model.f = Param(model.i, initialize=f_init, doc='Final demand')
-    model.s = Var(model.j, bounds=(0, None), doc='Scaling Factor')
-
-    def supply_rule(model, i):
-      return sum(model.x[i, j] * model.s[j] for j in model.j) >= model.f[i]
-    model.supply = Constraint(model.i, rule=supply_rule, doc='Equations')
-
-    def objective_rule(model):
-      return sum(model.s[j] for j in model.j)
-    model.objective = Objective(rule=objective_rule, sense=minimize, doc='Define objective function')
-
-    def pyomo_postprocess(options=None, instance=None, results=None):
-        df = pd.DataFrame.from_dict(model.s.extract_values(), orient='index', columns=[str(model.s)])
-        return df
-
-
-
-    # This emulates what the pyomo command-line tools does
-    from pyomo.opt import SolverFactory
-    import pyomo.environ
-
-    opt = SolverFactory("glpk")
-    results = opt.solve(model)
-    solution = pyomo_postprocess(None, model, results)
     scaling_vector = pd.DataFrame()
     scaling_vector['process'] = process
-    scaling_vector['scaling_factor'] = solution['s']
+    scaling_vector['scaling_factor'] = scv
 
     results_df = df_with_all_other_flows.merge(scaling_vector, on=['process'], how='left')
 
@@ -138,118 +86,131 @@ def solver_optimization(tech_matrix,F,process, df_with_all_other_flows):
 
 def electricity_corrector_before20(df):
     """
-    This function is used to replace pre 2020 electricity flows with the base electricity mix flow
+    This function is used to replace pre 2020 electricity flows in the emissions inventory with the base electricity mix flow
     in the USLCI inventory Electricity, at Grid, US, 2010'
     
-
     Parameters
     ----------
     df: pd.DataFrame
-        process inventory
+        Background process inventory. Columns are derived from the background LCI database being used.
 
     Returns
     -------
-    pd.DataFrame
+    df: pd.DataFrame
        process inventory with electricity flows before 2020 converted to the base electricity
        mix flow in USLCI. 
     """
-
-    
     df = df.replace(to_replace='electricity', value='Electricity, at Grid, US, 2010')
     return df
 
-def runner(tech_matrix,F,yr,i,j,k,final_demand_scaler,process,df_with_all_other_flows,route_id=None):
-
+def runner_insitu(
+    tech_matrix,
+    F,
+    yr,
+    i,
+    j,
+    k,
+    state,
+    final_demand_scaler,
+    process,
+    df_with_all_other_flows
+    ):
     """
-    Runs the optimization function and creates final data frame in proper format
+    Runs the solver function for the insitu emissions and creates foreground emissions data frame in proper format.
 
     Parameters
     ----------
-    tech matrix: pd.Dataframe
-         technology matrix built from the process inventory. 
+    tech matrix: pandas dataframe
+         technology matrix built from the emissions inventory. 
     F: final demand series vector
-         final demand of the LCA problem
+         final demand of the foreground system
     yr: int
-         year of analysis
+        Model year
     i: int
-         facility ID
+        facility ID
     j: str
-        stage
-    k: sr
-        material
+        Name of supply chain stage
+    k: str
+        Name of material
+    state: str
+        State where the facility is located.
     final_demand_scaler: int
-        scaling variable number to ease optimization
+        Integer for scaling final demand and avoiding badly scaled matrix calculations.
     process: list
-        list of processes included in the technology matrix
+        List of processes included in the technology matrix
     df_with_all_other_flows: pd.DataFrame
         Dataframe with flows in the inventory which do not have a production process. 
-    route_id: str
-        Route identifier. For a facility, this will always be None.
     
-
     Returns
     -------
-    pd.DataFrame
-       Dataframe with LCA results
+    res: pandas dataframe
+        Emission results in the form of a dataframe.
+        Columns:
+            - product: str
+            - unit: str
+            - value: float
+            - year: int
+            - facility_id: int
+            - stage: str
+            - material: str
+            - route_id: int
+            - state: str
     """
-
-    
     res = pd.DataFrame()
-    res= solver_optimization(tech_matrix, F,process,df_with_all_other_flows)
+    res = solver(tech_matrix, F, process, df_with_all_other_flows) 
     res['value'] = res['value']*final_demand_scaler
     if  not res.empty:        
        res.loc[:,'year'] =  yr
        res.loc[:,'facility_id'] = i
        res.loc[:,'stage'] = j
        res.loc[:,'material'] = k
+       res.loc[:,'state'] = state
     else:        
-       print(f"Insitu emission optimization failed for {k} at {j} in {yr}")
+       print(f"Insitu emission calculation failed for {k} at {j} in {yr}")
     
     res = electricity_corrector_before20(res)
     res['route_id'] = None
     return res
 
 
-def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
-
-
+def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, state, df_emissions, verbose):
     """
-    This is used for calculating insitu emissions
-    Creates technology matrix and final demand vector from inventory data
-    Runs the PyLCA optimizer to perform LCA calculations
-    Conforms results to a dataframe 
+    Creates a product only technology matrix for scaling vector calculations. 
+    Runs the solver to perform insitu emissions calculations. Conforms emission results to a dataframe. Performs column checks and renames columns .
+    Returns the emissions dataframe.
 
     Parameters
     ----------
-    f_d: Dataframe 
-    Dataframe from DES 
-    
+    f_d: pandas dataframe 
+        Dataframe from DES 
     yr: int
-    Year of calculation
-
+        Model year.
     fac_id: int
-    Facility ID of facility being evaluated
-
+        Facility ID of facility being evaluated
     stage: str 
-    Stage of facility being evaluated
-
+        Supply chain stage.
     material: str
-    material being evaluated
-
-    df_emission: df
-    Emissons inventory
+        material being evaluated
+    df_emission: pandas dataframe
+        Emissons inventory
 
     Returns
     -------
-    pd.DataFrame
-         Insitu emissions within a Dataframe after LCA calculations
+    res: pandas dataframe
+       Insitu emissions dataframe with modified column names after checking column number. 
+       Columns:
+        - flow name: str
+        - flow unit: str
+        - flow quantity: float
+        - year: int
+        - facility_id: int
+        - stage: str
+        - material: str
+        - route_id: int
+        - state: str
     """
-
-
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-
-    final_lci_result = pd.DataFrame()
     # Running LCA for all years as obtained from CELAVI
     # Incorporating dynamics lci database
     process_df, df_with_all_other_flows = preprocessing(int(yr), df_emissions)
@@ -264,25 +225,30 @@ def model_celavi_lci_insitu(f_d, yr, fac_id, stage, material, df_emissions):
     final_dem = product_df.merge(f_d, left_on=0, right_on='flow name', how='left')
     final_dem = final_dem.fillna(0)
     chksum = np.sum(final_dem['flow quantity'])
-    if chksum != 0:
-        F = final_dem['flow quantity']
-
-        if chksum > 100000:
+    F = final_dem['flow quantity']
+    if chksum <= 0:
+        if verbose == 1:
+            print('LCA emissions inventory does not exist for %s %s %s' % (str(yr), stage, material))
+        return pd.DataFrame()
+        #Returns blank dataframe if not inventory is present
+    
+    elif chksum > 100000:
             final_demand_scaler = 10000
-        elif chksum > 10000:
+    elif chksum > 10000:
             final_demand_scaler = 1000
-        elif chksum > 100:
+    elif chksum > 100:
             final_demand_scaler = 10
-        else:
+    else:
             final_demand_scaler = 1
 
-        # Dividing by scaling value to solve scaling issues
-        F = F / final_demand_scaler
+    # Dividing by scaling value to solve scaling issues
+    F = F / final_demand_scaler
 
-        res = runner(tech_matrix, F, yr, fac_id, stage, material, final_demand_scaler, process, df_with_all_other_flows)
-        # r es.columns = ['flow name', 'unit', 'flow quantity', 'year', 'stage', 'material']
-        # res = model_celavi_lci_background(res, yr, stage, material)
-        res.columns = ['flow name', 'unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id']
-        return res
+    res = runner_insitu(tech_matrix, F, yr, fac_id, stage, material, state, final_demand_scaler, process, df_with_all_other_flows)
+    if len(res.columns) != 9:
+        print(f'model_celavi_lci: res has {len(res.columns)}; needs 9 columns',
+              flush=True)
+        return pd.DataFrame(columns = ['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id', 'state'])
     else:
-        return pd.DataFrame()
+        res.columns = ['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material','route_id','state']
+        return res
