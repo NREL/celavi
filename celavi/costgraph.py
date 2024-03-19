@@ -1068,5 +1068,5 @@ class CostGraph:
         _out["run"] = self.run
         with open(self.pathway_crit_history_filename, "a") as f:
             _out.to_csv(
-                f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
+                f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
             )

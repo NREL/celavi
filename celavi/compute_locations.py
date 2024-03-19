@@ -461,13 +461,16 @@ class ComputeLocations:
         ] = _new_facility_id.p_name.str.split('_',
                                               expand=True)
 
-        # Calculate lat/long pairs for the future power plants
+        # Calculate lat/long pairs for the future power plants by taking the
+        # average lat/long of existing power plants by state
         _new_facility_locs = _new_facility_id[
             ['facility_id', 'region_id_2']
         ].merge(
-            self.locs.groupby(
+            self.locs.loc[self.locs.facility_type == 'power plant'].groupby(
                 by='region_id_2'
-            ).mean().reset_index()[['region_id_2', 'lat', 'long']],
+            ).mean(
+                ['lat','long']
+            ).reset_index()[['region_id_2', 'lat', 'long']],
             on='region_id_2',
             how='left'
         )
