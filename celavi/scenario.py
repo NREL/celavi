@@ -516,7 +516,7 @@ class Scenario:
 
         with open(self.files["count_cumulative_histories"], "a") as f:
             count_cumulative_histories.to_csv(
-                f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
+                f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
             )
 
         diagnostic_viz_counts.generate_plots()
@@ -579,7 +579,7 @@ class Scenario:
 
         with open(self.files["lcia_facility_results"], "a") as f:
             lcia_locations_df.to_csv(
-                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+                f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
         # Create and save LCIA results for transportation, by route county
@@ -715,22 +715,22 @@ class Scenario:
 
         with open(self.files["mass_cumulative_histories"], "a") as f:
             mass_cumulative_histories.to_csv(
-                f, mode="a", header=f.tell() == 0, index=False, line_terminator="\n"
+                f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
             )
 
         with open(self.files["lcia_transpo_results"], "a") as f:
             lcia_transpo_agg.to_csv(
-                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+                f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
         with open(self.files["lcia_transpo_results"], "a") as f:
             lcia_transpo_agg.to_csv(
-                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+                f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
         with open(self.files["central_summary"], "a") as f:
             central_summary.to_csv(
-                f, index=False, mode="a", header=f.tell() == 0, line_terminator="\n"
+                f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
     @staticmethod
