@@ -31,7 +31,7 @@ setuptools.setup(
         "pyutilib",
         "joblib",
         "plotly",
-        "kaleido==0.1.0",
+        "kaleido==0.1.0.post1",
         "scikit-learn",
         "PyYAML",
         "sphinx-rtd-theme"
