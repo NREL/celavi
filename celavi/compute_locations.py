@@ -466,7 +466,7 @@ class ComputeLocations:
         _new_facility_locs = _new_facility_id[
             ['facility_id', 'region_id_2']
         ].merge(
-            self.locs.loc[self.locs.facility_type == 'power plant'].groupby(
+            self.locs.groupby(
                 by='region_id_2'
             ).mean(
                 ['lat','long']
