@@ -1058,15 +1058,18 @@ class CostGraph:
         Performs postprocessing on CostGraph outputs being saved to file and
         saves to user-specified filenames and directories
         """
-        _out = pd.DataFrame(
-            self.pathway_crit_history
-            ).explode(
-                column=['destination_facility_id','eol_pathway_criterion']
-                ).drop_duplicates(
-                    ignore_index=True
-                    )
-        _out["run"] = self.run
-        with open(self.pathway_crit_history_filename, "a") as f:
-            _out.to_csv(
-                f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
-            )
+        try:
+            _out = pd.DataFrame(
+                self.pathway_crit_history
+                ).explode(
+                    column=['destination_facility_id','eol_pathway_criterion']
+                    ).drop_duplicates(
+                        ignore_index=True
+                        )
+            _out["run"] = self.run
+            with open(self.pathway_crit_history_filename, "a") as f:
+                _out.to_csv(
+                    f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
+                )
+        except KeyError:
+            print(f"CostGraph: pathway_crit_history is empty; no end of life flows were simulated")
