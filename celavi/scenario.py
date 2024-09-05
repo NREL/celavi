@@ -177,6 +177,7 @@ class Scenario:
                 lookup_facility_type=self.files["lookup_facility_type"],
                 technology_data_filename=self.files["technology_data"],
                 standard_scenarios_filename=self.files["capacity_projection"],
+                pv_module_chars_filename=self.files["pv_module_chars"]
             )
             loc.join_facilities(locations_output_file=self.files["locs"])
 
