@@ -248,7 +248,7 @@ class TechUnitLocations(Data):
 
     No manual changes are needed to the raw dataset before it is processed.
     """
-    COLUMNS = ({'name': 'eia_id', 'type': float, 'index': True, 'backfill': '-1'},
+    COLUMNS = ({'name': 'eia_id', 'type': int, 'index': True, 'backfill': '-1'},
                {'name': 't_state', 'type': str, 'index': False, 'backfill': None},
                {'name': 't_county', 'type': str, 'index': False, 'backfill': None},
                {'name': 'p_name', 'type': str, 'index': False, 'backfill': None},
@@ -266,6 +266,50 @@ class TechUnitLocations(Data):
                  columns={d['name']: d['type'] for d in COLUMNS},
                  backfill=True):
         super(TechUnitLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                backfill=backfill)
+
+
+class PVTechUnitLocations(Data):
+    """
+    Read in and process raw power plant locations dataset.
+
+    Dataset is downloadable at @TODO
+
+    No manual changes are needed to the raw dataset before it is processed.
+    """
+    COLUMNS = ({'name': 'eia_id', 'type': int, 'index': True, 'backfill': '-1'},
+               {'name': 'p_state', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'p_county', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'p_name', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'p_year', 'type': float, 'index': False, 'backfill': '-1'},
+               {'name': 'p_tech_sec', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'xlong', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'ylat', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'p_cap_dc', 'type': float, 'index': False, 'backfill': None}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS},
+                 backfill=True):
+        super(PVTechUnitLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                backfill=backfill)
+
+
+class PVTechUnitChars(Data):
+    """
+    Read in and process pv module characteristics dataset.
+
+    This dataset was derived from PV ICE, mat_factor.csv file.
+    """
+    COLUMNS = ({'name': 'MWdc_per_m2', 'type': float, 'index': True, 'backfill': '-1'},
+               {'name': 'MWdc_per_module', 'type': float, 'index': False, 'backfill': '-1'},
+               {'name': 'glass_metrictonne_per_module', 'type': float, 'index': False, 'backfill': '-1'},
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS},
+                 backfill=True):
+        super(PVTechUnitChars, self).__init__(df=df, fpath=fpath, columns=columns,
                                                 backfill=backfill)
 
 
