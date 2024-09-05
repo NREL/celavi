@@ -373,7 +373,8 @@ class StandardScenarios(Data):
     """
     COLUMNS = ({'name': 'state', 'type': str, 'index': True, 'backfill': None},
                {'name': 't', 'type': int, 'index': False, 'backfill': None},
-               {'name': 'wind-ons_MW', 'type': float, 'index': False, 'backfill': '-1'}
+               {'name': 'wind-ons_MW', 'type': float, 'index': False, 'backfill': '-1'},
+               {'name': 'upv_MW', 'type': float, 'index':False, 'backfill': '-1'}
                )
 
     def __init__(self, df=None, fpath=None,
