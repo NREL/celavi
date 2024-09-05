@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 
 warnings.simplefilter('error', UserWarning)
 
-import pdb
+
 class ComputeLocations:
     """
     The ComputeLocations class performs preprocessing that ingests raw facility
@@ -288,14 +288,6 @@ class ComputeLocations:
             inplace = True
         )
 
-        # Filter down the dataset to generate the number_of_technology_units
-        # file
-        # Store this dataframe into self for use in capacity projection
-        # calculations and creation of the number_of_technology_units file
-        self.capacity_data = pv_locs[
-            ['facility_id', 'p_name', 'year', 'p_cap_dc']
-            ].drop_duplicates().dropna()
-
         # Aggregate to STATE level by SUMMING capacity and AVERAGING
         # location. State = region_id_2
         # (this is the plant location for each facility_id)
@@ -310,6 +302,14 @@ class ComputeLocations:
                 ).merge(
                     fac_ids_state, on='region_id_2', how='outer'
                     )
+
+        # Filter down the dataset to generate the number_of_technology_units
+        # file
+        # Store this dataframe into self for use in capacity projection
+        # calculations and creation of the number_of_technology_units file
+        self.capacity_data = pv_locs_state[
+            ['facility_id', 'region_id_2', 'year', 'p_cap_dc']
+            ].drop_duplicates().dropna()
 
         power_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if power_plant_type_lookup:
@@ -633,6 +633,39 @@ class ComputeLocations:
             backfill=self.backfill
         )
 
+        # process self.capacity_data, created in solar_power_plant, to match
+        # the eventual capacity_future data
+        capacity_unit_counts = self.capacity_data.merge(
+            modules[['year','MWdc_per_module']], on='year', how='outer'
+            ).dropna(
+                ).sort_values(
+                    by=['region_id_2', 'year']
+                    )
+
+        # Take sequential differences in installed capacity within each state to
+        # calcualte new yearly installations
+        # (the sort above is necesasry for this to work properly)
+        capacity_unit_counts['cap_new'] = capacity_unit_counts.groupby(
+            'region_id_2'
+            )['p_cap_dc'].diff(
+            ).replace(
+                {np.nan: None}
+                )
+
+        # New installations for the first year a state appears in the data is set as the observed
+        # installed capacity for that year (a simplification, but this lets us capture that initial
+        # capacity so we don't under-count)
+        _replace_index = capacity_unit_counts[capacity_unit_counts.cap_new.values == None]['cap_new'].index
+        capacity_unit_counts.loc[_replace_index, 'cap_new'] = capacity_unit_counts.p_cap_dc[_replace_index]
+        
+        capacity_unit_counts['n_module'] = np.ceil(capacity_unit_counts.cap_new / capacity_unit_counts.MWdc_per_module)
+        capacity_unit_counts.loc[capacity_unit_counts.n_module < 0, 'n_module'] = 0.0
+        capacity_unit_counts['p_name'] = capacity_unit_counts.region_id_2 + '_hist'
+        capacity_unit_counts.drop(
+            columns = ['p_cap_dc','MWdc_per_module','cap_new'],
+            inplace = True
+            )
+
         # group stscen by state and take the consecutive difference of the
         # capacity column to get new MW-dc installations by year
         stscen['cap_new'] = stscen.groupby('state')['upv_MW'].diff()
@@ -669,8 +702,12 @@ class ComputeLocations:
         joined['p_name'] = joined.state + '_future_cap'
 
         # remove columns no longer needed
-        capacity_future = joined[['year', 'p_name', 'n_module', 'MWdc_per_module']]
-        # @TODO stopped here
+        capacity_future = joined.copy()[['year', 'state', 'p_name', 'n_module', 'MWdc_per_module']]
+        capacity_future.rename(
+            columns = {'state':'region_id_2'},
+            inplace = True
+        )        
+
         # Use the computed locations dataset to generate unique facility_id
         # values for these future "power plants"
         _facility_id_start = int(self.locs.facility_id.max() + 1)
@@ -696,9 +733,9 @@ class ComputeLocations:
             on='p_name',
             how='outer'
         )
-        self.capacity_data = pd.concat([self.capacity_data,capacity_future])
+        self.capacity_data = pd.concat([capacity_unit_counts,capacity_future])
         self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns)).rename(
-            columns={'n_turbine': 'n_technology'}
+            columns={'n_module': 'n_technology'}
         ).to_csv(
             self.technology_data_filename,
             index=False
@@ -751,12 +788,14 @@ class ComputeLocations:
             Path where the processed and aggregated locations dataset is saved
         """
 
-        wind_plant_locations = ComputeLocations.wind_power_plant(self)
-        landfill_locations_no_nulls = ComputeLocations.landfill(self)
-        facility_locations = ComputeLocations.other_facility(self)
+        #wind_plant_locations = ComputeLocations.wind_power_plant(self)
+        pv_plant_locations = self.solar_power_plant(self)
+        landfill_locations_no_nulls = self.landfill(self)
+        facility_locations = self.other_facility(self)
 
 
-        locations = pd.concat([facility_locations,wind_plant_locations])
+        #locations = pd.concat([facility_locations,wind_plant_locations])
+        locations = pd.concat([facility_locations, pv_plant_locations])
         locations = pd.concat([locations,landfill_locations_no_nulls])
         locations.reset_index(drop=True, inplace=True)
 
