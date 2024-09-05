@@ -6,7 +6,7 @@ from sklearn.linear_model import LinearRegression
 
 warnings.simplefilter('error', UserWarning)
 
-
+import pdb
 class ComputeLocations:
     """
     The ComputeLocations class performs preprocessing that ingests raw facility
@@ -77,6 +77,7 @@ class ComputeLocations:
         self.node_locations = node_locations
         self.technology_data_filename = technology_data_filename
         self.standard_scenarios_filename = standard_scenarios_filename
+        self.pvchars_filename = pv_module_chars_filename
 
         self.lookup_facility_type_file = lookup_facility_type
 
@@ -207,6 +208,121 @@ class ComputeLocations:
         return wind_plant_locations
 
 
+    def solar_power_plant(self):
+        """
+        Ingests raw data from the U.S. PV database, filters down to
+        the contiguous U.S. and creates a data frame that can be combined with
+        other sets of facility location data. The number_of_technology_units
+        file is also created from this dataset.
+
+        See PVTechUnitLocations child class of Data class for column names and
+        data types, and where to download the USPVDB.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        pv_plant_locations: pd.DataFrame
+            Dataset of power plant locations including unique facility ID, the
+            facility type identifier, a lat/long pair, and four generic region
+            identifiers (country, state, county, etc.)
+
+            Columns:
+                - facility_id : int
+                - facility_type : str
+                - lat : float
+                - long : float
+                - region_id_1 : str
+                - region_id_2 : str
+                - region_id_3 : str
+                - region_id_4 : str
+        """
+        # Process data for solar power plants - from USPVDB
+        pv_locs_raw = Data.TechUnitLocations(fpath=self.power_plant_locations, backfill=self.backfill)
+        
+        # select only those plants with eia_ids 
+        pv_locs = pv_locs_raw[(pv_locs_raw['eia_id'] != '-1') & (pv_locs_raw['p_year'] != '-1')]
+
+        # reformat data for later use
+        pv_locs = pv_locs.rename(
+            columns={
+                "p_state": "region_id_2",
+                'p_county': 'region_id_3',
+                "xlong": "long",
+                "ylat": "lat",
+                "eia_id": "facility_id",
+                "p_year": "year"
+                },
+                )
+
+        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
+        pv_locs.drop(
+            index = pv_locs[pv_locs.region_id_2.isin(['HI','GU','PR','AK'])].index,
+            inplace = True
+        )
+
+        # exclude Nantucket since transport routing doesn't currently include ferries
+        pv_locs.drop(
+            index = pv_locs[pv_locs.region_id_3 == 'Nantucket'].index,
+            inplace = True
+        )
+
+        # exclude all PV subtypes other than c-Si
+        # that's the only one we have glass information on
+        pv_locs.drop(
+            index = pv_locs[pv_locs.p_tech_sec != 'c-si'].index,
+            inplace = True
+        )
+
+        # then the tech_sec column is no longer needed
+        pv_locs.drop(
+            columns = 'p_tech_sec',
+            inplace = True
+        )
+
+        # also drop data from before the simulation start year
+        pv_locs.drop(
+            index = pv_locs[pv_locs.year < self.start_year].index,
+            inplace = True
+        )
+
+        # Filter down the dataset to generate the number_of_technology_units
+        # file
+        # Store this dataframe into self for use in capacity projection
+        # calculations and creation of the number_of_technology_units file
+        self.capacity_data = pv_locs[
+            ['facility_id', 'p_name', 'year', 'p_cap_dc']
+            ].drop_duplicates().dropna()
+
+        # Aggregate to STATE level by SUMMING capacity and AVERAGING
+        # location. State = region_id_2
+        # (this is the plant location for each facility_id)
+        fac_ids_state = pv_locs[['facility_id','region_id_2']].drop_duplicates(
+            subset='region_id_2', keep='last'
+            )
+        pv_locs_state = pv_locs.groupby(
+            ['region_id_2','year']
+            ).agg(
+                {'lat': np.mean, 'long': np.mean, 'p_cap_dc': 'sum'}
+                ).reset_index(
+                ).merge(
+                    fac_ids_state, on='region_id_2', how='outer'
+                    )
+
+        power_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
+        if power_plant_type_lookup:
+            pv_locs_state["facility_type"] = power_plant_type_lookup
+        else:
+            warnings.warn('Power plant facility type missing from facility_type lookup table.')
+
+        pv_locs_state["region_id_1"] = 'USA'
+        pv_locs_state["region_id_4"] = ''
+
+        return pv_locs_state
+    
+
     def landfill(self):
         """
         Processes raw data from U.S. EPA Landfill Methane Outreach Program
@@ -321,7 +437,7 @@ class ComputeLocations:
         return facility_locations
 
 
-    def capacity_projections(self):
+    def capacity_projections_wind(self):
         """
         Use NREL's Standard Scenarios for electricity grid mix projections to
         calculate future technology unit installations. See the StandardScenarios
@@ -487,6 +603,141 @@ class ComputeLocations:
         self.locs = self.locs.sort_values(by = list(self.locs.columns))
 
 
+    def capacity_projections_solar(self):
+        """
+        Use NREL's Standard Scenarios for electricity grid mix projections to
+        calculate future technology unit installations. See the StandardScenarios
+        child class of the Data parent class for additional information on
+        obtaining and formatting the input dataset.
+
+        Future technology unit installations do not have locations defined in the
+        input datasets. Locations for these installations are calculated by U.S.
+        state (region_id_2) by averaging the locations of previously installed
+        technology units.
+        """
+
+        # Read in the standard scenario data
+        stscen = Data.StandardScenarios(
+            fpath=self.standard_scenarios_filename,
+            backfill=self.backfill
+        ).rename(
+            columns={'t': 'year'}
+        )
+
+        # Read in dataset on module characteristics
+        # Capacity per m2, capacity per module, and glass mass per module
+        # This information is analogous to the "avg_cap_hist" from the
+        # wind blade study
+        modules = Data.PVTechUnitChars(
+            fpath=self.pvchars_filename,
+            backfill=self.backfill
+        )
+
+        # group stscen by state and take the consecutive difference of the
+        # capacity column to get new MW-dc installations by year
+        stscen['cap_new'] = stscen.groupby('state')['upv_MW'].diff()
+
+        # where total capacity decreases in a year, set the new capacity value
+        # to 0
+        stscen.loc[stscen['cap_new'] < 0,'cap_new'] = 0
+
+        # .diff() leaves empty values where there is no previous row.
+        # replace these NAs with 0
+        stscen.fillna(value=0, inplace=True)
+
+        # merge the average capacity extrapolation with the standard scenario
+        # data by year
+        # keep only the columns required to calculate the number of new
+        # turbines
+        joined = modules[modules.year > 2020].merge(
+            stscen[stscen.year > 2020],
+            on='year',
+            how='outer',
+            suffixes=('avgcap', 'stdscen'),
+            sort=True
+        )[['year', 'state', 'MWdc_per_module', 'cap_new']]
+
+        # calculate the number of new modules by dividing the new capacity
+        # addition with the average module capacity
+        # round up to the nearest integer to deal in whole numbers of modules
+        joined['n_module'] = np.ceil(joined.cap_new / joined.MWdc_per_module)
+
+        # remove any entries where no new turbines are installed
+        joined = joined[joined.n_module > 0]
+
+        # generate project names for the future capacity
+        joined['p_name'] = joined.state + '_future_cap'
+
+        # remove columns no longer needed
+        capacity_future = joined[['year', 'p_name', 'n_module', 'MWdc_per_module']]
+        # @TODO stopped here
+        # Use the computed locations dataset to generate unique facility_id
+        # values for these future "power plants"
+        _facility_id_start = int(self.locs.facility_id.max() + 1)
+
+        # generate a list of new facility IDs
+        _new_facility_id = list(
+            _facility_id_start +
+            np.arange(len(capacity_future.p_name.unique()))
+        )
+
+        # create a data frame of new facility IDs and project names,
+        # for merging
+        _new_facility_id = pd.DataFrame(
+            data={
+                'p_name': list(capacity_future.p_name.unique()),
+                'facility_id': _new_facility_id
+            }
+        )
+
+        # merge to add a facility_id column to the capacity projection data
+        capacity_future = capacity_future.merge(
+            _new_facility_id[['p_name', 'facility_id']],
+            on='p_name',
+            how='outer'
+        )
+        self.capacity_data = pd.concat([self.capacity_data,capacity_future])
+        self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns)).rename(
+            columns={'n_turbine': 'n_technology'}
+        ).to_csv(
+            self.technology_data_filename,
+            index=False
+        )
+
+
+        # get state column back by splitting p_name
+        # ig1 and ig2 are dummy columns not used further
+        _new_facility_id[
+            ['region_id_2', 'ig1', 'ig2']
+        ] = _new_facility_id.p_name.str.split('_',
+                                                expand=True)
+
+        # Calculate lat/long pairs for the future power plants by taking the
+        # average lat/long of existing power plants by state
+        _new_facility_locs = _new_facility_id[
+            ['facility_id', 'region_id_2']
+        ].merge(
+            self.locs.groupby(
+                by='region_id_2'
+            ).mean(
+                ['lat','long']
+            ).reset_index()[['region_id_2', 'lat', 'long']],
+            on='region_id_2',
+            how='left'
+        )
+
+        _new_facility_locs['facility_type'] = 'power plant'
+        _new_facility_locs['region_id_1'] = 'USA'
+        _new_facility_locs['region_id_3'] = ''
+        _new_facility_locs['region_id_4'] = ''
+
+        # Add the future power plants to the locations dataset stored in self
+        # It has to go back into self to get saved at the end of the
+        # join_facilities method
+        self.locs = pd.concat([self.locs,_new_facility_locs])
+        self.locs = self.locs.sort_values(by = list(self.locs.columns))
+
+
     def join_facilities(self, locations_output_file):
         """
         Call other ComputeLocations methods to process raw locations datasets
@@ -531,6 +782,7 @@ class ComputeLocations:
 
         self.locs = locations
 
-        self.capacity_projections()
+        #self.capacity_projections_wind()
+        self.capacity_projections_solar()
 
         self.locs.to_csv(locations_output_file, index=False)
