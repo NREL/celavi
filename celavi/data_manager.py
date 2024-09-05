@@ -301,7 +301,8 @@ class PVTechUnitChars(Data):
 
     This dataset was derived from PV ICE, mat_factor.csv file.
     """
-    COLUMNS = ({'name': 'MWdc_per_m2', 'type': float, 'index': True, 'backfill': '-1'},
+    COLUMNS = ({'name': 'year', 'type': float, 'index': True, 'backfill': '-1'},
+               {'name': 'MWdc_per_m2', 'type': float, 'index': False, 'backfill': '-1'},
                {'name': 'MWdc_per_module', 'type': float, 'index': False, 'backfill': '-1'},
                {'name': 'glass_metrictonne_per_module', 'type': float, 'index': False, 'backfill': '-1'},
                )
