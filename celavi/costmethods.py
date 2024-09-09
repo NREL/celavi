@@ -223,7 +223,6 @@ class CostMethods:
         """
         """
         return 1.0
-    
 
     def cement_manufacturing(self, path_dict):
         """
@@ -231,190 +230,30 @@ class CostMethods:
         return 1.0
     
 
-
-
-    def rotor_teardown(self, path_dict):
+    def primary_material(self, path_dict):
         """
-        Cost (USD/metric ton) of removing one metric ton of blade from the
-        turbine. The cost of removing a single blade is calculated as one-third
-        the rotor teardown cost, and this cost is divided by blade mass to
-        calculate rotor teardown per metric ton of blade material.
-
-        Parameters
-        ----------
-        path_dict : dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-        _cost : float
-            Cost in USD per metric ton of removing a blade from an
-            in-use turbine. Equivalent to 1/3 the rotor teardown cost divided
-            by the blade mass.
+        Transportataion
         """
-
-        _year = path_dict['year']
-        _mass = path_dict['component mass']
-
-        if path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'stochastic':
-            if _year == self.start_year:
-                _m = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['rotor teardown']['m'],
-                    seed=self.seed
-                )
-                if isinstance(path_dict['cost uncertainty']['rotor teardown']['m'],dict):
-                    path_dict['cost uncertainty']['rotor teardown']['m']['value'] = _m
-                
-                _b = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['rotor teardown']['b'],
-                    seed=self.seed
-                )
-                if isinstance(path_dict['cost uncertainty']['rotor teardown']['b'], dict):
-                    path_dict['cost uncertainty']['rotor teardown']['b']['value'] = _b
-            else:
-                _m = path_dict['cost uncertainty']['rotor teardown']['m']['value']
-                _b = path_dict['cost uncertainty']['rotor teardown']['b']['value']
-        elif path_dict['cost uncertainty']['rotor teardown']['uncertainty'] == 'array':
-            _m = apply_array_uncertainty(
-                path_dict['cost uncertainty']['rotor teardown']['m'],
-                self.run
-                )
-            _b = apply_array_uncertainty(
-                path_dict['cost uncertainty']['rotor teardown']['b'],
-                self.run
-                )
-        else:
-            # with no uncertainty
-            _m = path_dict['cost uncertainty']['rotor teardown']['m']
-            _b = path_dict['cost uncertainty']['rotor teardown']['b']
-        
-        return (_m * (_year - 2000.0)  + _b) / _mass
+        return 1.0
 
 
-
-    def segmenting(self, path_dict):
+    def technology(self, path_dict):
         """
-        Cost method for blade segmenting into 30m sections performed on-site at
-        the wind power plant.
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Cost (USD/metric ton) of cutting a turbine blade into 30-m segments
+        Transportation
         """
-        if path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'stochastic':
-            if path_dict['year'] == self.start_year:
-                _b = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['segmenting']['b'],
-                    seed=self.seed
-                )
-                if isinstance(path_dict['cost uncertainty']['segmenting']['b'],dict):
-                    path_dict['cost uncertainty']['segmenting']['b']['value'] = _b
-            else:
-                _b = path_dict['cost uncertainty']['segmenting']['b']['value']
-        elif path_dict['cost uncertainty']['segmenting']['uncertainty'] == 'array':
-            _b = apply_array_uncertainty(
-                path_dict['cost uncertainty']['segmenting']['b'],
-                self.run
-                )
-        else:
-            _b = path_dict['cost uncertainty']['segmenting']['b']
-        
-        return _b
+        return 1.0
 
 
-
-    def coarse_grinding_onsite(self, path_dict):
+    def eol_material(self, path_dict):
         """
-        Cost method for coarsely grinding turbine blades onsite at a wind
-        power plant. This calculation uses industrial learning-by-doing
-        to gradually reduce costs over time.
-        
-        The coarse grinding, coarse grinding onsite, and fine grinding cost models
-        allow for array uncertainty in the initial cost or in the learning rate, 
-        or random uncertainty in the actual cost which depends on cumulative mass
-        processed. The logic for applying array uncertainty in these cost models
-        is as follows: IF the uncertainty type is 'array' AND there are no
-        parameter arrays in the cost uncertainty dictionary, THEN the learning rate
-        must have an array of values which are applied separately to each model run.
-        This logic is different from the uncertainty logic applied to all other cost
-        models, which do not have parameters stored outside the cost uncertainty
-        dictionary.
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Current cost of coarse grinding one metric ton of segmented blade
-            material onsite at a wind power plant.
         """
-        _learn_dict = path_dict['learning']['coarse grinding']      
+        return 1.0
 
-        # Implement uncertainty on initial cost before applying learning model
-        if path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'array':
-            _learn_rate = apply_array_uncertainty(
-                _learn_dict['learn rate'],
-                self.run
-                )  
-            # Array uncertainty is applied to the initial cost or to the learning rate
-            # (array uncertainty for the actual cost is implemented through the learning rate)
-            _initial_cost = apply_array_uncertainty(
-                path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],
-                self.run
-                )
-        elif path_dict['cost uncertainty']['coarse grinding onsite']['uncertainty'] == 'stochastic':
-            if path_dict['year'] == self.start_year:
-                    _initial_cost = apply_stoch_uncertainty(
-                        path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],
-                        seed=self.seed
-                    )
-                    # Because the triangular distribution has to be positive, apply a negative here
-                    _learn_rate = -1.0 * apply_stoch_uncertainty(
-                        _learn_dict['learn rate'],
-                        seed=self.seed
-                    )                    
-                    if isinstance(path_dict['cost uncertainty']['coarse grinding onsite']['initial cost'],dict):
-                        path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']['value'] = _initial_cost
-                    if isinstance(_learn_dict['learn rate'], dict):
-                        _learn_dict['learn rate']['value'] = _learn_rate
-            else:
-                _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']['value']
-                _learn_rate = _learn_dict['learn rate']['value']
-        else:
-            # with no uncertainty
-            _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _initial_cost = path_dict['cost uncertainty']['coarse grinding onsite']['initial cost']
 
-        # If the "cumul" value is None, then there has been no processing
-        # through coarse grinding and the initial cumul value from the config
-        # file is used
-
-        if _learn_dict['cumul'] is not None:
-            coarsegrind_cumul = max(
-                1,
-                _learn_dict['cumul']
-            )
-        else:
-            coarsegrind_cumul = _learn_dict['initial cumul']
-        
-        # calculate cost reduction factors from learning-by-doing model
-        # these factors are unitless
-        # apply cost reduction to initial cost
-        return _initial_cost * coarsegrind_cumul ** _learn_rate
-
+    def waste(self, path_dict):
+        """
+        """
+        return 1.0
 
 
     def coarse_grinding(self, path_dict):
@@ -625,166 +464,6 @@ class CostMethods:
 
 
 
-    def coprocessing(self, path_dict):
-        """
-        Cost method that calculates revenue from sale of coarsely-ground blade
-        material to cement co-processing plant.
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Revenue (USD/metric ton) from selling 1 metric ton of ground blade
-            to cement co-processing plant
-        """
-        if path_dict['cost uncertainty']['coprocessing']['uncertainty'] == 'stochastic':
-            if path_dict['year'] == self.start_year:
-                _out = -1.0 * apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['coprocessing']['b'],
-                    seed=self.seed
-                    )
-                if isinstance(path_dict['cost uncertainty']['coprocessing']['b'],dict):
-                    path_dict['cost uncertainty']['coprocessing']['b']['value'] = _out
-            else:
-                _out = path_dict['cost uncertainty']['coprocessing']['b']['value']
-            return _out
-        elif path_dict['cost uncertainty']['coprocessing']['uncertainty'] == 'array':
-            return -1.0 * apply_array_uncertainty(
-                path_dict['cost uncertainty']['coprocessing']['b'],
-                self.run
-                )
-        else:
-            # with no uncertainty
-            return -1.0 * path_dict['cost uncertainty']['coprocessing']['b']
-
-
-
-    def segment_transpo(self, path_dict):
-        """
-        Calculate segment transportation cost in USD/metric ton
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Cost of transporting one segmented blade one kilometer. Units:
-            USD/blade
-        """
-        _vkmt = path_dict['vkmt']
-        _mass = path_dict['component mass']
-        _year = path_dict['year']
-
-        if _vkmt is None or _mass is None:
-            return 0.0
-        else:
-            if path_dict['cost uncertainty']['segment transpo']['uncertainty'] == 'array':
-                if _year < 2001.0 or 2002.0 <= _year < 2003.0:
-                    _cost = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 1'],
-                        self.run
-                    )
-                elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
-                    _cost = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 2'],
-                        self.run
-                    )
-                elif 2019.0 <= _year < 2031.0:
-                    _cost = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 3'],
-                        self.run
-                    )
-                elif 2031.0 <= _year < 2044.0:
-                    _cost = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 4'],
-                        self.run
-                    )
-                elif 2044.0 <= _year <= 2050.0:
-                    _cost = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 5'],
-                        self.run
-                    )
-                else:
-                    warnings.warn(
-                        'Year out of range for segment transport; using cost 4')
-                    _cost = apply_array_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 4'],
-                        self.run
-                    )
-            elif path_dict['cost uncertainty']['segment transpo']['uncertainty'] == 'stochastic':
-                # when the model run begins, draw random values for all 5 costs and store them
-                if _year == self.start_year:
-                    path_dict['cost uncertainty']['segment transpo']['cost 1']['value'] = apply_stoch_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 1'],
-                        seed=self.seed
-                    )
-                    path_dict['cost uncertainty']['segment transpo']['cost 2']['value'] = apply_stoch_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 2'],
-                        seed=self.seed
-                    )
-                    path_dict['cost uncertainty']['segment transpo']['cost 3']['value'] = apply_stoch_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 3'],
-                        seed=self.seed
-                    )
-                    path_dict['cost uncertainty']['segment transpo']['cost 4']['value'] = apply_stoch_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 4'],
-                        seed=self.seed
-                    )
-                    path_dict['cost uncertainty']['segment transpo']['cost 5']['value'] = apply_stoch_uncertainty(
-                        path_dict['cost uncertainty']['segment transpo']['cost 5'],
-                        seed=self.seed
-                    )
-                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 1']['value']
-                else:
-                    if _year < 2001.0 or 2002.0 <= _year < 2003.0:
-                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 1']['value']
-                    elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
-                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 2']['value']
-                    elif 2019.0 <= _year < 2031.0:
-                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 3']['value']
-                    elif 2031.0 <= _year < 2044.0:
-                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 4']['value']
-                    elif 2044.0 <= _year <= 2050.0:
-                        _cost = path_dict['cost uncertainty']['segment transpo']['cost 5']['value']
-                    else:
-                        warnings.warn(
-                            'Year out of range for segment transport; using cost 4'
-                            )
-                        _cost = apply_stoch_uncertainty(
-                            path_dict['cost uncertainty']['segment transpo']['cost 4'],
-                            seed=self.seed
-                        )
-            else:
-                # with no uncertainty
-                if _year < 2001.0 or 2002.0 <= _year < 2003.0:
-                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 1']
-                elif 2001.0 <= _year < 2002.0 or 2003.0 <= _year < 2019.0:
-                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 2']
-                elif 2019.0 <= _year < 2031.0:
-                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 3']
-                elif 2031.0 <= _year < 2044.0:
-                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 4']
-                elif 2044.0 <= _year <= 2050.0:
-                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 5']
-                else:
-                    warnings.warn(
-                        'Year out of range for segment transport; using cost 4'
-                        )
-                    _cost = path_dict['cost uncertainty']['segment transpo']['cost 4']
-
-            return _cost * _vkmt / _mass
-
-
-
     def shred_transpo(self, path_dict):
         """
         Cost method for calculating shredded blade transportation costs (truck)
@@ -840,61 +519,3 @@ class CostMethods:
                 _b = path_dict['cost uncertainty']['shred transpo']['b']
         
             return (_m * (_year - 2000.0) + _b) * _vkmt
-
-
-
-    def manufacturing(self, path_dict):
-        """
-        Cost method for calculating blade manufacturing costs in USD/metric
-        ton. Data sourced from Murray et al. (2019), a techno-economic analysis
-        of a thermoplastic blade compared to the standard thermoset epoxy blade
-        using a 61.5m blade as basis. The baseline cost for the thermoset blade
-        ($11.44/kg) is used here, converted to USD / metric ton.
-
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Cost of manufacturing 1 metric ton of new turbine blade.
-
-        """
-        _cost = 11440.0
-        if path_dict['cost uncertainty']['manufacturing']['uncertainty'] == 'array' and path_dict['year'] > 2021.0:
-            _cost = apply_array_uncertainty(
-                path_dict['cost uncertainty']['manufacturing']['b'],
-                self.run
-                )
-            return _cost
-        if path_dict['cost uncertainty']['manufacturing']['uncertainty'] == 'stochastic':
-            _c = path_dict['cost uncertainty']['manufacturing']['c']
-            _loc = path_dict['cost uncertainty']['manufacturing']['loc']
-            _scale = path_dict['cost uncertainty']['manufacturing']['scale']
-            return st.triang.rvs(c=_c, loc=_loc*_cost, scale=_scale*_cost, random_state=self.seed)
-        else:
-            return _cost
-
-
-    def blade_transpo(self, path_dict):
-        """
-        Cost of transporting 1 metric ton of complete wind blade by 1 km.
-        Currently the segment transportation cost is used as proxy.
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Cost of transporting one segmented blade one kilometer. Units:
-            USD/blade
-        """
-        return self.segment_transpo(path_dict)
