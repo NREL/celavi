@@ -25,6 +25,7 @@ class ComputeLocations:
                  power_plant_locations,
                  landfill_locations,
                  other_facility_locations,
+                 state_centroids,
                  transportation_graph,
                  node_locations,
                  lookup_facility_type,
@@ -47,6 +48,10 @@ class ComputeLocations:
 
         other_facility_locations
             Data set of all other facility types involved in the case study.
+        
+        state_centroids
+            Dataset of all U.S. state centroids, for use when facilities don't
+            have exact locations.
 
         transportation_graph
             Transportation network data.
@@ -74,6 +79,7 @@ class ComputeLocations:
         self.power_plant_locations = power_plant_locations
         self.landfill_locations = landfill_locations
         self.other_facility_locations = other_facility_locations
+        self.state_centroids = state_centroids
         self.transportation_graph = transportation_graph
         self.node_locations = node_locations
         self.technology_data_filename = technology_data_filename
@@ -658,6 +664,13 @@ class ComputeLocations:
             backfill=self.backfill
         )
 
+        # Read in dataset on state centroids to fill in any location gaps
+        # for the future capacity locations
+        states = Data.StateCentroids(
+            fpath=self.state_centroids,
+            backfill=self.backfill
+        )
+
         # process self.capacity_data, created in solar_power_plant, to match
         # the eventual capacity_future data
         capacity_unit_counts = self.capacity_data.merge(
@@ -798,6 +811,20 @@ class ComputeLocations:
                     on='region_id_2',
                     how='left'
                     )
+        
+        # Some states won't have previous installations and the lat/longs will
+        # turn out blank in _new_facility_locs
+        _need_latlong = _new_facility_locs.loc[_new_facility_locs.lat.isna() & _new_facility_locs.long.isna()].index
+        _new_facility_locs.loc[_need_latlong, 'lat'] = states.lat.loc[
+            states.region_id_2.isin(
+                _new_facility_locs.loc[_need_latlong, 'region_id_2']
+                )
+                ].values
+        _new_facility_locs.loc[_need_latlong, 'long'] = states.long.loc[
+            states.region_id_2.isin(
+                _new_facility_locs.loc[_need_latlong, 'region_id_2']
+                )
+                ].values
 
         _new_facility_locs['facility_type'] = 'pv power plant'
         _new_facility_locs['region_id_1'] = 'USA'

@@ -172,6 +172,7 @@ class Scenario:
                 power_plant_locations=self.files["power_plant_locs"],
                 landfill_locations=self.files["landfill_locs"],
                 other_facility_locations=self.files["other_facility_locs"],
+                state_centroids=self.files["state_centroids"],
                 transportation_graph=self.files["transportation_graph"],
                 node_locations=self.files["node_locs"],
                 lookup_facility_type=self.files["lookup_facility_type"],
