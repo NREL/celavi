@@ -29,7 +29,8 @@ class ComputeLocations:
                  node_locations,
                  lookup_facility_type,
                  technology_data_filename,
-                 standard_scenarios_filename):
+                 standard_scenarios_filename,
+                 pv_module_chars_filename):
         """
         Parameters
         ----------
@@ -240,7 +241,10 @@ class ComputeLocations:
                 - region_id_4 : str
         """
         # Process data for solar power plants - from USPVDB
-        pv_locs_raw = Data.TechUnitLocations(fpath=self.power_plant_locations, backfill=self.backfill)
+        pv_locs_raw = Data.PVTechUnitLocations(
+            fpath=self.power_plant_locations,
+            backfill=self.backfill
+            )
         
         # select only those plants with eia_ids 
         pv_locs = pv_locs_raw[(pv_locs_raw['eia_id'] != '-1') & (pv_locs_raw['p_year'] != '-1')]
@@ -287,27 +291,47 @@ class ComputeLocations:
             index = pv_locs[pv_locs.year < self.start_year].index,
             inplace = True
         )
-
+        
         # Aggregate to STATE level by SUMMING capacity and AVERAGING
         # location. State = region_id_2
         # (this is the plant location for each facility_id)
-        fac_ids_state = pv_locs[['facility_id','region_id_2']].drop_duplicates(
+        _fac_ids_state = pv_locs[['facility_id','region_id_2']].drop_duplicates(
             subset='region_id_2', keep='last'
             )
-        pv_locs_state = pv_locs.groupby(
+        # averaging location w/out grouping by year
+        # (don't want different lcations for each year)
+        _pv_locs_aggd = pv_locs.groupby(
+            'region_id_2'
+            ).agg(
+                {'lat':np.mean, 'long':np.mean}
+                ).reset_index()
+        # summing installed capacity by region and year
+        # (to sum over all projects in a region)
+        _pv_cap_aggd = pv_locs.groupby(
             ['region_id_2','year']
             ).agg(
-                {'lat': np.mean, 'long': np.mean, 'p_cap_dc': 'sum'}
-                ).reset_index(
-                ).merge(
-                    fac_ids_state, on='region_id_2', how='outer'
-                    )
-
+                {'p_cap_dc':'sum'}
+                ).reset_index()
+        # Merge locations, capacities, and downselected facility_ids
+        pv_cap_state =  _pv_locs_aggd.merge(
+            _pv_cap_aggd,
+            on='region_id_2',
+            how='outer'
+            ).merge(
+                _fac_ids_state,
+                on='region_id_2',
+                how='outer'
+                )
+        
+        # Need a different set of data for CAPACITY versus LOCATION
+        pv_locs_state = pv_cap_state.drop(columns=['year','p_cap_dc'])
+        pv_locs_state.drop_duplicates(keep='last',inplace=True)
+        
         # Filter down the dataset to generate the number_of_technology_units
         # file
         # Store this dataframe into self for use in capacity projection
         # calculations and creation of the number_of_technology_units file
-        self.capacity_data = pv_locs_state[
+        self.capacity_data = pv_cap_state[
             ['facility_id', 'region_id_2', 'year', 'p_cap_dc']
             ].drop_duplicates().dropna()
 
@@ -318,6 +342,7 @@ class ComputeLocations:
             warnings.warn('Power plant facility type missing from facility_type lookup table.')
 
         pv_locs_state["region_id_1"] = 'USA'
+        pv_locs_state["region_id_3"] = ''
         pv_locs_state["region_id_4"] = ''
 
         return pv_locs_state
@@ -645,6 +670,8 @@ class ComputeLocations:
         # Take sequential differences in installed capacity within each state to
         # calcualte new yearly installations
         # (the sort above is necesasry for this to work properly)
+        # After this step, the facility ID column becomes a float because int 
+        # columns can't contain NaNs
         capacity_unit_counts['cap_new'] = capacity_unit_counts.groupby(
             'region_id_2'
             )['p_cap_dc'].diff(
@@ -665,6 +692,10 @@ class ComputeLocations:
             columns = ['p_cap_dc','MWdc_per_module','cap_new'],
             inplace = True
             )
+        
+        # Convert the facility ID column back to an int for consistency with the
+        # rest of the data structures
+        capacity_unit_counts['facility_id'] = capacity_unit_counts.facility_id.astype('int')
 
         # group stscen by state and take the consecutive difference of the
         # capacity column to get new MW-dc installations by year
@@ -702,7 +733,7 @@ class ComputeLocations:
         joined['p_name'] = joined.state + '_future_cap'
 
         # remove columns no longer needed
-        capacity_future = joined.copy()[['year', 'state', 'p_name', 'n_module', 'MWdc_per_module']]
+        capacity_future = joined.copy()[['year', 'state', 'p_name', 'n_module']]
         capacity_future.rename(
             columns = {'state':'region_id_2'},
             inplace = True
@@ -726,7 +757,7 @@ class ComputeLocations:
                 'facility_id': _new_facility_id
             }
         )
-
+        
         # merge to add a facility_id column to the capacity projection data
         capacity_future = capacity_future.merge(
             _new_facility_id[['p_name', 'facility_id']],
@@ -736,11 +767,11 @@ class ComputeLocations:
         self.capacity_data = pd.concat([capacity_unit_counts,capacity_future])
         self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns)).rename(
             columns={'n_module': 'n_technology'}
-        ).to_csv(
+        )
+        self.capacity_data.to_csv(
             self.technology_data_filename,
             index=False
         )
-
 
         # get state column back by splitting p_name
         # ig1 and ig2 are dummy columns not used further
@@ -751,19 +782,24 @@ class ComputeLocations:
 
         # Calculate lat/long pairs for the future power plants by taking the
         # average lat/long of existing power plants by state
-        _new_facility_locs = _new_facility_id[
-            ['facility_id', 'region_id_2']
-        ].merge(
-            self.locs.groupby(
-                by='region_id_2'
+        _avg_locs = self.locs.groupby(
+            by=['region_id_2', 'facility_type']
             ).mean(
                 ['lat','long']
-            ).reset_index()[['region_id_2', 'lat', 'long']],
-            on='region_id_2',
-            how='left'
-        )
+                ).reset_index()
+        _avg_powerplant_locs = _avg_locs.loc[(_avg_locs.facility_type == 'pv power plant')]
+        
+        _new_facility_locs = _new_facility_id[
+            ['facility_id', 'region_id_2']
+            ].merge(
+                _avg_powerplant_locs[
+                    ['region_id_2','lat','long']
+                    ],
+                    on='region_id_2',
+                    how='left'
+                    )
 
-        _new_facility_locs['facility_type'] = 'power plant'
+        _new_facility_locs['facility_type'] = 'pv power plant'
         _new_facility_locs['region_id_1'] = 'USA'
         _new_facility_locs['region_id_3'] = ''
         _new_facility_locs['region_id_4'] = ''
@@ -789,10 +825,9 @@ class ComputeLocations:
         """
 
         #wind_plant_locations = ComputeLocations.wind_power_plant(self)
-        pv_plant_locations = self.solar_power_plant(self)
-        landfill_locations_no_nulls = self.landfill(self)
-        facility_locations = self.other_facility(self)
-
+        pv_plant_locations = ComputeLocations.solar_power_plant(self)
+        landfill_locations_no_nulls = ComputeLocations.landfill(self)
+        facility_locations = ComputeLocations.other_facility(self)
 
         #locations = pd.concat([facility_locations,wind_plant_locations])
         locations = pd.concat([facility_locations, pv_plant_locations])

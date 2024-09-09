@@ -180,7 +180,7 @@ class Scenario:
                 pv_module_chars_filename=self.files["pv_module_chars"]
             )
             loc.join_facilities(locations_output_file=self.files["locs"])
-
+        
         # if the step_costs file is being generated, then all facilities of the same
         # type will have the same cost models.
         if self.scen["flags"].get("generate_step_costs", True):
@@ -189,7 +189,7 @@ class Scenario:
                 on="facility_type",
                 how="outer",
             ).to_csv(self.files["step_costs"], index=False)
-
+        
         # Data filtering for states
         states_to_filter = self.scen["scenario"].get("states_included", [])
 
