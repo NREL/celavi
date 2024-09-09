@@ -111,6 +111,125 @@ class CostMethods:
             _b = path_dict['cost uncertainty']['landfilling']['b']
         # fee model = point-slope form of a line
         return _m * (_year - 2000.0) + _b
+    
+
+    def resource_extraction(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def solar_glass_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+    def module_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+    def module_installation(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def module_uninstallation(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def module_disassembly(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def solar_glass_recovery(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def window_glass_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def window_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def window_installation(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def window_removal(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def window_glass_recovery(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def container_glass_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def container_glass_collection(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def container_glass_sorting(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def cullet_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def glass_wool_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def scm_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def insulation_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
+
+    def cement_manufacturing(self, path_dict):
+        """
+        """
+        return 1.0
+    
 
 
 
