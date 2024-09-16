@@ -31,6 +31,7 @@ class ComputeLocations:
                  lookup_facility_type,
                  technology_data_filename,
                  standard_scenarios_filename,
+                 market_share_filename,
                  pv_module_chars_filename):
         """
         Parameters
@@ -71,6 +72,11 @@ class ComputeLocations:
         standard_scenarios_filename
             File of output from NREL's ReEDS model, used for capacity expansion
             projections past the current year.
+        
+        market_share_filename
+
+        pv_module_chars_filename
+
         """
 
         self.start_year = start_year
@@ -84,6 +90,7 @@ class ComputeLocations:
         self.node_locations = node_locations
         self.technology_data_filename = technology_data_filename
         self.standard_scenarios_filename = standard_scenarios_filename
+        self.market_share_filename = market_share_filename
         self.pvchars_filename = pv_module_chars_filename
 
         self.lookup_facility_type_file = lookup_facility_type
@@ -646,6 +653,7 @@ class ComputeLocations:
         state (region_id_2) by averaging the locations of previously installed
         technology units.
         """
+        marketshare = pd.read_csv(self.market_share_filename)
 
         # Read in the standard scenario data
         stscen = Data.StandardScenarios(
@@ -653,7 +661,11 @@ class ComputeLocations:
             backfill=self.backfill
         ).rename(
             columns={'t': 'year'}
-        )
+        ).merge(
+            marketshare[['year','csi']],
+            on='year',
+            how='outer'
+            ).dropna()
 
         # Read in dataset on module characteristics
         # Capacity per m2, capacity per module, and glass mass per module
@@ -678,7 +690,18 @@ class ComputeLocations:
             ).dropna(
                 ).sort_values(
                     by=['region_id_2', 'year']
+                    ).merge(
+                        marketshare[['year','csi']],
+                        on='year',
+                        how='left'
                     )
+
+        capacity_unit_counts['csi_cap_dc'] = capacity_unit_counts.p_cap_dc * capacity_unit_counts.csi
+
+        capacity_unit_counts.drop(
+            columns = 'csi',
+            inplace=True
+        )
 
         # Take sequential differences in installed capacity within each state to
         # calcualte new yearly installations
@@ -687,7 +710,7 @@ class ComputeLocations:
         # columns can't contain NaNs
         capacity_unit_counts['cap_new'] = capacity_unit_counts.groupby(
             'region_id_2'
-            )['p_cap_dc'].diff(
+            )['csi_cap_dc'].diff(
             ).replace(
                 {np.nan: None}
                 )
@@ -696,13 +719,12 @@ class ComputeLocations:
         # installed capacity for that year (a simplification, but this lets us capture that initial
         # capacity so we don't under-count)
         _replace_index = capacity_unit_counts[capacity_unit_counts.cap_new.values == None]['cap_new'].index
-        capacity_unit_counts.loc[_replace_index, 'cap_new'] = capacity_unit_counts.p_cap_dc[_replace_index]
-        
+        capacity_unit_counts.loc[_replace_index, 'cap_new'] = capacity_unit_counts.csi_cap_dc[_replace_index]
         capacity_unit_counts['n_module'] = np.ceil(capacity_unit_counts.cap_new / capacity_unit_counts.MWdc_per_module)
         capacity_unit_counts.loc[capacity_unit_counts.n_module < 0, 'n_module'] = 0.0
         capacity_unit_counts['p_name'] = capacity_unit_counts.region_id_2 + '_hist'
         capacity_unit_counts.drop(
-            columns = ['p_cap_dc','MWdc_per_module','cap_new'],
+            columns = ['p_cap_dc','csi_cap_dc','MWdc_per_module','cap_new'],
             inplace = True
             )
         
@@ -710,14 +732,22 @@ class ComputeLocations:
         # rest of the data structures
         capacity_unit_counts['facility_id'] = capacity_unit_counts.facility_id.astype('int')
 
+        # add market share column to standard scenarios to scale down installed capacity
+        stscen['upv_MW_csi'] = stscen.upv_MW * stscen.csi
+        
+        stscen.drop(
+            columns='csi',
+            inplace=True
+        )
+
         # group stscen by state and take the consecutive difference of the
         # capacity column to get new MW-dc installations by year
-        stscen['cap_new'] = stscen.groupby('state')['upv_MW'].diff()
+        stscen['cap_new'] = stscen.groupby('state')['upv_MW_csi'].diff()
 
         # where total capacity decreases in a year, set the new capacity value
         # to 0
         stscen.loc[stscen['cap_new'] < 0,'cap_new'] = 0
-
+        
         # .diff() leaves empty values where there is no previous row.
         # replace these NAs with 0
         stscen.fillna(value=0, inplace=True)
