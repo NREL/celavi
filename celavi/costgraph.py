@@ -672,6 +672,11 @@ class CostGraph:
                     # if the destination node facility ID matches the
                     # destination facility ID in the routing dataset row,
                     # apply the distance from the routing dataset to this edge
+                    try:
+                        x = self.supply_chain.nodes[v_node]['facility_id']
+                    except KeyError:
+                        print(f"{v_node} does not exist;skipping")
+                        continue
                     if (
                         self.supply_chain.nodes[v_node]["facility_id"]
                         == _line["destination_facility_id"].values[0]

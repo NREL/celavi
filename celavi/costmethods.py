@@ -246,12 +246,14 @@ class CostMethods:
 
     def eol_material(self, path_dict):
         """
+        Transportation
         """
         return 1.0
 
 
     def waste(self, path_dict):
         """
+        Transportation
         """
         return 1.0
 
