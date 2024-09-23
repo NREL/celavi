@@ -170,6 +170,7 @@ class Scenario:
             loc = ComputeLocations(
                 start_year=start_year,
                 power_plant_locations=self.files["power_plant_locs"],
+                commercial_building_locations=self.files["commercial_building_locations"],
                 landfill_locations=self.files["landfill_locs"],
                 other_facility_locations=self.files["other_facility_locs"],
                 state_centroids=self.files["state_centroids"],
