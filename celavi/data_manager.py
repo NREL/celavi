@@ -310,6 +310,31 @@ class PVTechUnitLocations(Data):
                                                 backfill=backfill)
 
 
+class CommWindowTechUnitLocations(Data):
+    """
+    Read in and process raw commercial windows dataset.
+
+    Dataset is derived from COMSTOCK.
+    """
+    COLUMNS = (
+               {'name': 'region_id_2', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'year', 'type': float, 'index': False, 'backfill': '-1'},
+               {'name': 'technology', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'long', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'n_technology', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'glass_kg', 'type': float, 'index': False, 'backfill': None}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS},
+                 backfill=True):
+        super(CommWindowTechUnitLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                backfill=backfill)
+
+
 class PVTechUnitChars(Data):
     """
     Read in and process pv module characteristics dataset.
