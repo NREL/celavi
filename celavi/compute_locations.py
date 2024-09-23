@@ -23,6 +23,7 @@ class ComputeLocations:
     def __init__(self,
                  start_year : int,
                  power_plant_locations,
+                 commercial_building_locations,
                  landfill_locations,
                  other_facility_locations,
                  state_centroids,
@@ -43,6 +44,8 @@ class ComputeLocations:
             Data set of renewable energy power plant locations including lat,
             long, region identifier columns, and other power-plant-specific
             information as needed.
+        
+        commercial_building_locations
 
         landfill_locations
             Data set of landfill locations.
@@ -83,6 +86,7 @@ class ComputeLocations:
 
         # file paths for raw data used to compute locations
         self.power_plant_locations = power_plant_locations
+        self.commercial_building_locations = commercial_building_locations
         self.landfill_locations = landfill_locations
         self.other_facility_locations = other_facility_locations
         self.state_centroids = state_centroids
@@ -299,6 +303,10 @@ class ComputeLocations:
             inplace = True
         )
 
+        # but do add back in a "technology" column to distinguish from
+        # windows etc
+        pv_locs['technology'] = 'csi module'
+
         # also drop data from before the simulation start year
         pv_locs.drop(
             index = pv_locs[pv_locs.year < self.start_year].index,
@@ -347,6 +355,8 @@ class ComputeLocations:
         self.capacity_data = pv_cap_state[
             ['facility_id', 'region_id_2', 'year', 'p_cap_dc']
             ].drop_duplicates().dropna()
+        
+        self.capacity_data['technology'] = 'csi module'
 
         power_plant_type_lookup = self.facility_type_lookup[self.facility_type_lookup[0].str.contains('power plant')].values[0][0]
         if power_plant_type_lookup:
@@ -359,7 +369,53 @@ class ComputeLocations:
         pv_locs_state["region_id_4"] = ''
 
         return pv_locs_state
-    
+
+
+    def commercial_building_windows(self):
+        """
+
+        """
+       # Process data for solar power plants - from USPVDB
+        building_locs_raw = Data.CommWindowTechUnitLocations(
+            fpath=self.commercial_building_locations,
+            backfill=self.backfill
+            )
+        
+        building_locs = building_locs_raw.copy()
+
+        # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
+        building_locs.drop(
+            index = building_locs[building_locs.region_id_2.isin(['HI','GU','PR','AK'])].index,
+            inplace = True
+        )
+
+        # also drop data from before the simulation start year
+        building_locs.drop(
+            index = building_locs[building_locs.year < self.start_year].index,
+            inplace = True
+        )
+
+        # Filter down the dataset to generate the buildings portion of the
+        #  number_of_technology_units file
+        # Store this dataframe into self for use in capacity projection
+        # calculations and creation of the number_of_technology_units file
+        self.capacity_data_buildings = building_locs.loc[:,
+        ['facility_id', 'technology', 'region_id_2', 'year', 'n_technology']
+        ].drop_duplicates().dropna()
+        self.capacity_data_buildings['p_name'] = self.capacity_data_buildings.region_id_2 + '_buildings'
+
+        # Create the dataset for LOCATION only, no capacity info
+        building_locs_state = building_locs.loc[:,
+        ['region_id_2','lat','long','facility_id','facility_type']
+        ]
+        building_locs_state.drop_duplicates(keep='last',inplace=True)
+
+        building_locs_state["region_id_1"] = 'USA'
+        building_locs_state["region_id_3"] = ''
+        building_locs_state["region_id_4"] = ''
+
+        return building_locs_state
+
 
     def landfill(self):
         """
@@ -764,6 +820,8 @@ class ComputeLocations:
             sort=True
         )[['year', 'state', 'MWdc_per_module', 'cap_new']]
 
+        joined['technology'] = 'csi module'
+
         # calculate the number of new modules by dividing the new capacity
         # addition with the average module capacity
         # round up to the nearest integer to deal in whole numbers of modules
@@ -776,7 +834,7 @@ class ComputeLocations:
         joined['p_name'] = joined.state + '_future_cap'
 
         # remove columns no longer needed
-        capacity_future = joined.copy()[['year', 'state', 'p_name', 'n_module']]
+        capacity_future = joined.copy()[['year', 'state', 'p_name', 'technology', 'n_module']]
         capacity_future.rename(
             columns = {'state':'region_id_2'},
             inplace = True
@@ -810,10 +868,6 @@ class ComputeLocations:
         self.capacity_data = pd.concat([capacity_unit_counts,capacity_future])
         self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns)).rename(
             columns={'n_module': 'n_technology'}
-        )
-        self.capacity_data.to_csv(
-            self.technology_data_filename,
-            index=False
         )
 
         # get state column back by splitting p_name
@@ -868,6 +922,46 @@ class ComputeLocations:
         self.locs = self.locs.sort_values(by = list(self.locs.columns))
 
 
+    def capacity_projections_buildings(self):
+        """
+        No capacity projections for buildings as yet
+        """
+        # Sum up the number of windows by technology type
+        _cap_building = self.capacity_data_buildings.groupby(
+            ['year','facility_id','region_id_2','technology','p_name']
+            ).agg(
+                {'n_technology': 'sum'}
+                ).reset_index(
+                ).sort_values(
+                    by=['region_id_2', 'year']
+                    )
+        
+        # Take sequential differences in installed capacity within each state to
+        # calcualte new yearly installations
+        # (the sort above is necesasry for this to work properly)
+        # After this step, the facility ID column becomes a float because int 
+        # columns can't contain NaNs
+        _cap_building['cap_new'] = _cap_building.groupby(
+            ['region_id_2', 'technology']
+            )['n_technology'].diff(
+            ).replace(
+                {np.nan: None}
+                )
+        
+        _cap_building.loc[_cap_building.cap_new < 0, 'cap_new'] = 0.0
+
+        # New installations for the first year a state appears in the data is set as the observed
+        # installed capacity for that year (a simplification, but this lets us capture that initial
+        # capacity so we don't under-count)
+        _replace_index = _cap_building[_cap_building.cap_new.values == None]['cap_new'].index
+        _cap_building.loc[_replace_index, 'cap_new'] = _cap_building.n_technology[_replace_index]
+
+        _cap_building.drop(columns='n_technology', inplace=True)
+        _cap_building.rename(columns={'cap_new':'n_technology'}, inplace=True)
+
+        self.capacity_data = pd.concat([self.capacity_data, _cap_building])
+
+
     def join_facilities(self, locations_output_file):
         """
         Call other ComputeLocations methods to process raw locations datasets
@@ -883,13 +977,16 @@ class ComputeLocations:
 
         #wind_plant_locations = ComputeLocations.wind_power_plant(self)
         pv_plant_locations = ComputeLocations.solar_power_plant(self)
+        comm_buildings_locations = ComputeLocations.commercial_building_windows(self)
         landfill_locations_no_nulls = ComputeLocations.landfill(self)
         facility_locations = ComputeLocations.other_facility(self)
 
         #locations = pd.concat([facility_locations,wind_plant_locations])
         locations = pd.concat([facility_locations, pv_plant_locations])
+        locations = pd.concat([locations, comm_buildings_locations])
         locations = pd.concat([locations,landfill_locations_no_nulls])
         locations.reset_index(drop=True, inplace=True)
+
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska
         # (only have road network data for the contiguous United States)
@@ -902,9 +999,14 @@ class ComputeLocations:
 
         # find the entries in locations that have a duplicate facility_id AND
         # are not power plants.
+        # OR have no facility_id at all
         _ids_update = locations[locations.duplicated(subset='facility_id',
                                                      keep=False)]
         _ids_update = _ids_update.loc[_ids_update.facility_type != 'power plant'].index
+
+        # Use the computed locations dataset to generate unique facility_id
+        # values for these future "power plants"
+        _facility_id_start = int(locations.facility_id.max() + 1)
 
         # Update the facility_id values for these entries in the locations data
         # frame.
@@ -915,5 +1017,11 @@ class ComputeLocations:
 
         #self.capacity_projections_wind()
         self.capacity_projections_solar()
+        self.capacity_projections_buildings()
+
+        self.capacity_data.to_csv(
+            self.technology_data_filename,
+            index=False
+        )        
 
         self.locs.to_csv(locations_output_file, index=False)
