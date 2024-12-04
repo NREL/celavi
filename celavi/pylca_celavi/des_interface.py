@@ -1,21 +1,17 @@
 import pandas as pd
-from celavi.pylca_celavi.pylca_opt_foreground import model_celavi_lci
-from celavi.pylca_celavi.insitu_emission import model_celavi_lci_insitu
+from celavi.pylca_celavi.pylca_liaison import liaison_lci
 import os
-from celavi.pylca_celavi.pylca_opt_background import model_celavi_lci_background
+import secrets
+#todo
+#This directory needs to be read as a yaml file to be removed from being hardcoded. 
+os.environ['BRIGHTWAY2_DIR']= "/kfs2/shared-projects/liaison/env/hipster/"
+print('Importing brightway module.....',flush=True)
+import brightway2 as bw
+print('Imported',flush= True)
 
-# Concrete lifecycle inventory updater
-from celavi.pylca_celavi.concrete_life_cycle_inventory_editor import (
-    concrete_life_cycle_inventory_updater,
-)
-
-# Postprocessing to perform life cycle impact analysis
-from celavi.pylca_celavi.pylca_celavi_background_postprocess import (
-    postprocessing,
-    impact_calculations,
-)
-
-
+#todo
+#We need to remove several variables that are unnecessary now. 
+#We need to add the data directory
 class PylcaCelavi:
     def __init__(
         self,
@@ -104,9 +100,9 @@ class PylcaCelavi:
             if self.verbose == 1:
                 print(f"PyLCIA: {self.lcia_des_filename} not found")
 
-    def lca_performance_improvement(self, df, state, electricity_grid_spatial_level):
+    def lca_performance_improvement(self, df, state):
         """
-        This function is used to bypass pylca celavi calculations
+        This function is used to bypass pylca liaison calculations
         It reads emission factor data from previous runs stored in a file
         and performs lca faster.
 
@@ -131,9 +127,6 @@ class PylcaCelavi:
         state : str
             State identifier. Currently not used
 
-        electricity_grid_spatial_level : str
-            Specification of grid spatial level used for lca calculations. Must be "state" or "national".
-        
         Returns
         -------
         pandas.DataFrame, pandas.DataFrame
@@ -172,40 +165,36 @@ class PylcaCelavi:
                 - route_id: str
                     UUID of transportation route.
         """
+      
+        
+        
         try:
-            if electricity_grid_spatial_level != 'state':
-                db= pd.read_csv(self.shortcutlca_filename)
-                db.columns = ['year', 'stage', 'material', 'flow name', 'emission factor kg/kg']
-                db = db.drop_duplicates()
-                df2 = df.merge(db, on = ['year', 'stage', 'material'], how = 'outer',indicator = True)
-                df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()
-            else:
-                db= pd.read_csv(self.shortcutlca_filename)
-                db.columns = ['year', 'stage', 'material', 'state','flow name', 'emission factor kg/kg']
-                db = db.drop_duplicates()
-                df2 = df.merge(db, on = ['year', 'stage', 'material','state'], how = 'outer',indicator = True)
-                df_with_lca_entry = df2[df2['_merge'] == 'both'].drop_duplicates()   
+            shortcutlca_df = pd.read_csv(self.shortcutlca_filename)
+            shortcutlca_df.columns = ['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']
 
-            
+            df[['stage','year','material','state','facility_id','route_id']] = df[['stage','year','material','state','facility_id','route_id']].astype('str')
+            shortcutlca_df[['stage','year','material','state','facility_id','route_id']] = shortcutlca_df[['stage','year','material','state','facility_id','route_id']].astype('str')
+            del shortcutlca_df['route_id']
+            df2 = df.merge(shortcutlca_df,left_on=['stage','year','material','state','facility_id'],right_on = ['stage','year','material','state','facility_id'],indicator=True,how = 'outer')
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
-            df_with_no_lca_entry = df_with_no_lca_entry.drop_duplicates()
+            df_results = df2[df2['_merge'] == 'both']
+            df_results['value'] = df_results['flow quantity'] * df_results['value']
+            df_results = df_results[['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']]
             
-            try:
-                df_with_no_lca_entry = df_with_no_lca_entry[['year', 'facility_id', 'flow quantity', 'stage', 'state', 'material', 'flow unit']]  
-            except:
-                df_with_no_lca_entry = df_with_no_lca_entry[['year', 'facility_id', 'flow quantity', 'stage', 'material', 'flow unit']]  
-
-            df_with_lca_entry['flow quantity'] = df_with_lca_entry['flow quantity'] * df_with_lca_entry['emission factor kg/kg']
-            df_with_lca_entry = df_with_lca_entry[['flow name', 'flow unit', 'flow quantity', 'year', 'facility_id', 'stage', 'material', 'route_id','state']]
-            result_shortcut = impact_calculations(df_with_lca_entry,self.traci_lci_filename)
-            
-            return df_with_no_lca_entry, result_shortcut
+            return df_with_no_lca_entry,df_results
 
         except FileNotFoundError:
+            
+            shortcutlca_df= pd.DataFrame()
+            #shortcutlca_df.columns = ['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']
+            df_with_no_lca_entry = df
+
 
             if self.verbose == 1:
                 print("No existing shortcut LCA file:" + self.shortcutlca_filename)
-            return df, pd.DataFrame()
+            
+            return df_with_no_lca_entry,pd.DataFrame()
+
 
     def pylca_run_main(self, df, verbose=0):
         """
@@ -243,6 +232,7 @@ class PylcaCelavi:
 
             # This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
             for index, row in df_s.iterrows():
+                #CHECK THIS PART
                 year = row["year"]
                 stage = row["stage"]
                 material = row["material"]
@@ -253,27 +243,14 @@ class PylcaCelavi:
 
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
-                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state,self.electricity_grid_spatial_level)
+                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state)
                     df_with_no_lca_entry['route_id'] = route_id #the lca performance improvement removes routes id. 
                 else:
                     df_with_no_lca_entry = new_df
                     result_shortcut = pd.DataFrame()
 
+                res_calculated = pd.DataFrame()
                 if not df_with_no_lca_entry.empty:
-                    # Calculates the concrete lifecycle flow and emissions inventory
-                    df_static, df_emissions = concrete_life_cycle_inventory_updater(
-                        new_df,
-                        year,
-                        material,
-                        stage,
-                        self.static_lci_filename,
-                        self.stock_filename,
-                        self.emissions_lci_filename,
-                        self.substitution_rate,
-                    )
-
-                    if not df_static.empty:
-
                         working_df = df_with_no_lca_entry
                         working_df["flow name"] = (
                             working_df["material"] + ", " + working_df["stage"]
@@ -282,9 +259,9 @@ class PylcaCelavi:
 
                         if sum(working_df["flow quantity"]) != 0:
 
-                            # model_celavi_lci() is calculating foreground processes and dynamics of electricity mix.
+                            # liaison_lci() is calculating foreground processes and dynamics of electricity mix.
                             # It calculates the LCI flows of the foreground process.
-                            res = model_celavi_lci(
+                            res,quantity = liaison_lci(
                                 working_df,
                                 year,
                                 facility_id,
@@ -292,58 +269,30 @@ class PylcaCelavi:
                                 material,
                                 route_id,
                                 state,
-                                df_static,
-                                self.dynamic_lci_filename,
-                                self.electricity_grid_spatial_level,
-                                self.intermediate_demand_filename,
                                 self.verbose,
+                                bw
                             )
-                            # model_celavi_lci_insitu() calculating direct emissions from foreground
-                            # processes.
-                            emission = model_celavi_lci_insitu(
-                                working_df,
-                                year,
-                                facility_id,
-                                stage,
-                                material,
-                                state,
-                                df_emissions,
-                                self.verbose,
+
+                            lca_db = res
+                            lca_db['year'] = lca_db['year'].astype(int)
+                            lca_db['value'] = lca_db['value']/quantity
+                            lca_db = lca_db.drop_duplicates()
+                            lca_db.to_csv(
+                                self.shortcutlca_filename,
+                                mode="a",
+                                index=False,
+                                header=False,
                             )
-                            if not res.empty:                            
-                                res = model_celavi_lci_background(res,year,facility_id,stage,material,route_id,state,self.uslci_tech_filename,self.uslci_emission_filename,self.uslci_process_filename,self.verbose)
-                                lci = postprocessing(res,emission,self.verbose)
-                                res = impact_calculations(lci,self.traci_lci_filename)
-                                res_df = pd.concat([res_df,res])
+                            res.to_csv('results.csv',mode='a', index=False)
+                            res_calculated = res
 
-                                lcia_mass_flow = lci
-                                del df_with_no_lca_entry['route_id']
-                                del lcia_mass_flow['route_id']
-                                
-                                df_with_no_lca_entry = df_with_no_lca_entry.drop(['flow name'],axis = 1)
-                                lca_db = df_with_no_lca_entry.merge(lcia_mass_flow,on = ['year','stage','material','state'])
-                                lca_db['emission factor kg/kg'] = lca_db['flow quantity_y']/lca_db['flow quantity_x']  
-                                
-                                if self.electricity_grid_spatial_level == 'state':
-                                    lca_db['state'] = state
-                                    lca_db = lca_db[['year','stage','material','state','flow name','emission factor kg/kg']]
-                                else: 
-                                    lca_db = lca_db[['year','stage','material','flow name','emission factor kg/kg']]
 
-                                lca_db = lca_db[lca_db['material'] != 'concrete']
-                                lca_db['year'] = lca_db['year'].astype(int)
-                                lca_db = lca_db.drop_duplicates()
-                                lca_db.to_csv(
-                                    self.shortcutlca_filename,
-                                    mode="a",
-                                    index=False,
-                                    header=False,
-                                )
-                            else:
+                            if res.empty:
                                 if verbose > 0:
                                     print(
                                         f"Empty dataframe returned from pylcia foreground for {year} {stage} {material}"
                                     )
+
                         else:
                             if verbose > 0:
                                 print(
@@ -353,23 +302,17 @@ class PylcaCelavi:
 
                 else:
                     if self.verbose == 1:
-                        print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)    
+                        print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)
+
     
-                res_df = pd.concat([res_df,result_shortcut])
+                res_df = pd.concat([res_df,result_shortcut,res_calculated])
         
-        #Correcting the units for LCIA results. 
-        for index,row in res_df.iterrows():
-            a = row['impacts']
-            try:
-                split_string = a.split("/kg", 1)
-                res_df = res_df.replace(a, split_string[0] + split_string[1])
-
-            except:
-                split_string = a.split("/ kg", 1)
-                res_df = res_df.replace(a, split_string[0] + split_string[1])
-
-        # The line below is just for debugging if needed
         res_df["run"] = self.run
-        res_df.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+
+        res_df['impacts'] = res_df['lcia']
+        res_df['impact'] = res_df['value']
+        res_df2 = res_df[['year','facility_id','material','route_id','state','stage','impacts','impact','run']]
+        res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+
         # This is the result that needs to be analyzed every timestep.
-        return res_df
+        return res_df2
