@@ -139,7 +139,7 @@ class CostMethods:
         return 1.0
 
     def module_disassembly(self, path_dict):
-       """
+        """
         Cost method
 
         Parameters
@@ -597,7 +597,7 @@ class CostMethods:
 
     
     def glass_wool_manufacturing(self, path_dict):
-      """
+        """
         Cost method
 
         Parameters
@@ -707,7 +707,7 @@ class CostMethods:
     
 
     def scm_manufacturing(self, path_dict):
-      """
+        """
         Cost method
 
         Parameters
