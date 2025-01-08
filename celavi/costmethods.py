@@ -139,14 +139,16 @@ class CostMethods:
         return 1.0
 
     def module_disassembly(self, path_dict):
-        """
+       """
         Cost method
+
         Parameters
         ----------
         path_dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+
         Returns
         -------
             Net cost (process cost plus landfilling cost minus revenue) of fine
@@ -166,9 +168,9 @@ class CostMethods:
                 self.run
                 )
             _initial_cost = apply_array_uncertainty(
-                path_dict['cost uncertainty']['module disassembly']['initial cost'],
-                self.run
-                )
+               path_dict['cost uncertainty']['module disassembly']['initial cost'],
+               self.run
+               )
             _revenue = apply_array_uncertainty(
                 path_dict['cost uncertainty']['module disassembly']['revenue'],
                 self.run
@@ -287,7 +289,6 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['window glass recovery']
 
-
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['window glass recovery']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
@@ -388,14 +389,15 @@ class CostMethods:
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+
         Returns
         -------
             Net cost (process cost plus landfilling cost minus revenue) of fine
             grinding one metric ton of blade material at a mechanical recycling
             facility and disposing of material losses in a landfill.
-        """        
+        """
         _learn_dict = path_dict['learning']['cullet manufacturing']
-
+       
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['cullet manufacturing']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
@@ -466,7 +468,7 @@ class CostMethods:
             )
         else:
             _finegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         _finegrind_learning = _finegrind_cumul ** _learn_rate
@@ -478,7 +480,7 @@ class CostMethods:
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
         _revenue = (1 - _loss) * _revenue
-
+        
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         _landfill = _loss * self.landfilling(path_dict)
@@ -593,16 +595,18 @@ class CostMethods:
 
         return _cost + _landfill - _revenue
 
-
+    
     def glass_wool_manufacturing(self, path_dict):
-        """
+      """
         Cost method
+
         Parameters
         ----------
         path_dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+
         Returns
         -------
             Net cost (process cost plus landfilling cost minus revenue) of fine
@@ -611,7 +615,7 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['glass wool manufacturing']
 
-
+       
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['glass wool manufacturing']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
@@ -682,7 +686,7 @@ class CostMethods:
             )
         else:
             _finegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         _finegrind_learning = _finegrind_cumul ** _learn_rate
@@ -694,23 +698,25 @@ class CostMethods:
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
         _revenue = (1 - _loss) * _revenue
-
+        
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         _landfill = _loss * self.landfilling(path_dict)
 
         return _cost + _landfill - _revenue
-
+    
 
     def scm_manufacturing(self, path_dict):
-        """
+      """
         Cost method
+
         Parameters
         ----------
         path_dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+
         Returns
         -------
             Net cost (process cost plus landfilling cost minus revenue) of fine
@@ -719,6 +725,7 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['scm manufacturing']
 
+       
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['scm manufacturing']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
@@ -789,7 +796,7 @@ class CostMethods:
             )
         else:
             _finegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         _finegrind_learning = _finegrind_cumul ** _learn_rate
@@ -801,12 +808,13 @@ class CostMethods:
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
         _revenue = (1 - _loss) * _revenue
-
+        
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         _landfill = _loss * self.landfilling(path_dict)
 
-        return _cost + _landfill - _revenue 
+        return _cost + _landfill - _revenue
+
 
     def primary_material(self, path_dict):
         """
