@@ -349,87 +349,6 @@ class CostMethods:
             _initial_cost = path_dict['cost uncertainty']['window glass recovery']['initial cost']
             _revenue = path_dict['cost uncertainty']['window glass recovery']['revenue']
 
-
-    def window_glass_cullet_manufacturing(self, path_dict):
-        """
-        Cost method
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Net cost (process cost plus landfilling cost minus revenue) of fine
-            grinding one metric ton of blade material at a mechanical recycling
-            facility and disposing of material losses in a landfill.
-        """
-        _learn_dict = path_dict['learning']['cullet manufacturing']
-
-       
-        # Implement uncertainty on parameters: array or random
-        if path_dict['cost uncertainty']['cullet manufacturing']['uncertainty'] == 'array':
-            _learn_rate = apply_array_uncertainty(
-                _learn_dict['learn rate'],
-                self.run
-                )
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['cullet manufacturing']['fraction'],
-                self.run
-                )
-            _initial_cost = apply_array_uncertainty(
-               path_dict['cost uncertainty']['cullet manufacturing']['initial cost'],
-               self.run
-               )
-            _revenue = apply_array_uncertainty(
-                path_dict['cost uncertainty']['cullet manufacturing']['revenue'],
-                self.run
-                )
-
-        elif path_dict['cost uncertainty']['cullet manufacturing']['uncertainty'] == 'stochastic':
-            if path_dict['year'] == self.start_year:
-                _loss = apply_stoch_uncertainty(
-                    path_dict['path_split']['cullet manufacturing']['fraction'],
-                    seed=self.seed
-                    )
-                _learn_rate = -1.0 * apply_stoch_uncertainty(
-                    _learn_dict['learn rate'],
-                    seed=self.seed
-                    )
-                _initial_cost = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['cullet manufacturing']['initial cost'],
-                    seed=self.seed
-                    )
-                _revenue = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['cullet manufacturing']['revenue'],
-                    seed=self.seed
-                    )
-                if isinstance(path_dict['path_split']['cullet manufacturing']['fraction'],dict):
-                    path_dict['path_split']['cullet manufacturing']['fraction']['value'] = _loss
-                if isinstance(_learn_dict['learn rate'], dict):
-                    _learn_dict['learn rate']['value'] = _learn_rate
-                if isinstance(path_dict['cost uncertainty']['cullet manufacturing']['initial cost'],dict):
-                    path_dict['cost uncertainty']['cullet manufacturing']['initial cost']['value'] = _initial_cost
-                if isinstance(path_dict['cost uncertainty']['cullet manufacturing']['revenue'], dict):
-                    path_dict['cost uncertainty']['cullet manufacturing']['revenue']['value'] = _revenue
-            else:
-                _loss = path_dict['path_split']['cullet manufacturing']['fraction']['value']
-                _learn_rate = _learn_dict['learn rate']['value']
-                _initial_cost = path_dict['cost uncertainty']['cullet manufacturing']['initial cost']['value']
-                _revenue = path_dict['cost uncertainty']['cullet manufacturing']['revenue']['value']
-        else:
-            # No uncertainty
-            _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['cullet manufacturing']['fraction'],
-                self.run
-                )
-            _initial_cost = path_dict['cost uncertainty']['cullet manufacturing']['initial cost']
-            _revenue = path_dict['cost uncertainty']['cullet manufacturing']['revenue']
-
         # If the "cumul" value is None, then there has been no processing
         # through fine grinding and the initial cumul value from the config
         # file is used
@@ -440,7 +359,7 @@ class CostMethods:
             )
         else:
             _finegrind_cumul = _learn_dict['initial cumul']
-        
+
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         _finegrind_learning = _finegrind_cumul ** _learn_rate
@@ -452,227 +371,7 @@ class CostMethods:
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
         _revenue = (1 - _loss) * _revenue
-        
-        # calculate additional cost of landfilling the lost material
-        # (USD/metric ton)
-        _landfill = _loss * self.landfilling(path_dict)
 
-        return _cost + _landfill - _revenue
-    
-
-    def glass_wool_manufacturing(self, path_dict):
-      """
-        Cost method
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Net cost (process cost plus landfilling cost minus revenue) of fine
-            grinding one metric ton of blade material at a mechanical recycling
-            facility and disposing of material losses in a landfill.
-        """
-        _learn_dict = path_dict['learning']['glass wool manufacturing']
-
-       
-        # Implement uncertainty on parameters: array or random
-        if path_dict['cost uncertainty']['glass wool manufacturing']['uncertainty'] == 'array':
-            _learn_rate = apply_array_uncertainty(
-                _learn_dict['learn rate'],
-                self.run
-                )
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['glass wool manufacturing']['fraction'],
-                self.run
-                )
-            _initial_cost = apply_array_uncertainty(
-               path_dict['cost uncertainty']['glass wool manufacturing']['initial cost'],
-               self.run
-               )
-            _revenue = apply_array_uncertainty(
-                path_dict['cost uncertainty']['glass wool manufacturing']['revenue'],
-                self.run
-                )
-
-        elif path_dict['cost uncertainty']['glass wool manufacturing']['uncertainty'] == 'stochastic':
-            if path_dict['year'] == self.start_year:
-                _loss = apply_stoch_uncertainty(
-                    path_dict['path_split']['glass wool manufacturing']['fraction'],
-                    seed=self.seed
-                    )
-                _learn_rate = -1.0 * apply_stoch_uncertainty(
-                    _learn_dict['learn rate'],
-                    seed=self.seed
-                    )
-                _initial_cost = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['glass wool manufacturing']['initial cost'],
-                    seed=self.seed
-                    )
-                _revenue = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['glass wool manufacturing']['revenue'],
-                    seed=self.seed
-                    )
-                if isinstance(path_dict['path_split']['glass wool manufacturing']['fraction'],dict):
-                    path_dict['path_split']['glass wool manufacturing']['fraction']['value'] = _loss
-                if isinstance(_learn_dict['learn rate'], dict):
-                    _learn_dict['learn rate']['value'] = _learn_rate
-                if isinstance(path_dict['cost uncertainty']['glass wool manufacturing']['initial cost'],dict):
-                    path_dict['cost uncertainty']['glass wool manufacturing']['initial cost']['value'] = _initial_cost
-                if isinstance(path_dict['cost uncertainty']['glass wool manufacturing']['revenue'], dict):
-                    path_dict['cost uncertainty']['glass wool manufacturing']['revenue']['value'] = _revenue
-            else:
-                _loss = path_dict['path_split']['glass wool manufacturing']['fraction']['value']
-                _learn_rate = _learn_dict['learn rate']['value']
-                _initial_cost = path_dict['cost uncertainty']['glass wool manufacturing']['initial cost']['value']
-                _revenue = path_dict['cost uncertainty']['glass wool manufacturing']['revenue']['value']
-        else:
-            # No uncertainty
-            _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['glass wool manufacturing']['fraction'],
-                self.run
-                )
-            _initial_cost = path_dict['cost uncertainty']['glass wool manufacturing']['initial cost']
-            _revenue = path_dict['cost uncertainty']['glass wool manufacturing']['revenue']
-
-        # If the "cumul" value is None, then there has been no processing
-        # through fine grinding and the initial cumul value from the config
-        # file is used
-        if _learn_dict['cumul'] is not None:
-            _finegrind_cumul = max(
-                1,
-                _learn_dict['cumul']
-            )
-        else:
-            _finegrind_cumul = _learn_dict['initial cumul']
-        
-        # calculate cost reduction factors from learning-by-doing model
-        # these factors are unitless
-        _finegrind_learning = _finegrind_cumul ** _learn_rate
-
-        # calculate process cost based on total input mass (no material loss
-        # yet) (USD/metric ton)
-        _cost = _initial_cost * _finegrind_learning
-
-        # calculate revenue based on total output mass accounting for material
-        # loss (USD/metric ton)
-        _revenue = (1 - _loss) * _revenue
-        
-        # calculate additional cost of landfilling the lost material
-        # (USD/metric ton)
-        _landfill = _loss * self.landfilling(path_dict)
-
-        return _cost + _landfill - _revenue
-    
-
-    def scm_manufacturing(self, path_dict):
-      """
-        Cost method
-
-        Parameters
-        ----------
-        path_dict
-            Dictionary of variable structure containing cost parameters for
-            calculating and updating processing costs for circularity pathway
-            processes
-
-        Returns
-        -------
-            Net cost (process cost plus landfilling cost minus revenue) of fine
-            grinding one metric ton of blade material at a mechanical recycling
-            facility and disposing of material losses in a landfill.
-        """
-        _learn_dict = path_dict['learning']['scm manufacturing']
-
-       
-        # Implement uncertainty on parameters: array or random
-        if path_dict['cost uncertainty']['scm manufacturing']['uncertainty'] == 'array':
-            _learn_rate = apply_array_uncertainty(
-                _learn_dict['learn rate'],
-                self.run
-                )
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['scm manufacturing']['fraction'],
-                self.run
-                )
-            _initial_cost = apply_array_uncertainty(
-               path_dict['cost uncertainty']['scm manufacturing']['initial cost'],
-               self.run
-               )
-            _revenue = apply_array_uncertainty(
-                path_dict['cost uncertainty']['scm manufacturing']['revenue'],
-                self.run
-                )
-
-        elif path_dict['cost uncertainty']['scm manufacturing']['uncertainty'] == 'stochastic':
-            if path_dict['year'] == self.start_year:
-                _loss = apply_stoch_uncertainty(
-                    path_dict['path_split']['scm manufacturing']['fraction'],
-                    seed=self.seed
-                    )
-                _learn_rate = -1.0 * apply_stoch_uncertainty(
-                    _learn_dict['learn rate'],
-                    seed=self.seed
-                    )
-                _initial_cost = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['scm manufacturing']['initial cost'],
-                    seed=self.seed
-                    )
-                _revenue = apply_stoch_uncertainty(
-                    path_dict['cost uncertainty']['scm manufacturing']['revenue'],
-                    seed=self.seed
-                    )
-                if isinstance(path_dict['path_split']['scm manufacturing']['fraction'],dict):
-                    path_dict['path_split']['scm manufacturing']['fraction']['value'] = _loss
-                if isinstance(_learn_dict['learn rate'], dict):
-                    _learn_dict['learn rate']['value'] = _learn_rate
-                if isinstance(path_dict['cost uncertainty']['scm manufacturing']['initial cost'],dict):
-                    path_dict['cost uncertainty']['scm manufacturing']['initial cost']['value'] = _initial_cost
-                if isinstance(path_dict['cost uncertainty']['scm manufacturing']['revenue'], dict):
-                    path_dict['cost uncertainty']['scm manufacturing']['revenue']['value'] = _revenue
-            else:
-                _loss = path_dict['path_split']['scm manufacturing']['fraction']['value']
-                _learn_rate = _learn_dict['learn rate']['value']
-                _initial_cost = path_dict['cost uncertainty']['scm manufacturing']['initial cost']['value']
-                _revenue = path_dict['cost uncertainty']['scm manufacturing']['revenue']['value']
-        else:
-            # No uncertainty
-            _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['scm manufacturing']['fraction'],
-                self.run
-                )
-            _initial_cost = path_dict['cost uncertainty']['scm manufacturing']['initial cost']
-            _revenue = path_dict['cost uncertainty']['scm manufacturing']['revenue']
-
-        # If the "cumul" value is None, then there has been no processing
-        # through fine grinding and the initial cumul value from the config
-        # file is used
-        if _learn_dict['cumul'] is not None:
-            _finegrind_cumul = max(
-                1,
-                _learn_dict['cumul']
-            )
-        else:
-            _finegrind_cumul = _learn_dict['initial cumul']
-        
-        # calculate cost reduction factors from learning-by-doing model
-        # these factors are unitless
-        _finegrind_learning = _finegrind_cumul ** _learn_rate
-
-        # calculate process cost based on total input mass (no material loss
-        # yet) (USD/metric ton)
-        _cost = _initial_cost * _finegrind_learning
-
-        # calculate revenue based on total output mass accounting for material
-        # loss (USD/metric ton)
-        _revenue = (1 - _loss) * _revenue
-        
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         _landfill = _loss * self.landfilling(path_dict)
@@ -690,14 +389,15 @@ class CostMethods:
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+
         Returns
         -------
             Net cost (process cost plus landfilling cost minus revenue) of fine
             grinding one metric ton of blade material at a mechanical recycling
             facility and disposing of material losses in a landfill.
-        """        
+        """
         _learn_dict = path_dict['learning']['cullet manufacturing']
-
+       
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['cullet manufacturing']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
@@ -768,7 +468,7 @@ class CostMethods:
             )
         else:
             _finegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         _finegrind_learning = _finegrind_cumul ** _learn_rate
@@ -780,7 +480,7 @@ class CostMethods:
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
         _revenue = (1 - _loss) * _revenue
-
+        
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         _landfill = _loss * self.landfilling(path_dict)
@@ -895,16 +595,18 @@ class CostMethods:
 
         return _cost + _landfill - _revenue
 
-
+    
     def glass_wool_manufacturing(self, path_dict):
-        """
+      """
         Cost method
+
         Parameters
         ----------
         path_dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+
         Returns
         -------
             Net cost (process cost plus landfilling cost minus revenue) of fine
@@ -913,7 +615,7 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['glass wool manufacturing']
 
-
+       
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['glass wool manufacturing']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
@@ -984,7 +686,7 @@ class CostMethods:
             )
         else:
             _finegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         _finegrind_learning = _finegrind_cumul ** _learn_rate
@@ -996,23 +698,25 @@ class CostMethods:
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
         _revenue = (1 - _loss) * _revenue
-
+        
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         _landfill = _loss * self.landfilling(path_dict)
 
         return _cost + _landfill - _revenue
-
+    
 
     def scm_manufacturing(self, path_dict):
-        """
+      """
         Cost method
+
         Parameters
         ----------
         path_dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+
         Returns
         -------
             Net cost (process cost plus landfilling cost minus revenue) of fine
@@ -1021,6 +725,7 @@ class CostMethods:
         """
         _learn_dict = path_dict['learning']['scm manufacturing']
 
+       
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['scm manufacturing']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
@@ -1091,7 +796,7 @@ class CostMethods:
             )
         else:
             _finegrind_cumul = _learn_dict['initial cumul']
-
+        
         # calculate cost reduction factors from learning-by-doing model
         # these factors are unitless
         _finegrind_learning = _finegrind_cumul ** _learn_rate
@@ -1103,12 +808,13 @@ class CostMethods:
         # calculate revenue based on total output mass accounting for material
         # loss (USD/metric ton)
         _revenue = (1 - _loss) * _revenue
-
+        
         # calculate additional cost of landfilling the lost material
         # (USD/metric ton)
         _landfill = _loss * self.landfilling(path_dict)
 
-        return _cost + _landfill - _revenue 
+        return _cost + _landfill - _revenue
+
 
     def primary_material(self, path_dict):
         """
