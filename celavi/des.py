@@ -30,6 +30,7 @@ class Context:
         locations_filename: str,
         step_costs_filename: str,
         component_material_masses_filename: str,
+        facility_components_filename: str,
         possible_components: List[str],
         possible_materials: List[str],
         cost_graph: CostGraph,
@@ -56,6 +57,10 @@ class Context:
         component_material_masses_filename: str
             Path to the dataset specifying component composition (materials and
             masses) over time.
+        
+        facility_components_filename: str
+            Path to dataset specifying which components can belong to which
+            facilities, if a restriction exists.
 
         possible_components: List[str]
             The list of possible technology components.
@@ -117,6 +122,7 @@ class Context:
 
         self.component_material_mass_tonne_dict: Dict[str, Dict[int, float]] = {}
         component_material_masses_df = pd.read_csv(component_material_masses_filename)
+        facility_components_df = pd.read_csv(facility_components_filename)
 
         for material in possible_materials:
             self.component_material_mass_tonne_dict[material] = {}
@@ -160,12 +166,18 @@ class Context:
             facility_id = row["facility_id"]
             step = row["step"]
             step_facility_id = f"{step}_{facility_id}"
+            # Some facilities can only handle certain components
+            # Apply that restriction here
+            if facility_components_df.component.loc[facility_components_df.facility_type == facility_type] is not None:
+                allowed_items = facility_components_df.component.loc[facility_components_df.facility_type == facility_type]
+            else:
+                allowed_items = possible_materials
 
             self.count_facility_inventories[step_facility_id] = FacilityInventory(
                 facility_id=facility_id,
                 facility_type=facility_type,
                 step=step,
-                possible_items=possible_components,
+                possible_items=allowed_items,
                 timesteps=max_timesteps,
                 quantity_unit="count",
                 can_be_negative=False,
@@ -175,7 +187,7 @@ class Context:
                 facility_id=facility_id,
                 facility_type=facility_type,
                 step=step,
-                possible_items=possible_materials,
+                possible_items=allowed_items,
                 timesteps=max_timesteps,
                 quantity_unit="tonnes",
                 can_be_negative=False,
@@ -270,7 +282,7 @@ class Context:
                 material: self.component_material_mass_tonne_dict[material][year]
                 for material in self.possible_materials
             }
-
+            # @TODO populate components to facilities according to technology type
             component = Component(
                 kind=row["kind"],
                 year=year,

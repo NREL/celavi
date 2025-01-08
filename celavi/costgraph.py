@@ -821,11 +821,13 @@ class CostGraph:
             _node = [
                 x
                 for x, y in self.supply_chain.nodes(data=True)
-                if y["facility_id"] == node_id and y["connects"] == "bid"
+                if (('facility_id',node_id) in y.items()) and (('connects','bid') in y.items())
             ][0]
 
         # Get a list of all nodes with an outgoing edge that connects to this
         # node_id, with the specified facility type
+        # Note: the "find" function does not look for exact matches, only the existence of
+        # the string `connect_to` in the node name
         _upstream_nodes = [
             n for n in self.supply_chain.predecessors(_node) if n.find(connect_to) != -1
         ]

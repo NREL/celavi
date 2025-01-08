@@ -395,6 +395,7 @@ class Scenario:
             if self.scen["flags"].get("generate_step_costs")
             else self.files["step_costs_custom"],
             component_material_masses_filename=self.files["component_material_mass"],
+            facility_components_filename=self.files["facility_components"],
             possible_components=possible_components,
             possible_materials=material_list,
             cost_graph=self.netw,
