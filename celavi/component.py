@@ -215,7 +215,10 @@ class Component:
             if self.pathway:
                 location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
-                if factype in self.split_dict.keys():
+
+                # Added "startswith" method to allow multiple splits from
+                # same source.
+                if any(key.startswith(factype) for key in self.split_dict):
                     # increment the facility inventory and transportation tracker
                     self.move_component_to(
                         env, loc=location, dist=distance, route_id=route_id
