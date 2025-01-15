@@ -365,7 +365,6 @@ class ComputeLocations:
         else:
             warnings.warn('Power plant facility type missing from facility_type lookup table.')
 
-        pv_locs_state.loc[:,'facility_id'] = ['P'+str(id) for id in pv_locs_state.facility_id]
         pv_locs_state["region_id_1"] = 'USA'
         pv_locs_state["region_id_3"] = ''
         pv_locs_state["region_id_4"] = ''
@@ -793,7 +792,7 @@ class ComputeLocations:
         
         # Convert the facility ID column back to an int for consistency with the
         # rest of the data structures
-        capacity_unit_counts['facility_id'] = capacity_unit_counts.facility_id.astype('int')
+        capacity_unit_counts['facility_id'] = capacity_unit_counts.facility_id
 
         # add market share column to standard scenarios to scale down installed capacity
         stscen['upv_MW_csi'] = stscen.upv_MW * stscen.csi
