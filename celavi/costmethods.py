@@ -452,7 +452,7 @@ class CostMethods:
             # No uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
             _loss = apply_array_uncertainty(
-                path_dict['path_split']['cullet manufacturing']['fraction'],
+                path_dict['path_split']['solar glass cullet manufacturing']['fraction'],
                 self.run
                 )
             _initial_cost = path_dict['cost uncertainty']['cullet manufacturing']['initial cost']
@@ -560,7 +560,7 @@ class CostMethods:
             # No uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
             _loss = apply_array_uncertainty(
-                path_dict['path_split']['cullet manufacturing']['fraction'],
+                path_dict['path_split']['window glass cullet manufacturing']['fraction'],
                 self.run
                 )
             _initial_cost = path_dict['cost uncertainty']['cullet manufacturing']['initial cost']
