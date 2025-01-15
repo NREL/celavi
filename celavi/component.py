@@ -94,7 +94,7 @@ class Component:
         from_facility_id: int
             The starting location of the the component.
         """
-        in_use_facility_id = f"in use_{int(from_facility_id)}"
+        in_use_facility_id = f"in use_{from_facility_id}"
         path_choices = self.context.cost_graph.choose_paths(source=in_use_facility_id)
         path_choices_dict = {
             path_choice["source"]: path_choice for path_choice in path_choices
@@ -160,7 +160,7 @@ class Component:
             mass_inventory.increment_quantity(material, -mass, env.now)
 
         # Component is now in use; update the location
-        self.current_location = f"in use_{int(self.in_use_facility_id)}"
+        self.current_location = f"in use_{self.in_use_facility_id}"
 
         # Increment in use inventories
         count_inventory = self.context.count_facility_inventories[self.current_location]
@@ -175,12 +175,12 @@ class Component:
             count_transport.increment_inbound_tonne_km(
                 tonne_km=mass
                 * self.context.cost_graph.supply_chain.edges[
-                    f"manufacturing_{int(self.manuf_facility_id)}",
-                    f"in use_{int(self.in_use_facility_id)}",
+                    f"manufacturing_{self.manuf_facility_id}",
+                    f"in use_{self.in_use_facility_id}",
                 ]["dist"],
                 route_id=self.context.cost_graph.supply_chain.edges[
-                    f"manufacturing_{int(self.manuf_facility_id)}",
-                    f"in use_{int(self.in_use_facility_id)}",
+                    f"manufacturing_{self.manuf_facility_id}",
+                    f"in use_{self.in_use_facility_id}",
                 ]["route_id"],
                 timestep=env.now,
             )
@@ -228,7 +228,7 @@ class Component:
 
                     # locate the two downstream facilities that are closest
                     _split_facility_1 = self.context.cost_graph.find_downstream(
-                        facility_id=int(location.split("_")[1]),
+                        facility_id=location.split("_")[1],
                         connect_to=self.split_dict[factype]["facility_1"],
                         get_dist=True,
                     )
