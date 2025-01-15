@@ -814,7 +814,7 @@ class CostGraph:
             not node_id
             in nx.get_node_attributes(self.supply_chain, name="facility_id").values()
         ):
-            print("Facility %d does not exist in CostGraph" % node_id, flush=True)
+            print(f"Facility {node_id} does not exist in CostGraph", flush=True)
             return None
         else:
             # If node_id does exist in the supply chain, pull out the node name
