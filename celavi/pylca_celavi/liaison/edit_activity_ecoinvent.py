@@ -72,7 +72,8 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
 
             #Changing name of electricity flow
             #Changing name of electricity flow
-            name_of_flow = electricity_correction(exch)
+            #name_of_flow = electricity_correction(exch)
+            name_of_flow = exch['name']
             flow.append(name_of_flow)
 
             if exch['type'] == 'production':
@@ -127,7 +128,7 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
     example['code'] = flow_code
 
     #Sanity check to write the dataframe. Can be deleted later
-    example.to_csv(data_dir+'example_user_edited_process.csv',index=False)
+    example.to_csv(data_dir+process_selected_as_foreground+str(year_of_study)+location_under_study+'.csv',index=False)
     run_filename = example
 
 

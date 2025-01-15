@@ -98,14 +98,14 @@ def liaison_lci(
     
     # Defining a list of processes for which LCA needs to be done. 
     # This is not required and will be deleted after integration with the glass recycling model of CELAVI
-    processes_list = ["treatment of waste glass from unsorted public collection, sorting","photovoltaic plant construction, 570kWp, multi-Si, on open ground","treatment of waste glass sheet, sorting plant","glass wool mat production","insulation spiral-seam duct production, rockwool, DN 400, 30 mm","cement production, Portland","treatment of waste glass, unsanitary landfill, wet infiltration class (500mm)","flat glass production, uncoated"] 
-    random_number = random.randint(0,7)
+    processes_list = ["treatment of waste glass from unsorted public collection, sorting","photovoltaic plant construction, 570kWp, multi-Si, on open ground","treatment of waste glass sheet, sorting plant","glass wool mat production","cement production, Portland","treatment of waste glass, unsanitary landfill, wet infiltration class (500mm)","flat glass production, uncoated"] 
+    random_number = random.randint(0,6)
     process_in_ecoinvent_for_lca_from_celavi = processes_list[random_number]
     unit_under_study = "kilogram"
 
     #These data directories are relevant to LiAISON. 
     #inventory_to_be_built_from_celavi = pd.read_csv('/kfs2/shared-projects/liaison/liaison_reeds/data/inputs/example.csv')
-    data_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data-tiny-data/generated/"
+    data_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data/generated/"
     output_dir = "/kfs2/projects/celavicf/celavi-master/"
 
     #These are two ways in which LCA can be performed. 
@@ -115,6 +115,7 @@ def liaison_lci(
     # Right now, the dataframe being read is empty. 
     inventory_to_be_built_from_celavi = pd.DataFrame(columns=['process', 'flow', 'value', 'unit', 'input', 'year', 'comments', 'type',
            'process_location', 'supplying_location'])
+    inventory_to_be_built_from_celavi = "additional_inventories"+".csv"
     
     # These project names match to the project names of HIPSTER and need to be added to the yaml file
     updated_project_name='USMid_Case'+str(year_from_celavi)
