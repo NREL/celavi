@@ -418,9 +418,9 @@ class Scenario:
         components = []
         for _, row in technology_data.iterrows():
             year = row["year"]
-            in_use_facility_id = int(row["facility_id"])
+            in_use_facility_id = row["facility_id"]
             manuf_facility_id = self.netw.find_upstream_neighbor(
-                int(row["facility_id"])
+                row["facility_id"]
             )
             n_technology = int(row["n_technology"])
 

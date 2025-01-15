@@ -223,7 +223,7 @@ class Locations(Data):
     Read in and process raw facility locations (other than power plants)
     datasets.
     """
-    COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
+    COLUMNS = ({'name': 'facility_id', 'type': str, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
@@ -292,7 +292,7 @@ class PVTechUnitLocations(Data):
 
     No manual changes are needed to the raw dataset before it is processed.
     """
-    COLUMNS = ({'name': 'eia_id', 'type': int, 'index': True, 'backfill': '-1'},
+    COLUMNS = ({'name': 'eia_id', 'type': str, 'index': True, 'backfill': '-1'},
                {'name': 'p_state', 'type': str, 'index': False, 'backfill': None},
                {'name': 'p_county', 'type': str, 'index': False, 'backfill': None},
                {'name': 'p_name', 'type': str, 'index': False, 'backfill': None},
@@ -318,7 +318,7 @@ class CommWindowTechUnitLocations(Data):
     """
     COLUMNS = (
                {'name': 'region_id_2', 'type': str, 'index': False, 'backfill': None},
-               {'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
+               {'name': 'facility_id', 'type': str, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'year', 'type': float, 'index': False, 'backfill': '-1'},
                {'name': 'technology', 'type': str, 'index': False, 'backfill': None},
@@ -358,7 +358,7 @@ class OtherFacilityLocations(Data):
     """
     Read in and process additional, miscellaneous facility location datasets.
     """
-    COLUMNS = ({'name': 'facility_id', 'type': int, 'index': True, 'backfill': None},
+    COLUMNS = ({'name': 'facility_id', 'type': str, 'index': True, 'backfill': None},
                {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
                {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
                {'name': 'long', 'type': float, 'index': False, 'backfill': None},
@@ -380,7 +380,7 @@ class LandfillLocations(Data):
     Read in and process raw landfill facility locations dataset from the U.S.
     EPA's LMOP database at https://www.epa.gov/lmop.
     """
-    COLUMNS = ({'name': 'Landfill ID', 'type': int, 'index': True, 'backfill': None},
+    COLUMNS = ({'name': 'Landfill ID', 'type': str, 'index': True, 'backfill': None},
                {'name': 'State', 'type': str, 'index': False, 'backfill': None},
                {'name': 'Latitude', 'type': float, 'index': False, 'backfill': None},
                {'name': 'Longitude', 'type': float, 'index': False, 'backfill': None},

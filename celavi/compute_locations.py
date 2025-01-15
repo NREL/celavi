@@ -248,7 +248,7 @@ class ComputeLocations:
             identifiers (country, state, county, etc.)
 
             Columns:
-                - facility_id : int
+                - facility_id : str
                 - facility_type : str
                 - lat : float
                 - long : float
@@ -277,6 +277,7 @@ class ComputeLocations:
                 "p_year": "year"
                 },
                 )
+        pv_locs.loc[:,'facility_id'] = ['P'+str(id) for id in pv_locs.facility_id]
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         pv_locs.drop(
@@ -410,6 +411,7 @@ class ComputeLocations:
         ]
         building_locs_state.drop_duplicates(keep='last',inplace=True)
 
+        building_locs_state.loc[:,'facility_id'] = ['B'+str(id) for id in building_locs_state.facility_id]
         building_locs_state["region_id_1"] = 'USA'
         building_locs_state["region_id_3"] = ''
         building_locs_state["region_id_4"] = ''
@@ -474,6 +476,7 @@ class ComputeLocations:
         # drop landfills that have null values for lat and long
         # (data cleanup from LMOP data; 7 cases where landfills exist but no locations are defined; e.g., facility_id = 2173)
         landfill_locations_no_nulls = landfill_locations.dropna(subset=['long', 'lat'])
+        landfill_locations_no_nulls.loc[:,'facility_id'] = ['L'+str(id) for id in landfill_locations_no_nulls.facility_id]
 
         return landfill_locations_no_nulls
 
@@ -495,7 +498,7 @@ class ComputeLocations:
             region identifiers (country, state, county, etc.)
 
             Columns:
-                - facility_id : int
+                - facility_id : str
                 - facility_type : str
                 - lat : float
                 - long : float
@@ -528,6 +531,9 @@ class ComputeLocations:
                           "please verify your input file is correctly generated. Number facilities is %d; " \
                           "number unique facility_id is %d." % (number_other_facilities, number_unique_facility_id)
             warnings.warn(warning_str)
+        
+        facility_locations.loc[:,'facility_id'] = [factype[0].upper()+str(id) for id, factype in zip(facility_locations.facility_id, facility_locations.facility_type)]
+
         return facility_locations
 
 
@@ -786,7 +792,7 @@ class ComputeLocations:
         
         # Convert the facility ID column back to an int for consistency with the
         # rest of the data structures
-        capacity_unit_counts['facility_id'] = capacity_unit_counts.facility_id.astype('int')
+        capacity_unit_counts['facility_id'] = capacity_unit_counts.facility_id
 
         # add market share column to standard scenarios to scale down installed capacity
         stscen['upv_MW_csi'] = stscen.upv_MW * stscen.csi
@@ -843,23 +849,19 @@ class ComputeLocations:
 
         # Use the computed locations dataset to generate unique facility_id
         # values for these future "power plants"
-        _facility_id_start = int(self.locs.facility_id.max() + 1)
-
+        _facility_id_start = max([int(id[1:]) for id in self.locs.facility_id]) + 1
         # generate a list of new facility IDs
-        _new_facility_id = list(
-            _facility_id_start +
-            np.arange(len(capacity_future.p_name.unique()))
-        )
+        _new_facility_id = (_facility_id_start + np.arange(len(capacity_future.p_name.unique()))).tolist()
 
         # create a data frame of new facility IDs and project names,
         # for merging
         _new_facility_id = pd.DataFrame(
             data={
                 'p_name': list(capacity_future.p_name.unique()),
-                'facility_id': _new_facility_id
+                'facility_id': ['P'+str(newid) for newid in _new_facility_id],
             }
         )
-        
+
         # merge to add a facility_id column to the capacity projection data
         capacity_future = capacity_future.merge(
             _new_facility_id[['p_name', 'facility_id']],
@@ -967,7 +969,7 @@ class ComputeLocations:
 
         # Model 100s of windows instead of individual, to improve running time
         _cap_building.loc[:, 'n_technology'] = np.ceil(_cap_building.n_technology / 100.0)
-
+        _cap_building.loc[:, 'facility_id'] = ['B' + str(id) for id in _cap_building.facility_id]
         self.capacity_data = pd.concat([self.capacity_data, _cap_building])
 
 
@@ -1013,14 +1015,17 @@ class ComputeLocations:
                                                      keep=False)]
         _ids_update = _ids_update.loc[_ids_update.facility_type != 'power plant'].index
 
-        # Use the computed locations dataset to generate unique facility_id
-        # values for these future "power plants"
-        _facility_id_start = int(locations.facility_id.max() + 1)
+        if len(_ids_update) > 0:
+            # Use the computed locations dataset to generate unique facility_id
+            # values for these future "power plants"
+            _facility_id_start = max([int(id[1:]) for id in locations.facility_id]) + 1
 
-        # Update the facility_id values for these entries in the locations data
-        # frame.
-        for i in _ids_update:
-            locations.loc[i, 'facility_id'] = int(max(locations.facility_id) + 1)
+            # Update the facility_id values for these entries in the locations data
+            # frame.
+            inc = 0
+            for i in _ids_update:
+                locations.loc[i, 'facility_id'] = 'P' + str(_facility_id_start + inc)
+                inc += 1
 
         self.locs = locations
 
