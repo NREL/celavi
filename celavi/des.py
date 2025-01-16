@@ -131,6 +131,7 @@ class Context:
             material = row["material"]
             self.component_material_mass_tonne_dict[material][year] = row["mass_tonnes"]
 
+        self.possible_components = possible_components
         self.possible_materials = possible_materials
 
         # Inventories hold the simple counts of materials at stages of
@@ -170,15 +171,17 @@ class Context:
             # Some facilities can only handle certain components
             # Apply that restriction here
             if facility_components_df.component.loc[facility_components_df.facility_type == facility_type] is not None:
-                allowed_items = facility_components_df.component.loc[facility_components_df.facility_type == facility_type]
+                allowed_components = facility_components_df.component.loc[facility_components_df.facility_type == facility_type]
+                allowed_materials = component_material_masses_df.material.loc[component_material_masses_df.component.isin(allowed_components)].unique()
             else:
-                allowed_items = possible_materials
-
+                allowed_components = self.possible_components
+                allowed_materials = self.possible_materials
+            
             self.count_facility_inventories[step_facility_id] = FacilityInventory(
                 facility_id=facility_id,
                 facility_type=facility_type,
                 step=step,
-                possible_items=allowed_items,
+                possible_items=allowed_components,
                 timesteps=max_timesteps,
                 quantity_unit="count",
                 can_be_negative=False,
@@ -188,7 +191,7 @@ class Context:
                 facility_id=facility_id,
                 facility_type=facility_type,
                 step=step,
-                possible_items=allowed_items,
+                possible_items=allowed_materials,
                 timesteps=max_timesteps,
                 quantity_unit="tonnes",
                 can_be_negative=False,
