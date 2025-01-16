@@ -279,11 +279,6 @@ class Context:
 
         for _, row in df.iterrows():
             year = row["year"]
-            mass_tonnes = {
-                material: self.component_material_mass_tonne_dict[material][year]
-                for material in self.possible_materials
-            }
-            # @TODO populate components to facilities according to technology type
             component = Component(
                 kind=row["kind"],
                 year=year,
@@ -292,7 +287,7 @@ class Context:
                 in_use_facility_id=row["in_use_facility_id"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
-                mass_tonnes=mass_tonnes,
+                mass_tonnes=row['mass_tonnes'],
             )
             self.env.process(component.bol_process(self.env))
             self.components.append(component)
