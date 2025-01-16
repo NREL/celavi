@@ -381,7 +381,7 @@ class Scenario:
             self.scen["technology_components"].get("component_list", []).keys()
         )
 
-        # Get list of unique materials involved in the case study
+        # Get list of unique materials involved in the case study        
         materials = [
             self.scen["technology_components"].get("component_materials")[c]
             for c in circular_components
@@ -426,14 +426,25 @@ class Scenario:
 
             for _ in range(n_technology):
                 for c in circular_components:
-                    components.append(
-                        {
-                            "year": year,
-                            "kind": c,
-                            "manuf_facility_id": manuf_facility_id,
-                            "in_use_facility_id": in_use_facility_id,
-                        }
-                    )
+                    _c_mats = self.scen['technology_components']['component_materials'][c]
+                    _c_mat_mass = component_material_mass.mass_tonnes.loc[
+                        (component_material_mass.technology == row['technology']) &
+                        (component_material_mass.component == c) & 
+                        (component_material_mass.material.isin(_c_mats)) &
+                        (component_material_mass.year == year)
+                    ]
+                    if not _c_mat_mass.empty:
+                        components.append(
+                            {
+                                "year": year,
+                                "kind": c,
+                                "manuf_facility_id": manuf_facility_id,
+                                "in_use_facility_id": in_use_facility_id,
+                                "mass_tonnes": dict(zip(_c_mats, _c_mat_mass)),
+                            }
+                        )
+                    else:
+                        pass
 
         components = pd.DataFrame(components)
 
