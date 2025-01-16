@@ -1,3 +1,5 @@
+import pandas as pd
+
 from typing import Deque, Tuple, Dict
 from collections import deque
 
@@ -16,6 +18,7 @@ class Component:
     def __init__(
         self,
         context,
+        locations,
         kind: str,
         year: int,
         lifespan_timesteps: float,
@@ -36,6 +39,8 @@ class Component:
         ----------
         context: Context
             The context that contains this component.
+
+        locations: pd.DataFrame
 
         kind: str
             The type of this component. It isn't called "type" because
@@ -75,7 +80,7 @@ class Component:
         self.mass_tonnes = mass_tonnes
         self.manuf_facility_id = manuf_facility_id
         self.in_use_facility_id = in_use_facility_id
-        self.current_location = "manufacturing_" + str(self.manuf_facility_id)
+        self.current_location = locations.facility_type.loc[locations.facility_id == manuf_facility_id].values[0] + '_' +  manuf_facility_id
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
         self.split_dict = self.context.path_dict["path_split"]

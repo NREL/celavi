@@ -144,6 +144,7 @@ class Context:
 
         # Read the locations and step costs to make the facility inventories
         locations = pd.read_csv(locations_filename)
+        self.locations = locations
         step_costs = pd.read_csv(step_costs_filename)
 
         # Find state level location information for each facility. This should
@@ -286,6 +287,7 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=year,
+                locations=self.locations,
                 manuf_facility_id=row["manuf_facility_id"],
                 in_use_facility_id=row["in_use_facility_id"],
                 context=self,
