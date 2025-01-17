@@ -176,7 +176,6 @@ class Context:
             else:
                 allowed_components = self.possible_components
                 allowed_materials = self.possible_materials
-            
             self.count_facility_inventories[step_facility_id] = FacilityInventory(
                 facility_id=facility_id,
                 facility_type=facility_type,
@@ -285,9 +284,8 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=year,
-                locations=self.locations,
-                manuf_facility_id=row["manuf_facility_id"],
-                in_use_facility_id=row["in_use_facility_id"],
+                manuf_facility=row["manuf_facility"],
+                in_use_facility=row["in_use_facility"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
                 mass_tonnes=row['mass_tonnes'],
@@ -331,11 +329,10 @@ class Context:
         year = int(floor(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
 
-        cumulative_counts = [
-            facility.cumulative_input_history[component_kind][timestep]
-            for name, facility in self.count_facility_inventories.items()
-            if any(pname in name for pname in process_name)
-        ]
+        try:
+            cumulative_counts = [facility.cumulative_input_history[component_kind][timestep]for name, facility in self.count_facility_inventories.items()if any(pname in name for pname in process_name)]
+        except KeyError:
+            pdb.set_trace()
         total_count = sum(cumulative_counts)
         total_mass = total_count * avg_component_mass
         return total_mass
@@ -365,13 +362,14 @@ class Context:
 
             for facility_name, facility in self.mass_facility_inventories.items():
                 process_name, facility_id = facility_name.split("_")
-                for material in self.possible_materials:
+
+                for mat in [material for material in self.possible_materials if material in facility.transaction_history.columns]:
                     annual_transactions = facility.transaction_history.loc[
-                        window_first_timestep:window_last_timestep, material
-                    ]
+                        window_first_timestep:window_last_timestep, mat
+                        ]
                     sliced_info = facility.transaction_history.loc[
                         window_first_timestep:window_last_timestep,
-                        [material, "timestep"],
+                        [mat, "timestep"],
                     ].reset_index()
 
                     sliced_info["year"] = (
@@ -385,7 +383,7 @@ class Context:
                             )
                         )
                     )
-                    problematic_value = sliced_info[material][self.timesteps_per_year]
+                    problematic_value = sliced_info[mat][self.timesteps_per_year]
 
                     # A problematic value is when mass is reported in the last time step of a sliced dataframe
                     # which belongs to the next year. Generally this happens only for manufacturing.
@@ -418,7 +416,7 @@ class Context:
                             "flow quantity": mass_kg,
                             "stage": process_name,
                             "year": actual_year,
-                            "material": material,
+                            "material": mat,
                             "flow unit": "kg",
                             "facility_id": facility_id,
                             "route_id": None,
@@ -426,6 +424,7 @@ class Context:
                         }
                         self.data_for_lci.append(row)
                         annual_data_for_lci.append(row)
+
             for facility_name, tracker in self.transportation_trackers.items():
                 _, facility_id = facility_name.split("_")
                 # List of all inbound transportation amounts to this facility in the past window
