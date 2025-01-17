@@ -814,7 +814,7 @@ class CostGraph:
             not node_id
             in nx.get_node_attributes(self.supply_chain, name="facility_id").values()
         ):
-            print("Facility %d does not exist in CostGraph" % node_id, flush=True)
+            print(f"Facility {node_id} does not exist in CostGraph", flush=True)
             return None
         else:
             # If node_id does exist in the supply chain, pull out the node name
@@ -851,14 +851,14 @@ class CostGraph:
             _nearest_upstream_node = _upstream_nodes[
                 _upstream_dists.index(min(_upstream_dists))
             ]
-            _nearest_facility_id = _nearest_upstream_node.split("_")[1]
+            _nearest_facility = _nearest_upstream_node
 
         else:
             # If there is only one option, pull that node's facility_id directly
-            _nearest_facility_id = _upstream_nodes[0].split("_")[1]
+            _nearest_facility = _upstream_nodes[0]
 
-        # Return the "closest" node's facility_id as an integer
-        return int(_nearest_facility_id)
+        # Return the "closest" node's name (facility type + facility_id)
+        return _nearest_facility
 
     def find_downstream(
         self,

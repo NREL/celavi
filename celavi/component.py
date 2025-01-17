@@ -1,3 +1,5 @@
+import pandas as pd
+
 from typing import Deque, Tuple, Dict
 from collections import deque
 
@@ -19,8 +21,8 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
-        manuf_facility_id: int,
-        in_use_facility_id: int,
+        manuf_facility: str,
+        in_use_facility: str,
         mass_tonnes: Dict[str, float] = 0,
     ):
         """
@@ -31,7 +33,7 @@ class Component:
         It sets the initial state, which is an empty string. This is
         because there is no state until the component begins life, when
         the process defined in method begin_life() is called by SimPy.
-
+        @TODO update docstring
         Parameters
         ----------
         context: Context
@@ -58,13 +60,13 @@ class Component:
             Component composition by material, in tonnes. Keys are
             material names. Values are material masses.
 
-        manuf_facility_id: int
-            The facility id where the component begins life (typically but not
+        manuf_facility: str
+            The node name where the component begins life (typically but not
             necessarily a manufacturing facility type) used in initial pathway
             selection from CostGraph.
 
-        in_use_facility_id: int
-            The facility ID where the component spends its first useful lifetime
+        in_use_facility: str
+            The node name where the component spends its first useful lifetime
             before beginning the end-of-life process (typically but not necessarily
             a renewable energy power plant).
         """
@@ -73,9 +75,8 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
-        self.manuf_facility_id = manuf_facility_id
-        self.in_use_facility_id = in_use_facility_id
-        self.current_location = "manufacturing_" + str(self.manuf_facility_id)
+        self.manuf_facility = manuf_facility
+        self.in_use_facility = in_use_facility
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
         self.split_dict = self.context.path_dict["path_split"]
@@ -94,18 +95,17 @@ class Component:
         from_facility_id: int
             The starting location of the the component.
         """
-        in_use_facility_id = f"in use_{int(from_facility_id)}"
-        path_choices = self.context.cost_graph.choose_paths(source=in_use_facility_id)
+        path_choices = self.context.cost_graph.choose_paths(source=self.in_use_facility)
         path_choices_dict = {
             path_choice["source"]: path_choice for path_choice in path_choices
         }
 
-        path_choice = path_choices_dict[in_use_facility_id]
+        path_choice = path_choices_dict[self.in_use_facility]
         self.pathway = deque()
         for facility, lifespan, distance, route_id in path_choice["path"]:
             # Override the initial timespan when component goes into use.
 
-            if facility.startswith("in use"):
+            if 'in use' in facility:
                 self.pathway.append(
                     (facility, self.initial_lifespan_timesteps, distance, route_id)
                 )
@@ -141,10 +141,9 @@ class Component:
 
         # component waits to be manufactured
         yield env.timeout(begin_timestep)
-
         # Increment manufacturing inventories
-        count_inventory = self.context.count_facility_inventories[self.current_location]
-        mass_inventory = self.context.mass_facility_inventories[self.current_location]
+        count_inventory = self.context.count_facility_inventories[self.manuf_facility]
+        mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
         count_inventory.increment_quantity(self.kind, 1, env.now)
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, mass, env.now)
@@ -160,27 +159,31 @@ class Component:
             mass_inventory.increment_quantity(material, -mass, env.now)
 
         # Component is now in use; update the location
-        self.current_location = f"in use_{int(self.in_use_facility_id)}"
 
+        
         # Increment in use inventories
-        count_inventory = self.context.count_facility_inventories[self.current_location]
-        mass_inventory = self.context.mass_facility_inventories[self.current_location]
+        count_inventory = self.context.count_facility_inventories[self.in_use_facility]
+        mass_inventory = self.context.mass_facility_inventories[self.in_use_facility]
         count_inventory.increment_quantity(self.kind, 1, env.now)
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, mass, env.now)
 
         # Increment transportation to in use facilities
-        count_transport = self.context.transportation_trackers[self.current_location]
+        count_transport = self.context.transportation_trackers[self.in_use_facility]
         for _, mass in self.mass_tonnes.items():
+            _edge_tuple = [
+                (u, v) 
+                for u, v in self.context.cost_graph.supply_chain.edges 
+                if (u.split('_')[1] == self.manuf_facility.split('_')[1]) 
+                and (v.split('_')[1] == self.in_use_facility.split('_')[1])
+                ][0]
             count_transport.increment_inbound_tonne_km(
                 tonne_km=mass
                 * self.context.cost_graph.supply_chain.edges[
-                    f"manufacturing_{int(self.manuf_facility_id)}",
-                    f"in use_{int(self.in_use_facility_id)}",
+                    _edge_tuple
                 ]["dist"],
                 route_id=self.context.cost_graph.supply_chain.edges[
-                    f"manufacturing_{int(self.manuf_facility_id)}",
-                    f"in use_{int(self.in_use_facility_id)}",
+                    _edge_tuple
                 ]["route_id"],
                 timestep=env.now,
             )
@@ -231,7 +234,7 @@ class Component:
 
                     # locate the two downstream facilities that are closest
                     _split_facility_1 = self.context.cost_graph.find_downstream(
-                        facility_id=int(location.split("_")[1]),
+                        facility_id=location.split("_")[1],
                         connect_to=self.split_dict[factype]["facility_1"],
                         get_dist=True,
                     )
