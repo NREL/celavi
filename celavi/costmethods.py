@@ -396,7 +396,7 @@ class CostMethods:
             grinding one metric ton of blade material at a mechanical recycling
             facility and disposing of material losses in a landfill.
         """
-        _learn_dict = path_dict['learning']['cullet manufacturing']
+        _learn_dict = path_dict['learning']['solar glass cullet manufacturing']
        
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['cullet manufacturing']['uncertainty'] == 'array':
@@ -504,7 +504,7 @@ class CostMethods:
             grinding one metric ton of blade material at a mechanical recycling
             facility and disposing of material losses in a landfill.
         """        
-        _learn_dict = path_dict['learning']['cullet manufacturing']
+        _learn_dict = path_dict['learning']['window glass cullet manufacturing']
 
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['cullet manufacturing']['uncertainty'] == 'array':
