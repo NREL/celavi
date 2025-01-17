@@ -39,7 +39,7 @@ def search_index_creator(ei_cf_36_db):
             
             
             dic[i['name']+'@'+i['location']+'@'+i['unit']][i['code']] = i
-            dic2[i['name']+'@'+i['location']+'@'+i['unit']] = i
+            dic2[i['code']] = i
 
 
         
@@ -75,10 +75,12 @@ def search_index_reader(p_name,p_loc,p_unit,data_dict):
             for key in activity_dict.keys():
                 return activity_dict[key]
         else:
-            print('\nWarning --- Issue with process dictionary length when '+dic_key+' is chosen',flush=True)
+
+            print('\nINFO: Process dictionary length when '+dic_key+' is chosen is '+str(len(activity_dict)),flush=True)
             for key in activity_dict.keys():
-                print('Warning --- Multiple activities found ---- ',activity_dict[key],key,flush=True)
+                print('INFO Multiple activities found ---- ',activity_dict[key],key,flush=True)
             print('\n')
+
             return activity_dict[key]
 
 
@@ -158,8 +160,8 @@ def search_dictionary(db,bw):
         
         
         ei_cf_36_db = bw.Database(db)
-        database_dict,process_database_dict = search_index_creator(ei_cf_36_db)
-        return database_dict,process_database_dict
+        database_dict,database_dict_secondary = search_index_creator(ei_cf_36_db)
+        return database_dict
 
 def liaison_calc(db,run_filename,bw):
 
@@ -185,7 +187,7 @@ def liaison_calc(db,run_filename,bw):
         """ 
         ei_cf_36_db = bw.Database(db)
         print('creating inventory withing the database---',db,flush=True)
-        database_dict,process_database_dict = search_index_creator(ei_cf_36_db)
+        database_dict,database_dict_secondary = search_index_creator(ei_cf_36_db)
       
         
         inventory = run_filename.sort_values(by=['process','process_location'])   
@@ -265,7 +267,7 @@ def liaison_calc(db,run_filename,bw):
                 process_dict[key].save()
 
         #Recreate the database dictionary so that the new created processes are listed in the inventory
-        database_dict,process_database_dict = search_index_creator(ei_cf_36_db)
+        database_dict,database_dict_secondary = search_index_creator(ei_cf_36_db)
         
         # Step 3 is to define the flows that are inputs to the datasets
         # Only technosphere can be inputs 
@@ -290,8 +292,8 @@ def liaison_calc(db,run_filename,bw):
                     activity = None
                     # Then the UUID has been supplied and we can try to find using UUID
                     try:
-                        activity = process_dict[str(row['code'])]
-                        print('Complete Success - Provided location '+ row['supplying_location']+' for '+ row['flow'] +' was found. Chosen location was '+activity['location'] + ' . Chosen process was ' + activity['name'] ,flush = True)
+                        activity = database_dict_secondary(row['code'])
+                        print('UUID matched - Provided location '+ row['supplying_location']+' for '+ row['flow'] +' was found. Chosen location was '+activity['location'] + ' . Chosen process was ' + activity['name'] ,flush = True)
                         print_flag = True
                     except:
                         # This exception is to make sure that if flows are not found for the user provided location, other locations are searched for and linked automatically. 
@@ -393,8 +395,8 @@ def liaison_calc(db,run_filename,bw):
             print('')
 
 
-        database_dict,process_database_dict = search_index_creator(ei_cf_36_db)
-        return process_database_dict
+        database_dict,database_dict_secondary = search_index_creator(ei_cf_36_db)
+        return database_dict
 
         
 def lcia_traci_run(db,primary_process,functional_unit,mc_foreground_flag,mc_runs,bw):
