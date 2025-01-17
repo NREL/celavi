@@ -95,7 +95,7 @@ class Component:
         from_facility_id: int
             The starting location of the the component.
         """
-        path_choices = self.context.cost_graph.choose_paths(source=self.in_use_facility)
+        path_choices = self.context.cost_graph.choose_paths(source_node=self.in_use_facility)
         path_choices_dict = {
             path_choice["source"]: path_choice for path_choice in path_choices
         }
@@ -192,7 +192,7 @@ class Component:
         yield env.timeout(self.initial_lifespan_timesteps)
 
         # Component's next steps are determined and stored in self.pathway
-        self.create_pathway_queue(self.in_use_facility_id)
+        self.create_pathway_queue(self.in_use_facility)
 
         # Component is decremented from in use inventories
         count_inventory.increment_quantity(self.kind, -1, env.now)
