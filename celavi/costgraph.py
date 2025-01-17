@@ -851,14 +851,14 @@ class CostGraph:
             _nearest_upstream_node = _upstream_nodes[
                 _upstream_dists.index(min(_upstream_dists))
             ]
-            _nearest_facility_id = _nearest_upstream_node.split("_")[1]
+            _nearest_facility = _nearest_upstream_node
 
         else:
             # If there is only one option, pull that node's facility_id directly
-            _nearest_facility_id = _upstream_nodes[0].split("_")[1]
+            _nearest_facility = _upstream_nodes[0]
 
-        # Return the "closest" node's facility_id as an integer
-        return int(_nearest_facility_id)
+        # Return the "closest" node's name (facility type + facility_id)
+        return _nearest_facility
 
     def find_downstream(
         self,
