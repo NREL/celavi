@@ -28,7 +28,7 @@ from celavi.diagnostic_viz import DiagnosticViz
 
 
 
-
+import pdb
 class Scenario:
     """
     Set up, validate, and execute a CELAVI scenario.
@@ -418,10 +418,12 @@ class Scenario:
         components = []
         for _, row in technology_data.iterrows():
             year = row["year"]
-            in_use_facility_id = row["facility_id"]
-            manuf_facility_id = self.netw.find_upstream_neighbor(
+            # @NOTE hard coded to glass study, will need to adapt
+            in_use_facility = 'pv in use_' + row["facility_id"] if row['technology'] == 'csi module' else 'window in use_' + row['facility_id']
+            manuf_facility = self.netw.find_upstream_neighbor(
                 row["facility_id"]
             )
+
             n_technology = int(row["n_technology"])
 
             for _ in range(n_technology):
@@ -438,8 +440,8 @@ class Scenario:
                             {
                                 "year": year,
                                 "kind": c,
-                                "manuf_facility_id": manuf_facility_id,
-                                "in_use_facility_id": in_use_facility_id,
+                                "manuf_facility": manuf_facility,
+                                "in_use_facility": in_use_facility,
                                 "mass_tonnes": dict(zip(_c_mats, _c_mat_mass)),
                             }
                         )
