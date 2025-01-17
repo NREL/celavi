@@ -9,7 +9,7 @@ import yaml
 import os
 import time
 from celavi.pylca_celavi.liaison.montecarloforeground import mc_foreground
-from celavi.pylca_celavi.liaison.lci_calculator import liaison_calc,search_dictionary,lcia_traci_run,lcia_recipe_run, lcia_premise_gwp_run
+from celavi.pylca_celavi.liaison.lci_calculator import liaison_calc,search_dictionary,search_index_reader,lcia_traci_run,lcia_recipe_run, lcia_premise_gwp_run
 from celavi.pylca_celavi.liaison.search_activity_ecoinvent import search_activity_in_ecoinvent
 from celavi.pylca_celavi.liaison.edit_activity_ecoinvent import user_controlled_editing_ecoinvent_activity
 
@@ -137,13 +137,12 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                 if edit_ecoinvent_user_controlled  == True:  
 
                     #inventory here has to be a dictionary. So if we read inventory from csv file we cannot edit it.             
-                    run_filename = user_controlled_editing_ecoinvent_activity(inventory,year_of_study,data_dir)
+                    run_filename = user_controlled_editing_ecoinvent_activity(inventory,year_of_study,location_under_study,output_dir)
                     print('Activity edited according to user prereferences and saved success',flush=True)  
                     #run_filename is a dataframe.
                     process_dictionary = liaison_calc(db,run_filename,bw)
 
             if lca_flag: 
-
 
                 activity_lca = search_index_reader(process_under_study,location_under_study,unit_under_study,process_dictionary)
                 result_dir1,n_lcias1 = lcia_traci_run(db,activity_lca,functional_unit,mc_foreground_flag,mc_runs,bw)

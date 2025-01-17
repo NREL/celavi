@@ -64,9 +64,8 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
 
 
     #Extracting ecoinvent database for activity and flows and creating a LiAISON friendly dataframe
-    for key in process_selected_as_foreground.keys():
-        for exch in process_selected_as_foreground[key].exchanges():
-            process.append(process_selected_as_foreground[key]['name'])            
+    for exch in process_selected_as_foreground.exchanges():
+            process.append(process_selected_as_foreground['name'])            
             value.append(exch['amount'])
             unit.append(exch['unit'])
 
@@ -128,7 +127,7 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
     example['code'] = flow_code
 
     #Sanity check to write the dataframe. Can be deleted later
-    example.to_csv(data_dir+process_selected_as_foreground+str(year_of_study)+location_under_study+'.csv',index=False)
+    example.to_csv(data_dir+process_selected_as_foreground['name']+str(year_of_study)+location_under_study+'.csv',index=False)
     run_filename = example
 
 
