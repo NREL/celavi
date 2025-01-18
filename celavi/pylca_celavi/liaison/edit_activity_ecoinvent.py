@@ -17,7 +17,7 @@ def electricity_correction(exchange_ob):
 
     """
     if 'electricity' in exchange_ob['name']:
-        name_of_flow = 'ReEDS_State_Grid_Mix'
+        name_of_flow = 'market group for electricity, high voltage'
     else:
         name_of_flow = exchange_ob['name']
 
@@ -39,7 +39,7 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
     -------
     """
     print('Editing activities within ecoinvent to US location and US state wise grid mix',flush=True)
-    new_location = location_under_study
+    new_location = str(location_under_study)
 
     # These variables are used to create inventory dataframe
     process = []
@@ -71,8 +71,7 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
 
             #Changing name of electricity flow
             #Changing name of electricity flow
-            #name_of_flow = electricity_correction(exch)
-            name_of_flow = exch['name']
+            name_of_flow = electricity_correction(exch)
             flow.append(name_of_flow)
 
             if exch['type'] == 'production':

@@ -234,7 +234,7 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                      'method': method     
                     })    
                 
-                lcia_df.to_csv(output_dir+results_filename+str(r)+db+primary_process+'.csv',index = False)
+                #lcia_df.to_csv(output_dir+results_filename+str(r)+db+primary_process+'.csv',index = False)
                 print("LCA performed succesfully", flush= True)
 
                 save_project = False

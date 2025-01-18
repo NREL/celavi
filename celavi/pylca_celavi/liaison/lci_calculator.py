@@ -320,9 +320,12 @@ def liaison_calc(db,run_filename,bw):
                                                 try:
                                                     activity = search_index_reader(row['flow'],'RER',row['unit'],database_dict)
                                                 except:
-                                                    print('Warning --- Failed - Not found '+row['flow'] + ' ' + row['supplying_location'] + ' ',flush = True)
-                                                    print_flag = True
-                                                    not_found = True
+                                                    try:                  
+                                                        activity = search_index_reader(row['flow'],'US-WECC',row['unit'],database_dict)
+                                                    except:
+                                                        print('Warning --- Failed - Not found '+row['flow'] + ' ' + row['supplying_location'] + ' ',flush = True)
+                                                        print_flag = True
+                                                        not_found = True
                         if print_flag == False:
                             print('Minor Success - Provided location '+ row['supplying_location']+' for '+ row['flow'] +' was not found. Shifting to ' + activity['name']+' ' + activity['location'],flush = True)
 

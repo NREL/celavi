@@ -240,7 +240,7 @@ class PylcaCelavi:
                                 index=False,
                                 header=False,
                             )
-                            res.to_csv('results.csv',mode='a', index=False)
+                            res.to_csv('results_checked_to_be_deleted.csv',mode='a', index=False)
                             res_calculated = res
 
 
@@ -269,7 +269,7 @@ class PylcaCelavi:
         res_df['impacts'] = res_df['lcia']
         res_df['impact'] = res_df['value']
         res_df2 = res_df[['year','facility_id','material','route_id','state','stage','impacts','impact','run']]
-        res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+        res_df2.to_csv(self.lcia_des_filename, mode='a', header=True, index=False)
 
         # This is the result that needs to be analyzed every timestep.
         return res_df2
