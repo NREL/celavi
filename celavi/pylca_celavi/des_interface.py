@@ -17,19 +17,8 @@ class PylcaCelavi:
         self,
         lcia_des_filename,
         shortcutlca_filename,
-        intermediate_demand_filename,
-        dynamic_lci_filename,
-        electricity_grid_spatial_level,
-        static_lci_filename,
-        uslci_tech_filename,
-        uslci_emission_filename,
-        uslci_process_filename,
-        stock_filename,
-        emissions_lci_filename,
-        traci_lci_filename,
         use_shortcut_lca_calculations,
         verbose,
-        substitution_rate,
         run=0,
     ):
         """
@@ -43,52 +32,20 @@ class PylcaCelavi:
         shortcutlca_filename: str
             Path to file where previously calculated impacts are stored. This file
             can be used instead of re-calculating impacts from the inventory.
-        intermediate_demand_filename: str
-            Path to file that stores the final demand vector every time the LCIA 
-            calculations are run. For debugging purposes only.
-        dynamic_lci_filename: str
-            Path to the LCI dataset which changes with time.
-        electricity_grid_spatial_level: str
-            Specification of grid spatial level used for lca calculations. Must be
-            "state" or "national".
-        static_lci_filename: str
-            Path to the LCI dataset which does not change with time.
-        uslci_filename: str
-            Path to the U.S. LCI dataset pickle file.
-        stock_filename: str
-            Filename for storage pickle variable.
-        emissions_lci_filename: str
-            Filename for emissions inventory.
-        traci_lci_filename: str
-           Filename for TRACI 2.0 characterization factor dataset.
         use_shortcut_lca_calculations: Boolean
             Boolean flag for using previously calculating impact data or running the
             optimization code to re-calculate impacts.
         verbose: int
             0 to suppress detailed print statements
             1 to allow print statements
-        substitution_rate: Dict
-            Dictionary of material name: substitution rates for materials displaced by the
-            circular component.
         run: int
             Model run. Defaults to zero.
         """
         # filepaths for files used in the pylca calculations
         self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
-        self.intermediate_demand_filename = intermediate_demand_filename
-        self.dynamic_lci_filename = dynamic_lci_filename
-        self.electricity_grid_spatial_level = electricity_grid_spatial_level
-        self.static_lci_filename = static_lci_filename
-        self.uslci_tech_filename = uslci_tech_filename
-        self.uslci_emission_filename = uslci_emission_filename
-        self.uslci_process_filename = uslci_process_filename
-        self.stock_filename = stock_filename
-        self.emissions_lci_filename = emissions_lci_filename
-        self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         self.verbose = verbose
-        self.substitution_rate = substitution_rate
         self.run = run
 
         # The results file should be removed if present. The LCA results are appended to the results file. 

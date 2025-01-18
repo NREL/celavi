@@ -317,26 +317,10 @@ class Scenario:
         self.lca = PylcaCelavi(
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
-            intermediate_demand_filename=self.files["intermediate_demand"],
-            dynamic_lci_filename=dynamic_lci_filename,
-            electricity_grid_spatial_level=electricity_grid_spatial_level,
-            static_lci_filename=self.files["static_lci"],
-            uslci_tech_filename=self.files["uslci_tech"],
-            uslci_emission_filename=self.files["uslci_emission"],
-            uslci_process_filename=self.files["uslci_process_adder"],
-            stock_filename=self.files["stock_filename"],
-            emissions_lci_filename=self.files["emissions_lci"],
-            traci_lci_filename=self.files["traci_lci"],
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
             verbose = self.case["model_run"].get("lcia_verbose"),
-            substitution_rate={
-                mat: apply_array_uncertainty(rate, self.run)
-                for mat, rate in self.scen["technology_components"]
-                .get("substitution_rates")
-                .items()
-            },
             run=self.run,
         )
 

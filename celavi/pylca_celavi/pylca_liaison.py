@@ -98,8 +98,8 @@ def liaison_lci(
     
     # Defining a list of processes for which LCA needs to be done. 
     # This is not required and will be deleted after integration with the glass recycling model of CELAVI
-    processes_list = ["treatment of waste glass from unsorted public collection, sorting","photovoltaic plant construction, 570kWp, multi-Si, on open ground","treatment of waste glass sheet, sorting plant","glass wool mat production","cement production, Portland","treatment of waste glass, unsanitary landfill, wet infiltration class (500mm)","flat glass production, uncoated"] 
-    random_number = random.randint(0,6)
+    processes_list = ["treatment of waste glass from unsorted public collection, sorting","treatment of waste glass sheet, sorting plant","glass wool mat production","cement production, Portland","treatment of waste glass, unsanitary landfill, wet infiltration class (500mm)","flat glass production, uncoated"] 
+    random_number = random.randint(0,5)
     process_in_ecoinvent_for_lca_from_celavi = processes_list[random_number]
     unit_under_study = "kilogram"
 
