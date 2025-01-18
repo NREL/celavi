@@ -289,26 +289,6 @@ class Scenario:
             self.netw = pickle.load(open(self.files["costgraph_pickle"], "rb"))
             print(f"CostGraph read in at {self.simtime(self.start)}", flush=True)
 
-        # Electricity spatial mix level. Defaults to 'state' when not provided.
-        electricity_grid_spatial_level = self.scen["scenario"].get(
-            "electricity_mix_level", "state"
-        )
-
-        if electricity_grid_spatial_level == "state":
-            reeds_importer = ReedsImporter(
-                reeds_imported_filename=self.files["state_reeds_grid_mix"],
-                reeds_output_filename=self.files["state_electricity_lci"],
-            )
-            reeds_importer.state_level_reeds_importer()
-            dynamic_lci_filename = self.files["state_electricity_lci"]
-        else:
-            reeds_importer = ReedsImporter(
-                reeds_imported_filename=self.files["national_reeds_grid_mix"],
-                reeds_output_filename=self.files["national_electricity_lci"],
-            )
-            reeds_importer.national_level_reeds_importer()
-            dynamic_lci_filename = self.files["national_electricity_lci"]
-
         # Prepare LCIA code
         #verbose = 0 means no print statements. 
         #verbose = 1 prints detailed LCA calculation steps
