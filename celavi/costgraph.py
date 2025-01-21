@@ -240,7 +240,7 @@ class CostGraph:
             else:
                 return list(map(lambda x, y: (x, y), list1, list2))
 
-    def find_nearest(self, source: str, crit: str):
+    def find_nearest(self, source_node: str, crit: str):
         """
         Method that finds the nearest nodes to source and returns that node name,
         the path length to the nearest node, and the path to the nearest node as
@@ -251,7 +251,7 @@ class CostGraph:
 
         Parameters
         ----------
-        source
+        source_node
             Name of node where this path begins.
         crit
             Criteria to calculate path "length". May be cost or dict.
@@ -267,10 +267,10 @@ class CostGraph:
 
         # Calculate the length of paths from fromnode to all other nodes
         lengths = nx.single_source_bellman_ford_path_length(
-            self.supply_chain, source, weight=crit
+            self.supply_chain, source_node, weight=crit
         )
 
-        short_paths = nx.single_source_bellman_ford_path(self.supply_chain, source)
+        short_paths = nx.single_source_bellman_ford_path(self.supply_chain, source_node)
 
         # We are only interested in a particular type(s) of node
         targets = list(
@@ -282,7 +282,10 @@ class CostGraph:
         # return the smallest of all lengths to get to typeofnode
         if subdict:
             # dict of shortest paths to all targets
-            nearest = min(subdict, key=subdict.get)
+            try:
+                nearest = min(subdict, key=subdict.get)
+            except NameError:
+                pdb.set_trace()
             timeout = nx.get_node_attributes(self.supply_chain, "timeout")
             timeout_list = [
                 value for key, value in timeout.items() if key in short_paths[nearest]
@@ -303,13 +306,12 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
-            _fac_id = self.supply_chain.nodes[source]["facility_id"]
+            _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
             _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
             _bol_crit = nx.shortest_path_length(
                 self.supply_chain,
-                source="manufacturing_"
-                + str(self.find_upstream_neighbor(node_id=_fac_id, crit="cost")),
-                target=str(source),
+                source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
+                target=source_node,
                 weight=crit,
                 method="bellman-ford",
             )
@@ -739,7 +741,7 @@ class CostGraph:
                 flush=True,
             )
 
-    def choose_paths(self, source: str = None, crit: str = "cost"):
+    def choose_paths(self, source_node: str = None, crit: str = "cost"):
         """
         Calculate total pathway costs (sum of all node and edge costs) over
         all possible pathways between source and target nodes. Other "costs"
@@ -748,7 +750,7 @@ class CostGraph:
 
         Parameters
         ----------
-        source : str
+        source_node : str
             Node name in the format "facilitytype_facilityid".
         crit : str
             Criterion on which "shortest" path is defined. Defaults to cost.
@@ -762,17 +764,17 @@ class CostGraph:
         # Since all edges now contain both processing costs (for the u node)
         # as well as transport costs (including distances), all we need to do
         # is get the shortest path using the 'cost' attribute as the edge weight
-        if source is None:
+        if source_node is None:
             raise ValueError(f"CostGraph.choose_paths: source node cannot be None")
         else:
-            if source not in self.supply_chain.nodes():
-                raise ValueError(f"CostGraph.choose_paths: {source} not in CostGraph")
+            if source_node not in self.supply_chain.nodes():
+                raise ValueError(f"CostGraph.choose_paths: {source_node} not in CostGraph")
             else:
                 _paths = []
-                _chosen_path = self.find_nearest(source=source, crit=crit)
+                _chosen_path = self.find_nearest(source_node=source_node, crit=crit)
                 _paths.append(
                     {
-                        "source": source,
+                        "source": source_node,
                         "target": _chosen_path[0],
                         "path": _chosen_path[2],
                         "cost": _chosen_path[1],

@@ -15,21 +15,12 @@ print('Imported',flush= True)
 class PylcaCelavi:
     def __init__(
         self,
+        data_dir,
+        liaison_params,
         lcia_des_filename,
         shortcutlca_filename,
-        intermediate_demand_filename,
-        dynamic_lci_filename,
-        electricity_grid_spatial_level,
-        static_lci_filename,
-        uslci_tech_filename,
-        uslci_emission_filename,
-        uslci_process_filename,
-        stock_filename,
-        emissions_lci_filename,
-        traci_lci_filename,
         use_shortcut_lca_calculations,
         verbose,
-        substitution_rate,
         run=0,
     ):
         """
@@ -40,55 +31,36 @@ class PylcaCelavi:
         lcia_des_filename: str
             Path to file that stores calculated impacts for passing back to the
             discrete event simulation.
+        data_dir: str
+            Path to outer directory of data repository.
+        liaison_params: Dict
+            Dictionary of liaison-specific parameters
         shortcutlca_filename: str
             Path to file where previously calculated impacts are stored. This file
             can be used instead of re-calculating impacts from the inventory.
-        intermediate_demand_filename: str
-            Path to file that stores the final demand vector every time the LCIA 
-            calculations are run. For debugging purposes only.
-        dynamic_lci_filename: str
-            Path to the LCI dataset which changes with time.
-        electricity_grid_spatial_level: str
-            Specification of grid spatial level used for lca calculations. Must be
-            "state" or "national".
-        static_lci_filename: str
-            Path to the LCI dataset which does not change with time.
-        uslci_filename: str
-            Path to the U.S. LCI dataset pickle file.
-        stock_filename: str
-            Filename for storage pickle variable.
-        emissions_lci_filename: str
-            Filename for emissions inventory.
-        traci_lci_filename: str
-           Filename for TRACI 2.0 characterization factor dataset.
         use_shortcut_lca_calculations: Boolean
             Boolean flag for using previously calculating impact data or running the
             optimization code to re-calculate impacts.
         verbose: int
             0 to suppress detailed print statements
             1 to allow print statements
-        substitution_rate: Dict
-            Dictionary of material name: substitution rates for materials displaced by the
-            circular component.
         run: int
             Model run. Defaults to zero.
         """
         # filepaths for files used in the pylca calculations
+        self.generated_dir = os.path.join(data_dir, 'generated','liaison')
+        self.inputs_dir = os.path.join(data_dir, 'inputs','liaison')
+        # create liaison-specific input directories if they don't exist
+        for _dir in [self.generated_dir, self.inputs_dir]:
+            if not os.path.isdir(_dir):
+                os.makedirs(
+                    _dir
+                )
+        self.liaison_params = liaison_params
         self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
-        self.intermediate_demand_filename = intermediate_demand_filename
-        self.dynamic_lci_filename = dynamic_lci_filename
-        self.electricity_grid_spatial_level = electricity_grid_spatial_level
-        self.static_lci_filename = static_lci_filename
-        self.uslci_tech_filename = uslci_tech_filename
-        self.uslci_emission_filename = uslci_emission_filename
-        self.uslci_process_filename = uslci_process_filename
-        self.stock_filename = stock_filename
-        self.emissions_lci_filename = emissions_lci_filename
-        self.traci_lci_filename = traci_lci_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         self.verbose = verbose
-        self.substitution_rate = substitution_rate
         self.run = run
 
         # The results file should be removed if present. The LCA results are appended to the results file. 
@@ -283,7 +255,7 @@ class PylcaCelavi:
                                 index=False,
                                 header=False,
                             )
-                            res.to_csv('results.csv',mode='a', index=False)
+                            res.to_csv('results_checked_to_be_deleted.csv',mode='a', index=False)
                             res_calculated = res
 
 
@@ -312,7 +284,7 @@ class PylcaCelavi:
         res_df['impacts'] = res_df['lcia']
         res_df['impact'] = res_df['value']
         res_df2 = res_df[['year','facility_id','material','route_id','state','stage','impacts','impact','run']]
-        res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+        res_df2.to_csv(self.lcia_des_filename, mode='a', header=True, index=False)
 
         # This is the result that needs to be analyzed every timestep.
         return res_df2

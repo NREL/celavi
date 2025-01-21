@@ -78,10 +78,10 @@ def liaison_lci(
         year_from_celavi = 2024
     else:
         print('year to change',yr)
-        if yr%4 == 0:
+        if yr%2 == 0:
             year_from_celavi = yr
         else:
-            year_from_celavi = yr-yr%4
+            year_from_celavi = yr-yr%2
     print('year changed from ',yr,year_from_celavi)
     
     # Sanity Check to make sure LCA dataframe from CELAVI only contains one row. 
@@ -94,12 +94,13 @@ def liaison_lci(
 
 
     # Not sure why I changed state to a list and then loop through the list. Can be changed to directly storing the variable. 
+    state = "US-"+state
     state_from_celavi = [state]
     
     # Defining a list of processes for which LCA needs to be done. 
     # This is not required and will be deleted after integration with the glass recycling model of CELAVI
-    processes_list = ["treatment of waste glass from unsorted public collection, sorting","photovoltaic plant construction, 570kWp, multi-Si, on open ground","treatment of waste glass sheet, sorting plant","glass wool mat production","cement production, Portland","treatment of waste glass, unsanitary landfill, wet infiltration class (500mm)","flat glass production, uncoated"] 
-    random_number = random.randint(0,6)
+    processes_list = ["treatment of waste glass from unsorted public collection, sorting","treatment of waste glass sheet, sorting plant","glass wool mat production","cement production, Portland","treatment of waste glass, unsanitary landfill, wet infiltration class (500mm)","flat glass production, uncoated"] 
+    random_number = random.randint(0,5)
     process_in_ecoinvent_for_lca_from_celavi = processes_list[random_number]
     unit_under_study = "kilogram"
 
@@ -118,9 +119,9 @@ def liaison_lci(
     inventory_to_be_built_from_celavi = "additional_inventories"+".csv"
     
     # These project names match to the project names of HIPSTER and need to be added to the yaml file
-    updated_project_name='USMid_Case'+str(year_from_celavi)
+    updated_project_name='Mid_Case'+str(year_from_celavi)
     updated_database='premise_base'
-    lca_project='USMid_Case_celavi'+str(year_from_celavi)
+    lca_project='Mid_Case_celavi'+str(year_from_celavi)
 
     def correct_natural_land_transformation(bw):
         """
