@@ -282,10 +282,7 @@ class CostGraph:
         # return the smallest of all lengths to get to typeofnode
         if subdict:
             # dict of shortest paths to all targets
-            try:
-                nearest = min(subdict, key=subdict.get)
-            except NameError:
-                pdb.set_trace()
+            nearest = min(subdict, key=subdict.get)
             timeout = nx.get_node_attributes(self.supply_chain, "timeout")
             timeout_list = [
                 value for key, value in timeout.items() if key in short_paths[nearest]
@@ -339,6 +336,113 @@ class CostGraph:
         else:
             # not found, no path from source to typeofnode
             return None, None, None
+
+
+    def find_nearest_factype(
+        self,
+        source_node: str,
+        target_factype: str,
+        crit: str
+        ):
+        """
+        Method that finds the nearest nodes of type target_factype to source_node and
+        returns that node name, the path length to the nearest node, and the 
+        path to the nearest node as a list of nodes.
+
+        See docstring for find_nearest for original code source
+
+        Parameters
+        ----------
+        source_node : str
+            Name of node where this path begins.
+        
+        target_factype : str
+            Facility type of target nodes where this path should terminate.
+
+        crit : str
+            Criteria to calculate path "length". May be cost or dict.
+
+        Returns
+        -------
+        [0] name of node of type target_factype "closest" to source_node
+        [1] "length" of path between source_node and the closest target_factype node
+        [2] list of nodes defining the path between source_node and the closest target_factype node
+        """
+        if self.verbose > 1:
+            print(f"Finding path from {source_node} to nearest {target_factype}")
+
+        # Calculate the length of paths from fromnode to all other nodes
+        lengths = nx.single_source_bellman_ford_path_length(
+            self.supply_chain, source_node, weight=crit
+        )
+
+        short_paths = nx.single_source_bellman_ford_path(self.supply_chain, source_node)
+
+        # We are only interested in a particular type(s) of node
+        targets = list(
+            search_nodes(self.supply_chain, {"in": [("step",), target_factype]})
+        )
+        
+        subdict = {k: v for k, v in lengths.items() if k in targets}
+
+        # return the smallest of all lengths to get to typeofnode
+        if subdict:
+            # dict of shortest paths to all targets
+            nearest = min(subdict, key=subdict.get)
+            timeout = nx.get_node_attributes(self.supply_chain, "timeout")
+            timeout_list = [
+                value for key, value in timeout.items() if key in short_paths[nearest]
+            ]
+            dist_list = [
+                self.supply_chain.edges[short_paths[nearest][d : d + 2]]["dist"]
+                for d in range(len(short_paths[nearest]) - 1)
+            ]
+            dist_list.insert(0, 0.0)
+            route_id_list = [
+                self.supply_chain.edges[short_paths[nearest][d : d + 2]]["route_id"]
+                for d in range(len(short_paths[nearest]) - 1)
+            ]
+            route_id_list.insert(0, None)
+            _out = self.list_of_tuples(
+                short_paths[nearest], timeout_list, dist_list, route_id_list
+            )
+
+            # create dictionary for this preferred pathway cost and decision
+            # criterion and append to the pathway_crit_history
+            _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
+            _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
+            _bol_crit = nx.shortest_path_length(
+                self.supply_chain,
+                source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
+                target=source_node,
+                weight=crit,
+                method="bellman-ford",
+            )
+
+            for i in self.sc_end:
+                _dest = [key for key, value in subdict.items() if i in key]
+                _crit = [value for key, value in subdict.items() if i in key]
+                if len(_crit) > 0:
+                    self.pathway_crit_history.append(
+                        {
+                            "year": self.year,
+                            "source_facility_id": _fac_id,
+                            "destination_facility_id": _dest,
+                            "region_id_1": _loc_line.region_id_1.values[0],
+                            "region_id_2": _loc_line.region_id_2.values[0],
+                            "region_id_3": _loc_line.region_id_3.values[0],
+                            "region_id_4": _loc_line.region_id_4.values[0],
+                            "eol_pathway_type": i,
+                            "eol_pathway_criterion": _crit,
+                            "bol_pathway_criterion": _bol_crit,
+                        }
+                    )
+
+            return nearest, subdict[nearest], _out
+        else:
+            # not found, no path from source to typeofnode
+            return None, None, None
+
 
     def get_edges(self, facility_df: pd.DataFrame, u_edge="step", v_edge="next_step"):
         """
