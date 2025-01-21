@@ -15,6 +15,8 @@ print('Imported',flush= True)
 class PylcaCelavi:
     def __init__(
         self,
+        data_dir,
+        liaison_params,
         lcia_des_filename,
         shortcutlca_filename,
         use_shortcut_lca_calculations,
@@ -29,6 +31,10 @@ class PylcaCelavi:
         lcia_des_filename: str
             Path to file that stores calculated impacts for passing back to the
             discrete event simulation.
+        data_dir: str
+            Path to outer directory of data repository.
+        liaison_params: Dict
+            Dictionary of liaison-specific parameters
         shortcutlca_filename: str
             Path to file where previously calculated impacts are stored. This file
             can be used instead of re-calculating impacts from the inventory.
@@ -42,6 +48,15 @@ class PylcaCelavi:
             Model run. Defaults to zero.
         """
         # filepaths for files used in the pylca calculations
+        self.generated_dir = os.path.join(data_dir, 'generated','liaison')
+        self.inputs_dir = os.path.join(data_dir, 'inputs','liaison')
+        # create liaison-specific input directories if they don't exist
+        for _dir in [self.generated_dir, self.inputs_dir]:
+            if not os.path.isdir(_dir):
+                os.makedirs(
+                    _dir
+                )
+        self.liaison_params = liaison_params
         self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
