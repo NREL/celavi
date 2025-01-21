@@ -219,9 +219,7 @@ class Component:
                 location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
 
-                # Added "startswith" method to allow multiple splits from
-                # same source.
-                if any(key.startswith(factype) for key in self.split_dict):
+                if factype in [key for key in self.split_dict]:
                     # increment the facility inventory and transportation tracker
                     self.move_component_to(
                         env, loc=location, dist=distance, route_id=route_id
@@ -232,20 +230,14 @@ class Component:
 
                     self.move_component_from(env, loc=location)
 
-                    # locate the two downstream facilities that are closest
-                    _split_facility_1 = self.context.cost_graph.find_downstream(
-                        facility_id=location.split("_")[1],
-                        connect_to=self.split_dict[factype]["facility_1"],
-                        get_dist=True,
+                    # Locate the closest facility that receives material losses
+                    _split_facility_1 = self.context.cost_graph.find_nearest_factype(
+                        source_node = location,
+                        target_factype = self.split_dict[factype]["facility_1"],
+                        crit = 'dist',
                     )
 
-                    _split_facility_2 = self.context.cost_graph.find_downstream(
-                        node_name=location,
-                        connect_to=self.split_dict[factype]["facility_2"],
-                        get_dist=True,
-                    )
-
-                    # Move component fractions to the split facilities
+                    # Move component fractions to facility that receives material losses
                     self.move_component_to(
                         env,
                         loc=_split_facility_1[0],
@@ -256,15 +248,16 @@ class Component:
                         dist=_split_facility_1[1],
                         route_id=_split_facility_1[2],
                     )
+                    # Move the rest of the component to the next facility along pathway
                     self.move_component_to(
                         env,
-                        loc=_split_facility_2[0],
+                        loc=self.pathway[0][0],
                         amt=1 - apply_array_uncertainty(
                             self.split_dict[factype]["fraction"],
                             self.context.model_run
                             ),
-                        dist=_split_facility_2[1],
-                        route_id=_split_facility_2[2],
+                        dist=self.pathway[0][2],
+                        route_id=self.pathway[0][3],
                     )
                 elif factype in self.split_dict["pass"]:
                     pass
