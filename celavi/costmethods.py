@@ -622,10 +622,7 @@ class CostMethods:
                 _learn_dict['learn rate'],
                 self.run
                 )
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['glass wool manufacturing']['fraction'],
-                self.run
-                )
+            _loss = 0.0
             _initial_cost = apply_array_uncertainty(
                path_dict['cost uncertainty']['glass wool manufacturing']['initial cost'],
                self.run
@@ -637,10 +634,7 @@ class CostMethods:
 
         elif path_dict['cost uncertainty']['glass wool manufacturing']['uncertainty'] == 'stochastic':
             if path_dict['year'] == self.start_year:
-                _loss = apply_stoch_uncertainty(
-                    path_dict['path_split']['glass wool manufacturing']['fraction'],
-                    seed=self.seed
-                    )
+                _loss = 0.0
                 _learn_rate = -1.0 * apply_stoch_uncertainty(
                     _learn_dict['learn rate'],
                     seed=self.seed
@@ -653,8 +647,6 @@ class CostMethods:
                     path_dict['cost uncertainty']['glass wool manufacturing']['revenue'],
                     seed=self.seed
                     )
-                if isinstance(path_dict['path_split']['glass wool manufacturing']['fraction'],dict):
-                    path_dict['path_split']['glass wool manufacturing']['fraction']['value'] = _loss
                 if isinstance(_learn_dict['learn rate'], dict):
                     _learn_dict['learn rate']['value'] = _learn_rate
                 if isinstance(path_dict['cost uncertainty']['glass wool manufacturing']['initial cost'],dict):
@@ -662,17 +654,14 @@ class CostMethods:
                 if isinstance(path_dict['cost uncertainty']['glass wool manufacturing']['revenue'], dict):
                     path_dict['cost uncertainty']['glass wool manufacturing']['revenue']['value'] = _revenue
             else:
-                _loss = path_dict['path_split']['glass wool manufacturing']['fraction']['value']
+                _loss = 0.0
                 _learn_rate = _learn_dict['learn rate']['value']
                 _initial_cost = path_dict['cost uncertainty']['glass wool manufacturing']['initial cost']['value']
                 _revenue = path_dict['cost uncertainty']['glass wool manufacturing']['revenue']['value']
         else:
             # No uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['glass wool manufacturing']['fraction'],
-                self.run
-                )
+            _loss = 0.0
             _initial_cost = path_dict['cost uncertainty']['glass wool manufacturing']['initial cost']
             _revenue = path_dict['cost uncertainty']['glass wool manufacturing']['revenue']
 
@@ -732,10 +721,7 @@ class CostMethods:
                 _learn_dict['learn rate'],
                 self.run
                 )
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['scm manufacturing']['fraction'],
-                self.run
-                )
+            _loss = 0.0
             _initial_cost = apply_array_uncertainty(
                path_dict['cost uncertainty']['scm manufacturing']['initial cost'],
                self.run
@@ -747,10 +733,7 @@ class CostMethods:
 
         elif path_dict['cost uncertainty']['scm manufacturing']['uncertainty'] == 'stochastic':
             if path_dict['year'] == self.start_year:
-                _loss = apply_stoch_uncertainty(
-                    path_dict['path_split']['scm manufacturing']['fraction'],
-                    seed=self.seed
-                    )
+                _loss = 0.0
                 _learn_rate = -1.0 * apply_stoch_uncertainty(
                     _learn_dict['learn rate'],
                     seed=self.seed
@@ -763,8 +746,6 @@ class CostMethods:
                     path_dict['cost uncertainty']['scm manufacturing']['revenue'],
                     seed=self.seed
                     )
-                if isinstance(path_dict['path_split']['scm manufacturing']['fraction'],dict):
-                    path_dict['path_split']['scm manufacturing']['fraction']['value'] = _loss
                 if isinstance(_learn_dict['learn rate'], dict):
                     _learn_dict['learn rate']['value'] = _learn_rate
                 if isinstance(path_dict['cost uncertainty']['scm manufacturing']['initial cost'],dict):
@@ -772,17 +753,14 @@ class CostMethods:
                 if isinstance(path_dict['cost uncertainty']['scm manufacturing']['revenue'], dict):
                     path_dict['cost uncertainty']['scm manufacturing']['revenue']['value'] = _revenue
             else:
-                _loss = path_dict['path_split']['scm manufacturing']['fraction']['value']
+                _loss = 0.0
                 _learn_rate = _learn_dict['learn rate']['value']
                 _initial_cost = path_dict['cost uncertainty']['scm manufacturing']['initial cost']['value']
                 _revenue = path_dict['cost uncertainty']['scm manufacturing']['revenue']['value']
         else:
             # No uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['scm manufacturing']['fraction'],
-                self.run
-                )
+            _loss = 0.0
             _initial_cost = path_dict['cost uncertainty']['scm manufacturing']['initial cost']
             _revenue = path_dict['cost uncertainty']['scm manufacturing']['revenue']
 

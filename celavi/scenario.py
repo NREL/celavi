@@ -289,54 +289,20 @@ class Scenario:
             self.netw = pickle.load(open(self.files["costgraph_pickle"], "rb"))
             print(f"CostGraph read in at {self.simtime(self.start)}", flush=True)
 
-        # Electricity spatial mix level. Defaults to 'state' when not provided.
-        electricity_grid_spatial_level = self.scen["scenario"].get(
-            "electricity_mix_level", "state"
-        )
-
-        if electricity_grid_spatial_level == "state":
-            reeds_importer = ReedsImporter(
-                reeds_imported_filename=self.files["state_reeds_grid_mix"],
-                reeds_output_filename=self.files["state_electricity_lci"],
-            )
-            reeds_importer.state_level_reeds_importer()
-            dynamic_lci_filename = self.files["state_electricity_lci"]
-        else:
-            reeds_importer = ReedsImporter(
-                reeds_imported_filename=self.files["national_reeds_grid_mix"],
-                reeds_output_filename=self.files["national_electricity_lci"],
-            )
-            reeds_importer.national_level_reeds_importer()
-            dynamic_lci_filename = self.files["national_electricity_lci"]
-
         # Prepare LCIA code
         #verbose = 0 means no print statements. 
         #verbose = 1 prints detailed LCA calculation steps
         if self.case["model_run"].get("warning_verbose") == 0:
             warnings.filterwarnings('ignore')
         self.lca = PylcaCelavi(
+            data_dir=self.args.data,
+            liaison_params=self.case['liaison'],
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
-            intermediate_demand_filename=self.files["intermediate_demand"],
-            dynamic_lci_filename=dynamic_lci_filename,
-            electricity_grid_spatial_level=electricity_grid_spatial_level,
-            static_lci_filename=self.files["static_lci"],
-            uslci_tech_filename=self.files["uslci_tech"],
-            uslci_emission_filename=self.files["uslci_emission"],
-            uslci_process_filename=self.files["uslci_process_adder"],
-            stock_filename=self.files["stock_filename"],
-            emissions_lci_filename=self.files["emissions_lci"],
-            traci_lci_filename=self.files["traci_lci"],
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
             verbose = self.case["model_run"].get("lcia_verbose"),
-            substitution_rate={
-                mat: apply_array_uncertainty(rate, self.run)
-                for mat, rate in self.scen["technology_components"]
-                .get("substitution_rates")
-                .items()
-            },
             run=self.run,
         )
 
