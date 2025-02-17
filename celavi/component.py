@@ -33,7 +33,7 @@ class Component:
         It sets the initial state, which is an empty string. This is
         because there is no state until the component begins life, when
         the process defined in method begin_life() is called by SimPy.
-        @TODO update docstring
+
         Parameters
         ----------
         context: Context
@@ -56,10 +56,6 @@ class Component:
             fixed float lifespans, or lifespans defined with a Weibull 
             probability distribution.
 
-        mass_tonnes: Dict[str, float]
-            Component composition by material, in tonnes. Keys are
-            material names. Values are material masses.
-
         manuf_facility: str
             The node name where the component begins life (typically but not
             necessarily a manufacturing facility type) used in initial pathway
@@ -69,6 +65,10 @@ class Component:
             The node name where the component spends its first useful lifetime
             before beginning the end-of-life process (typically but not necessarily
             a renewable energy power plant).
+        
+        mass_tonnes: Dict[str, float]
+            Component composition by material, in tonnes. Keys are
+            material names. Values are material masses.            
         """
 
         self.context = context
@@ -216,33 +216,33 @@ class Component:
         """
         while True:
             if self.pathway:
+                # Update the component's process queue (EOL pathway) to remove the current
+                # location etc.
                 location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
-                if factype in self.split_dict.keys():
+
+                # If the component is now at a facility type that incurs material losses,
+                if factype in [key for key in self.split_dict]:
                     # increment the facility inventory and transportation tracker
                     self.move_component_to(
                         env, loc=location, dist=distance, route_id=route_id
                     )
                     self.current_location = location
-
+                    
+                    # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
 
+                    # Decrement the current facility inventory
                     self.move_component_from(env, loc=location)
 
-                    # locate the two downstream facilities that are closest
-                    _split_facility_1 = self.context.cost_graph.find_downstream(
-                        facility_id=location.split("_")[1],
-                        connect_to=self.split_dict[factype]["facility_1"],
-                        get_dist=True,
+                    # Locate the closest facility that receives material losses
+                    _split_facility_1 = self.context.cost_graph.find_nearest_factype(
+                        source_node = location,
+                        target_factype = self.split_dict[factype]["facility_1"],
+                        crit = 'dist',
                     )
 
-                    _split_facility_2 = self.context.cost_graph.find_downstream(
-                        node_name=location,
-                        connect_to=self.split_dict[factype]["facility_2"],
-                        get_dist=True,
-                    )
-
-                    # Move component fractions to the split facilities
+                    # Move component fractions to [landfill] facility that receives material losses
                     self.move_component_to(
                         env,
                         loc=_split_facility_1[0],
@@ -253,19 +253,26 @@ class Component:
                         dist=_split_facility_1[1],
                         route_id=_split_facility_1[2],
                     )
+
+                    # Move the rest of the component to the next facility along pathway
                     self.move_component_to(
                         env,
-                        loc=_split_facility_2[0],
+                        loc=self.pathway[0][0],
                         amt=1 - apply_array_uncertainty(
                             self.split_dict[factype]["fraction"],
                             self.context.model_run
                             ),
-                        dist=_split_facility_2[1],
-                        route_id=_split_facility_2[2],
+                        dist=self.pathway[0][2],
+                        route_id=self.pathway[0][3],
                     )
+                # If the component is currently at a facility type noted "pass" (typically
+                # end-of-supply-chain facilities), do nothing b/c the component is staying
+                # here (no next step)
                 elif factype in self.split_dict["pass"]:
                     pass
-
+                
+                # If the component is at a facility WITHOUT material losses but WITH a next
+                # step, then move the entire component along the pathway
                 else:
                     self.move_component_to(
                         env, loc=location, dist=distance, route_id=route_id
@@ -273,6 +280,7 @@ class Component:
 
                     self.current_location = location
 
+                    # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
 
                     self.move_component_from(env, loc=location)
