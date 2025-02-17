@@ -305,13 +305,13 @@ class CostGraph:
             # criterion and append to the pathway_crit_history
             _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
             _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            _bol_crit = nx.shortest_path_length(
-                self.supply_chain,
-                source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
-                target=source_node,
-                weight=crit,
-                method="bellman-ford",
-            )
+            #_bol_crit = nx.shortest_path_length(
+            #    self.supply_chain,
+            #    source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
+            #    target=source_node,
+            #    weight=crit,
+            #    method="bellman-ford",
+            #)
 
             for i in self.sc_end:
                 _dest = [key for key, value in subdict.items() if i in key]
@@ -328,7 +328,7 @@ class CostGraph:
                             "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
                             "eol_pathway_criterion": _crit,
-                            "bol_pathway_criterion": _bol_crit,
+                            #"bol_pathway_criterion": _bol_crit,
                         }
                     )
 
@@ -411,13 +411,13 @@ class CostGraph:
             # criterion and append to the pathway_crit_history
             _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
             _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            _bol_crit = nx.shortest_path_length(
-                self.supply_chain,
-                source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
-                target=source_node,
-                weight=crit,
-                method="bellman-ford",
-            )
+            #_bol_crit = nx.shortest_path_length(
+            #    self.supply_chain,
+            #    source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
+            #    target=source_node,
+            #    weight=crit,
+            #    method="bellman-ford",
+            #)
 
             for i in self.sc_end:
                 _dest = [key for key, value in subdict.items() if i in key]
@@ -434,7 +434,7 @@ class CostGraph:
                             "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
                             "eol_pathway_criterion": _crit,
-                            "bol_pathway_criterion": _bol_crit,
+                            #"bol_pathway_criterion": _bol_crit,
                         }
                     )
 
@@ -1175,7 +1175,7 @@ class CostGraph:
             _out = pd.DataFrame(
                 self.pathway_crit_history
                 ).explode(
-                    column=['destination_facility_id','eol_pathway_criterion']
+                    ['destination_facility_id','eol_pathway_criterion']
                     ).drop_duplicates(
                         ignore_index=True
                         )
