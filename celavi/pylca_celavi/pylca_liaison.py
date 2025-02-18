@@ -96,210 +96,241 @@ def liaison_lci(
     # Not sure why I changed state to a list and then loop through the list. Can be changed to directly storing the variable. 
     state = "US-"+state
     state_from_celavi = [state]
-    
-    # Defining a list of processes for which LCA needs to be done. 
-    # This is not required and will be deleted after integration with the glass recycling model of CELAVI
-    processes_list = ["treatment of waste glass from unsorted public collection, sorting","treatment of waste glass sheet, sorting plant","glass wool mat production","cement production, Portland","treatment of waste glass, unsanitary landfill, wet infiltration class (500mm)","flat glass production, uncoated"] 
-    random_number = random.randint(0,5)
-    process_in_ecoinvent_for_lca_from_celavi = processes_list[random_number]
-    unit_under_study = "kilogram"
 
-    #These data directories are relevant to LiAISON. 
-    #inventory_to_be_built_from_celavi = pd.read_csv('/kfs2/shared-projects/liaison/liaison_reeds/data/inputs/example.csv')
-    data_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data/generated/"
-    output_dir = "/kfs2/projects/celavicf/celavi-master/"
+    liaison_process_bridge_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data/inputs/"
+    liaison_process_bridge = pd.read_csv(liaison_process_bridge_dir+'liaison_process_bridge.csv')
+    selected_process = liaison_process_bridge[liaison_process_bridge['Activities'] == stage]
+    selected_process = selected_process[['Activities','Ecoinvent','Unit']].dropna()
+    if len(selected_process) == 1:
+        #Check passed
+        selected_process = selected_process.reset_index()
+        process_in_ecoinvent_for_lca_from_celavi = selected_process.loc[0,'Ecoinvent']
+        unit_under_study = selected_process.loc[0,'Unit']
 
-    #These are two ways in which LCA can be performed. 
-    #1. One where the activity is present in Ecoinvent. We need to extract it, edit it and then do LCA.
-    #2. The Activity does not exist in Ecoinvent at all. This has not been modeled yet as this will need csv files. 
-    # For these activities we need to create the csv files and if these activities are not found in Ecoinvent, we should read the csv files. 
-    # Right now, the dataframe being read is empty. 
-    inventory_to_be_built_from_celavi = pd.DataFrame(columns=['process', 'flow', 'value', 'unit', 'input', 'year', 'comments', 'type',
-           'process_location', 'supplying_location'])
-    inventory_to_be_built_from_celavi = "additional_inventories"+".csv"
-    
-    # These project names match to the project names of HIPSTER and need to be added to the yaml file
-    updated_project_name='Mid_Case'+str(year_from_celavi)
-    updated_database='premise_base'
-    lca_project='Mid_Case_celavi'+str(year_from_celavi)
+        #These data directories are relevant to LiAISON. 
+        #inventory_to_be_built_from_celavi = pd.read_csv('/kfs2/shared-projects/liaison/liaison_reeds/data/inputs/example.csv')
+        data_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data/generated/"
+        output_dir = "/kfs2/projects/celavicf/celavi-master/"
 
-    def correct_natural_land_transformation(bw):
+        #These are two ways in which LCA can be performed. 
+        #1. One where the activity is present in Ecoinvent. We need to extract it, edit it and then do LCA.
+        #2. The Activity does not exist in Ecoinvent at all. This has not been modeled yet as this will need csv files. 
+        # For these activities we need to create the csv files and if these activities are not found in Ecoinvent, we should read the csv files. 
+        # Right now, the dataframe being read is empty. 
+        inventory_to_be_built_from_celavi = pd.DataFrame(columns=['process', 'flow', 'value', 'unit', 'input', 'year', 'comments', 'type',
+               'process_location', 'supplying_location'])
+        inventory_to_be_built_from_celavi = "additional_inventories"+".csv"
+        
+        # These project names match to the project names of HIPSTER and need to be added to the yaml file
+        updated_project_name='Mid_Case'+str(year_from_celavi)
+        updated_database='premise_base'
+        lca_project='Mid_Case_celavi'+str(year_from_celavi)
+
+    def correct_natural_land_transformation(bw) -> None:
         """
-        Correction of natural land transformation emission characterization factors
-        Parameters
-        ==========
-        bw: module package
+        Corrects the namation method in the Brightway2 database.
+        Removes flows not related to specific land types in a whitelist.
 
-
+        Parameters:
+        -----------
+        bw : module
+            Brightway2 module loaded as a shortcut name.
         """
-        lt = [m for m in bw.methods if "natural land transformation" in m[1]]
-     
-        white_list = [
-            "forest",
-            "gassland, natural",
-            "sea",
-            "ocean",
-            "inland waterbody",
-            "lake, natural",
-            "river, natural",
-            "seabed, natural",
-            "shrub land",
-            "snow",
-            "unspecified",
-            "wetland",
-            "bare area",
-        ]
-         
+        lt_methods = [m for m in bw.methods if "natural land transformation" in m[1]]
+        white_list = ["forest", "grassland, natural", "sea", "ocean", "inland waterbody", "lake, natural",
+                      "river, natural", "seabed, natural", "shrub land", "snow", "unspecified", "wetland", "bare area"]
+        # l_flows = [cf for lt_method in lt_methods for cf in bw.Method(lt_method).load() if any(n in bw.get_activity(cf[0])["name"] for n in white_list)]
         l_flows = []
-        for l in lt:
-            m = bw.Method(l)
-            cfs = m.load()
-            cfs = [cf for cf in cfs if any(n in bw.get_activity(cf[0])["name"] for n in white_list)]
-            m.write(cfs)
-
-
-    def correct_bigcc_copper_use(bw,db):
-        """
-        Correction of copper use by Biomass Gasification CC plants
-        """
-        list_dbs = [
-        db
-        ]
-
-        list_acts = [
-        "electricity production, at BIGCC power plant, no CCS",
-        "electricity production, at BIGCC power plant, pre, pipeline 200km, storage 1000m",
-        "electricity production, at BIGCC power plant, pre, pipeline 400km, storage 3000m",
-        ]
-
-        for db in list_dbs:
-            for ds in bw.Database(db):
-                if ds["name"] in list_acts:
-                        for exc in ds.exchanges():
-                            if exc["name"] == "Construction, BIGCC power plant 450MW":
-                                #print("found exchange to correct")
-                                exc["amount"] = 1.01e-11
-                                exc.save()
-    
-    def reset_project(updated_project_name,number,project,updated_database,bw):
-        
-        """
-        This function copies the project directory of a certain year and scenario, for example
-        ecoinvent RCP 19 2030 and creates a copy of the project using a non repeatable name
-        using 
-
-
-        Parameters
-        ----------
-        updated_project_name: str
-            new project name
-        
-        number : str
-            random number generated by uuid to create no duplicate databases
-        
-        project : str 
-            generic project name
+        l_flow_dic = {}
+        # Iterate through each impact assessment method
+        for lt_method in lt_methods:
+            method = bw.Method(lt_method)  # Load the method
+            cf_data = method.load()  # Retrieve the characterization factors
             
-        updated_database : module
-            new database to be used within the new project for LCA
-   
-        Returns
-        -------
-        project name : str
-            Name of the project
-        """
+            # Iterate through each characterization factor
+            for cf in cf_data:
+                activity = bw.get_activity(cf[0])  # Get the activity associated with the CF
+                activity_code = activity['code']
+                activity_name = activity["name"]  # Extract the activity name
+                # print(cf,activity_name,2)
+                
+                
+                # Check if any of the names in white_list are in the activity name
+                if any(n in activity_name for n in white_list):
+                    # l_flows.append(cf)  # Append the matching characterization factor
+                    l_flow_dic[activity_code] = cf
+        
+        l_flows = []
+        #adding the l_flows to a list in a unique manner
+        for l_flow_key in l_flow_dic.keys():
+            l_flows.append(l_flow_dic[l_flow_key])
+        for lt_method in lt_methods:
+            bw.Method(lt_method).write(l_flows)
 
-        project_name = project+"_"+number
-        try:
-          print('Trying to delete project',project_name)
-          bw.projects.delete_project(project_name,delete_dir = True)
-          print('Project deleted',flush=True)
-        except:
-          print('Project does not exist',flush=True)
-          pass
-        bw.projects.set_current(updated_project_name)
-        print("Entered project for copying databases" + updated_project_name,flush = True)
-        print("Databases in this project are",flush = True)
-        print(bw.databases,flush = True)
-        try:
-            bw.projects.copy_project(project_name,switch = False)
-            print('Project copied successfully',flush=True)
-        except:
-            bw.projects.purge_deleted_directories()
-            bw.projects.copy_project(project_name,switch = False)
-            print('Project copied successfully after directory deleted',flush=True)    
 
-        bw.projects.set_current(project_name)
-        print("Current new project " + project_name,flush = True)
-        print("Databases in this project are",flush = True)    
-        print(project_name,flush = True)
-        print(bw.databases,flush = True)
-        print('Correcting Natural Land Transformation Recipe method', flush = True)
-        correct_natural_land_transformation(bw)
-        print('Correcting BIG CC copper use',flush = True)
-        correct_bigcc_copper_use(bw,updated_database)
-        return project_name
+        def correct_bigcc_copper_use(bw,db):
+            """
+            Correction of copper use by Biomass Gasification CC plants
+            """
+            list_dbs = [
+            db
+            ]
+
+            list_acts = [
+            "electricity production, at BIGCC power plant, no CCS",
+            "electricity production, at BIGCC power plant, pre, pipeline 200km, storage 1000m",
+            "electricity production, at BIGCC power plant, pre, pipeline 400km, storage 3000m",
+            ]
+
+            for db in list_dbs:
+                for ds in bw.Database(db):
+                    if ds["name"] in list_acts:
+                            for exc in ds.exchanges():
+                                if exc["name"] == "Construction, BIGCC power plant 450MW":
+                                    #print("found exchange to correct")
+                                    exc["amount"] = 1.01e-11
+                                    exc.save()
+        
+        def reset_project(updated_project_name,number,project,updated_database,bw):
+            
+            """
+            This function copies the project directory of a certain year and scenario, for example
+            ecoinvent RCP 19 2030 and creates a copy of the project using a non repeatable name
+            using 
+
+
+            Parameters
+            ----------
+            updated_project_name: str
+                new project name
+            
+            number : str
+                random number generated by uuid to create no duplicate databases
+            
+            project : str 
+                generic project name
+                
+            updated_database : module
+                new database to be used within the new project for LCA
+       
+            Returns
+            -------
+            project name : str
+                Name of the project
+            """
+
+            project_name = project+"_"+number
+            try:
+              print('Trying to delete project',project_name)
+              bw.projects.delete_project(project_name,delete_dir = True)
+              print('Project deleted',flush=True)
+            except:
+              print('Project does not exist',flush=True)
+              pass
+            bw.projects.set_current(updated_project_name)
+            print("Entered project for copying databases" + updated_project_name,flush = True)
+            print("Databases in this project are",flush = True)
+            print(bw.databases,flush = True)
+            try:
+                bw.projects.copy_project(project_name,switch = False)
+                print('Project copied successfully',flush=True)
+            except:
+                bw.projects.purge_deleted_directories()
+                bw.projects.copy_project(project_name,switch = False)
+                print('Project copied successfully after directory deleted',flush=True)    
+
+            bw.projects.set_current(project_name)
+            print("Current new project " + project_name,flush = True)
+            print("Databases in this project are",flush = True)    
+            print(project_name,flush = True)
+            print(bw.databases,flush = True)
+            print('Correcting Natural Land Transformation Recipe method', flush = True)
+            correct_natural_land_transformation(bw)
+            print('Correcting BIG CC copper use',flush = True)
+            correct_bigcc_copper_use(bw,updated_database)
+            return project_name
+        
+        number = str(secrets.token_hex(8))
+        project_name = reset_project(updated_project_name,number,lca_project,updated_database,bw)
+
+        # Sanity Check statements
+        print(process_in_ecoinvent_for_lca_from_celavi,'to do lca for',flush=True)
+        print(stage,material)
+
+        #todo
+        # Not sure why it was decided to have states as a list. Can be changed and the loop may be deleted
+        for st in state_from_celavi:   
+
+            res_df = main_run(lca_project=lca_project,
+                     updated_project_name=updated_project_name,
+                     year_of_study=year_from_celavi,
+                     results_filename='Mid_Case'+str(year_from_celavi)+st,
+                     mc_foreground_flag=False,
+                     lca_flag=True,
+                     region_sensitivity_flag=False,
+                     edit_ecoinvent_user_controlled = True,
+                     region=st,
+                     data_dir=data_dir,
+                     primary_process=process_in_ecoinvent_for_lca_from_celavi,
+                     process_under_study=process_in_ecoinvent_for_lca_from_celavi, 
+                     location_under_study=st,
+                     unit_under_study=unit_under_study,
+                     updated_database=updated_database, 
+                     mc_runs=0,
+                     functional_unit=value_from_celavi,
+                     inventory_filename = inventory_to_be_built_from_celavi,
+                     output_dir= output_dir,
+                     bw=bw)
+        try:
+           #Projects are deleted to save disk space
+           bw.projects.delete_project(bw.projects.current, delete_dir=True) 
+           print('Deleted succesfully')
+           bw.projects.purge_deleted_directories()
+        except:
+           print('There was an issue with deletion')  
+           bw.projects.purge_deleted_directories()
+
+        #Sanity Check if LCA calculations failed
+        if res_df.empty:
+            print('LCA calculations failed')
+            sys.exit(0)
+
+        
+        res_df['year']  = yr
+        res_df['facility_id'] = fac_id
+        res_df['stage']   = stage
+        res_df['material']  = material 
+        res_df['route_id']   = route_id
+        res_df['state'] = state
+
+
+        print('Performed lca for ',stage,' ',material,' ', state)
+        print(str(time.time()-tim0),' seconds for one lca calculation of ', str(yr), stage, material) 
+        print("")
+        print("")
+
+        
+
+    elif len(selected_process) == 0:
+        print('Missing process. Skipping LCA calculations', stage)
+
+        res_df = pd.DataFrame()
+
+    else:
+        print(selected_process)
+        print("!!!!Issue - Bridge file")
     
-    number = str(secrets.token_hex(8))
-    project_name = reset_project(updated_project_name,number,lca_project,updated_database,bw)
-
-    # Sanity Check statements
-    print(process_in_ecoinvent_for_lca_from_celavi,'to do lca for',flush=True)
-    print(stage,material)
-
-    #todo
-    # Not sure why it was decided to have states as a list. Can be changed and the loop may be deleted
-    stage = process_in_ecoinvent_for_lca_from_celavi
-    for st in state_from_celavi:   
-
-        res_df = main_run(lca_project=lca_project,
-                 updated_project_name=updated_project_name,
-                 year_of_study=year_from_celavi,
-                 results_filename='Mid_Case'+str(year_from_celavi)+st,
-                 mc_foreground_flag=False,
-                 lca_flag=True,
-                 region_sensitivity_flag=False,
-                 edit_ecoinvent_user_controlled = True,
-                 region=st,
-                 data_dir=data_dir,
-                 primary_process=process_in_ecoinvent_for_lca_from_celavi,
-                 process_under_study=process_in_ecoinvent_for_lca_from_celavi, 
-                 location_under_study=st,
-                 unit_under_study=unit_under_study,
-                 updated_database=updated_database, 
-                 mc_runs=0,
-                 functional_unit=value_from_celavi,
-                 inventory_filename = inventory_to_be_built_from_celavi,
-                 output_dir= output_dir,
-                 bw=bw)
-    try:
-       #Projects are deleted to save disk space
-       bw.projects.delete_project(bw.projects.current, delete_dir=True) 
-       print('Deleted succesfully')
-       bw.projects.purge_deleted_directories()
-    except:
-       print('There was an issue with deletion')  
-       bw.projects.purge_deleted_directories()
-
-    #Sanity Check if LCA calculations failed
-    if res_df.empty:
-        print('LCA calculations failed')
-        sys.exit(0)
-
-
-    res_df['year']  = yr
-    res_df['facility_id'] = fac_id
-    res_df['stage']   = stage
-    res_df['material']  = material 
-    res_df['route_id']   = route_id
-    res_df['state'] = state
-
-    print('Performed lca for ',stage,' ',material,' ', state)
-    print(str(time.time()-tim0),' seconds for one lca calculation of ', str(yr), stage, material) 
-    print("")
-    print("")
 
     return res_df,value_from_celavi
+    # Defining a list of processes for which LCA needs to be done. 
+    # This is not required and will be deleted after integration with the glass recycling model of CELAVI
+    # processes_list = ["glass wool mat production","glass wool mat production, without cullet"] 
+    # random_number = random.randint(0,2)
+    # process_in_ecoinvent_for_lca_from_celavi = processes_list[random_number]
+    
+
+
+    
 
 
 

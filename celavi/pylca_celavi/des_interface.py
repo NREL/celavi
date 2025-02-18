@@ -15,8 +15,6 @@ print('Imported',flush= True)
 class PylcaCelavi:
     def __init__(
         self,
-        data_dir,
-        liaison_params,
         lcia_des_filename,
         shortcutlca_filename,
         use_shortcut_lca_calculations,
@@ -31,10 +29,6 @@ class PylcaCelavi:
         lcia_des_filename: str
             Path to file that stores calculated impacts for passing back to the
             discrete event simulation.
-        data_dir: str
-            Path to outer directory of data repository.
-        liaison_params: Dict
-            Dictionary of liaison-specific parameters
         shortcutlca_filename: str
             Path to file where previously calculated impacts are stored. This file
             can be used instead of re-calculating impacts from the inventory.
@@ -48,15 +42,6 @@ class PylcaCelavi:
             Model run. Defaults to zero.
         """
         # filepaths for files used in the pylca calculations
-        self.generated_dir = os.path.join(data_dir, 'generated','liaison')
-        self.inputs_dir = os.path.join(data_dir, 'inputs','liaison')
-        # create liaison-specific input directories if they don't exist
-        for _dir in [self.generated_dir, self.inputs_dir]:
-            if not os.path.isdir(_dir):
-                os.makedirs(
-                    _dir
-                )
-        self.liaison_params = liaison_params
         self.lcia_des_filename = lcia_des_filename
         self.shortcutlca_filename = shortcutlca_filename
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
@@ -245,21 +230,22 @@ class PylcaCelavi:
                                 bw
                             )
 
-                            lca_db = res
-                            lca_db['year'] = lca_db['year'].astype(int)
-                            lca_db['value'] = lca_db['value']/quantity
-                            lca_db = lca_db.drop_duplicates()
-                            lca_db.to_csv(
-                                self.shortcutlca_filename,
-                                mode="a",
-                                index=False,
-                                header=False,
-                            )
-                            res.to_csv('results_checked_to_be_deleted.csv',mode='a', index=False)
-                            res_calculated = res
+                            if not res.empty:
 
+                                lca_db = res
+                                lca_db['year'] = lca_db['year'].astype(int)
+                                lca_db['value'] = lca_db['value']/quantity
+                                lca_db = lca_db.drop_duplicates()
+                                lca_db.to_csv(
+                                    self.shortcutlca_filename,
+                                    mode="a",
+                                    index=False,
+                                    header=False,
+                                )
+                                res.to_csv('results_checked_to_be_deleted.csv',mode='a', index=False)
+                                res_calculated = res
 
-                            if res.empty:
+                            elif res.empty:
                                 if verbose > 0:
                                     print(
                                         f"Empty dataframe returned from pylcia foreground for {year} {stage} {material}"
@@ -279,12 +265,15 @@ class PylcaCelavi:
     
                 res_df = pd.concat([res_df,result_shortcut,res_calculated])
         
-        res_df["run"] = self.run
+        if not res_df.empty:
 
-        res_df['impacts'] = res_df['lcia']
-        res_df['impact'] = res_df['value']
-        res_df2 = res_df[['year','facility_id','material','route_id','state','stage','impacts','impact','run']]
-        res_df2.to_csv(self.lcia_des_filename, mode='a', header=True, index=False)
+            res_df["run"] = self.run
+            res_df['impacts'] = res_df['lcia']
+            res_df['impact'] = res_df['value']
+            res_df2 = res_df[['year','facility_id','material','route_id','state','stage','impacts','impact','run']]
+            res_df2.to_csv(self.lcia_des_filename, mode='a', header=True, index=False)
 
+        else:
+            res_df2 = pd.DataFrame()
         # This is the result that needs to be analyzed every timestep.
         return res_df2
