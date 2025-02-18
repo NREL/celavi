@@ -126,7 +126,8 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
     example['code'] = flow_code
 
     #Sanity check to write the dataframe. Can be deleted later
-    example.to_csv(data_dir+process_selected_as_foreground['name']+str(year_of_study)+location_under_study+'.csv',index=False)
+    name_of_process = process_selected_as_foreground['name'].replace("/","per")
+    example.to_csv(data_dir+name_of_process+str(year_of_study)+location_under_study+'.csv',index=False)
     run_filename = example
 
 

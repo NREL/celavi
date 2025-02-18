@@ -101,6 +101,7 @@ def liaison_lci(
     liaison_process_bridge = pd.read_csv(liaison_process_bridge_dir+'liaison_process_bridge.csv')
     selected_process = liaison_process_bridge[liaison_process_bridge['Activities'] == stage]
     selected_process = selected_process[['Activities','Ecoinvent','Unit']].dropna()
+    
     if len(selected_process) == 1:
         #Check passed
         selected_process = selected_process.reset_index()
@@ -126,130 +127,130 @@ def liaison_lci(
         updated_database='premise_base'
         lca_project='Mid_Case_celavi'+str(year_from_celavi)
 
-    def correct_natural_land_transformation(bw) -> None:
-        """
-        Corrects the namation method in the Brightway2 database.
-        Removes flows not related to specific land types in a whitelist.
+        def correct_natural_land_transformation(bw) -> None:
+            """
+            Corrects the namation method in the Brightway2 database.
+            Removes flows not related to specific land types in a whitelist.
 
-        Parameters:
-        -----------
-        bw : module
-            Brightway2 module loaded as a shortcut name.
-        """
-        lt_methods = [m for m in bw.methods if "natural land transformation" in m[1]]
-        white_list = ["forest", "grassland, natural", "sea", "ocean", "inland waterbody", "lake, natural",
-                      "river, natural", "seabed, natural", "shrub land", "snow", "unspecified", "wetland", "bare area"]
-        # l_flows = [cf for lt_method in lt_methods for cf in bw.Method(lt_method).load() if any(n in bw.get_activity(cf[0])["name"] for n in white_list)]
-        l_flows = []
-        l_flow_dic = {}
-        # Iterate through each impact assessment method
-        for lt_method in lt_methods:
-            method = bw.Method(lt_method)  # Load the method
-            cf_data = method.load()  # Retrieve the characterization factors
+            Parameters:
+            -----------
+            bw : module
+                Brightway2 module loaded as a shortcut name.
+            """
+            lt_methods = [m for m in bw.methods if "natural land transformation" in m[1]]
+            white_list = ["forest", "grassland, natural", "sea", "ocean", "inland waterbody", "lake, natural",
+                          "river, natural", "seabed, natural", "shrub land", "snow", "unspecified", "wetland", "bare area"]
+            # l_flows = [cf for lt_method in lt_methods for cf in bw.Method(lt_method).load() if any(n in bw.get_activity(cf[0])["name"] for n in white_list)]
+            l_flows = []
+            l_flow_dic = {}
+            # Iterate through each impact assessment method
+            for lt_method in lt_methods:
+                method = bw.Method(lt_method)  # Load the method
+                cf_data = method.load()  # Retrieve the characterization factors
+                
+                # Iterate through each characterization factor
+                for cf in cf_data:
+                    activity = bw.get_activity(cf[0])  # Get the activity associated with the CF
+                    activity_code = activity['code']
+                    activity_name = activity["name"]  # Extract the activity name
+                    # print(cf,activity_name,2)
+                    
+                    
+                    # Check if any of the names in white_list are in the activity name
+                    if any(n in activity_name for n in white_list):
+                        # l_flows.append(cf)  # Append the matching characterization factor
+                        l_flow_dic[activity_code] = cf
             
-            # Iterate through each characterization factor
-            for cf in cf_data:
-                activity = bw.get_activity(cf[0])  # Get the activity associated with the CF
-                activity_code = activity['code']
-                activity_name = activity["name"]  # Extract the activity name
-                # print(cf,activity_name,2)
-                
-                
-                # Check if any of the names in white_list are in the activity name
-                if any(n in activity_name for n in white_list):
-                    # l_flows.append(cf)  # Append the matching characterization factor
-                    l_flow_dic[activity_code] = cf
-        
-        l_flows = []
-        #adding the l_flows to a list in a unique manner
-        for l_flow_key in l_flow_dic.keys():
-            l_flows.append(l_flow_dic[l_flow_key])
-        for lt_method in lt_methods:
-            bw.Method(lt_method).write(l_flows)
+            l_flows = []
+            #adding the l_flows to a list in a unique manner
+            for l_flow_key in l_flow_dic.keys():
+                l_flows.append(l_flow_dic[l_flow_key])
+            for lt_method in lt_methods:
+                bw.Method(lt_method).write(l_flows)
 
 
         def correct_bigcc_copper_use(bw,db):
-            """
-            Correction of copper use by Biomass Gasification CC plants
-            """
-            list_dbs = [
-            db
-            ]
+                """
+                Correction of copper use by Biomass Gasification CC plants
+                """
+                list_dbs = [
+                db
+                ]
 
-            list_acts = [
-            "electricity production, at BIGCC power plant, no CCS",
-            "electricity production, at BIGCC power plant, pre, pipeline 200km, storage 1000m",
-            "electricity production, at BIGCC power plant, pre, pipeline 400km, storage 3000m",
-            ]
+                list_acts = [
+                "electricity production, at BIGCC power plant, no CCS",
+                "electricity production, at BIGCC power plant, pre, pipeline 200km, storage 1000m",
+                "electricity production, at BIGCC power plant, pre, pipeline 400km, storage 3000m",
+                ]
 
-            for db in list_dbs:
-                for ds in bw.Database(db):
-                    if ds["name"] in list_acts:
-                            for exc in ds.exchanges():
-                                if exc["name"] == "Construction, BIGCC power plant 450MW":
-                                    #print("found exchange to correct")
-                                    exc["amount"] = 1.01e-11
-                                    exc.save()
-        
+                for db in list_dbs:
+                    for ds in bw.Database(db):
+                        if ds["name"] in list_acts:
+                                for exc in ds.exchanges():
+                                    if exc["name"] == "Construction, BIGCC power plant 450MW":
+                                        #print("found exchange to correct")
+                                        exc["amount"] = 1.01e-11
+                                        exc.save()
+            
         def reset_project(updated_project_name,number,project,updated_database,bw):
-            
-            """
-            This function copies the project directory of a certain year and scenario, for example
-            ecoinvent RCP 19 2030 and creates a copy of the project using a non repeatable name
-            using 
-
-
-            Parameters
-            ----------
-            updated_project_name: str
-                new project name
-            
-            number : str
-                random number generated by uuid to create no duplicate databases
-            
-            project : str 
-                generic project name
                 
-            updated_database : module
-                new database to be used within the new project for LCA
-       
-            Returns
-            -------
-            project name : str
-                Name of the project
-            """
+                """
+                This function copies the project directory of a certain year and scenario, for example
+                ecoinvent RCP 19 2030 and creates a copy of the project using a non repeatable name
+                using 
 
-            project_name = project+"_"+number
-            try:
-              print('Trying to delete project',project_name)
-              bw.projects.delete_project(project_name,delete_dir = True)
-              print('Project deleted',flush=True)
-            except:
-              print('Project does not exist',flush=True)
-              pass
-            bw.projects.set_current(updated_project_name)
-            print("Entered project for copying databases" + updated_project_name,flush = True)
-            print("Databases in this project are",flush = True)
-            print(bw.databases,flush = True)
-            try:
-                bw.projects.copy_project(project_name,switch = False)
-                print('Project copied successfully',flush=True)
-            except:
-                bw.projects.purge_deleted_directories()
-                bw.projects.copy_project(project_name,switch = False)
-                print('Project copied successfully after directory deleted',flush=True)    
 
-            bw.projects.set_current(project_name)
-            print("Current new project " + project_name,flush = True)
-            print("Databases in this project are",flush = True)    
-            print(project_name,flush = True)
-            print(bw.databases,flush = True)
-            print('Correcting Natural Land Transformation Recipe method', flush = True)
-            correct_natural_land_transformation(bw)
-            print('Correcting BIG CC copper use',flush = True)
-            correct_bigcc_copper_use(bw,updated_database)
-            return project_name
-        
+                Parameters
+                ----------
+                updated_project_name: str
+                    new project name
+                
+                number : str
+                    random number generated by uuid to create no duplicate databases
+                
+                project : str 
+                    generic project name
+                    
+                updated_database : module
+                    new database to be used within the new project for LCA
+           
+                Returns
+                -------
+                project name : str
+                    Name of the project
+                """
+
+                project_name = project+"_"+number
+                try:
+                  print('Trying to delete project',project_name)
+                  bw.projects.delete_project(project_name,delete_dir = True)
+                  print('Project deleted',flush=True)
+                except:
+                  print('Project does not exist',flush=True)
+                  pass
+                bw.projects.set_current(updated_project_name)
+                print("Entered project for copying databases" + updated_project_name,flush = True)
+                print("Databases in this project are",flush = True)
+                print(bw.databases,flush = True)
+                try:
+                    bw.projects.copy_project(project_name,switch = False)
+                    print('Project copied successfully',flush=True)
+                except:
+                    bw.projects.purge_deleted_directories()
+                    bw.projects.copy_project(project_name,switch = False)
+                    print('Project copied successfully after directory deleted',flush=True)    
+
+                bw.projects.set_current(project_name)
+                print("Current new project " + project_name,flush = True)
+                print("Databases in this project are",flush = True)    
+                print(project_name,flush = True)
+                print(bw.databases,flush = True)
+                print('Correcting Natural Land Transformation Recipe method', flush = True)
+                correct_natural_land_transformation(bw)
+                print('Correcting BIG CC copper use',flush = True)
+                correct_bigcc_copper_use(bw,updated_database)
+                return project_name
+            
         number = str(secrets.token_hex(8))
         project_name = reset_project(updated_project_name,number,lca_project,updated_database,bw)
 
@@ -295,7 +296,6 @@ def liaison_lci(
             print('LCA calculations failed')
             sys.exit(0)
 
-        
         res_df['year']  = yr
         res_df['facility_id'] = fac_id
         res_df['stage']   = stage
@@ -309,19 +309,17 @@ def liaison_lci(
         print("")
         print("")
 
-        
-
     elif len(selected_process) == 0:
         print('Missing process. Skipping LCA calculations', stage)
-
         res_df = pd.DataFrame()
 
     else:
         print(selected_process)
         print("!!!!Issue - Bridge file")
     
-
+    res_df.to_csv('check_output.csv', mode = 'a')
     return res_df,value_from_celavi
+    
     # Defining a list of processes for which LCA needs to be done. 
     # This is not required and will be deleted after integration with the glass recycling model of CELAVI
     # processes_list = ["glass wool mat production","glass wool mat production, without cullet"] 

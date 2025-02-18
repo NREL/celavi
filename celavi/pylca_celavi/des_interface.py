@@ -15,6 +15,8 @@ print('Imported',flush= True)
 class PylcaCelavi:
     def __init__(
         self,
+        data_dir,
+        liaison_params,
         lcia_des_filename,
         shortcutlca_filename,
         use_shortcut_lca_calculations,
