@@ -24,7 +24,7 @@ def electricity_correction(exchange_ob):
     return name_of_flow
 
 
-def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,year_of_study,location_under_study,data_dir):
+def modify_electricity_grid_mix(process_selected_as_foreground,year_of_study,location_under_study,data_dir):
     """
     This function searches for activities and edits the ecoinvent activity as a foreground process in the chosen location
     It extracts every flow in the chosen foreground process, creates a dataframe from it and changes the location
@@ -132,3 +132,40 @@ def user_controlled_editing_ecoinvent_activity(process_selected_as_foreground,ye
 
 
     return run_filename
+
+
+def module_required_for_solar_glass(process_selected_as_foreground,year_of_study,functional_unit):
+    """
+    This function is used to convert kilograms of solar glass in module manufacturing to number of modules to square meter
+    This is because Ecoinvent works with module as square meter
+    Parameters:
+    ===========
+    process_selected_as_foreground: activity object brightway2
+        the process under study
+    year_of_study: str
+        year of study
+    functional_unit: float
+        amount to do LCA on
+
+    Returns:
+    =========
+    function_unit:float
+        Modified functional unit
+
+    """
+    glass_module_df = pd.read_csv("/kfs2/projects/celavicf/celavi-master/celavi-data/inputs/glasspermodule_pvice.csv")
+    if process_selected_as_foreground['name'] == "photovoltaic panel production, multi-Si wafer":
+        #Convert the function unit
+        chosen_year_df = glass_module_df[glass_module_df['year'] == int(year_of_study)].reset_index()
+        glass_metrictonne_per_module = chosen_year_df.loc[0,'glass_metrictonne_per_module']
+        glass_kilogram_per_module = glass_metrictonne_per_module * 1000
+        # functional unit is solar glass kilograms
+        module_number = functional_unit/glass_kilogram_per_module
+        squaremeter_of_modules = module_number * 1 #1 module = 1 square meter
+        print('Functional unit of process ',process_selected_as_foreground['name'],' changed from ',functional_unit,' solar glass kilograms to ',module_number,' square meter of modules',flush=True)
+        return module_number
+
+
+    else:
+        #return the original functional unit
+        return functional_unit

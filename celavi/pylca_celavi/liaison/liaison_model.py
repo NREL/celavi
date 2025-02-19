@@ -11,8 +11,7 @@ import time
 from celavi.pylca_celavi.liaison.montecarloforeground import mc_foreground
 from celavi.pylca_celavi.liaison.lci_calculator import liaison_calc,search_dictionary,search_index_reader,lcia_traci_run,lcia_recipe_run, lcia_premise_gwp_run
 from celavi.pylca_celavi.liaison.search_activity_ecoinvent import search_activity_in_ecoinvent
-from celavi.pylca_celavi.liaison.edit_activity_ecoinvent import user_controlled_editing_ecoinvent_activity
-
+from celavi.pylca_celavi.liaison.edit_activity_ecoinvent import modify_electricity_grid_mix,module_required_for_solar_glass
 
 
 def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_foreground_flag,lca_flag,region_sensitivity_flag,edit_ecoinvent_user_controlled,region,data_dir,primary_process,process_under_study,location_under_study,unit_under_study,updated_database,mc_runs,functional_unit,inventory_filename,output_dir,bw):
@@ -137,7 +136,13 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                 if edit_ecoinvent_user_controlled  == True:  
 
                     #inventory here has to be a dictionary. So if we read inventory from csv file we cannot edit it.             
-                    run_filename = user_controlled_editing_ecoinvent_activity(inventory,year_of_study,location_under_study,data_dir)
+                    
+                    #Editing the functional unit for solar module manufacturing
+                    functional_unit = module_required_for_solar_glass(inventory,year_of_study,functional_unit)
+                    
+                    #Editing electricity grid mix for all processes so that electricity is obtained from the state grid from ReEDS grid mix data
+                    run_filename = modify_electricity_grid_mix(inventory,year_of_study,location_under_study,data_dir)
+                    
                     print('Activity edited according to user prereferences and saved success',flush=True)  
                     #run_filename is a dataframe.
                     process_dictionary = liaison_calc(db,run_filename,bw)

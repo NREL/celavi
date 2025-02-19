@@ -114,7 +114,7 @@ def liaison_lci(
 
         # Validity check for unit
         if unit != celavi_unit:
-            logging.error("Units from DES did not match units from Ecoinvent")
+            logging.warning(f"Unit comparison warning: From celavi {unit} from Ecoinvent {unit_under_study}")
 
         #These data directories are relevant to LiAISON. 
         #inventory_to_be_built_from_celavi = pd.read_csv('/kfs2/shared-projects/liaison/liaison_reeds/data/inputs/example.csv')
