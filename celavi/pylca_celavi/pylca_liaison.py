@@ -4,6 +4,7 @@ import time
 from celavi.pylca_celavi.liaison.liaison_model import main_run
 import secrets
 import random
+import logging
 
 
 def liaison_lci(
@@ -12,6 +13,7 @@ def liaison_lci(
     fac_id,
     stage,
     material,
+    unit,
     route_id,
     state,
     verbose,
@@ -36,6 +38,8 @@ def liaison_lci(
         Supply chain stage.
     material: str
         Material being processed.
+    unit: str
+        Unit of material processed
     route_id: str
         Unique identifier for transportation route.
     state: str
@@ -94,7 +98,6 @@ def liaison_lci(
 
 
     # Not sure why I changed state to a list and then loop through the list. Can be changed to directly storing the variable. 
-    state = "US-"+state
     state_from_celavi = [state]
 
     liaison_process_bridge_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data/inputs/"
@@ -107,6 +110,10 @@ def liaison_lci(
         selected_process = selected_process.reset_index()
         process_in_ecoinvent_for_lca_from_celavi = selected_process.loc[0,'Ecoinvent']
         unit_under_study = selected_process.loc[0,'Unit']
+
+        # Validity check for unit
+        if unit != unit_under_study:
+            logging.error("Units from DES did not match units from Ecoinvent")
 
         #These data directories are relevant to LiAISON. 
         #inventory_to_be_built_from_celavi = pd.read_csv('/kfs2/shared-projects/liaison/liaison_reeds/data/inputs/example.csv')
@@ -317,7 +324,6 @@ def liaison_lci(
         print(selected_process)
         print("!!!!Issue - Bridge file")
     
-    res_df.to_csv('check_output.csv', mode = 'a')
     return res_df,value_from_celavi
     
     # Defining a list of processes for which LCA needs to be done. 

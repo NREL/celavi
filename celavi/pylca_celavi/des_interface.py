@@ -130,7 +130,6 @@ class PylcaCelavi:
         try:
             shortcutlca_df = pd.read_csv(self.shortcutlca_filename)
             shortcutlca_df.columns = ['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']
-
             df[['stage','year','material','state','facility_id','route_id']] = df[['stage','year','material','state','facility_id','route_id']].astype('str')
             shortcutlca_df[['stage','year','material','state','facility_id','route_id']] = shortcutlca_df[['stage','year','material','state','facility_id','route_id']].astype('str')
             del shortcutlca_df['route_id']
@@ -188,7 +187,8 @@ class PylcaCelavi:
         # The LCA needs to be done for every region separately. Thus separating the states in the dataframe.
         for st in states:
             df_s = df[df["state"] == st]
-
+            # Changing the state name from "XX to US-XX"
+            df_s['state'] = "US-"+df_s['state']
             # This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
             for index, row in df_s.iterrows():
                 #CHECK THIS PART
@@ -196,14 +196,17 @@ class PylcaCelavi:
                 stage = row["stage"]
                 material = row["material"]
                 facility_id = row["facility_id"]
-                route_id = row["route_id"]
+                route_id = str(row["route_id"]) 
                 state = row["state"]
+                unit = row["flow unit"]
                 new_df = df_s[df_s["index"] == index]
+
+
 
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
                     df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state)
-                    df_with_no_lca_entry['route_id'] = route_id #the lca performance improvement removes routes id. 
+                    df_with_no_lca_entry['route_id'] = str(route_id) #the lca performance improvement removes routes id. 
                 else:
                     df_with_no_lca_entry = new_df
                     result_shortcut = pd.DataFrame()
@@ -226,6 +229,7 @@ class PylcaCelavi:
                                 facility_id,
                                 stage,
                                 material,
+                                unit,
                                 route_id,
                                 state,
                                 self.verbose,
@@ -272,8 +276,8 @@ class PylcaCelavi:
             res_df["run"] = self.run
             res_df['impacts'] = res_df['lcia']
             res_df['impact'] = res_df['value']
-            res_df2 = res_df[['year','facility_id','material','route_id','state','stage','impacts','impact','run']]
-            res_df2.to_csv(self.lcia_des_filename, mode='a', header=True, index=False)
+            res_df2 = res_df[['year','facility_id','material','route_id','stage','state','impacts','impact','unit','run']]
+            res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
 
         else:
             res_df2 = pd.DataFrame()
