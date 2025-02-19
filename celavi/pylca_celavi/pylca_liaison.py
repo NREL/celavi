@@ -103,16 +103,17 @@ def liaison_lci(
     liaison_process_bridge_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data/inputs/"
     liaison_process_bridge = pd.read_csv(liaison_process_bridge_dir+'liaison_process_bridge.csv')
     selected_process = liaison_process_bridge[liaison_process_bridge['Activities'] == stage]
-    selected_process = selected_process[['Activities','Ecoinvent','Unit']].dropna()
+    selected_process = selected_process[['Activities','Ecoinvent','Unit','Celavi Unit']].dropna()
     
     if len(selected_process) == 1:
         #Check passed
         selected_process = selected_process.reset_index()
         process_in_ecoinvent_for_lca_from_celavi = selected_process.loc[0,'Ecoinvent']
         unit_under_study = selected_process.loc[0,'Unit']
+        celavi_unit = selected_process.loc[0,'Celavi Unit']
 
         # Validity check for unit
-        if unit != unit_under_study:
+        if unit != celavi_unit:
             logging.error("Units from DES did not match units from Ecoinvent")
 
         #These data directories are relevant to LiAISON. 

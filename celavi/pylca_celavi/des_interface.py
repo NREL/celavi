@@ -201,8 +201,6 @@ class PylcaCelavi:
                 unit = row["flow unit"]
                 new_df = df_s[df_s["index"] == index]
 
-
-
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
                     df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state)
