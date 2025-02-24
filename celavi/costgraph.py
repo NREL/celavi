@@ -125,6 +125,12 @@ class CostGraph:
 
         self.year = year
 
+        # Create a dictionary to store the cost adjustment factor by year
+        # Using this factor prevents negative path weights, which break most shortest path algorithms
+        # By storing the cost adjustment, we can post process costs back to their non-adjusted
+        # values in each year
+        self.cost_adjustment_factor = {}
+
         self.path_dict["component mass"] = component_initial_mass
         self.path_dict["year"] = self.year
         self.path_dict["vkmt"] = None
@@ -263,26 +269,32 @@ class CostGraph:
         [2] list of nodes defining the path between source and the closest node
         """
         if self.verbose > 1:
-            print("Finding shortest paths from", source)
+            print(f"Finding shortest paths from {source_node} to terminal nodes")
 
-        # Calculate the length of paths from fromnode to all other nodes
-        lengths = nx.single_source_bellman_ford_path_length(
-            self.supply_chain, source_node, weight=crit
-        )
+        # Pull out a list of all nodes in the supply chain that are terminal
+        # The linear supply chain terminates there, OR one loop of a circular pathway
+        # terminates there
+        targets = [tnode for tnode in search_nodes(self.supply_chain, {"in": [("step",), self.sc_begin]})]
 
-        short_paths = nx.single_source_bellman_ford_path(self.supply_chain, source_node)
-
-        # We are only interested in a particular type(s) of node
-        targets = list(
-            search_nodes(self.supply_chain, {"in": [("step",), self.sc_end]})
-        )
-
-        subdict = {k: v for k, v in lengths.items() if k in targets}
+        # Loop thru terminal nodes
+        # Use the loop rather than list comprehension b/c if a terminal node isn't reachable from the source
+        # node, the list comprehension will throw an error
+        short_paths = {}
+        lengths = {}
+        for tnode in targets:
+            try:
+                # Find the shortest path (list of nodes) to terminal node
+                short_paths[tnode] = nx.astar_path(self.supply_chain, source = source_node, target = tnode, weight = crit)
+                # Find the shortest path length to terminal node
+                lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)
+            except nx.NetworkXNoPath:
+                if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
+                pass
 
         # return the smallest of all lengths to get to typeofnode
-        if subdict:
+        if lengths:
             # dict of shortest paths to all targets
-            nearest = min(subdict, key=subdict.get)
+            nearest = min(lengths, key=lengths.get)
             timeout = nx.get_node_attributes(self.supply_chain, "timeout")
             timeout_list = [
                 value for key, value in timeout.items() if key in short_paths[nearest]
@@ -314,8 +326,8 @@ class CostGraph:
             #)
 
             for i in self.sc_end:
-                _dest = [key for key, value in subdict.items() if i in key]
-                _crit = [value for key, value in subdict.items() if i in key]
+                _dest = [key for key, value in lengths.items() if i in key]
+                _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
@@ -332,9 +344,10 @@ class CostGraph:
                         }
                     )
 
-            return nearest, subdict[nearest], _out
+            return nearest, lengths[nearest], _out
         else:
             # not found, no path from source to typeofnode
+            print(f'CostGraph.find_nearest: No path from {source_node} to any of {self.sc_begin} nodes')
             return None, None, None
 
 
@@ -371,24 +384,24 @@ class CostGraph:
         if self.verbose > 1:
             print(f"Finding path from {source_node} to nearest {target_factype}")
 
-        # Calculate the length of paths from fromnode to all other nodes
-        lengths = nx.single_source_bellman_ford_path_length(
-            self.supply_chain, source_node, weight=crit
-        )
-
-        short_paths = nx.single_source_bellman_ford_path(self.supply_chain, source_node)
-
         # We are only interested in a particular type(s) of node
-        targets = list(
-            search_nodes(self.supply_chain, {"in": [("step",), target_factype]})
-        )
+        targets = [tnode for tnode in search_nodes(self.supply_chain, {"in": [("step",), target_factype]})]
         
-        subdict = {k: v for k, v in lengths.items() if k in targets}
+        short_paths = {}
+        lengths = {}
+        for tnode in targets:
+            try:
+                # Find the shortest path (list of nodes) to target factype nodes
+                short_paths[tnode] = nx.astar_path(self.supply_chain, source = source_node, target = tnode, weight = crit)
+                # Find the shortest path length from source_node to target factype nodes
+                lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)
+            except nx.NetworkXNoPath:
+                if self.verbose > 1: print(f'CostGraph.find_nearest_factype: No path from {source_node} to {tnode}')
 
         # return the smallest of all lengths to get to typeofnode
-        if subdict:
+        if lengths:
             # dict of shortest paths to all targets
-            nearest = min(subdict, key=subdict.get)
+            nearest = min(lengths, key=lengths.get)
             timeout = nx.get_node_attributes(self.supply_chain, "timeout")
             timeout_list = [
                 value for key, value in timeout.items() if key in short_paths[nearest]
@@ -420,8 +433,8 @@ class CostGraph:
             #)
 
             for i in self.sc_end:
-                _dest = [key for key, value in subdict.items() if i in key]
-                _crit = [value for key, value in subdict.items() if i in key]
+                _dest = [key for key, value in lengths.items() if i in key]
+                _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
@@ -438,8 +451,9 @@ class CostGraph:
                         }
                     )
 
-            return nearest, subdict[nearest], _out
+            return nearest, lengths[nearest], _out
         else:
+            print(f'CostGraph.find_nearest_factype: No path from {source_node} to {target_factype} facility type')
             # not found, no path from source to typeofnode
             return None, None, None
 
@@ -836,7 +850,14 @@ class CostGraph:
                 )
             except TypeError:
                 print(f'CostGraph: A cost method assigned to {edge} is returning None', flush=True)
-                raise TypeError 
+                raise TypeError
+        
+
+        _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
+
+        for edge in self.supply_chain.edges():
+            self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
             print(
@@ -1158,6 +1179,12 @@ class CostGraph:
             self.supply_chain.edges[edge]["cost"] = sum(
                 [f(_edge_dict) for f in self.supply_chain.edges[edge]["cost_method"]]
             )
+        
+        _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
+
+        for edge in self.supply_chain.edges():
+            self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
         if self.verbose > 0:
             print(
