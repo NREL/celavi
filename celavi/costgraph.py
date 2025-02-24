@@ -125,6 +125,12 @@ class CostGraph:
 
         self.year = year
 
+        # Create a dictionary to store the cost adjustment factor by year
+        # Using this factor prevents negative path weights, which break most shortest path algorithms
+        # By storing the cost adjustment, we can post process costs back to their non-adjusted
+        # values in each year
+        self.cost_adjustment_factor = {}
+
         self.path_dict["component mass"] = component_initial_mass
         self.path_dict["year"] = self.year
         self.path_dict["vkmt"] = None
@@ -263,8 +269,8 @@ class CostGraph:
         [2] list of nodes defining the path between source and the closest node
         """
         if self.verbose > 1:
-            print("Finding all shortest paths from", source)
-        
+            print(f"Finding shortest paths from {source_node} to terminal nodes")
+
         # Pull out a list of all nodes in the supply chain that are terminal
         # The linear supply chain terminates there, OR one loop of a circular pathway
         # terminates there
@@ -341,6 +347,7 @@ class CostGraph:
             return nearest, lengths[nearest], _out
         else:
             # not found, no path from source to typeofnode
+            print(f'CostGraph.find_nearest: No path from {source_node} to any of {self.sc_begin} nodes')
             return None, None, None
 
 
@@ -376,7 +383,7 @@ class CostGraph:
         """
         if self.verbose > 1:
             print(f"Finding path from {source_node} to nearest {target_factype}")
-        
+
         # We are only interested in a particular type(s) of node
         targets = [tnode for tnode in search_nodes(self.supply_chain, {"in": [("step",), target_factype]})]
         
@@ -446,6 +453,7 @@ class CostGraph:
 
             return nearest, lengths[nearest], _out
         else:
+            print(f'CostGraph.find_nearest_factype: No path from {source_node} to {target_factype} facility type')
             # not found, no path from source to typeofnode
             return None, None, None
 
@@ -842,7 +850,14 @@ class CostGraph:
                 )
             except TypeError:
                 print(f'CostGraph: A cost method assigned to {edge} is returning None', flush=True)
-                raise TypeError 
+                raise TypeError
+        
+
+        _cost_adjust = abs(min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()]))
+        self.cost_adjustment_factor[self.year] = _cost_adjust
+
+        for edge in self.supply_chain.edges():
+            self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + _cost_adjust
 
         if self.verbose > 0:
             print(
@@ -1164,6 +1179,12 @@ class CostGraph:
             self.supply_chain.edges[edge]["cost"] = sum(
                 [f(_edge_dict) for f in self.supply_chain.edges[edge]["cost_method"]]
             )
+        
+        _cost_adjust = abs(min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()]))
+        self.cost_adjustment_factor[self.year] = _cost_adjust
+
+        for edge in self.supply_chain.edges():
+            self.supply_chain.edges[edge]['cost'] = _cost_adjust + self.supply_chain.edges[edge]['cost']
 
         if self.verbose > 0:
             print(
