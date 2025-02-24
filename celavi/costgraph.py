@@ -853,11 +853,11 @@ class CostGraph:
                 raise TypeError
         
 
-        _cost_adjust = abs(min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()]))
-        self.cost_adjustment_factor[self.year] = _cost_adjust
+        _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
 
         for edge in self.supply_chain.edges():
-            self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + _cost_adjust
+            self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
             print(
@@ -1180,11 +1180,11 @@ class CostGraph:
                 [f(_edge_dict) for f in self.supply_chain.edges[edge]["cost_method"]]
             )
         
-        _cost_adjust = abs(min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()]))
-        self.cost_adjustment_factor[self.year] = _cost_adjust
+        _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
 
         for edge in self.supply_chain.edges():
-            self.supply_chain.edges[edge]['cost'] = _cost_adjust + self.supply_chain.edges[edge]['cost']
+            self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
         if self.verbose > 0:
             print(
