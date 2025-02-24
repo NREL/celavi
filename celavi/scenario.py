@@ -466,6 +466,7 @@ class Scenario:
 
     def postprocess(self):
         """Post-process, visualize, and save results of one model run."""
+        pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv('cost-adjust-factors.csv')
 
         # Create a name for the scenario, based either on a key in the original
         # scneario YAML or, if the key is not found, the filename of the scenario.
