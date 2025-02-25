@@ -210,8 +210,8 @@ def module_required_for_solar_glass(process_selected_as_foreground,year_of_study
         # functional unit is solar glass kilograms
         module_number = functional_unit/glass_kilogram_per_module
         squaremeter_of_modules = module_number * 2 #1 module = 2 square meter
-        print('Functional unit of process ',process_selected_as_foreground['name'],' changed from ',functional_unit,' solar glass kilograms to ',module_number,' square meter of modules',flush=True)
-        return module_number
+        print('Functional unit of process ',process_selected_as_foreground['name'],' changed from ',functional_unit,' solar glass kilograms to ',squaremeter_of_modules,' square meter of modules',flush=True)
+        return squaremeter_of_modules
 
 
     else:
