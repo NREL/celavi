@@ -1,4 +1,5 @@
 import pandas as pd
+import networkx as nx
 
 from typing import Deque, Tuple, Dict
 from collections import deque
@@ -171,20 +172,19 @@ class Component:
         # Increment transportation to in use facilities
         count_transport = self.context.transportation_trackers[self.in_use_facility]
         for _, mass in self.mass_tonnes.items():
-            _edge_tuple = [
-                (u, v) 
-                for u, v in self.context.cost_graph.supply_chain.edges 
-                if (u.split('_')[1] == self.manuf_facility.split('_')[1]) 
-                and (v.split('_')[1] == self.in_use_facility.split('_')[1])
-                ][0]
+            dist = nx.astar_path_length(
+                self.context.cost_graph.supply_chain,
+                source = self.manuf_facility,
+                target = self.in_use_facility,
+                weight = 'dist'
+            )
+            
             count_transport.increment_inbound_tonne_km(
-                tonne_km=mass
-                * self.context.cost_graph.supply_chain.edges[
-                    _edge_tuple
-                ]["dist"],
-                route_id=self.context.cost_graph.supply_chain.edges[
-                    _edge_tuple
-                ]["route_id"],
+                # @NOTE dist > 0 logic here only kicks in for artificially small datasets with all 
+                # facilities colocated ie tiny-circfutures
+                tonne_km = mass * dist if dist > 0 else mass * 1.0,
+                # @NOTE route_id may become a list of route_ids or may be removed altogether(?)
+                route_id = None,
                 timestep=env.now,
             )
 
