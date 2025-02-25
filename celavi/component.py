@@ -1,4 +1,5 @@
 import pandas as pd
+import networkx as nx
 
 from typing import Deque, Tuple, Dict
 from collections import deque
@@ -171,24 +172,21 @@ class Component:
         # Increment transportation to in use facilities
         count_transport = self.context.transportation_trackers[self.in_use_facility]
         for _, mass in self.mass_tonnes.items():
-            try:
-                _edge_tuple = [
-                    (u, v) 
-                    for u, v in self.context.cost_graph.supply_chain.edges 
-                    if (u.split('_')[1] == self.manuf_facility.split('_')[1]) 
-                    and (v.split('_')[1] == self.in_use_facility.split('_')[1])
-                    ][0]
-                
-                count_transport.increment_inbound_tonne_km(
-                    # @TODO replace with sum of distance over all edges connecting in use
-                    # facility to manufacruring facility
-                    tonne_km = mass * self.context.cost_graph.supply_chain.edges[_edge_tuple]["dist"],
-                    # @NOTE route_id may become a list of route_ids or may be removed altogether(?)
-                    route_id=self.context.cost_graph.supply_chain.edges[_edge_tuple]["route_id"],
-                    timestep=env.now,
-                )
-            except IndexError:
-                pdb.set_trace()
+            dist = nx.astar_path_length(
+                self.context.cost_graph.supply_chain,
+                source = self.manuf_facility,
+                target = self.in_use_facility,
+                weight = 'dist'
+            )
+            
+            count_transport.increment_inbound_tonne_km(
+                # @NOTE dist > 0 logic here only kicks in for artificially small datasets with all 
+                # facilities colocated ie tiny-circfutures
+                tonne_km = mass * dist if dist > 0 else mass * 1.0,
+                # @NOTE route_id may become a list of route_ids or may be removed altogether(?)
+                route_id = None,
+                timestep=env.now,
+            )
 
         # Component stays in use for its lifetime
         yield env.timeout(self.initial_lifespan_timesteps)
