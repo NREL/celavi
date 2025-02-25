@@ -796,30 +796,230 @@ class CostMethods:
 
     def primary_material(self, path_dict):
         """
-        Transportataion
+        Cost method for calculating transportation costs (truck)
+        in USD/metric ton.
+
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Cost of transporting 1 metric ton of material by
+            one kilometer. Units: USD/metric ton.
         """
-        return 1.0
+        _vkmt = path_dict['vkmt']  # _vkmt is in km
+        _year = path_dict['year']
+
+        if _vkmt is None:
+            return 0.0
+        else:
+            if path_dict['cost uncertainty']['primary material']['uncertainty'] == 'array':
+                _m = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['primary material']['m'],
+                    self.run
+                    )
+                _b = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['primary material']['b'],
+                    self.run
+                    )
+            elif path_dict['cost uncertainty']['primary material']['uncertainty'] == 'stochastic':
+                if _year == self.start_year:
+                    _m = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['primary material']['m'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['primary material']['m'],dict):
+                        path_dict['cost uncertainty']['primary material']['m']['value'] = _m
+                    _b = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['primary material']['b'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['primary material']['b'],dict):
+                        path_dict['cost uncertainty']['primary material']['b']['value'] = _b
+                else:
+                    _m = path_dict['cost uncertainty']['primary material']['m']['value']
+                    _b = path_dict['cost uncertainty']['primary material']['b']['value']
+            else:
+                # with no uncertainty
+                _m = path_dict['cost uncertainty']['primary material']['m']
+                _b = path_dict['cost uncertainty']['primary material']['b']
+        
+            return (_m * (_year - 2000.0) + _b) * _vkmt
 
 
     def technology(self, path_dict):
         """
-        Transportation
+        Cost method for calculating transportation costs (truck)
+        in USD/metric ton.
+
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Cost of transporting 1 metric ton of material by
+            one kilometer. Units: USD/metric ton.
         """
-        return 1.0
+        _vkmt = path_dict['vkmt']  # _vkmt is in km
+        _year = path_dict['year']
+
+        if _vkmt is None:
+            return 0.0
+        else:
+            if path_dict['cost uncertainty']['technology']['uncertainty'] == 'array':
+                _m = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['technology']['m'],
+                    self.run
+                    )
+                _b = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['technology']['b'],
+                    self.run
+                    )
+            elif path_dict['cost uncertainty']['technology']['uncertainty'] == 'stochastic':
+                if _year == self.start_year:
+                    _m = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['technology']['m'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['technology']['m'],dict):
+                        path_dict['cost uncertainty']['technology']['m']['value'] = _m
+                    _b = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['technology']['b'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['technology']['b'],dict):
+                        path_dict['cost uncertainty']['technology']['b']['value'] = _b
+                else:
+                    _m = path_dict['cost uncertainty']['technology']['m']['value']
+                    _b = path_dict['cost uncertainty']['technology']['b']['value']
+            else:
+                # with no uncertainty
+                _m = path_dict['cost uncertainty']['technology']['m']
+                _b = path_dict['cost uncertainty']['technology']['b']
+        
+            return (_m * (_year - 2000.0) + _b) * _vkmt
 
 
     def eol_material(self, path_dict):
         """
-        Transportation
+        Cost method for calculating transportation costs (truck)
+        in USD/metric ton.
+
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Cost of transporting 1 metric ton of material by
+            one kilometer. Units: USD/metric ton.
         """
-        return 1.0
+        _vkmt = path_dict['vkmt']  # _vkmt is in km
+        _year = path_dict['year']
+
+        if _vkmt is None:
+            return 0.0
+        else:
+            if path_dict['cost uncertainty']['eol material']['uncertainty'] == 'array':
+                _m = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['eol material']['m'],
+                    self.run
+                    )
+                _b = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['eol material']['b'],
+                    self.run
+                    )
+            elif path_dict['cost uncertainty']['eol material']['uncertainty'] == 'stochastic':
+                if _year == self.start_year:
+                    _m = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['eol material']['m'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['eol material']['m'],dict):
+                        path_dict['cost uncertainty']['eol material']['m']['value'] = _m
+                    _b = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['eol material']['b'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['eol material']['b'],dict):
+                        path_dict['cost uncertainty']['eol material']['b']['value'] = _b
+                else:
+                    _m = path_dict['cost uncertainty']['eol material']['m']['value']
+                    _b = path_dict['cost uncertainty']['eol material']['b']['value']
+            else:
+                # with no uncertainty
+                _m = path_dict['cost uncertainty']['eol material']['m']
+                _b = path_dict['cost uncertainty']['eol material']['b']
+        
+            return (_m * (_year - 2000.0) + _b) * _vkmt
 
 
     def waste(self, path_dict):
         """
-        Transportation
+        Cost method for calculating transportation costs (truck)
+        in USD/metric ton.
+
+        Parameters
+        ----------
+        path_dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Cost of transporting 1 metric ton of material by
+            one kilometer. Units: USD/metric ton.
         """
-        return 1.0
+        _vkmt = path_dict['vkmt']  # _vkmt is in km
+        _year = path_dict['year']
+
+        if _vkmt is None:
+            return 0.0
+        else:
+            if path_dict['cost uncertainty']['waste']['uncertainty'] == 'array':
+                _m = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['waste']['m'],
+                    self.run
+                    )
+                _b = apply_array_uncertainty(
+                    path_dict['cost uncertainty']['waste']['b'],
+                    self.run
+                    )
+            elif path_dict['cost uncertainty']['waste']['uncertainty'] == 'stochastic':
+                if _year == self.start_year:
+                    _m = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['waste']['m'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['waste']['m'],dict):
+                        path_dict['cost uncertainty']['waste']['m']['value'] = _m
+                    _b = apply_stoch_uncertainty(
+                        path_dict['cost uncertainty']['waste']['b'],
+                        seed=self.seed
+                    )
+                    if isinstance(path_dict['cost uncertainty']['waste']['b'],dict):
+                        path_dict['cost uncertainty']['waste']['b']['value'] = _b
+                else:
+                    _m = path_dict['cost uncertainty']['waste']['m']['value']
+                    _b = path_dict['cost uncertainty']['waste']['b']['value']
+            else:
+                # with no uncertainty
+                _m = path_dict['cost uncertainty']['waste']['m']
+                _b = path_dict['cost uncertainty']['waste']['b']
+        
+            return (_m * (_year - 2000.0) + _b) * _vkmt
 
 
     def coarse_grinding(self, path_dict):
