@@ -114,7 +114,8 @@ class CostGraph:
         self.loc_df = pd.read_csv(locations_file)
 
         self.sc_end = sc_end + sc_out_circ
-        self.sc_begin = sc_begin + sc_in_circ
+        self.sc_begin = sc_begin 
+        self.sc_reenter = sc_in_circ
         
         if len(circular_components) == 1:
             self.circular_components = circular_components[0]
@@ -274,7 +275,7 @@ class CostGraph:
         # Pull out a list of all nodes in the supply chain that are terminal
         # The linear supply chain terminates there, OR one loop of a circular pathway
         # terminates there
-        targets = [tnode for tnode in search_nodes(self.supply_chain, {"in": [("step",), self.sc_begin]})]
+        targets = [tnode for tnode in search_nodes(self.supply_chain, {"in": [("step",), self.sc_reenter]})]
 
         # Loop thru terminal nodes
         # Use the loop rather than list comprehension b/c if a terminal node isn't reachable from the source
@@ -347,7 +348,7 @@ class CostGraph:
             return nearest, lengths[nearest], _out
         else:
             # not found, no path from source to typeofnode
-            print(f'CostGraph.find_nearest: No path from {source_node} to any of {self.sc_begin} nodes')
+            print(f'CostGraph.find_nearest: No path from {source_node} to any of {self.sc_reenter} nodes')
             return None, None, None
 
 
@@ -909,19 +910,17 @@ class CostGraph:
                 return _paths
 
     def find_upstream_neighbor(
-        self, node_id: int, connect_to: str = "manufacturing", crit: str = "dist"
+        self, node_id: int, crit: str = "dist"
     ):
         """
         Given a node in the network, find the "nearest" upstream neighbor to
-        that node that is of the type specified by connect_to. "Nearest" is
+        that node that is of the type specified by self.sc_begin. "Nearest" is
         determined according to the crit parameter.
 
         Parameters
         ----------
         node_id : int
             facility_id of a node in the supply chain network. No default.
-        connect_to : str
-            facility_type of the upstream node.
         crit : str
             Criteron used to decide which manufacturing node is "nearest".
             Defaults to distance.
@@ -929,12 +928,12 @@ class CostGraph:
         Returns
         -------
         _nearest_facility_id : int
-            Integer identifying the "closest" upstream node of type connect_to
-            that connects to the node with the provided node_id. Returns None
+            Integer identifying the "closest" upstream node of type listed in
+            self.sc_begin that is connected to (possibly via multiple steps)
+            the node with the provided node_id. Returns None
             if node_id does not exist in the network or if the node_id does not
-            connect to any nodes of the connect_to type.
+            connect to any nodes of types listed in self.sc_begin.
         """
-
         # Check that the node_id exists in the supply chain.
         # If it doesn't, print a message and return None
         if (
@@ -951,14 +950,19 @@ class CostGraph:
                 if (('facility_id',node_id) in y.items()) and (('connects','bid') in y.items())
             ][0]
 
-        # Get a list of all nodes with an outgoing edge that connects to this
-        # node_id, with the specified facility type
+        # Get a list of all nodes upstream of this node_id with a facility type
+        # specified in self.sc_begin
+        # The while loop performs this operation recursively in case the node we're looking
+        # for is several steps upstream
+        # Only the node we're looking for is stored in _upstream_nodes
         # Note: the "find" function does not look for exact matches, only the existence of
-        # the string `connect_to` in the node name
-        _upstream_nodes = [
-            n for n in self.supply_chain.predecessors(_node) if n.find(connect_to) != -1
-        ]
-
+        # strings in self.sc_begin in the node name
+        _upstream_nodes = []
+        _predec = [_node]
+        while len(_upstream_nodes) == 0:
+            _predec = [n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]
+            _upstream_nodes = [n for n in _predec if any([n.find(begin + '_') != -1 for begin in self.sc_begin])]
+        
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
