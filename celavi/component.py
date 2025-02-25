@@ -5,7 +5,7 @@ from collections import deque
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
-
+import pdb
 class Component:
     """
     The Component class works with the Context class to run the discrete
@@ -171,22 +171,24 @@ class Component:
         # Increment transportation to in use facilities
         count_transport = self.context.transportation_trackers[self.in_use_facility]
         for _, mass in self.mass_tonnes.items():
-            _edge_tuple = [
-                (u, v) 
-                for u, v in self.context.cost_graph.supply_chain.edges 
-                if (u.split('_')[1] == self.manuf_facility.split('_')[1]) 
-                and (v.split('_')[1] == self.in_use_facility.split('_')[1])
-                ][0]
-            count_transport.increment_inbound_tonne_km(
-                tonne_km=mass
-                * self.context.cost_graph.supply_chain.edges[
-                    _edge_tuple
-                ]["dist"],
-                route_id=self.context.cost_graph.supply_chain.edges[
-                    _edge_tuple
-                ]["route_id"],
-                timestep=env.now,
-            )
+            try:
+                _edge_tuple = [
+                    (u, v) 
+                    for u, v in self.context.cost_graph.supply_chain.edges 
+                    if (u.split('_')[1] == self.manuf_facility.split('_')[1]) 
+                    and (v.split('_')[1] == self.in_use_facility.split('_')[1])
+                    ][0]
+                
+                count_transport.increment_inbound_tonne_km(
+                    # @TODO replace with sum of distance over all edges connecting in use
+                    # facility to manufacruring facility
+                    tonne_km = mass * self.context.cost_graph.supply_chain.edges[_edge_tuple]["dist"],
+                    # @NOTE route_id may become a list of route_ids or may be removed altogether(?)
+                    route_id=self.context.cost_graph.supply_chain.edges[_edge_tuple]["route_id"],
+                    timestep=env.now,
+                )
+            except IndexError:
+                pdb.set_trace()
 
         # Component stays in use for its lifetime
         yield env.timeout(self.initial_lifespan_timesteps)
