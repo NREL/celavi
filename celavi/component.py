@@ -6,7 +6,7 @@ from collections import deque
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
-import pdb
+
 class Component:
     """
     The Component class works with the Context class to run the discrete
