@@ -102,13 +102,21 @@ def liaison_lci(
 
     liaison_process_bridge_dir = "/kfs2/projects/celavicf/celavi-master/celavi-data/inputs/"
     liaison_process_bridge = pd.read_csv(liaison_process_bridge_dir+'liaison_process_bridge.csv')
-    selected_process = liaison_process_bridge[liaison_process_bridge['Activities'] == stage]
-    selected_process = selected_process[['Activities','Ecoinvent','Unit','Celavi Unit']].dropna()
     
-    if len(selected_process) == 1:
+
+    # This is the method of connecting with CELAVI. Not using this since we want to debug the activities
+    # selected_process = liaison_process_bridge[liaison_process_bridge['Activities'] == stage]
+    selected_process = liaison_process_bridge.sample()
+    selected_process = selected_process[['Activities','Ecoinvent','Unit','Celavi Unit']].dropna()
+    print(selected_process)
+
+    res_df = pd.DataFrame()
+    
+    if (len(selected_process) == 1):
         #Check passed
         selected_process = selected_process.reset_index()
         process_in_ecoinvent_for_lca_from_celavi = selected_process.loc[0,'Ecoinvent']
+        print('LCA:',process_in_ecoinvent_for_lca_from_celavi)
         unit_under_study = selected_process.loc[0,'Unit']
         celavi_unit = selected_process.loc[0,'Celavi Unit']
 
@@ -128,7 +136,7 @@ def liaison_lci(
         # Right now, the dataframe being read is empty. 
         inventory_to_be_built_from_celavi = pd.DataFrame(columns=['process', 'flow', 'value', 'unit', 'input', 'year', 'comments', 'type',
                'process_location', 'supplying_location'])
-        inventory_to_be_built_from_celavi = "additional_inventories"+".csv"
+        inventory_to_be_built_from_celavi =  liaison_process_bridge_dir+"additional_inventories"+".csv"
         
         # These project names match to the project names of HIPSTER and need to be added to the yaml file
         updated_project_name='Mid_Case'+str(year_from_celavi)

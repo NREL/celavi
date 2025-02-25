@@ -3,7 +3,8 @@ import pandas as pd
 
 def electricity_correction(exchange_ob):
     """
-    We need an additional correction. All instances of electricity flows needs to be changed with ReEDS_State_Grid_mix
+    We need an additional correction. All instances of electricity flows needs to be changed with high voltage electricity since LiAISON ReEDS only produces state mixes of high voltage electricity but
+    includes transmission. But we are adding 2% losses here. 
     
     Parameters:
     ----------
@@ -14,17 +15,21 @@ def electricity_correction(exchange_ob):
     -------
     name_of_flow: str
         name of the flow to be changed
+    value: float
+        value of the flow ( amount )
 
     """
-    if 'electricity' in exchange_ob['name']:
+    if ('market group for electricity, medium voltage' in exchange_ob['name']) or ('market group for electricity, low voltage' in exchange_ob['name']) or ('market for electricity, high voltage' in exchange_ob['name']) or ('market for electricity, medium voltage' in exchange_ob['name']) or ('market for electricity, low voltage' in exchange_ob['name']):
         name_of_flow = 'market group for electricity, high voltage'
+        value = exchange_ob['amount'] * 1.02
     else:
         name_of_flow = exchange_ob['name']
+        value = exchange_ob['amount']
 
-    return name_of_flow
+    return name_of_flow,value
 
 
-def modify_electricity_grid_mix(process_selected_as_foreground,year_of_study,location_under_study,data_dir):
+def modify_electricity_grid_mix_and_solar_glass_removal(process_selected_as_foreground,year_of_study,location_under_study,data_dir):
     """
     This function searches for activities and edits the ecoinvent activity as a foreground process in the chosen location
     It extracts every flow in the chosen foreground process, creates a dataframe from it and changes the location
@@ -66,12 +71,11 @@ def modify_electricity_grid_mix(process_selected_as_foreground,year_of_study,loc
     #Extracting ecoinvent database for activity and flows and creating a LiAISON friendly dataframe
     for exch in process_selected_as_foreground.exchanges():
             process.append(process_selected_as_foreground['name'])            
-            value.append(exch['amount'])
+            
             unit.append(exch['unit'])
 
-            #Changing name of electricity flow
-            #Changing name of electricity flow
-            name_of_flow = electricity_correction(exch)
+            name_of_flow,amount = electricity_correction(exch)
+            value.append(amount)
             flow.append(name_of_flow)
 
             if exch['type'] == 'production':
@@ -130,8 +134,52 @@ def modify_electricity_grid_mix(process_selected_as_foreground,year_of_study,loc
     example.to_csv(data_dir+name_of_process+str(year_of_study)+location_under_study+'.csv',index=False)
     run_filename = example
 
+    # Removal of solar glass iron from the inventory for the panel production activity. 
+    if process_selected_as_foreground['name'] == "photovoltaic panel production, multi-Si wafer":
+            example2 = example[example['flow'] != "solar glass production, low-iron"]
+            example2 = example2[example2['flow'] != "tempering, flat glass"]
+            print('Removed glass production from the inventory',flush = True)
+            example2.to_csv(data_dir+name_of_process+str(year_of_study)+location_under_study+'.csv',index=False)
+            run_filename = example2
 
     return run_filename
+
+
+def module_disassembly_glass_content(process_selected_as_foreground,year_of_study,functional_unit):
+    """
+    This function is used to convert kilograms of solar glass in module manufacturing to number of modules to square meter
+    This is because Ecoinvent works with module as square meter
+    Parameters:
+    ===========
+    process_selected_as_foreground: activity object brightway2
+        the process under study
+    year_of_study: str
+        year of study
+    functional_unit: float
+        amount to do LCA on
+
+    Returns:
+    =========
+    function_unit:float
+        Modified functional unit
+
+    """
+
+    
+    glass_module_df = pd.read_csv("/kfs2/projects/celavicf/celavi-master/celavi-data/inputs/glasspermodule_pvice.csv")
+    if process_selected_as_foreground == "module disassembly":
+        #Convert the function unit
+        chosen_year_df = glass_module_df[glass_module_df['year'] == int(year_of_study)].reset_index()
+        glass_metrictonne_per_module = chosen_year_df.loc[0,'glass_metrictonne_per_module']
+        glass_kilogram_per_module = glass_metrictonne_per_module * 1000
+        # functional unit is solar glass kilograms
+        module_number = functional_unit/glass_kilogram_per_module   
+        print('Functional unit of process ',process_selected_as_foreground,' changed from ',functional_unit,' solar glass kilograms to ',module_number,' number of modules',flush=True)
+        return module_number
+    else:
+        return functional_unit
+
+
 
 
 def module_required_for_solar_glass(process_selected_as_foreground,year_of_study,functional_unit):
@@ -161,7 +209,7 @@ def module_required_for_solar_glass(process_selected_as_foreground,year_of_study
         glass_kilogram_per_module = glass_metrictonne_per_module * 1000
         # functional unit is solar glass kilograms
         module_number = functional_unit/glass_kilogram_per_module
-        squaremeter_of_modules = module_number * 1 #1 module = 1 square meter
+        squaremeter_of_modules = module_number * 2 #1 module = 2 square meter
         print('Functional unit of process ',process_selected_as_foreground['name'],' changed from ',functional_unit,' solar glass kilograms to ',module_number,' square meter of modules',flush=True)
         return module_number
 
@@ -169,3 +217,100 @@ def module_required_for_solar_glass(process_selected_as_foreground,year_of_study
     else:
         #return the original functional unit
         return functional_unit
+
+
+def module_installation_for_solar_glass(process_selected_as_foreground,year_of_study,functional_unit):
+    """
+    This function is used to convert kilograms of solar glass in module manufacturing to units of installation
+    This is because Ecoinvent works with module installation as unit
+    Parameters:
+    ===========
+    process_selected_as_foreground: activity object brightway2
+        the process under study
+    year_of_study: str
+        year of study
+    functional_unit: float
+        amount to do LCA on
+
+    Returns:
+    =========
+    function_unit:float
+        Modified functional unit
+
+    """
+    glass_module_df = pd.read_csv("/kfs2/projects/celavicf/celavi-master/celavi-data/inputs/glasspermodule_pvice.csv")
+    if process_selected_as_foreground['name'] == "electric installation, 570 kWp photovoltaic plant, at plant":
+        #Convert the function unit
+        chosen_year_df = glass_module_df[glass_module_df['year'] == int(year_of_study)].reset_index()
+        glass_metrictonne_per_module = chosen_year_df.loc[0,'glass_metrictonne_per_module']
+        glass_kilogram_per_module = glass_metrictonne_per_module * 1000
+        # functional unit is solar glass kilograms
+        module_number = functional_unit/glass_kilogram_per_module       
+        mwproduction = module_number * chosen_year_df.loc[0,'MWdc_per_module']
+        kwproduction = mwproduction*1000
+        installation_unit = kwproduction / 570 # From the plant capacity activity in Ecoinvent
+        print('Functional unit of process ',process_selected_as_foreground['name'],' changed from ',functional_unit,' solar glass kilograms to ',installation_unit,' units of installation',flush=True)
+        return installation_unit
+
+
+    else:
+        #return the original functional unit
+        return functional_unit
+
+
+def window_frame(process_selected_as_foreground,year_of_study,functional_unit):
+    """
+    This function is used to convert kilograms of glass in window manufacturing to square meter of window aluminum frame
+    This is because Ecoinvent works with window frame as square meter
+    Parameters:
+    ===========
+    process_selected_as_foreground: activity object brightway2
+        the process under study
+    year_of_study: str
+        year of study
+    functional_unit: float
+        amount to do LCA on
+
+    Returns:
+    =========
+    function_unit:float
+        Modified functional unit
+
+    """
+    if process_selected_as_foreground['name'] == "window frame production, aluminium, U=1.6 W/m2K":
+        #Convert the function unit
+        m2_per_kg = 0.131578947 # From comstock file
+        sqm_frame = m2_per_kg * functional_unit # Functional unit is in kilograms of window glass
+        print('Functional unit of process ',process_selected_as_foreground['name'],' changed from ',functional_unit,' window glass kilograms to ',sqm_frame,' square meter frame',flush=True)
+        return sqm_frame
+
+
+    else:
+        #return the original functional unit
+        return functional_unit
+
+def landfilling_functional_unit(process_selected_as_foreground,functional_unit):
+    """
+    This function is used to change the sign of the landfilling functional unit since its negative in Ecoinvent
+    Parameters:
+    ===========
+    process_selected_as_foreground: activity object brightway2
+        the process under study
+    functional_unit: float
+        amount to do LCA on
+
+    Returns:
+    =========
+    function_unit:float
+        Modified functional unit
+
+    """ 
+    if process_selected_as_foreground['name'] == "treatment of municipal solid waste, sanitary landfill":
+        print('Functional unit of process ',process_selected_as_foreground['name'],' changed from ',functional_unit,' landfilling kilograms to ',functional_unit*(-1),' kilograms',flush=True)
+        return functional_unit*(-1)
+    else:
+        #return the original functional unit
+        return functional_unit
+
+
+
