@@ -329,10 +329,7 @@ class Context:
         year = int(floor(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
 
-        try:
-            cumulative_counts = [facility.cumulative_input_history[component_kind][timestep]for name, facility in self.count_facility_inventories.items()if any(pname in name for pname in process_name)]
-        except KeyError:
-            pdb.set_trace()
+        cumulative_counts = [facility.cumulative_input_history[component_kind][timestep]for name, facility in self.count_facility_inventories.items()if any(pname in name for pname in process_name)]
         total_count = sum(cumulative_counts)
         total_mass = total_count * avg_component_mass
         return total_mass
