@@ -417,9 +417,7 @@ class CostGraph:
                 for d in range(len(short_paths[nearest]) - 1)
             ]
             route_id_list.insert(0, None)
-            _out = self.list_of_tuples(
-                short_paths[nearest], timeout_list, dist_list, route_id_list
-            )
+            _routes = [r for r in route_id_list if r is not None]
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
@@ -452,7 +450,7 @@ class CostGraph:
                         }
                     )
 
-            return nearest, lengths[nearest], _out
+            return nearest, lengths[nearest], _routes
         else:
             print(f'CostGraph.find_nearest_factype: No path from {source_node} to {target_factype} facility type')
             # not found, no path from source to typeofnode

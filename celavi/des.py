@@ -440,6 +440,10 @@ class Context:
                 # and therefore only one corresponding route
                 if len(annual_transportations[annual_transportations != 0]) == 1:
                     # Provide one row of data to LCIA by filtering out zeros/Nones. No aggregation needed.
+                    if any(route_ids[annual_transportations != 0].tolist()):
+                        _route_id_list = [r for rs in route_ids[annual_transportations != 0].tolist() for r in rs]
+                    else:
+                        _route_id_list = [None]
                     row = {
                         "flow quantity": annual_transportations[
                             annual_transportations != 0
@@ -449,7 +453,7 @@ class Context:
                         "material": "transportation",
                         "flow unit": "t * km",
                         "facility_id": facility_id,
-                        "route_id": route_ids[annual_transportations != 0][0],
+                        "route_id": _route_id_list,
                         "state": self.facility_states[facility_id],
                     }
                     self.data_for_lci.append(row)
