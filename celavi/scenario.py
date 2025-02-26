@@ -399,6 +399,10 @@ class Scenario:
                 row["facility_id"]
             )
 
+            # Optional print statement for component monitoring
+            if self.case["model_run"].get("warning_verbose") > 1:
+                print(f'{row.facility_id} , {row.year}: {manuf_facility}')
+
             n_technology = int(row["n_technology"])
 
             for _ in range(n_technology):
