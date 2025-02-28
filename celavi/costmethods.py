@@ -265,15 +265,11 @@ class CostMethods:
             facility and disposing of material losses in a landfill.
         """
         _learn_dict = path_dict['learning']['solar glass recovery']
-       
+        _loss = 0.0
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty']['solar glass recovery']['uncertainty'] == 'array':
             _learn_rate = apply_array_uncertainty(
                 _learn_dict['learn rate'],
-                self.run
-                )
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['solar glass recovery']['fraction'],
                 self.run
                 )
             _initial_cost = apply_array_uncertainty(
@@ -287,10 +283,6 @@ class CostMethods:
 
         elif path_dict['cost uncertainty']['solar glass recovery']['uncertainty'] == 'stochastic':
             if path_dict['year'] == self.start_year:
-                _loss = apply_stoch_uncertainty(
-                    path_dict['path_split']['solar glass recovery']['fraction'],
-                    seed=self.seed
-                    )
                 _learn_rate = -1.0 * apply_stoch_uncertainty(
                     _learn_dict['learn rate'],
                     seed=self.seed
@@ -312,17 +304,12 @@ class CostMethods:
                 if isinstance(path_dict['cost uncertainty']['solar glass recovery']['revenue'], dict):
                     path_dict['cost uncertainty']['solar glass recovery']['revenue']['value'] = _revenue
             else:
-                _loss = path_dict['path_split']['solar glass recovery']['fraction']['value']
                 _learn_rate = _learn_dict['learn rate']['value']
                 _initial_cost = path_dict['cost uncertainty']['solar glass recovery']['initial cost']['value']
                 _revenue = path_dict['cost uncertainty']['solar glass recovery']['revenue']['value']
         else:
             # No uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = apply_array_uncertainty(
-                path_dict['path_split']['solar glass recovery']['fraction'],
-                self.run
-                )
             _initial_cost = path_dict['cost uncertainty']['solar glass recovery']['initial cost']
             _revenue = path_dict['cost uncertainty']['solar glass recovery']['revenue']
 
