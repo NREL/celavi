@@ -127,6 +127,9 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                 print('Using the provided inventory files',flush = True)
                 print('Reading from ' + run_filename,flush = True)
                 inventory = pd.read_csv(run_filename) #dataframe
+                # Updating the location in the additional inventories file
+                inventory['process_location'] = location_under_study
+                inventory['supplying_location'] = location_under_study
                 #inventory is a dataframe
                 process_dictionary = liaison_calc(db,inventory,bw)
                 functional_unit =  module_disassembly_glass_content(process_under_study,year_of_study,functional_unit)
