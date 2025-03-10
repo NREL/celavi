@@ -136,6 +136,8 @@ class PylcaCelavi:
             df2 = df.merge(shortcutlca_df,left_on=['stage','year','material','state','facility_id'],right_on = ['stage','year','material','state','facility_id'],indicator=True,how = 'outer')
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
             df_results = df2[df2['_merge'] == 'both']
+            if df_results.empty:
+                print("Missing from shortcut ",df['stage'],df['year'],df['state'])
             df_results['value'] = df_results['flow quantity'] * df_results['value']
             df_results = df_results[['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']]
             
@@ -200,6 +202,14 @@ class PylcaCelavi:
                 state = row["state"]
                 unit = row["flow unit"]
                 new_df = df_s[df_s["index"] == index]
+                #Update years before 2024 since LCI not available
+                if year < 2024:
+                    original_year = year
+                    new_year = 2024
+                    new_df['year'] = new_year
+                else:
+                    new_year = year
+                    original_year = year
 
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
@@ -223,7 +233,7 @@ class PylcaCelavi:
                             # It calculates the LCI flows of the foreground process.
                             res,quantity = liaison_lci(
                                 working_df,
-                                year,
+                                new_year,
                                 facility_id,
                                 stage,
                                 material,
@@ -246,7 +256,7 @@ class PylcaCelavi:
                                     index=False,
                                     header=False,
                                 )
-                                res.to_csv('results_checked_to_be_deleted.csv',mode='a', index=False)
+                                res['year'] = original_year
                                 res_calculated = res
 
                             elif res.empty:
@@ -267,6 +277,8 @@ class PylcaCelavi:
                         print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)
 
     
+                result_shortcut['comment'] = "shortcut calculations"
+                res_calculated['comment'] = "full calculations"
                 res_df = pd.concat([res_df,result_shortcut,res_calculated])
         
         if not res_df.empty:
@@ -274,8 +286,11 @@ class PylcaCelavi:
             res_df["run"] = self.run
             res_df['impacts'] = res_df['lcia']
             res_df['impact'] = res_df['value']
-            res_df2 = res_df[['year','facility_id','material','route_id','stage','state','impacts','impact','unit','run']]
-            res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+            res_df['year'] = original_year
+            res_df2 = res_df[['year','facility_id','material','route_id','stage','state','impacts','impact','unit','run','comment']]
+            #res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+            res_df2.to_csv('results_checked_to_be_deleted.csv',mode='a', header=False, index=False)
+
 
         else:
             res_df2 = pd.DataFrame()
