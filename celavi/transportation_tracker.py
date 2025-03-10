@@ -1,5 +1,7 @@
 import numpy as np
 
+import uuid
+
 
 class TransportationTracker:
     """
@@ -37,4 +39,4 @@ class TransportationTracker:
 
         timestep = int(timestep)
         self.inbound_tonne_km[timestep] = self.inbound_tonne_km[timestep] + tonne_km
-        self.route_id[timestep] = route_id
+        self.route_id[timestep] = str(uuid.uuid1())
