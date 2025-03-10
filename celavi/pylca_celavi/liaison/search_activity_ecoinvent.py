@@ -70,8 +70,13 @@ def search_activity_in_ecoinvent(dictionary,process_under_study,location_under_s
                                     process_selected_as_foreground = extract_process(process_under_study+'@'+location_under_study+'@'+default_unit,dictionary)   
                                     print('Minor success: Process found in ecoinvent in GLO',flush=True)
                                 except:
-                                    print('****Failed -- Did not find this process in Ecoinvent. Please check process****',flush=True)
-                                    return run_filename
+                                        try:
+                                            location_under_study = 'ES'
+                                            process_selected_as_foreground = extract_process(process_under_study+'@'+location_under_study+'@'+default_unit,dictionary)   
+                                            print('Minor success: Process found in ecoinvent in ES',flush=True)
+                                        except:
+                                            print('****Failed -- Did not find this process in Ecoinvent. Please check process****',flush=True)
+                                            return run_filename
                             #todo needs to change when we will be also having activities being read from csv files
 
     run_filename = process_selected_as_foreground

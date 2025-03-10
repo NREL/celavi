@@ -11,7 +11,7 @@ import time
 from celavi.pylca_celavi.liaison.montecarloforeground import mc_foreground
 from celavi.pylca_celavi.liaison.lci_calculator import liaison_calc,search_dictionary,search_index_reader,lcia_traci_run,lcia_recipe_run, lcia_premise_gwp_run
 from celavi.pylca_celavi.liaison.search_activity_ecoinvent import search_activity_in_ecoinvent
-from celavi.pylca_celavi.liaison.edit_activity_ecoinvent import modify_electricity_grid_mix,module_required_for_solar_glass
+from celavi.pylca_celavi.liaison.edit_activity_ecoinvent import modify_electricity_grid_mix_and_solar_glass_removal,module_required_for_solar_glass,module_installation_for_solar_glass,window_frame,landfilling_functional_unit,module_disassembly_glass_content
 
 
 def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_foreground_flag,lca_flag,region_sensitivity_flag,edit_ecoinvent_user_controlled,region,data_dir,primary_process,process_under_study,location_under_study,unit_under_study,updated_database,mc_runs,functional_unit,inventory_filename,output_dir,bw):
@@ -127,8 +127,12 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                 print('Using the provided inventory files',flush = True)
                 print('Reading from ' + run_filename,flush = True)
                 inventory = pd.read_csv(run_filename) #dataframe
+                # Updating the location in the additional inventories file
+                inventory['process_location'] = location_under_study
+                inventory['supplying_location'] = location_under_study
                 #inventory is a dataframe
                 process_dictionary = liaison_calc(db,inventory,bw)
+                functional_unit =  module_disassembly_glass_content(process_under_study,year_of_study,functional_unit)
 
             else:
                 inventory = searched_item  #dictionary
@@ -139,9 +143,18 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                     
                     #Editing the functional unit for solar module manufacturing
                     functional_unit = module_required_for_solar_glass(inventory,year_of_study,functional_unit)
+
+                    #Editing the functional unit for solar module installation
+                    functional_unit = module_installation_for_solar_glass(inventory,year_of_study,functional_unit)
+
+                    # Editing the functional unit for window frame manufacturing
+                    functional_unit = window_frame(inventory,year_of_study,functional_unit)
+
+                    # Editing the functional unit for landfilling
+                    functional_unit = landfilling_functional_unit(inventory,functional_unit)
                     
                     #Editing electricity grid mix for all processes so that electricity is obtained from the state grid from ReEDS grid mix data
-                    run_filename = modify_electricity_grid_mix(inventory,year_of_study,location_under_study,data_dir)
+                    run_filename = modify_electricity_grid_mix_and_solar_glass_removal(inventory,year_of_study,location_under_study,data_dir)
                     
                     print('Activity edited according to user prereferences and saved success',flush=True)  
                     #run_filename is a dataframe.

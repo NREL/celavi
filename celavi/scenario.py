@@ -381,6 +381,15 @@ class Scenario:
         # Create the technology dataframe that will be used to populate
         # the context with components.
         technology_data = pd.read_csv(self.files["technology_data"])
+
+        # If the component_scaledown parameter in scenario.yaml has a value, use it to 
+        # scale down the number of technology components to model
+        # Take the ceiling of the scaled down number (component count should be a round number/integer)
+        # To NOT scale down the number of components, leave the component_scaledown parameter
+        # blank in scenario.yaml
+        if self.scen['scenario']['component_scaledown']:
+            technology_data.loc[:,'n_technology'] = np.ceil((1 / self.scen['scenario']['component_scaledown']) * technology_data.n_technology)
+
         components = []
         for _, row in technology_data.iterrows():
             year = row["year"]
@@ -389,6 +398,10 @@ class Scenario:
             manuf_facility = self.netw.find_upstream_neighbor(
                 row["facility_id"]
             )
+
+            # Optional print statement for component monitoring
+            if self.case["model_run"].get("warning_verbose") > 1:
+                print(f'{row.facility_id} , {row.year}: {manuf_facility}')
 
             n_technology = int(row["n_technology"])
 
