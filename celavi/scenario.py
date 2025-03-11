@@ -551,11 +551,12 @@ class Scenario:
             "state",
             "impact",
             "impact_value",
+            "units",
             "run",
+            "c_type"
         ]
         lcia_df = pd.read_csv(self.files["lcia_to_des"], names=lcia_names)
         locations_df = pd.read_csv(self.files["locs"])
-
         locations_columns = [
             "facility_id",
             "facility_type",
@@ -570,7 +571,7 @@ class Scenario:
         locations_select_df = locations_df.loc[:, locations_columns]
         lcia_process = lcia_df.loc[
             (lcia_df.run == self.run) & (lcia_df.route_id.isna())
-        ]
+        ] 
         lcia_locations_df = lcia_process.merge(
             locations_select_df, how="inner", on="facility_id"
         ).drop_duplicates()
@@ -650,7 +651,8 @@ class Scenario:
 
         lcia_summary = []
         for _, row in lcia_locations_df.iterrows():
-            impact, units = self.impact_and_units(row["impact"])
+            impact = row["impact"]
+            units = row["units"]
             summary_row = {
                 "units": units,
                 "name": impact,

@@ -288,8 +288,8 @@ class PylcaCelavi:
             res_df['impact'] = res_df['value']
             res_df['year'] = original_year
             res_df2 = res_df[['year','facility_id','material','route_id','stage','state','impacts','impact','unit','run','comment']]
-            #res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
-            res_df2.to_csv('results_checked_to_be_deleted.csv',mode='a', header=False, index=False)
+            res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
+            #res_df2.to_csv('results_checked_to_be_deleted.csv',mode='a', header=False, index=False)
 
 
         else:
