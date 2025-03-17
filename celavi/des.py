@@ -284,7 +284,7 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=year,
-                manuf_facility=row["manuf_facility"],
+                #manuf_facility=row["manuf_facility"],
                 in_use_facility=row["in_use_facility"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),

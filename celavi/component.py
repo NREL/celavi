@@ -22,7 +22,7 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
-        manuf_facility: str,
+        #manuf_facility: str,
         in_use_facility: str,
         mass_tonnes: Dict[str, float] = 0,
     ):
@@ -142,6 +142,13 @@ class Component:
 
         # component waits to be manufactured
         yield env.timeout(begin_timestep)
+
+        # Identify manufacturing facility
+        # @TODO replace/augment with closed loop logic
+        self.manuf_facility = self.context.cost_graph.find_upstream_neighbor(
+            self.in_use_facility
+        )
+
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
