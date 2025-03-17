@@ -517,6 +517,7 @@ class Scenario:
             var_name="unit",
             value_name="count",
             run=self.run,
+            component_scaledown = self.scen['scenario']['component_scaledown'],
         )
         count_cumulative_histories = (
             diagnostic_viz_counts.gather_and_melt_cumulative_histories()

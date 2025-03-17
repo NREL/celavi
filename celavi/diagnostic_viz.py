@@ -25,6 +25,7 @@ class DiagnosticViz:
         var_name: str,
         value_name: str,
         run: int,
+        component_scaledown: int = None,
     ):
         """
         Parameters
@@ -59,6 +60,8 @@ class DiagnosticViz:
 
         run : int
             Model run identifier for uncertainty runs within a scenario.
+        
+        component_scaledown: int or None, Default = None
         """
         self.facility_inventories = facility_inventories
         _name, _ext = str.split(output_plot_filename, ".")
@@ -70,6 +73,8 @@ class DiagnosticViz:
         self.var_name = var_name
         self.value_name = value_name
         self.run = run
+
+        self.component_scaledown = component_scaledown
 
         # This instance attribute is not set by a parameter to the
         # constructor. Rather, it is merely created to hold a cached
@@ -157,6 +162,12 @@ class DiagnosticViz:
             width=1000,
             height=1000,
         )
+
+        if self.component_scaledown is not None:
+            fig.update_layout(
+                yaxis_title=f'Count ({self.component_scaledown}s of units)',
+                yaxis2_title=f'Count ({self.component_scaledown}s of units)'
+            )
 
         # If a previous figure exists, remove it
         Path(self.output_plot_filename).unlink(missing_ok=True)
