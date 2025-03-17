@@ -388,7 +388,12 @@ class Scenario:
         # To NOT scale down the number of components, leave the component_scaledown parameter
         # blank in scenario.yaml
         if self.scen['scenario']['component_scaledown']:
-            technology_data.loc[:,'n_technology'] = np.ceil((1 / self.scen['scenario']['component_scaledown']) * technology_data.n_technology)
+            _n_tech_scaled = np.ceil((1 / self.scen['scenario']['component_scaledown']) * technology_data.n_technology)
+            _technology_data_scaled = technology_data.copy()
+            _technology_data_scaled['n_technology_scaled'] = _n_tech_scaled
+            _technology_data_scaled['scale_factor'] = [orig / scaled if orig != 0 else 0.0 for orig, scaled in zip(technology_data.n_technology, _n_tech_scaled)]
+            _technology_data_scaled.to_csv(self.files['technology_data_scaled'],index=False)
+            technology_data.loc[:,'n_technology'] = _n_tech_scaled
 
         components = []
         for _, row in technology_data.iterrows():
