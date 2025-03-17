@@ -121,10 +121,12 @@ class DiagnosticViz:
 
             cumulative_histories.append(cumulative_history)
 
-        cumulative_histories = pd.concat(cumulative_histories)
+        # The dropna() gets rid of all blank component counts, generally those
+        # where the facility never processes a particular component
+        cumulative_histories_df = pd.concat(cumulative_histories).dropna()
 
         self.gathered_and_melted_cumulative_histories = (
-            cumulative_histories.drop(["timestep", "year_floor", "facility_id"], axis=1)
+            cumulative_histories_df.drop(["timestep", "year_floor", "facility_id"], axis=1)
             .melt(
                 var_name=self.var_name,
                 value_name=self.value_name,
