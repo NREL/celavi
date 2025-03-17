@@ -394,6 +394,7 @@ class Scenario:
             _technology_data_scaled['scale_factor'] = [orig / scaled if orig != 0 else 0.0 for orig, scaled in zip(technology_data.n_technology, _n_tech_scaled)]
             _technology_data_scaled.to_csv(self.files['technology_data_scaled'],index=False)
             technology_data.loc[:,'n_technology'] = _n_tech_scaled
+            technology_data['scale_factor'] = _technology_data_scaled['scale_factor']
 
         components = []
         for _, row in technology_data.iterrows():
@@ -409,11 +410,15 @@ class Scenario:
                 print(f'{row.facility_id} , {row.year}: {manuf_facility}')
 
             n_technology = int(row["n_technology"])
-
+            
             for _ in range(n_technology):
                 for c in circular_components:
                     _c_mats = self.scen['technology_components']['component_materials'][c]
-                    _c_mat_mass = component_material_mass.mass_tonnes.loc[
+                    if 'scale_factor' in row.index:
+                        _mass_scaler = row['scale_factor']
+                    else:
+                        _mass_scaler = 1.0
+                    _c_mat_mass = _mass_scaler * component_material_mass.mass_tonnes.loc[
                         (component_material_mass.technology == row['technology']) &
                         (component_material_mass.component == c) & 
                         (component_material_mass.material.isin(_c_mats)) &
