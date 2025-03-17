@@ -148,6 +148,34 @@ class Component:
         self.manuf_facility = self.context.cost_graph.find_upstream_neighbor(
             self.in_use_facility
         )
+        # Closed loop logic requires accessing the mass facility inventories in Context and the 
+        # node and edge costs in CostGraph
+        # Steps:
+        # - Identify the closest virgin manufacturing facility upstream of self.in_use_facility
+        # (we assume virgin facilities can always produce more / no supply constraints)
+        virgin_manuf_facility = self.context.cost_graph.find_upstream_neighbor(
+            self.in_use_facility
+        )
+        # - Calculate the pathway cost between those virgin manufacturing facilities and the 
+        # in use facility
+        virgin_manuf_cost = None
+        # - Identify the secondary manufacturing facilities upstream of self.in_use_facility
+        # with NON-ZERO mass inventories
+        # @TODO Need(?): new method in CostGraph that looks upstream of a node and finds all connecting
+        # nodes of a particular facility_type, returns a list of facility_ids and associated
+        # costs
+        secondary_manuf_facility_dict = {'facility_id': 'cost'}
+        # @NOTE This method should not return only the closest facility, because there may be further-away
+        # facilities with secondary materials available. The virgin manuf facility will not necessarily
+        # be lower cost than a further-away secondary facility.
+        # - Calculate the pathway cost between the secondary facilities and the in use
+        # facility (if not returned by method described above)
+        # IF none of the secondary facilities are lower cost than the virgin facility, use 100% virgin
+        # materials to make this component
+        # IF one or more of the secondary facilities ARE lower cost than the virgin facility, use up
+        # the secondary materials (mass) inventory in order of least to greatest cost to make this component
+        # IF not all secondary facilities are lower cost than the virgin facility AND there is demand remaining
+        # after the low-cost secondary facility inventories are used up, THEN make up the difference w virgin manuf
 
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
