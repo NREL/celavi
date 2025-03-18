@@ -140,10 +140,13 @@ class CostMethods:
                 _learn_dict['learn rate'],
                 self.run
                 )
-            _loss = apply_array_uncertainty(
-                path_dict['path_split'][process]['fraction'],
-                self.run
-                )
+            try:
+                _loss = apply_array_uncertainty(
+                    path_dict['path_split'][process]['fraction'],
+                    self.run
+                    )
+            except KeyError:
+                _loss = 0.0
             _initial_cost = apply_array_uncertainty(
                path_dict['cost uncertainty'][process]['initial cost'],
                self.run
@@ -155,10 +158,13 @@ class CostMethods:
 
         elif path_dict['cost uncertainty'][process]['uncertainty'] == 'stochastic':
             if path_dict['year'] == self.start_year:
-                _loss = apply_stoch_uncertainty(
-                    path_dict['path_split'][process]['fraction'],
-                    seed=self.seed
-                    )
+                try:
+                    _loss = apply_stoch_uncertainty(
+                        path_dict['path_split'][process]['fraction'],
+                        seed=self.seed
+                        )
+                except KeyError:
+                    _loss = 0.0
                 _learn_rate = -1.0 * apply_stoch_uncertainty(
                     _learn_dict['learn rate'],
                     seed=self.seed
@@ -180,17 +186,23 @@ class CostMethods:
                 if isinstance(path_dict['cost uncertainty'][process]['revenue'], dict):
                     path_dict['cost uncertainty'][process]['revenue']['value'] = _revenue
             else:
-                _loss = path_dict['path_split'][process]['fraction']['value']
+                try:
+                    _loss = path_dict['path_split'][process]['fraction']['value']
+                except KeyError:
+                    _loss = 0.0
                 _learn_rate = _learn_dict['learn rate']['value']
                 _initial_cost = path_dict['cost uncertainty'][process]['initial cost']['value']
                 _revenue = path_dict['cost uncertainty'][process]['revenue']['value']
         else:
             # No uncertainty
             _learn_rate = apply_array_uncertainty(_learn_dict['learn rate'], self.run)
-            _loss = apply_array_uncertainty(
-                path_dict['path_split'][process]['fraction'],
-                self.run
-                )
+            try:
+                _loss = apply_array_uncertainty(
+                    path_dict['path_split'][process]['fraction'],
+                    self.run
+                    )
+            except KeyError:
+                _loss = 0.0
             _initial_cost = path_dict['cost uncertainty'][process]['initial cost']
             _revenue = path_dict['cost uncertainty'][process]['revenue']
 
