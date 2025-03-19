@@ -940,19 +940,10 @@ class ComputeLocations:
                     by=['region_id_2', 'year']
                     )
         
-        # Take sequential differences in installed capacity within each state to
-        # calcualte new yearly installations
-        # (the sort above is necesasry for this to work properly)
-        # After this step, the facility ID column becomes a float because int 
-        # columns can't contain NaNs
-        _cap_building['cap_new'] = _cap_building.groupby(
-            ['region_id_2', 'technology']
-            )['n_technology'].diff(
-            ).replace(
-                {np.nan: None}
-                )
-        
-        _cap_building.loc[_cap_building.cap_new < 0, 'cap_new'] = 0.0
+        # The "n_technology" coming from comstock data represents NEW window installations
+        # thus the sequential difference operation applied to the PV panel data should NOT
+        # be implemented here
+        _cap_building['cap_new'] = _cap_building['n_technology']
 
         # New installations for the first year a state appears in the data is set as the observed
         # installed capacity for that year (a simplification, but this lets us capture that initial
