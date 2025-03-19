@@ -388,7 +388,13 @@ class Scenario:
         # To NOT scale down the number of components, leave the component_scaledown parameter
         # blank in scenario.yaml
         if self.scen['scenario']['component_scaledown']:
-            technology_data.loc[:,'n_technology'] = np.ceil((1 / self.scen['scenario']['component_scaledown']) * technology_data.n_technology)
+            _n_tech_scaled = np.ceil((1 / self.scen['scenario']['component_scaledown']) * technology_data.n_technology)
+            _technology_data_scaled = technology_data.copy()
+            _technology_data_scaled['n_technology_scaled'] = _n_tech_scaled
+            _technology_data_scaled['scale_factor'] = [orig / scaled if orig != 0 else 0.0 for orig, scaled in zip(technology_data.n_technology, _n_tech_scaled)]
+            _technology_data_scaled.to_csv(self.files['technology_data_scaled'],index=False)
+            technology_data.loc[:,'n_technology'] = _n_tech_scaled
+            technology_data['scale_factor'] = _technology_data_scaled['scale_factor']
 
         components = []
         for _, row in technology_data.iterrows():
@@ -404,11 +410,15 @@ class Scenario:
                 print(f'{row.facility_id} , {row.year}: {manuf_facility}')
 
             n_technology = int(row["n_technology"])
-
+            
             for _ in range(n_technology):
                 for c in circular_components:
                     _c_mats = self.scen['technology_components']['component_materials'][c]
-                    _c_mat_mass = component_material_mass.mass_tonnes.loc[
+                    if 'scale_factor' in row.index:
+                        _mass_scaler = row['scale_factor']
+                    else:
+                        _mass_scaler = 1.0
+                    _c_mat_mass = _mass_scaler * component_material_mass.mass_tonnes.loc[
                         (component_material_mass.technology == row['technology']) &
                         (component_material_mass.component == c) & 
                         (component_material_mass.material.isin(_c_mats)) &
@@ -507,6 +517,7 @@ class Scenario:
             var_name="unit",
             value_name="count",
             run=self.run,
+            component_scaledown = self.scen['scenario']['component_scaledown'],
         )
         count_cumulative_histories = (
             diagnostic_viz_counts.gather_and_melt_cumulative_histories()
