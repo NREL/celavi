@@ -249,6 +249,13 @@ class CostMethods:
         return self.process_cost_loss_revenue_model(
             path_dict, 'solar glass manufacturing from cullet')
     
+    def solar_glass_recovery(self, path_dict):
+        """
+        See process_cost_loss_revenue_model method
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'solar glass recovery')
+    
     def module_manufacturing(self, path_dict):
         """
         See process_cost_loss_revenue_model method
