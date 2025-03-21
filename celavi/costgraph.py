@@ -890,6 +890,13 @@ class CostGraph:
         while len(_upstream_nodes) == 0:
             _predec = [n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]
             _upstream_nodes = [n for n in _predec if any([n.find(begin + '_') != -1 for begin in self.sc_begin])]
+            # Since we do this recursively, we also need to double check that a path exists between 
+            # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
+            for _u in _upstream_nodes:
+                try:
+                    _ = nx.astar_path(self.supply_chain, source = _node, target = _u)
+                except nx.NetworkXNoPath:
+                    _upstream_nodes.remove(_u)
         
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
@@ -904,12 +911,9 @@ class CostGraph:
         elif len(_upstream_nodes) > 1:
             # If there are multiple options, identify the nearest neighbor
             # according to the crit(eria) parameter
-            _upstream_dists = [
-                self.supply_chain.edges[_up_n, _node][crit] for _up_n in _upstream_nodes
-            ]
-            _nearest_upstream_node = _upstream_nodes[
-                _upstream_dists.index(min(_upstream_dists))
-            ]
+            _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = 'dist') 
+                                for _up_n in _upstream_nodes]
+            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
             _nearest_facility = _nearest_upstream_node
 
         else:
