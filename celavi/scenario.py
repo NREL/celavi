@@ -279,7 +279,7 @@ class Scenario:
                 random_state=self.rng,
                 run=self.run,
             )
-            print(f"CostGraph initialized at {self.simtime(self.start)}", flush=True)
+            print(f"CostGraph instantiated at {self.simtime(self.start)} s", flush=True)
 
             if self.scen["flags"].get("pickle_costgraph", True):
                 # Save the CostGraph object using pickle

@@ -793,7 +793,7 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
-            print(f'CostGraph: Instantiation took {np.round(time() - self.start_time, 0)} s', flush = True)
+            print(f'CostGraph: Instantiation took {(np.round(time() - self.start_time)/60, 2)} minutes', flush = True)
 
     def choose_paths(self, source_node: str = None, crit: str = "cost"):
         """
