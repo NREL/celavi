@@ -287,7 +287,7 @@ class Scenario:
 
         else:
             self.netw = pickle.load(open(self.files["costgraph_pickle"], "rb"))
-            print(f"CostGraph read in at {self.simtime(self.start)}", flush=True)
+            print(f"CostGraph read in at {self.simtime(self.start)} s", flush=True)
 
         # Prepare LCIA code
         #verbose = 0 means no print statements. 
@@ -397,6 +397,9 @@ class Scenario:
             technology_data['scale_factor'] = _technology_data_scaled['scale_factor']
 
         components = []
+        print(f'Instantiating {sum(technology_data.n_technology)} components at {self.simtime(self.start)} s',
+                flush=True)
+        _comptime = time.time()
         for _, row in technology_data.iterrows():
             year = row["year"]
             # @NOTE hard coded to glass study, will need to adapt
@@ -474,15 +477,13 @@ class Scenario:
                     random_state=self.rng,
                 )[0]
 
-        print(f"Components initialized at {self.simtime(self.start)} s", flush=True)
+        print(f'Instantiating components took {np.round((time.time() - _comptime)/60, 2)} minutes', 
+                flush = True)
 
         # Populate the context with components.
         self.context.populate(components, lifespan_fns)
 
-        print(
-            f"Context populated with components at {self.simtime(self.start)} s",
-            flush=True,
-        )
+        print(f'Beginning discrete event simulation at {self.simtime(self.start)} s', flush = True)
 
         # Run the context
         self.context.run()
