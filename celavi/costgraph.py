@@ -1102,13 +1102,6 @@ class CostGraph:
         # update the year for CostGraph
         self.year = path_dict["year"]
 
-        if self.verbose > 0:
-            print(
-                "Updating costs for %d at         %d s"
-                % (path_dict["year"], np.round(time() - self.start_time, 0)),
-                flush=True,
-            )
-
         for edge in self.supply_chain.edges():
             _edge_dict = path_dict.copy()
             _edge_dict["vkmt"] = self.supply_chain.edges[edge]["dist"]
@@ -1122,12 +1115,10 @@ class CostGraph:
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
-        if self.verbose > 0:
-            print(
-                "Costs updated for  %d at         %d s"
-                % (path_dict["year"], np.round(time() - self.start_time, 0)),
-                flush=True,
-            )
+        if self.verbose > 0 and self.year > 2001:
+            print(f'CostGraph: Costs updated for {self.year} after {np.round(time() - self.update_time, 1)} s',
+                    flush=True)
+        self.update_time = time()
 
     def save_costgraph_outputs(self):
         """
