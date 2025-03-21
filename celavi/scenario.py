@@ -250,7 +250,7 @@ class Scenario:
 
         if self.scen["flags"].get("initialize_costgraph", True):
             # Initialize the CostGraph using these parameter settings
-            print(f"CostGraph starts at {self.simtime(self.start)} s", flush=True)
+            print(f"CostGraph instantiation started at {self.simtime(self.start)} s", flush=True)
             self.netw = CostGraph(
                 step_costs_file=self.files["step_costs"]
                 if self.scen["flags"].get("generate_step_costs")
@@ -279,7 +279,7 @@ class Scenario:
                 random_state=self.rng,
                 run=self.run,
             )
-            print(f"CostGraph initialized at {self.simtime(self.start)}", flush=True)
+            print(f"CostGraph instantiated at {self.simtime(self.start)} s", flush=True)
 
             if self.scen["flags"].get("pickle_costgraph", True):
                 # Save the CostGraph object using pickle
