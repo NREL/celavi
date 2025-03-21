@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-
+import pdb
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -739,19 +739,29 @@ class CostGraph:
                                     }
                                 )
                     )
+            
+            if len(_u) == 0:
+                print(f'CostGraph: Node {_line[1]["source_facility_id"]} of type'
+                f' {_line[1]["source_facility_type"]} expected but not found',
+                flush = True)
+                continue
+
 
             # Find the edge that connects the source and destination nodes for this route
             _edge = [(u, v, dat) for u, v, dat in self.supply_chain.edges(_u, data = True) 
                         if self.supply_chain.nodes[v]["facility_id"] == _line[1]['destination_facility_id']]
+            
+            if len(_edge) == 0:
+                print(f'CostGraph: Edge between {_line[1]["source_facility_id"]}_{_line[1]["source_facility_type"]}'
+                        f' and {_line[1]["destination_facility_type"]}_{_line[1]["destination_facility_id"]} expected but not found',
+                        flush = True)
+                continue
 
             if self.verbose > 2:
                 print(f'CostGraph: Adding {_line[1]["total_vkmt"]} km between {_edge[0][0]} and {_edge[0][1]}', flush = True)
             
-            try:
-                self.supply_chain.edges[_edge[0][0], _edge[0][1]]['dist'] = _line[1]["total_vkmt"]
-                self.supply_chain.edges[_edge[0][0], _edge[0][1]]['route_id'] = _line[1]["route_id"]
-            except IndexError:
-                print(f'CostGraph: Edge expected but not found between {_edge[0][0]} and {_edge[0][1]}', flush = True)
+            self.supply_chain.edges[_edge[0][0], _edge[0][1]]['dist'] = _line[1]["total_vkmt"]
+            self.supply_chain.edges[_edge[0][0], _edge[0][1]]['route_id'] = _line[1]["route_id"]
         
         if self.verbose > 0:
             print(f'CostGraph: Adding route distances took {np.round((time() - _ltime)/60, 2)} minutes', flush=True)
@@ -793,7 +803,7 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
-            print(f'CostGraph: Instantiation took {(np.round(time() - self.start_time)/60, 2)} minutes', flush = True)
+            print(f'CostGraph: Instantiation took {np.round((time() - self.start_time)/60, 2)} minutes', flush = True)
 
     def choose_paths(self, source_node: str = None, crit: str = "cost"):
         """
