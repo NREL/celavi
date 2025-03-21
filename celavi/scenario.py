@@ -483,10 +483,7 @@ class Scenario:
         # Populate the context with components.
         self.context.populate(components, lifespan_fns)
 
-        print(
-            f"Context populated with components at {self.simtime(self.start)} s",
-            flush=True,
-        )
+        print(f'Beginning discrete event simulation at {self.simtime(self.start)} s', flush = True)
 
         # Run the context
         self.context.run()
