@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-import pdb
+
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -146,8 +146,10 @@ class CostGraph:
         self.pathway_crit_history = list()
 
         # Create network structure and metadata df for network building
+        # @NOTE the drop_duplicates on step_costs will need to be removed
+        # for studies with facility-specific cost methods
         self.network_data = self.routes_file.merge(
-            self.step_costs[['step','step_cost_method']],
+            self.step_costs[['step','step_cost_method']].drop_duplicates(),
             left_on = 'u_step',
             right_on = 'step',
             how = 'left'
@@ -157,6 +159,14 @@ class CostGraph:
                 how='left'
             )
 
+        # Any edges without a defined transportation cost method are assigned
+        # the zero method
+        # This is intended solely for colocated nodes ie within the same
+        # facility
+        self.network_data.loc[
+            self.network_data.transpo_cost_method.isna(),
+            'transpo_cost_method'] = 'zero_method'
+        
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
 
@@ -304,10 +314,20 @@ class CostGraph:
                 lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)
             except nx.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
-                pass
-
+                continue
+        
         # return the smallest of all lengths to get to typeofnode
-        if lengths:
+        if len(lengths) > 0:
+            pdb.set_trace()
+            # For detailed debugging, save a file of all paths found and their lengths
+            pd.DataFrame([short_paths, lengths]).to_csv(f'{source_node}-{self.year}-paths.csv', index=False)
+
+            # Print a summary of the paths found
+            if self.verbose > 1:
+                print(f'CostGraph.find_nearest: {len(lengths)} paths from {source_node} to {targets} cost '
+                        f'${np.round(min(lengths),2)} - ${np.round(max(lengths),2)}',
+                        flush = True)
+
             # dict of shortest paths to all targets
             nearest = min(lengths, key=lengths.get)
             timeout = nx.get_node_attributes(self.supply_chain, "timeout")
@@ -362,7 +382,7 @@ class CostGraph:
             return nearest, lengths[nearest], _out
         else:
             # not found, no path from source to typeofnode
-            print(f'CostGraph.find_nearest: No path from {source_node} to any of {self.sc_reenter} nodes')
+            print(f'CostGraph.find_nearest: No paths from {source_node} to any of {self.sc_reenter} nodes')
             return None, None, None
 
 
@@ -528,16 +548,18 @@ class CostGraph:
             u_node,
             v_node,
             {'dist': dist, # the getattr method below pulls the actual function from costmethods.py
-            'cost_method': [getattr(self.cost_methods, node_cost), getattr(self.cost_methods, transpo_cost)],
+            'cost_method': [getattr(self.cost_methods, str(node_cost)), getattr(self.cost_methods, str(transpo_cost))],
             'cost': -1.0,
             'route_id': routeid}
             )
-            for u_node, v_node, dist, node_cost, transpo_cost, routeid 
-            in zip(self.network_data.u_node_id, self.network_data.v_node_id,
-             self.network_data.vkmt, self.network_data.step_cost_method,
-             self.network_data.transpo_cost_method, self.network_data.route_id)
+            for u_node, v_node, dist,
+                node_cost, transpo_cost,
+                routeid 
+            in zip(self.network_data.u_node_id, self.network_data.v_node_id, self.network_data.vkmt,
+            self.network_data.step_cost_method, self.network_data.transpo_cost_method,
+            self.network_data.route_id)
         ]
-        
+
         self.supply_chain.add_edges_from(all_edge_list)
 
         if self.verbose > 0:
@@ -569,7 +591,7 @@ class CostGraph:
 
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         if _cost_adjust < 0.0:
-            print(f'CostGraph: Adjusting all costs for {self.year} upwards by \${np.round(_cost_adjust, 2)}', flush = True)
+            print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(_cost_adjust, 2)}', flush = True)
             self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
             for edge in self.supply_chain.edges():
                 self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
@@ -894,7 +916,7 @@ class CostGraph:
         
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         if _cost_adjust < 0.0:
-            print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by \${np.round(_cost_adjust, 2)}',
+            print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(_cost_adjust, 2)}',
             flush = True)
             self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
 
