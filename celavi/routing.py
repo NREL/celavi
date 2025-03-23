@@ -24,7 +24,7 @@ import celavi.data_manager as Data
 import uuid
 import time
 
-import pdb
+
 class Router:
     """
     Calculate minimum-distance routes between supply chain facilities.
@@ -226,6 +226,7 @@ class Router:
                     # the route information. Instead, record the index to drop it from
                     # the network routes file
                     if _vkmt_by_county.vkmt.sum() > edge.vkmt_max:
+                        _network_dist = _network_dist + [{'index': idx, 'vkmt': _vkmt_by_county.vkmt.sum(), 'route_id': 'vkmt_max'}]
                         _drop_edges = _drop_edges + [idx]
                     # If the route returned has a total distance of under 1 kilometer, assume
                     # those facilities are colocated
@@ -254,18 +255,18 @@ class Router:
             )
             # Remove edges from the network if any have distances greater than the max allowed
             if len(_drop_edges) > 0:
-                pdb.set_trace()
-                network_routes.drop(index = [int(e) for e in _drop_edges], inplace = True)
+                network_routes.to_csv('network-routes-all.csv', index=False)
+                network_routes.drop(_drop_edges, inplace = True)
             
             # Save the network routes file for use in Cost Graph
             network_routes.to_csv(routes_output_file, index=False)
 
             # Calculate total distance over fclass and save the county level di
-            vkmt_by_county_all = pd.concat(vkmt_by_county_list).groupby(
-                ['u_node_id','v_node_id','route_id','region_transportation']
-                ).sum(
-                    'vkmt'
-                    ).reset_index()
+            vkmt_by_county_all = pd.concat(
+                vkmt_by_county_list
+                ).groupby(
+                    ['u_node_id','v_node_id','route_id','region_transportation']
+                    ).sum('vkmt').reset_index()
             
             vkmt_by_county_all.drop(columns='fclass', inplace = True)
 
