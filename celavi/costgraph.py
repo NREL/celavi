@@ -107,7 +107,9 @@ class CostGraph:
 
         # these data sets are processed line by line
         self.loc_file = locations_file
-        self.routes_file = routes_file
+
+        # This file now contains edge definitions, node metadata, and route distances
+        self.routes_file = pd.read_csv(routes_file)
 
         # also read in the locations as a dataframe for reference in
         # find_nearest
@@ -142,6 +144,18 @@ class CostGraph:
         self.run = run
         # create empty List to store the pathway cost output data
         self.pathway_crit_history = list()
+
+        # Create network structure and metadata df for network building
+        self.network_data = self.routes_file.merge(
+            self.step_costs[['step','step_cost_method']],
+            left_on = 'u_step',
+            right_on = 'step',
+            how = 'left'
+            ).merge(
+                self.transpo_edges,
+                on=['u_step','v_step'],
+                how='left'
+            )
 
         # create empty instance variable for supply chain DiGraph
         self.supply_chain = nx.DiGraph()
@@ -546,78 +560,6 @@ class CostGraph:
 
         return _nodes
 
-    def build_facility_graph(self, facility_df: pd.DataFrame):
-        """
-        Creates networkx DiGraph object containing nodes, intra-facility edges,
-        and all relevant attributes for a single facility.
-
-        Parameters
-        ----------
-        facility_df : pd.DataFrame
-            DataFrame with a single row that defines a supply chain facility.
-
-            Columns:
-                - facility_id : int
-                - facility_type : str
-                - lat : float
-                - long : float
-                - region_id_1 : str
-                - region_id_2 : str
-                - region_id_3 : str
-                - region_id_4 : str
-
-        Returns
-        -------
-        networkx.DiGraph
-            Directed graph representation of one supply chain facility.
-        """
-        if self.verbose > 1:
-            print(
-                "Building facility graph for ",
-                str(facility_df["facility_id"].values[0]),
-            )
-
-        # Create empty directed graph object
-        _facility = nx.DiGraph()
-
-        _id = str(facility_df["facility_id"].values[0])
-
-        # Generates list of (str, dict) tuples for node definition
-        _facility_nodes = self.get_nodes(facility_df)
-
-        # Populate the directed graph with node names and attribute
-        # dictionaries
-        _facility.add_nodes_from(_facility_nodes)
-
-        # Populate the directed graph with edges
-        # Edges within facilities don't have transportation costs or distances
-        # associated with them.
-        _edges = self.get_edges(facility_df)
-        _unique_edges = [tuple(map(lambda w: w + "_" + _id, x)) for x in _edges]
-
-        _methods = [
-            {
-                "cost_method": [
-                    getattr(
-                        self.cost_methods, _facility.nodes[edge[0]]["step_cost_method"]
-                    )
-                ],
-                "cost": 0.0,
-                "dist": 0.0,
-                "route_id": None,
-            }
-            for edge in _unique_edges
-        ]
-
-        _facility.add_edges_from(
-            self.list_of_tuples(
-                [node[0] for node in _unique_edges],
-                [node[1] for node in _unique_edges],
-                _methods,
-            )
-        )
-
-        return _facility
 
     def build_supplychain_graph(self):
         """
@@ -633,144 +575,28 @@ class CostGraph:
             print(f'CostGraph: Adding nodes and edges',flush=True)
 
         # add all facilities and intra-facility edges to supply chain
-        with open(self.loc_file, "r") as _loc_file:
-
-            _reader = pd.read_csv(_loc_file, chunksize=1)
-
-            for _line in _reader:
-
-                # Build the subgraph representation and add it to the list of
-                # facility subgraphs
-                _fac_graph = self.build_facility_graph(facility_df=_line)
-
-                # add onto the supply supply chain graph
-                self.supply_chain.add_nodes_from(_fac_graph.nodes(data=True))
-                self.supply_chain.add_edges_from(_fac_graph.edges(data=True))
+        # The format the networkx DiGraph needs is a list of three-tuples
+        # The first two elements per tuple define the u (source) and v 
+        # (destination) nodes
+        # The last element is a dictionary of edge attributes
+        all_edge_list = [ (
+            u_node,
+            v_node,
+            {'dist': dist, # the getattr method below pulls the actual function from costmethods.py
+            'cost_method': [getattr(self.cost_methods, node_cost), getattr(self.cost_methods, transpo_cost)],
+            'cost': -1.0,
+            'route_id': routeid}
+            )
+            for u_node, v_node, dist, node_cost, transpo_cost, routeid 
+            in zip(self.network_data.u_node_id, self.network_data.v_node_id,
+             self.network_data.vkmt, self.network_data.step_cost_method,
+             self.network_data.transpo_cost_method, self.network_data.route_id)
+        ]
+        
+        self.supply_chain.add_edges_from(all_edge_list)
 
         if self.verbose > 0:
             print(f'CostGraph: Adding nodes and edges took {np.round((time() - _netime)/60, 2)} minutes',flush=True)
-            print(f'CostGraph: Adding transport cost methods', flush = True)
-
-        _trtime = time()
-        # add all inter-facility edges, with costs but without distances
-        # this is a relatively short loop
-        for index, row in self.transpo_edges.iterrows():
-            if self.verbose > 2:
-                print(f'CostGraph: Adding transport cost methods to edges between {row["u_step"]} and {row["v_step"]}', flush = True)
-
-            _u = row["u_step"]
-            _v = row["v_step"]
-            _transpo_cost = row["transpo_cost_method"]
-
-            # get two lists of nodes to connect based on df row
-            _u_nodes = list(search_nodes(self.supply_chain, {"==": [("step",), _u]}))
-            _v_nodes = list(search_nodes(self.supply_chain, {"==": [("step",), _v]}))
-
-            # convert the two node lists to a list of tuples with all possible
-            # combinations of _u_nodes and _v_nodes
-            _edge_list = self.all_element_combos(_u_nodes, _v_nodes)
-
-            if not any(
-                [self.supply_chain.nodes[_v]["step"] in self.sc_end for _v in _v_nodes]
-            ):
-                _methods = [
-                    {
-                        "cost_method": [
-                            getattr(
-                                self.cost_methods,
-                                self.supply_chain.nodes[edge[0]]["step_cost_method"],
-                            ),
-                            getattr(self.cost_methods, _transpo_cost),
-                        ],
-                        "cost": 0.0,
-                        "dist": -1.0,
-                        "route_id": None,
-                    }
-                    for edge in _edge_list
-                ]
-            else:
-                _methods = [
-                    {
-                        "cost_method": [
-                            getattr(
-                                self.cost_methods,
-                                self.supply_chain.nodes[edge[0]]["step_cost_method"],
-                            ),
-                            getattr(self.cost_methods, _transpo_cost),
-                            getattr(
-                                self.cost_methods,
-                                self.supply_chain.nodes[edge[1]]["step_cost_method"],
-                            ),
-                        ],
-                        "cost": 0.0,
-                        "dist": -1.0,
-                        "route_id": None,
-                    }
-                    for edge in _edge_list
-                ]
-
-            # add these edges to the supply chain
-            self.supply_chain.add_edges_from(
-                self.list_of_tuples(
-                    [edge[0] for edge in _edge_list],
-                    [edge[1] for edge in _edge_list],
-                    _methods,
-                )
-            )
-
-        if self.verbose > 0:
-            print(f'CostGraph: Adding transport cost methods took {np.round((time() - _trtime)/60, 2)} minutes', flush = True)
-            print(f'CostGraph: Adding route distances', flush = True)
-        
-        # read in and process routes line by line
-        _route_file = pd.read_csv(self.routes_file).drop_duplicates(
-            subset = ["source_facility_id","source_facility_type",
-                        "destination_facility_id","destination_facility_type",
-                        "total_vkmt","route_id"],
-            inplace = False,
-            ignore_index = True
-        )
-        _ltime = time()
-        for _line in _route_file.iterrows():            
-            # find the source nodes for this route
-            _u = list(search_nodes(self.supply_chain,
-                                    {"and": [{"==": [("facility_id",), _line[1]['source_facility_id'],]},
-                                            {"in": [("connects",), ["out", "bid"]]}]
-                                    }
-                                )
-                    )
-            
-            if len(_u) == 0:
-                print(f'CostGraph: Node {_line[1]["source_facility_id"]} of type'
-                f' {_line[1]["source_facility_type"]} expected but not found',
-                flush = True)
-                continue
-
-
-            # Find the edge that connects the source and destination nodes for this route
-            _edge = [(u, v, dat) for u, v, dat in self.supply_chain.edges(_u, data = True) 
-                        if self.supply_chain.nodes[v]["facility_id"] == _line[1]['destination_facility_id']]
-            
-            if len(_edge) == 0:
-                print(f'CostGraph: Edge between {_line[1]["source_facility_id"]}_{_line[1]["source_facility_type"]}'
-                        f' and {_line[1]["destination_facility_type"]}_{_line[1]["destination_facility_id"]} expected but not found',
-                        flush = True)
-                continue
-
-            if self.verbose > 2:
-                print(f'CostGraph: Adding {_line[1]["total_vkmt"]} km between {_edge[0][0]} and {_edge[0][1]}', flush = True)
-            
-            self.supply_chain.edges[_edge[0][0], _edge[0][1]]['dist'] = _line[1]["total_vkmt"]
-            self.supply_chain.edges[_edge[0][0], _edge[0][1]]['route_id'] = _line[1]["route_id"]
-        
-        if self.verbose > 0:
-            print(f'CostGraph: Adding route distances took {np.round((time() - _ltime)/60, 2)} minutes', flush=True)
-
-        # After all of the route distances have been added, any edges that
-        # have a distance of -1 km are deleted from the network.
-        self.supply_chain.remove_edges_from(
-            [[u, v] for u, v, dat in self.supply_chain.edges.data() if dat['dist'] == -1.0]
-        )
 
         if self.verbose > 0:
             print(f'CostGraph: Calculating edge costs', flush=True)
@@ -804,6 +630,7 @@ class CostGraph:
 
         if self.verbose > 0:
             print(f'CostGraph: Instantiation took {np.round((time() - self.start_time)/60, 2)} minutes', flush = True)
+
 
     def choose_paths(self, source_node: str = None, crit: str = "cost"):
         """
