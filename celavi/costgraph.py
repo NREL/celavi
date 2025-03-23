@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-
+import pdb
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -561,6 +561,20 @@ class CostGraph:
         ]
 
         self.supply_chain.add_edges_from(all_edge_list)
+        
+        # Each node needs a facility_id attribute assigned
+        # This is so pathfinding logic, which operates off facility_id, will work
+        # the facility_id is the numeric code prepended by one letter, and it's already
+        # a part of the node_id
+        _node_attr_dict = {}
+        for node_id, facility_id in zip(self.network_data.u_node_id, self.network_data.u_facility_id):
+            if node_id not in _node_attr_dict.keys(): _node_attr_dict[node_id] = facility_id
+
+        nx.set_node_attributes(
+            self.supply_chain,
+            values = _node_attr_dict,
+            name = 'facility_id'
+        )
 
         if self.verbose > 0:
             print(f'CostGraph: Adding nodes and edges took {np.round((time() - _netime)/60, 2)} minutes',flush=True)
