@@ -28,7 +28,7 @@ from celavi.diagnostic_viz import DiagnosticViz
 
 
 
-
+import pdb
 class Scenario:
     """
     Set up, validate, and execute a CELAVI scenario.
@@ -216,21 +216,44 @@ class Scenario:
             if not self.scen["flags"].get("run_routes", True):
                 print(f"Filtering routes: {states_to_filter}", flush=True)
                 filter_routes(self.files["locs"], _routefile)
+        
+        # Generate file of network edges with node/facility IDs and locations
+        network_structure = pd.read_csv(self.files['network_structure'])
+        locations = pd.read_csv(self.files['locs'])
+        network_full = network_structure.copy().merge(
+            locations.add_prefix('u_'),
+            on = ['u_facility_type'],
+            how = 'left'
+            ).merge(
+                locations.add_prefix('v_'),
+                on = ['v_facility_type'],
+                how = 'left'
+                )
+
+        network_full.loc[:,'u_node_id'] = [f'{step}_{fid}' for step, fid in zip(network_full.u_step, network_full.u_facility_id)]
+        network_full.loc[:,'v_node_id'] = [f'{step}_{fid}' for step, fid in zip(network_full.v_step, network_full.v_facility_id)]
+
+        network_full.drop(columns = ['u_step','v_step'], inplace = True)
+
+        _drop_edges = network_full.loc[[(instate == True) and (u_state != v_state) for instate, u_state, v_state in zip(network_full.in_state, network_full.u_region_id_2, network_full.v_region_id_2)],:].index
+
+        network_full.drop(index = _drop_edges, inplace = True)
+
+        network_full.to_csv(self.files['network_edges'], index = False)
 
         if self.scen["flags"].get("run_routes", True):
             Router.get_all_routes(
-                locations_file=self.files["locs"],
-                route_pair_file=self.files["route_pairs"],
-                distance_filtering=self.scen["flags"].get("distance_filtering", False),
+                network_edges=self.files['network_edges'],
                 transportation_graph=self.files["transportation_graph"],
                 node_locations=self.files["node_locs"],
                 routes_output_file=_routefile,
                 routing_output_folder=os.path.join(
                     self.args.data, self.case["directories"].get("generated")
                 ),
-            )
-
-        print(f"Run routes completed in {self.simtime(self.start)} s", flush=True)
+                county_routes_file = self.files['county_routes']
+                ),
+        pdb.set_trace()
+        print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
 
     def setup(self):
         """Create instances of CostGraph, DES (Context and Components) and PyLCIA."""
