@@ -115,9 +115,8 @@ class CostGraph:
         # find_nearest
         self.loc_df = pd.read_csv(locations_file)
 
-        self.sc_end = sc_end + sc_out_circ
-        self.sc_begin = sc_begin 
-        self.sc_reenter = sc_in_circ
+        self.sc_end = sc_end + sc_out_circ + sc_in_circ
+        self.sc_begin = sc_begin
         
         if len(circular_components) == 1:
             self.circular_components = circular_components[0]
@@ -294,12 +293,13 @@ class CostGraph:
         [2] list of nodes defining the path between source and the closest node
         """
         if self.verbose > 1:
-            print(f"Finding shortest paths from {source_node} to terminal nodes")
+            print(f"Finding shortest paths from {source_node} to {self.sc_end}")
 
         # Pull out a list of all nodes in the supply chain that are terminal
         # The linear supply chain terminates there, OR one loop of a circular pathway
         # terminates there
-        targets = [tnode for tnode in self.supply_chain.nodes if any([scr in tnode for scr in self.sc_reenter])]
+        targets = [tnode for tnode in self.supply_chain.nodes 
+                    if any([scr in tnode for scr in self.sc_end])]
 
         # Loop thru terminal nodes
         # Use the loop rather than list comprehension b/c if a terminal node isn't reachable from the source
@@ -315,11 +315,11 @@ class CostGraph:
             except nx.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
                 continue
-        pdb.set_trace()
+        
         # return the smallest of all lengths to get to typeofnode
         if len(lengths) > 0:
             # For detailed debugging, save a file of all paths found and their lengths
-            pd.DataFrame([short_paths, lengths]).to_csv(f'{source_node}-{self.year}-paths.csv', index=False)
+            pd.DataFrame([short_paths, lengths]).to_csv(f'{source_node}-{int(self.year)}-paths.csv', index=False)
 
             # Print a summary of the paths found
             if self.verbose > 1:
@@ -329,10 +329,8 @@ class CostGraph:
 
             # dict of shortest paths to all targets
             nearest = min(lengths, key=lengths.get)
-            timeout = nx.get_node_attributes(self.supply_chain, "timeout")
-            timeout_list = [
-                value for key, value in timeout.items() if key in short_paths[nearest]
-            ]
+            timeout_list = [1.0 for node in short_paths[nearest]]
+
             dist_list = [
                 self.supply_chain.edges[short_paths[nearest][d : d + 2]]["dist"]
                 for d in range(len(short_paths[nearest]) - 1)
@@ -343,9 +341,8 @@ class CostGraph:
                 for d in range(len(short_paths[nearest]) - 1)
             ]
             route_id_list.insert(0, None)
-            _out = self.list_of_tuples(
-                short_paths[nearest], timeout_list, dist_list, route_id_list
-            )
+            
+            _out = self.list_of_tuples(short_paths[nearest], timeout_list, dist_list, route_id_list)
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
@@ -358,7 +355,7 @@ class CostGraph:
             #    weight=crit,
             #    method="bellman-ford",
             #)
-
+            pdb.set_trace()
             for i in self.sc_end:
                 _dest = [key for key, value in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
@@ -381,7 +378,7 @@ class CostGraph:
             return nearest, lengths[nearest], _out
         else:
             # not found, no path from source to typeofnode
-            print(f'CostGraph.find_nearest: No paths from {source_node} to any of {self.sc_reenter} nodes')
+            print(f'CostGraph.find_nearest: No paths from {source_node} to any of {self.sc_end} nodes')
             return None, None, None
 
 
@@ -436,10 +433,7 @@ class CostGraph:
         if lengths:
             # dict of shortest paths to all targets
             nearest = min(lengths, key=lengths.get)
-            timeout = nx.get_node_attributes(self.supply_chain, "timeout")
-            timeout_list = [
-                value for key, value in timeout.items() if key in short_paths[nearest]
-            ]
+            timeout_list = [1.0 for node in short_paths[nearest]]
             dist_list = [
                 self.supply_chain.edges[short_paths[nearest][d : d + 2]]["dist"]
                 for d in range(len(short_paths[nearest]) - 1)
