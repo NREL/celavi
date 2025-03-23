@@ -605,7 +605,7 @@ class CostGraph:
 
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         if _cost_adjust < 0.0:
-            print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(_cost_adjust, 2)}', flush = True)
+            print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
             self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
             for edge in self.supply_chain.edges():
                 self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
@@ -708,6 +708,8 @@ class CostGraph:
         _predec = [_node]
         while len(_upstream_nodes) == 0:
             _predec = [n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]
+            if len(_predec) == 0:
+                print(f'CostGraph.find_upstream_neighbor: {_node} has no predecessors', flush = True)
             _upstream_nodes = [n for n in _predec if any([n.find(begin + '_') != -1 for begin in self.sc_begin])]
             # Since we do this recursively, we also need to double check that a path exists between 
              # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
@@ -930,7 +932,7 @@ class CostGraph:
         
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         if _cost_adjust < 0.0:
-            print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(_cost_adjust, 2)}',
+            print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
             flush = True)
             self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
 
