@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-import pdb
+
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -355,7 +355,7 @@ class CostGraph:
             #    weight=crit,
             #    method="bellman-ford",
             #)
-            pdb.set_trace()
+
             for i in self.sc_end:
                 _dest = [key for key, value in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]

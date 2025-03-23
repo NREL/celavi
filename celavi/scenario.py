@@ -28,7 +28,7 @@ from celavi.diagnostic_viz import DiagnosticViz
 
 
 
-import pdb
+
 class Scenario:
     """
     Set up, validate, and execute a CELAVI scenario.
