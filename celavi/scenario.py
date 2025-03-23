@@ -28,7 +28,7 @@ from celavi.diagnostic_viz import DiagnosticViz
 
 
 
-import pdb
+
 class Scenario:
     """
     Set up, validate, and execute a CELAVI scenario.
@@ -264,8 +264,7 @@ class Scenario:
                     self.args.data, self.case["directories"].get("generated")
                 ),
                 county_routes_file = self.files['county_routes']
-                ),
-        pdb.set_trace()
+                )
         print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
 
     def setup(self):
