@@ -299,7 +299,7 @@ class CostGraph:
         # Pull out a list of all nodes in the supply chain that are terminal
         # The linear supply chain terminates there, OR one loop of a circular pathway
         # terminates there
-        targets = [tnode for tnode in search_nodes(self.supply_chain, {"in": [("step",), self.sc_reenter]})]
+        targets = [tnode for tnode in self.supply_chain.nodes if any([scr in tnode for scr in self.sc_reenter])]
 
         # Loop thru terminal nodes
         # Use the loop rather than list comprehension b/c if a terminal node isn't reachable from the source
@@ -315,10 +315,9 @@ class CostGraph:
             except nx.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
                 continue
-        
+        pdb.set_trace()
         # return the smallest of all lengths to get to typeofnode
         if len(lengths) > 0:
-            pdb.set_trace()
             # For detailed debugging, save a file of all paths found and their lengths
             pd.DataFrame([short_paths, lengths]).to_csv(f'{source_node}-{self.year}-paths.csv', index=False)
 
@@ -420,7 +419,7 @@ class CostGraph:
             print(f"Finding path from {source_node} to nearest {target_factype}")
 
         # We are only interested in a particular type(s) of node
-        targets = [tnode for tnode in search_nodes(self.supply_chain, {"in": [("step",), target_factype]})]
+        targets = [tnode for tnode in self.supply_chain.nodes if target_factype in tnode]
         
         short_paths = {}
         lengths = {}
@@ -489,41 +488,6 @@ class CostGraph:
             print(f'CostGraph.find_nearest_factype: No path from {source_node} to {target_factype} facility type')
             # not found, no path from source to typeofnode
             return None, None, None
-
-
-    def get_edges(self, facility_df: pd.DataFrame, u_edge="step", v_edge="next_step"):
-        """
-        Converts two columns of node names into a list of string tuples
-        for intra-facility edge definition with networkx
-
-        Parameters
-        ----------
-        facility_df
-            DataFrame listing processing steps (u_edge) and the next
-            processing step (v_edge) by facility type
-        u_edge
-            unique processing steps within a facility type
-        v_edge
-            steps to which the processing steps in u_edge connect
-
-        Returns
-        -------
-            list of string tuples that define edges within a facility type
-        """
-        if self.verbose > 1:
-            print("Getting edges for ", facility_df["facility_type"].values[0])
-
-        _type = facility_df["facility_type"].values[0]
-
-        _out = (
-            self.fac_edges[[u_edge, v_edge]]
-            .loc[self.fac_edges.facility_type == _type]
-            .dropna()
-            .to_records(index=False)
-            .tolist()
-        )
-
-        return _out
 
 
     def build_supplychain_graph(self):
