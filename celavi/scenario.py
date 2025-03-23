@@ -299,7 +299,6 @@ class Scenario:
                 step_costs_file=self.files["step_costs"]
                 if self.scen["flags"].get("generate_step_costs")
                 else self.files["step_costs_custom"],
-                fac_edges_file=self.files["fac_edges"],
                 transpo_edges_file=self.files["transpo_edges"],
                 locations_file=self.files["locs"],
                 routes_file=self.files["routes_computed"]

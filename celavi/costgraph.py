@@ -19,7 +19,6 @@ class CostGraph:
     def __init__(
         self,
         step_costs_file: str,
-        fac_edges_file: str,
         transpo_edges_file: str,
         locations_file: str,
         routes_file: str,
@@ -48,8 +47,6 @@ class CostGraph:
         step_costs_file : str
             Path to file listing processing steps and cost calculation methods
             by facility type.
-        fac_edges_file : str
-            Path to file listing intra-facility edges by facility type.
         transpo_edges_file : str
             Path to file listing inter-facility edges and transportation cost
             calculation methods.
@@ -102,7 +99,6 @@ class CostGraph:
 
         self.start_time = time()
         self.step_costs = pd.read_csv(step_costs_file)
-        self.fac_edges = pd.read_csv(fac_edges_file)
         self.transpo_edges = pd.read_csv(transpo_edges_file)
 
         # these data sets are processed line by line
