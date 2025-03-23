@@ -100,8 +100,6 @@ class Scenario:
         # Instantiate model
         self.setup()
 
-        print(f"Simulations starting at {self.simtime(self.start)} s", flush=True)
-
         # Execute all model runs
         # Subtract one from the number of runs in the config file because
         # arange includes zero in the list
@@ -442,7 +440,6 @@ class Scenario:
             manuf_facility = self.netw.find_upstream_neighbor(
                 row["facility_id"]
             )
-
             # Optional print statement for component monitoring
             if self.case["model_run"].get("warning_verbose") > 1:
                 print(f'{row.facility_id} , {row.year}: {manuf_facility}')
@@ -474,6 +471,7 @@ class Scenario:
                         )
                     else:
                         pass
+                if len(components) % 100 == 0: print(f'{len(components)} components instantiated')
 
         components = pd.DataFrame(components)
 
