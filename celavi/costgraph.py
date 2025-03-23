@@ -505,61 +505,6 @@ class CostGraph:
 
         return _out
 
-    def get_nodes(self, facility_df: pd.DataFrame):
-        """
-        Generates a data structure that defines all nodes and node attributes
-        for a single facility.
-
-        Parameters
-        ----------
-        facility_df : pd.DataFrame
-            DataFrame containing unique facility IDs, processing steps, and
-            the name of the method (if any) used to calculate processing costs
-
-            Columns:
-                - facility_id : int
-                - step : str
-                - connects : str
-                - step_cost_method : str
-
-        Returns
-        -------
-        List[(str, Dict)]
-            Data structure used to define a networkx DiGraph. Attributes
-            (dictionary keys) are: processing step, cost method, facility
-            ID, and region identifiers.
-        """
-        if self.verbose > 1:
-            print(
-                "Getting nodes for facility ", str(facility_df["facility_id"].values[0])
-            )
-
-        _id = facility_df["facility_id"].values[0]
-
-        # list of nodes (processing steps) within a facility
-        _node_names = (
-            self.step_costs["step"].loc[self.step_costs.facility_id == _id].tolist()
-        )
-
-        # data frame matching facility processing steps with methods for cost
-        # calculation over time
-        _step_cost = self.step_costs[
-            ["step", "step_cost_method", "facility_id", "connects"]
-        ].loc[self.step_costs.facility_id == _id]
-
-        _step_cost["timeout"] = 1
-
-        # create list of dictionaries from data frame with processing steps,
-        # cost calculation method, and facility-specific region identifiers
-        _attr_data = _step_cost.merge(
-            facility_df, how="outer", on="facility_id"
-        ).to_dict(orient="records")
-
-        # reformat data into a list of tuples as (str, dict)
-        _nodes = self.list_of_tuples(self.get_node_names(_id, _node_names), _attr_data)
-
-        return _nodes
-
 
     def build_supplychain_graph(self):
         """
@@ -713,7 +658,7 @@ class CostGraph:
             _node = [
                 x
                 for x, y in self.supply_chain.nodes(data=True)
-                if (('facility_id',node_id) in y.items()) and (('connects','bid') in y.items())
+                if ('facility_id',node_id) in y.items()
             ][0]
 
         # Get a list of all nodes upstream of this node_id with a facility type
