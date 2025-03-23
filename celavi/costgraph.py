@@ -623,10 +623,11 @@ class CostGraph:
             print(f'CostGraph: Calculating edge costs took {np.round((time() - _ctime)/60, 2)} minutes', flush=True)
 
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
-        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
-
-        for edge in self.supply_chain.edges():
-            self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
+        if _cost_adjust < 0.0:
+            print(f'CostGraph: Adjusting all costs for {self.year} upwards by \${np.round(_cost_adjust, 2)}', flush = True)
+            self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
+            for edge in self.supply_chain.edges():
+                self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
             print(f'CostGraph: Instantiation took {np.round((time() - self.start_time)/60, 2)} minutes', flush = True)
@@ -947,13 +948,16 @@ class CostGraph:
             )
         
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
-        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
+        if _cost_adjust < 0.0:
+            print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by \${np.round(_cost_adjust, 2)}',
+            flush = True)
+            self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
 
-        for edge in self.supply_chain.edges():
-            self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
+            for edge in self.supply_chain.edges():
+                self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
         if self.verbose > 0 and self.year > 2001:
-            print(f'CostGraph: Costs updated for {self.year} after {np.round(time() - self.update_time, 1)} s',
+            print(f'CostGraph.update_costs: Costs updated for {self.year} after {np.round(time() - self.update_time, 1)} s',
                     flush=True)
         self.update_time = time()
 
@@ -976,4 +980,4 @@ class CostGraph:
                     f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
                 )
         except KeyError:
-            print(f"CostGraph: pathway_crit_history is empty; no end of life flows were simulated")
+            print(f"CostGraph.save_costgraph_outputs: pathway_crit_history is empty; no end of life flows were simulated")
