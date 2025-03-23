@@ -28,7 +28,7 @@ from celavi.diagnostic_viz import DiagnosticViz
 
 
 
-
+import pdb
 class Scenario:
     """
     Set up, validate, and execute a CELAVI scenario.
@@ -234,6 +234,17 @@ class Scenario:
                 on = ['v_facility_type'],
                 how = 'left'
                 )
+        
+        # Identify and drop rows where intra-facility connections have been made between
+        # facilities
+        network_full.drop(
+            network_full.loc[
+                [(utype == vtype) and (u_facility != v_facility) 
+                for utype, vtype, u_facility, v_facility 
+                in zip(network_full.u_facility_type, network_full.v_facility_type, 
+                        network_full.u_facility_id, network_full.v_facility_id)],:].index,
+                 inplace = True
+        )
 
         # Create unique node_ids for every node based on the processing step and the
         # facility id
