@@ -281,7 +281,7 @@ class ComputeLocations:
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         pv_locs.drop(
-            index = pv_locs[pv_locs.region_id_2.isin(['HI','GU','PR','AK'])].index,
+            index = pv_locs[pv_locs.region_id_2.isin(['HI','GU','PR','AK', 'DC'])].index,
             inplace = True
         )
 
@@ -386,7 +386,7 @@ class ComputeLocations:
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         building_locs.drop(
-            index = building_locs[building_locs.region_id_2.isin(['HI','GU','PR','AK'])].index,
+            index = building_locs[building_locs.region_id_2.isin(['HI','GU','PR','AK', 'DC'])].index,
             inplace = True
         )
 
