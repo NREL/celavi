@@ -325,7 +325,7 @@ class CostGraph:
 
             # dict of shortest paths to all targets
             nearest = min(lengths, key=lengths.get)
-            timeout_list = [1.0 for node in short_paths[nearest]]
+            timeout_list = [self.supply_chain.nodes[node]['timeout'] for node in short_paths[nearest]]
 
             dist_list = [
                 self.supply_chain.edges[short_paths[nearest][d : d + 2]]["dist"]
@@ -523,6 +523,8 @@ class CostGraph:
         _node_attr_dict = {}
         for node_id, facility_id in zip(self.network_data.u_node_id, self.network_data.u_facility_id):
             if node_id not in _node_attr_dict.keys(): _node_attr_dict[node_id] = facility_id
+        for node_id, facility_id in zip(self.network_data.v_node_id, self.network_data.v_facility_id):
+            if node_id not in _node_attr_dict.keys(): _node_attr_dict[node_id] = facility_id
 
         nx.set_node_attributes(
             self.supply_chain,
@@ -530,6 +532,37 @@ class CostGraph:
             name = 'facility_id'
         )
 
+        # Add timespan to nodes. Facilities with "in use" in the name get either 20 or 30 year lifespans
+        # @NOTE Eventually this should draw from facility information and component-level lifespans
+        # in the YAML files. This logic is a quick fix specific to the glass case study.
+        _node_timeout_dict = {}
+        for node_id in self.network_data.u_node_id:
+            if node_id not in _node_timeout_dict.keys(): 
+                if 'pv in use' in node_id:
+                    _timeout = 20.0
+                elif 'window in use' in node_id:
+                    _timeout = 30.0
+                else:
+                    _timeout = 1.0
+                
+                _node_timeout_dict[node_id] = _timeout
+        for node_id in self.network_data.v_node_id:
+            if node_id not in _node_timeout_dict.keys(): 
+                if 'pv in use' in node_id:
+                    _timeout = 20.0
+                elif 'window in use' in node_id:
+                    _timeout = 30.0
+                else:
+                    _timeout = 1.0
+                
+                _node_timeout_dict[node_id] = _timeout
+        
+        nx.set_node_attributes(
+            self.supply_chain,
+            values = _node_timeout_dict,
+            name = 'timeout'
+        )
+        
         if self.verbose > 0:
             print(f'CostGraph: Adding nodes and edges took {np.round((time() - _netime)/60, 2)} minutes',flush=True)
 
