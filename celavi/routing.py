@@ -193,7 +193,14 @@ class Router:
 
         network = pd.read_csv(network_edges)
 
-        _drop_edges = []
+        # Get a table of which processing steps require downstream
+        # landfill facilities, for use in postprocessing routes
+        _landfill_edges = network.loc[
+            [vkmtmax > 0 and instate 
+            for vkmtmax, instate in zip(network.vkmt_max, network.in_state)],
+            ['u_step','v_step']
+            ].drop_duplicates().reset_index()
+        
         _network_dist = []
 
         vkmt_by_county_list = []
@@ -204,7 +211,7 @@ class Router:
         else:
             print(f'Router.get_all_routes: Finding {len(network)} routes', flush = True)
             _rtime = time.time()
-            for idx, edge in network.iterrows():
+            for idx, edge in network.iterrows():                
                 # Do not find routes between co-located nodes
                 if edge.u_facility_id == edge.v_facility_id:
                     _network_dist = _network_dist + [{'index': idx, 'vkmt': 0.0, 'route_id': 'colocated'}]
@@ -227,7 +234,6 @@ class Router:
                     # the network routes file
                     if _vkmt_by_county.vkmt.sum() > edge.vkmt_max:
                         _network_dist = _network_dist + [{'index': idx, 'vkmt': _vkmt_by_county.vkmt.sum(), 'route_id': 'vkmt_max'}]
-                        _drop_edges = _drop_edges + [idx]
                     # If the route returned has a total distance of under 1 kilometer, assume
                     # those facilities are colocated
                     # This accounts for facilities that are essentially colocated but don't
@@ -247,17 +253,53 @@ class Router:
                 # Print a status message every 100 routes
                 if idx % 100 == 0: print(f'Router.get_all_routes: {idx} routes found after {np.round((time.time() - _rtime)/60, 1)} minutes', flush = True)
             
-            network_routes = network.merge(
+            network_all_routes = network.merge(
                 pd.DataFrame(_network_dist),
                 left_index = True,
                 right_on = 'index',
                 how = 'left'
             )
+
+            # Save the raw routes file including edges that violate the vkmt_max
+            network_all_routes.to_csv('network-routes-all.csv', index=False)
+
             # Remove edges from the network if any have distances greater than the max allowed
-            if len(_drop_edges) > 0:
-                network_routes.to_csv('network-routes-all.csv', index=False)
-                network_routes.drop(_drop_edges, inplace = True)
+            if any(network_all_routes.route_id == 'vkmt_max'):
+                network_routes = network_all_routes.drop(network_all_routes.loc[network_all_routes.route_id == 'vkmt_max',:].index)
+
+                # Check through the dataset of nodes that require connections to a landfill
+                # If the vkmt_max restriction has removed all edges from these nodes to landfills,
+                # locate the nearest landfill and re-add that edge to the network regardless 
+                # of the vkmt_max
+                _add_edges = pd.DataFrame()
+                for _, edge in _landfill_edges.iterrows():
+                    _nodes_need_landfills = list(
+                        set(
+                            network_all_routes.loc[network_all_routes.u_step == edge['u_step'],'u_node_id'].drop_duplicates()
+                        ).difference(
+                            network_routes.loc[[(u == edge['u_step']) and (v == edge['v_step']) for u, v in zip(network_routes.u_step, network_routes.v_step)],'u_node_id'].drop_duplicates()
+                            )
+                        )
+                    if len(_nodes_need_landfills) > 0:
+                        _closest_landfills = network_all_routes.loc[
+                            (network_all_routes.u_node_id.isin(_nodes_need_landfills)) & (network_all_routes.v_step == edge.v_step),:
+                            ].groupby('u_node_id').agg({'vkmt':'min'}).reset_index()
+                        if len(_closest_landfills) == 0:
+                            # If the nodes have no available downstream facilities, print a warning
+                            # The location data may need to be revised in this case
+                            print(f'Router.get_all_routes: Nodes {_nodes_need_landfills} have no available {edge.v_step} nodes')
+                        else:
+                            _add_edges = pd.concat(
+                                [_add_edges,
+                                network_all_routes.loc[
+                                    (network_all_routes.u_node_id.isin(_nodes_need_landfills)) & (network_all_routes.v_step == edge.v_step) & (network_all_routes.vkmt.isin(_closest_landfills.vkmt)), :]
+                                    ]
+                                )
+                        
             
+            # Add in the landfill connections
+            network_routes = pd.concat([network_routes, _add_edges]).reset_index()
+
             # Save the network routes file for use in Cost Graph
             network_routes.to_csv(routes_output_file, index=False)
 
