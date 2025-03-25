@@ -100,8 +100,6 @@ class Scenario:
         # Instantiate model
         self.setup()
 
-        print(f"Simulations starting at {self.simtime(self.start)} s", flush=True)
-
         # Execute all model runs
         # Subtract one from the number of runs in the config file because
         # arange includes zero in the list
@@ -216,21 +214,67 @@ class Scenario:
             if not self.scen["flags"].get("run_routes", True):
                 print(f"Filtering routes: {states_to_filter}", flush=True)
                 filter_routes(self.files["locs"], _routefile)
+        
+        # Generate file of network edges with node/facility IDs and locations
+
+        # The network_structure file defines connections between nodes and assigns
+        # facility types, vkmt_max, instateonly boolean and a loss boolean to
+        # every connection
+        network_structure = pd.read_csv(self.files['network_structure'])
+
+        # By merging the network structure with the facility locations, the
+        # entire set of edges within the network is defined
+        locations = pd.read_csv(self.files['locs'])
+        network_full = network_structure.copy().merge(
+            locations.add_prefix('u_'),
+            on = ['u_facility_type'],
+            how = 'left'
+            ).merge(
+                locations.add_prefix('v_'),
+                on = ['v_facility_type'],
+                how = 'left'
+                )
+        
+        # Identify and drop rows where intra-facility connections have been made between
+        # facilities
+        network_full.drop(
+            network_full.loc[
+                [(utype == vtype) and (u_facility != v_facility) 
+                for utype, vtype, u_facility, v_facility 
+                in zip(network_full.u_facility_type, network_full.v_facility_type, 
+                        network_full.u_facility_id, network_full.v_facility_id)],:].index,
+                 inplace = True
+        )
+
+        # Create unique node_ids for every node based on the processing step and the
+        # facility id
+        network_full.loc[:,'u_node_id'] = [f'{step}_{fid}' for step, fid in zip(network_full.u_step, network_full.u_facility_id)]
+        network_full.loc[:,'v_node_id'] = [f'{step}_{fid}' for step, fid in zip(network_full.v_step, network_full.v_facility_id)]
+
+        # Generate list of edges to remove from the network based on the in-state boolean
+        # and whether the u and v nodes are within the same state
+        _drop_edges = network_full.loc[
+            [(instate == True) and (u_state != v_state) 
+            for instate, u_state, v_state 
+            in zip(network_full.in_state, network_full.u_region_id_2, network_full.v_region_id_2)],:].index
+        network_full.drop(index = _drop_edges, inplace = True)
+
+        # Save the edges to file
+        # Route distances and IDs are added by the Router
+        network_full.to_csv(self.files['network_edges'], index = False)
 
         if self.scen["flags"].get("run_routes", True):
             Router.get_all_routes(
-                locations_file=self.files["locs"],
-                route_pair_file=self.files["route_pairs"],
-                distance_filtering=self.scen["flags"].get("distance_filtering", False),
+                network_edges=self.files['network_edges'],
                 transportation_graph=self.files["transportation_graph"],
                 node_locations=self.files["node_locs"],
                 routes_output_file=_routefile,
                 routing_output_folder=os.path.join(
                     self.args.data, self.case["directories"].get("generated")
                 ),
-            )
-
-        print(f"Run routes completed in {self.simtime(self.start)} s", flush=True)
+                county_routes_file = self.files['county_routes']
+                )
+        print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
 
     def setup(self):
         """Create instances of CostGraph, DES (Context and Components) and PyLCIA."""
@@ -255,7 +299,6 @@ class Scenario:
                 step_costs_file=self.files["step_costs"]
                 if self.scen["flags"].get("generate_step_costs")
                 else self.files["step_costs_custom"],
-                fac_edges_file=self.files["fac_edges"],
                 transpo_edges_file=self.files["transpo_edges"],
                 locations_file=self.files["locs"],
                 routes_file=self.files["routes_computed"]
@@ -407,7 +450,6 @@ class Scenario:
             manuf_facility = self.netw.find_upstream_neighbor(
                 row["facility_id"]
             )
-
             # Optional print statement for component monitoring
             if self.case["model_run"].get("warning_verbose") > 1:
                 print(f'{row.facility_id} , {row.year}: {manuf_facility}')
@@ -439,6 +481,7 @@ class Scenario:
                         )
                     else:
                         pass
+                if len(components) % 100 == 0: print(f'{len(components)} components instantiated')
 
         components = pd.DataFrame(components)
 

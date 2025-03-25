@@ -128,7 +128,10 @@ class DiagnosticViz:
 
         # The dropna() gets rid of all blank component counts, generally those
         # where the facility never processes a particular component
-        cumulative_histories_df = pd.concat(cumulative_histories).dropna()
+        cumulative_histories_df = pd.concat(cumulative_histories).fillna(0)
+
+        # Save a raw version of the histories file for debugging
+        cumulative_histories_df.to_csv('cumulative-histories-raw.csv',index=False)
 
         self.gathered_and_melted_cumulative_histories = (
             cumulative_histories_df.drop(["timestep", "year_floor", "facility_id"], axis=1)
