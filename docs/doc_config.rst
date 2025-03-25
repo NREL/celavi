@@ -53,7 +53,6 @@ Case Study Config Template
 			lookup_steps:
 			lookup_transpo_cost_methods:
 			lookup_step_cost_methods:
-			fac_edges:
 			transpo_edges:
 			route_pairs:
 			component_material_mass:
@@ -328,7 +327,6 @@ Case Study Config Example
 			lookup_steps: step.csv
 			lookup_transpo_cost_methods: transpo_cost_method.csv
 			lookup_step_cost_methods: step_cost_method.csv
-			fac_edges: fac_edges.csv
 			transpo_edges: transpo_edges.csv
 			route_pairs: route_pairs.csv
 			component_material_mass: avgmass.csv

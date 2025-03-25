@@ -281,7 +281,7 @@ class ComputeLocations:
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         pv_locs.drop(
-            index = pv_locs[pv_locs.region_id_2.isin(['HI','GU','PR','AK'])].index,
+            index = pv_locs[pv_locs.region_id_2.isin(['HI','GU','PR','AK', 'DC'])].index,
             inplace = True
         )
 
@@ -386,7 +386,7 @@ class ComputeLocations:
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska (only have road network data for the contiguous United States)
         building_locs.drop(
-            index = building_locs[building_locs.region_id_2.isin(['HI','GU','PR','AK'])].index,
+            index = building_locs[building_locs.region_id_2.isin(['HI','GU','PR','AK', 'DC'])].index,
             inplace = True
         )
 
@@ -987,10 +987,12 @@ class ComputeLocations:
 
         # exclude Hawaii, Guam, Puerto Rico, and Alaska
         # (only have road network data for the contiguous United States)
+        # DC has no landfills in the landfill MOP data
         locations = locations[locations.region_id_2 != 'GU']
         locations = locations[locations.region_id_2 != 'HI']
         locations = locations[locations.region_id_2 != 'PR']
         locations = locations[locations.region_id_2 != 'AK']
+        locations = locations[locations.region_id_2 != 'DC']
         
         locations = locations[locations.region_id_3 != 'Nantucket']
 

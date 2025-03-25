@@ -17,7 +17,7 @@ class FileChecks:
     created with descriptive messages before they are raised.
     """
 
-    def __init__(self, locations, step_costs, fac_edges, routes, transpo_edges):
+    def __init__(self, locations, step_costs, routes, transpo_edges):
         """
         Initializes the file integrity checks by copying the filenames
         to instance variables.
@@ -30,9 +30,6 @@ class FileChecks:
         step_costs: str
             Path to the step_costs file
 
-        fac_edges: str
-            Path to the facility edges file
-
         routes: str
             Path to the routes file
 
@@ -41,13 +38,11 @@ class FileChecks:
         """
         self.locations_filename = locations
         self.step_costs_filename = step_costs
-        self.fac_edges_filename = fac_edges
         self.routes_filename = routes
         self.transpo_edges_filename = transpo_edges
 
         self.locations: pd.DataFrame = None
         self.step_costs: pd.DataFrame = None
-        self.fac_edges: pd.DataFrame = None
         self.routes: pd.DataFrame = None
         self.transpo: pd.DataFrame = None
 
@@ -71,9 +66,6 @@ class FileChecks:
 
         if not os.path.isfile(self.step_costs_filename):
             raise Exception(f'Step costs file {self.step_costs_filename} does not exist.')
-
-        if not os.path.isfile(self.fac_edges_filename):
-            raise Exception(f'Facility edges file {self.fac_edges_filename} does not exist.')
 
         if not os.path.isfile(self.routes_filename):
             raise Exception(f'Routes file {self.routes_filename} does not exist.')
@@ -103,11 +95,6 @@ class FileChecks:
             self.step_costs = pd.read_csv(self.step_costs_filename)
         except (pd.EmptyDataError, FileNotFoundError):
             raise Exception(f'{self.step_costs_filename} failed to read as a .csv')
-
-        try:
-            self.fac_edges = pd.read_csv(self.fac_edges_filename)
-        except (pd.EmptyDataError, FileNotFoundError):
-            raise Exception(f'{self.fac_edges_filename} failed to read as a .csv')
 
         try:
             self.routes = pd.read_csv(self.routes_filename)
@@ -152,9 +139,6 @@ class FileChecks:
         if self.locations['facility_type'].isnull().values.any():
             raise Exception('facility_type in locations has an empty value.')
 
-        if self.fac_edges['facility_type'].isnull().values.any():
-            raise Exception('facility_type in fac_edges has an empty value.')
-
         if self.routes['source_facility_type'].isnull().values.any():
             raise Exception('source_facility_type in routes has an empty value.')
 
@@ -198,9 +182,6 @@ class FileChecks:
 
         if self.transpo_edges['transpo_cost_method'].isnull().values.any():
             raise Exception('transpo_cost_method in transpo_edges has a null value')
-
-        if self.fac_edges['step'].isnull().values.any():
-            raise Exception('step in fac_edges has a null value')
 
     def check_joins_on_facility_id(self):
         """
@@ -283,21 +264,6 @@ class FileChecks:
             facility_types.
         """
 
-        # An outer join is used here to include all rows on both sides of the join
-        # Check for null values on the left/right side of the join, and use ids on the
-        # opposite right/left side of the join to generate error messages about
-        # unmatched rows on the other side of the join.
-
-        join1 = self.locations.merge(self.fac_edges, on='facility_type', how='outer')
-        if join1['facility_id'].isna().values.any():
-            facility_type = join1[join1['facility_id'].isna().values]['facility_type'].values
-            raise Exception(
-                f'There is a fac_edges.facility_type {facility_type} that does not exist in locations.facility_type')
-        if join1['step'].isna().values.any():
-            facility_type = join1[join1['step'].isna().values]['facility_type'].values
-            raise Exception(
-                f'There is a locations.facility_type {facility_type} that does not exist in fac_edges.facility_type')
-
         # An outer join is used here to include all rows on both sides of the join.
         # Use the left side of the join to check for facility types referenced by routes that
         # do not exist in locations.
@@ -315,7 +281,7 @@ class FileChecks:
         # Use the left side of the join to check for facility types referenced by routes that
         # do not exist in locations.
         # Use the right side of the join to create error messages about route destination
-        # facility types that do not exist fac_edges.
+        # facility types that do not exist in locations.facility_type.
 
         join4 = self.locations.merge(self.routes, left_on='facility_type', right_on='destination_facility_type',
                                      how='outer')
@@ -324,19 +290,6 @@ class FileChecks:
                 'destination_facility_type'].values
             raise Exception(
                 f'There is a routes.destination_facility_type {destination_facility_type} that does not exist in locations.facility_type.'
-            )
-
-        # An outer join is used here to include all rows on both sides of the join.
-        # Use the left side of the join to check for facility types referenced by routes that
-        # do not exist in face_edges.
-        # Use the right side of the join to create error messages about route source
-        # facility types that do not exist fac_edges.
-
-        join3 = self.fac_edges.merge(self.routes, left_on='facility_type', right_on='source_facility_type', how='outer')
-        if join3['facility_type'].isna().values.any():
-            source_facility_type = join3[join3['facility_type'].isna().values]['source_facility_type'].values
-            raise Exception(
-                f'There is a routes.source_facility_type {source_facility_type} that does not exist in fac_edges.facility_type'
             )
 
     def check_step_joins(self):
@@ -348,20 +301,6 @@ class FileChecks:
         Exception
             Raises an exception if there are any problems with the step ids.
         """
-
-        # An outer join is used here to include all rows on both sides of the join
-        # Check for null values on the left/right side of the join, and use ids on the
-        # opposite right/left side of the join to generate error messages about
-        # unmatched rows on the other side of the join.
-
-        join1 = self.step_costs.merge(self.fac_edges, on='step', how='outer')
-        if join1['facility_type'].isna().values.any():
-            step = join1[join1['facility_type'].isna().values]['step'].values
-            raise Exception(f'There is a step_costs.step of {step} that does not exist in fac_edges.step.')
-        if join1['step_cost_method'].isna().values.any():
-            step = join1[join1['step_cost_method'].isna().values]['step'].values
-            raise Exception(f'There is a fac_edges.step {step} that does not exist in step_cost_method.step.')
-
         # An outer join is used here to include all rows on both sides of the join.
         # Use the left side of the join to check for u_steps referenced by transpo_edges
         # that do not exist step_costs.
@@ -384,36 +323,19 @@ class FileChecks:
             v_step = join3[join3['step'].isna().values]['v_step'].values
             raise Exception(f'There is a transpo_edges.v_step {v_step} that does not exist in step_costs.step.')
 
-        # An outer join is used here to include all rows on both sides of the join.
-        # Use the left side of the join to check for next_steps referenced by fac_edges
-        # that do not exist step_costs.
-        # Use the right side of the join to create error messages about next_steps
-        # that do not exist step_costs.
-        # Note that since next_step is optional, do not generate an error messages
-        # for next_steps that are null.
-
-        join4 = self.step_costs.merge(self.fac_edges, left_on='step', right_on='next_step', how='outer')
-        if join4['step_x'].isna().values.any():
-            next_step = join4[join4['step_x'].isna().values]['next_step'].values
-            next_step_not_all_na = join4[join4['step_x'].isna().values]['next_step'].isna().values.all()
-            if not next_step_not_all_na:   # next_step is optional, so nan should not throw an error
-                raise Exception(f'There is a fac_edges.next_step {next_step} that does not exist in step_costs.step.')
-
 
 def main():
     # Filenames
-    # locations, step_costs, fac_edges, routes, transpo_edges
+    # locations, step_costs, routes, transpo_edges
     parser = argparse.ArgumentParser(description='Check CELAVI input data')
     parser.add_argument('--locations', help='Path to locations file')
     parser.add_argument('--step_costs', help='Path to step_costs file')
-    parser.add_argument('--fac_edges', help='Facility edges file')
     parser.add_argument('--routes', help='Routes file')
     parser.add_argument('--transpo_edges', help='Transportation edges file')
     args = parser.parse_args()
     file_checks = FileChecks(
         locations=args.locations,
         step_costs=args.step_costs,
-        fac_edges=args.fac_edges,
         routes=args.routes,
         transpo_edges=args.transpo_edges
     )
