@@ -314,8 +314,9 @@ class CostGraph:
         
         # return the smallest of all lengths to get to typeofnode
         if len(lengths) > 0:
-            # For detailed debugging, save a file of all paths found and their lengths
-            pd.DataFrame([short_paths, lengths]).to_csv(f'{source_node}-{int(self.year)}-paths.csv', index=False)
+            if self.verbose > 1:
+                # For detailed debugging, save a file of all paths found and their lengths
+                pd.DataFrame([short_paths, lengths]).to_csv(f'{source_node}-findnearest-{int(self.year)}-paths.csv', index=False)
 
             # Print a summary of the paths found
             if self.verbose > 1:
@@ -426,10 +427,13 @@ class CostGraph:
                 if self.verbose > 1: print(f'CostGraph.find_nearest_factype: No path from {source_node} to {tnode}')
 
         # return the smallest of all lengths to get to typeofnode
-        if lengths:
+        if len(lengths) > 0:
+            if self.verbose > 1:
+                # For detailed debugging, save a file of all paths found and their lengths
+                pd.DataFrame([short_paths, lengths]).to_csv(f'{source_node}-findnearestfactype-{int(self.year)}-paths.csv', index=False)
             # dict of shortest paths to all targets
             nearest = min(lengths, key=lengths.get)
-            timeout_list = [1.0 for node in short_paths[nearest]]
+            timeout_list = [self.supply_chain.nodes[node]['timeout'] for node in short_paths[nearest]]
             dist_list = [
                 self.supply_chain.edges[short_paths[nearest][d : d + 2]]["dist"]
                 for d in range(len(short_paths[nearest]) - 1)
@@ -562,7 +566,7 @@ class CostGraph:
             values = _node_timeout_dict,
             name = 'timeout'
         )
-        
+
         if self.verbose > 0:
             print(f'CostGraph: Adding nodes and edges took {np.round((time() - _netime)/60, 2)} minutes',flush=True)
 
