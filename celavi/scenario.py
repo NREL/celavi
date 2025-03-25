@@ -250,7 +250,7 @@ class Scenario:
 
         if self.scen["flags"].get("initialize_costgraph", True):
             # Initialize the CostGraph using these parameter settings
-            print(f"CostGraph starts at {self.simtime(self.start)} s", flush=True)
+            print(f"CostGraph instantiation started at {self.simtime(self.start)} s", flush=True)
             self.netw = CostGraph(
                 step_costs_file=self.files["step_costs"]
                 if self.scen["flags"].get("generate_step_costs")
@@ -279,7 +279,7 @@ class Scenario:
                 random_state=self.rng,
                 run=self.run,
             )
-            print(f"CostGraph initialized at {self.simtime(self.start)}", flush=True)
+            print(f"CostGraph instantiated at {self.simtime(self.start)} s", flush=True)
 
             if self.scen["flags"].get("pickle_costgraph", True):
                 # Save the CostGraph object using pickle
@@ -287,7 +287,7 @@ class Scenario:
 
         else:
             self.netw = pickle.load(open(self.files["costgraph_pickle"], "rb"))
-            print(f"CostGraph read in at {self.simtime(self.start)}", flush=True)
+            print(f"CostGraph read in at {self.simtime(self.start)} s", flush=True)
 
         # Prepare LCIA code
         #verbose = 0 means no print statements. 
@@ -388,9 +388,18 @@ class Scenario:
         # To NOT scale down the number of components, leave the component_scaledown parameter
         # blank in scenario.yaml
         if self.scen['scenario']['component_scaledown']:
-            technology_data.loc[:,'n_technology'] = np.ceil((1 / self.scen['scenario']['component_scaledown']) * technology_data.n_technology)
+            _n_tech_scaled = np.ceil((1 / self.scen['scenario']['component_scaledown']) * technology_data.n_technology)
+            _technology_data_scaled = technology_data.copy()
+            _technology_data_scaled['n_technology_scaled'] = _n_tech_scaled
+            _technology_data_scaled['scale_factor'] = [orig / scaled if orig != 0 else 0.0 for orig, scaled in zip(technology_data.n_technology, _n_tech_scaled)]
+            _technology_data_scaled.to_csv(self.files['technology_data_scaled'],index=False)
+            technology_data.loc[:,'n_technology'] = _n_tech_scaled
+            technology_data['scale_factor'] = _technology_data_scaled['scale_factor']
 
         components = []
+        print(f'Instantiating {sum(technology_data.n_technology)} components at {self.simtime(self.start)} s',
+                flush=True)
+        _comptime = time.time()
         for _, row in technology_data.iterrows():
             year = row["year"]
             # @NOTE hard coded to glass study, will need to adapt
@@ -404,11 +413,15 @@ class Scenario:
                 print(f'{row.facility_id} , {row.year}: {manuf_facility}')
 
             n_technology = int(row["n_technology"])
-
+            
             for _ in range(n_technology):
                 for c in circular_components:
                     _c_mats = self.scen['technology_components']['component_materials'][c]
-                    _c_mat_mass = component_material_mass.mass_tonnes.loc[
+                    if 'scale_factor' in row.index:
+                        _mass_scaler = row['scale_factor']
+                    else:
+                        _mass_scaler = 1.0
+                    _c_mat_mass = _mass_scaler * component_material_mass.mass_tonnes.loc[
                         (component_material_mass.technology == row['technology']) &
                         (component_material_mass.component == c) & 
                         (component_material_mass.material.isin(_c_mats)) &
@@ -464,15 +477,13 @@ class Scenario:
                     random_state=self.rng,
                 )[0]
 
-        print(f"Components initialized at {self.simtime(self.start)} s", flush=True)
+        print(f'Instantiating components took {np.round((time.time() - _comptime)/60, 2)} minutes', 
+                flush = True)
 
         # Populate the context with components.
         self.context.populate(components, lifespan_fns)
 
-        print(
-            f"Context populated with components at {self.simtime(self.start)} s",
-            flush=True,
-        )
+        print(f'Beginning discrete event simulation at {self.simtime(self.start)} s', flush = True)
 
         # Run the context
         self.context.run()
@@ -507,6 +518,7 @@ class Scenario:
             var_name="unit",
             value_name="count",
             run=self.run,
+            component_scaledown = self.scen['scenario']['component_scaledown'],
         )
         count_cumulative_histories = (
             diagnostic_viz_counts.gather_and_melt_cumulative_histories()
@@ -551,11 +563,12 @@ class Scenario:
             "state",
             "impact",
             "impact_value",
+            "units",
             "run",
+            "c_type"
         ]
         lcia_df = pd.read_csv(self.files["lcia_to_des"], names=lcia_names)
         locations_df = pd.read_csv(self.files["locs"])
-
         locations_columns = [
             "facility_id",
             "facility_type",
@@ -570,7 +583,7 @@ class Scenario:
         locations_select_df = locations_df.loc[:, locations_columns]
         lcia_process = lcia_df.loc[
             (lcia_df.run == self.run) & (lcia_df.route_id.isna())
-        ]
+        ] 
         lcia_locations_df = lcia_process.merge(
             locations_select_df, how="inner", on="facility_id"
         ).drop_duplicates()
@@ -650,7 +663,8 @@ class Scenario:
 
         lcia_summary = []
         for _, row in lcia_locations_df.iterrows():
-            impact, units = self.impact_and_units(row["impact"])
+            impact = row["impact"]
+            units = row["units"]
             summary_row = {
                 "units": units,
                 "name": impact,

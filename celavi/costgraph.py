@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-
+import pdb
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -628,12 +628,9 @@ class CostGraph:
         between facilities have costs defined in the interconnections
         dataset and distances defined in the routes dataset.
         """
+        _netime = time()
         if self.verbose > 0:
-            print(
-                "Adding nodes and edges at        %d s"
-                % np.round(time() - self.start_time, 0),
-                flush=True,
-            )
+            print(f'CostGraph: Adding nodes and edges',flush=True)
 
         # add all facilities and intra-facility edges to supply chain
         with open(self.loc_file, "r") as _loc_file:
@@ -651,27 +648,15 @@ class CostGraph:
                 self.supply_chain.add_edges_from(_fac_graph.edges(data=True))
 
         if self.verbose > 0:
-            print(
-                "Nodes and edges added at         %d s"
-                % np.round(time() - self.start_time, 0),
-                flush=True,
-            )
-            print(
-                "Adding transport cost methods at %d s"
-                % np.round(time() - self.start_time, 0),
-                flush=True,
-            )
+            print(f'CostGraph: Adding nodes and edges took {np.round((time() - _netime)/60, 2)} minutes',flush=True)
+            print(f'CostGraph: Adding transport cost methods', flush = True)
 
+        _trtime = time()
         # add all inter-facility edges, with costs but without distances
         # this is a relatively short loop
         for index, row in self.transpo_edges.iterrows():
-            if self.verbose > 1:
-                print(
-                    "Adding transport cost methods to edges between ",
-                    row["u_step"],
-                    " and ",
-                    row["v_step"],
-                )
+            if self.verbose > 2:
+                print(f'CostGraph: Adding transport cost methods to edges between {row["u_step"]} and {row["v_step"]}', flush = True)
 
             _u = row["u_step"]
             _v = row["v_step"]
@@ -732,110 +717,67 @@ class CostGraph:
                     _methods,
                 )
             )
+
         if self.verbose > 0:
-            print(
-                "Transport cost methods added at  %d s"
-                % np.round(time() - self.start_time, 0),
-                flush=True,
-            )
+            print(f'CostGraph: Adding transport cost methods took {np.round((time() - _trtime)/60, 2)} minutes', flush = True)
+            print(f'CostGraph: Adding route distances', flush = True)
+        
         # read in and process routes line by line
-        with open(self.routes_file, "r") as _route_file:
-            if self.verbose > 0:
-                print(
-                    "Adding route distances at        %d s"
-                    % np.round(time() - self.start_time, 0),
-                    flush=True,
-                )
-
-            # Only read in columns relevant to CostGraph building
-            _reader = pd.read_csv(
-                _route_file,
-                usecols=[
-                    "source_facility_id",
-                    "source_facility_type",
-                    "destination_facility_id",
-                    "destination_facility_type",
-                    "total_vkmt",
-                    "route_id",
-                ],
-                chunksize=1,
-            )
-            _prev_line = None
-
-            for _line in _reader:
-                if np.array_equal(_line, _prev_line):
-                    continue
-
-                _prev_line = _line
-
-                # find the source nodes for this route
-                _u = list(
-                    search_nodes(
-                        self.supply_chain,
-                        {
-                            "and": [
-                                {
-                                    "==": [
-                                        ("facility_id",),
-                                        _line["source_facility_id"].values[0],
-                                    ]
-                                },
-                                {"in": [("connects",), ["out", "bid"]]},
-                            ]
-                        },
+        _route_file = pd.read_csv(self.routes_file).drop_duplicates(
+            subset = ["source_facility_id","source_facility_type",
+                        "destination_facility_id","destination_facility_type",
+                        "total_vkmt","route_id"],
+            inplace = False,
+            ignore_index = True
+        )
+        _ltime = time()
+        for _line in _route_file.iterrows():            
+            # find the source nodes for this route
+            _u = list(search_nodes(self.supply_chain,
+                                    {"and": [{"==": [("facility_id",), _line[1]['source_facility_id'],]},
+                                            {"in": [("connects",), ["out", "bid"]]}]
+                                    }
+                                )
                     )
-                )
+            
+            if len(_u) == 0:
+                print(f'CostGraph: Node {_line[1]["source_facility_id"]} of type'
+                f' {_line[1]["source_facility_type"]} expected but not found',
+                flush = True)
+                continue
 
-                # loop thru all edges that connect to the source nodes
-                for u_node, v_node, data in self.supply_chain.edges(_u, data=True):
-                    # if the destination node facility ID matches the
-                    # destination facility ID in the routing dataset row,
-                    # apply the distance from the routing dataset to this edge
-                    try:
-                        x = self.supply_chain.nodes[v_node]['facility_id']
-                    except KeyError:
-                        print(f"{v_node} does not exist;skipping")
-                        continue
-                    if (
-                        self.supply_chain.nodes[v_node]["facility_id"]
-                        == _line["destination_facility_id"].values[0]
-                    ):
-                        if self.verbose > 1:
-                            print(
-                                "Adding ",
-                                str(_line["total_vkmt"].values[0]),
-                                " km between ",
-                                u_node,
-                                " and ",
-                                v_node,
-                            )
-                        data["dist"] = _line["total_vkmt"].values[0]
-                        data["route_id"] = _line["route_id"].values[0]
+
+            # Find the edge that connects the source and destination nodes for this route
+            _edge = [(u, v, dat) for u, v, dat in self.supply_chain.edges(_u, data = True) 
+                        if self.supply_chain.nodes[v]["facility_id"] == _line[1]['destination_facility_id']]
+            
+            if len(_edge) == 0:
+                print(f'CostGraph: Edge between {_line[1]["source_facility_id"]}_{_line[1]["source_facility_type"]}'
+                        f' and {_line[1]["destination_facility_type"]}_{_line[1]["destination_facility_id"]} expected but not found',
+                        flush = True)
+                continue
+
+            if self.verbose > 2:
+                print(f'CostGraph: Adding {_line[1]["total_vkmt"]} km between {_edge[0][0]} and {_edge[0][1]}', flush = True)
+            
+            self.supply_chain.edges[_edge[0][0], _edge[0][1]]['dist'] = _line[1]["total_vkmt"]
+            self.supply_chain.edges[_edge[0][0], _edge[0][1]]['route_id'] = _line[1]["route_id"]
+        
+        if self.verbose > 0:
+            print(f'CostGraph: Adding route distances took {np.round((time() - _ltime)/60, 2)} minutes', flush=True)
 
         # After all of the route distances have been added, any edges that
         # have a distance of -1 km are deleted from the network.
-        _all_edges = self.supply_chain.edges.data()
-        _remove_edges = []
-        for u, v, data in _all_edges:
-            if data["dist"] == -1.0:
-                if self.verbose > 1:
-                    print(f"Removing edge between {u} and {v}")
-                _remove_edges.append((u, v))
-        self.supply_chain.remove_edges_from(_remove_edges)
-        if self.verbose > 0:
-            print(
-                "Route distances added at         %d s"
-                % np.round(time() - self.start_time, 0),
-                flush=True,
-            )
-            print(
-                "Calculating edge costs at        %d s"
-                % np.round(time() - self.start_time, 0),
-                flush=True,
-            )
+        self.supply_chain.remove_edges_from(
+            [[u, v] for u, v, dat in self.supply_chain.edges.data() if dat['dist'] == -1.0]
+        )
 
+        if self.verbose > 0:
+            print(f'CostGraph: Calculating edge costs', flush=True)
+
+        _ctime = time()
         for edge in self.supply_chain.edges():
-            if self.verbose > 1:
+            if self.verbose > 2:
                 print("Calculating edge costs for ", edge)
 
             _edge_dict = self.path_dict.copy()
@@ -851,6 +793,8 @@ class CostGraph:
                 print(f'CostGraph: A cost method assigned to {edge} is returning None', flush=True)
                 raise TypeError
         
+        if self.verbose > 0:
+            print(f'CostGraph: Calculating edge costs took {np.round((time() - _ctime)/60, 2)} minutes', flush=True)
 
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
@@ -859,11 +803,7 @@ class CostGraph:
             self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
-            print(
-                "Supply chain graph is built at   %d s"
-                % np.round(time() - self.start_time, 0),
-                flush=True,
-            )
+            print(f'CostGraph: Instantiation took {np.round((time() - self.start_time)/60, 2)} minutes', flush = True)
 
     def choose_paths(self, source_node: str = None, crit: str = "cost"):
         """
@@ -960,6 +900,13 @@ class CostGraph:
         while len(_upstream_nodes) == 0:
             _predec = [n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]
             _upstream_nodes = [n for n in _predec if any([n.find(begin + '_') != -1 for begin in self.sc_begin])]
+            # Since we do this recursively, we also need to double check that a path exists between 
+             # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
+            for _u in _upstream_nodes:
+                try:
+                    _ = nx.astar_path(self.supply_chain, source = _node, target = _u)
+                except nx.NetworkXNoPath:
+                    _upstream_nodes.remove(_u)
         
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
@@ -974,12 +921,9 @@ class CostGraph:
         elif len(_upstream_nodes) > 1:
             # If there are multiple options, identify the nearest neighbor
             # according to the crit(eria) parameter
-            _upstream_dists = [
-                self.supply_chain.edges[_up_n, _node][crit] for _up_n in _upstream_nodes
-            ]
-            _nearest_upstream_node = _upstream_nodes[
-                _upstream_dists.index(min(_upstream_dists))
-            ]
+            _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = 'dist') 
+                                 for _up_n in _upstream_nodes]
+            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
             _nearest_facility = _nearest_upstream_node
 
         else:
@@ -1168,13 +1112,6 @@ class CostGraph:
         # update the year for CostGraph
         self.year = path_dict["year"]
 
-        if self.verbose > 0:
-            print(
-                "Updating costs for %d at         %d s"
-                % (path_dict["year"], np.round(time() - self.start_time, 0)),
-                flush=True,
-            )
-
         for edge in self.supply_chain.edges():
             _edge_dict = path_dict.copy()
             _edge_dict["vkmt"] = self.supply_chain.edges[edge]["dist"]
@@ -1188,12 +1125,10 @@ class CostGraph:
         for edge in self.supply_chain.edges():
             self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
-        if self.verbose > 0:
-            print(
-                "Costs updated for  %d at         %d s"
-                % (path_dict["year"], np.round(time() - self.start_time, 0)),
-                flush=True,
-            )
+        if self.verbose > 0 and self.year > 2001:
+            print(f'CostGraph: Costs updated for {self.year} after {np.round(time() - self.update_time, 1)} s',
+                    flush=True)
+        self.update_time = time()
 
     def save_costgraph_outputs(self):
         """
