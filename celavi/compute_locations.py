@@ -831,7 +831,6 @@ class ComputeLocations:
         # calculate the number of new modules by dividing the new capacity
         # addition with the average module capacity
         # round up to the nearest integer to deal in whole numbers of modules
-        # divide by 100 to reduce number of components and improve running time
         joined['n_module'] = np.ceil(joined.cap_new / joined.MWdc_per_module)
         
         # remove any entries where no new turbines are installed
@@ -870,9 +869,6 @@ class ComputeLocations:
         )
 
         self.capacity_data = pd.concat([capacity_unit_counts,capacity_future])
-
-        # Model 100s of modules instead of individual to cut down on run time
-        self.capacity_data.loc[:, 'n_module'] = np.ceil(self.capacity_data.n_module / 100.0)
 
         self.capacity_data = self.capacity_data.sort_values(by = list(self.capacity_data.columns)).rename(
             columns={'n_module': 'n_technology'}
@@ -944,19 +940,10 @@ class ComputeLocations:
                     by=['region_id_2', 'year']
                     )
         
-        # Take sequential differences in installed capacity within each state to
-        # calcualte new yearly installations
-        # (the sort above is necesasry for this to work properly)
-        # After this step, the facility ID column becomes a float because int 
-        # columns can't contain NaNs
-        _cap_building['cap_new'] = _cap_building.groupby(
-            ['region_id_2', 'technology']
-            )['n_technology'].diff(
-            ).replace(
-                {np.nan: None}
-                )
-        
-        _cap_building.loc[_cap_building.cap_new < 0, 'cap_new'] = 0.0
+        # The "n_technology" coming from comstock data represents NEW window installations
+        # thus the sequential difference operation applied to the PV panel data should NOT
+        # be implemented here
+        _cap_building['cap_new'] = _cap_building['n_technology']
 
         # New installations for the first year a state appears in the data is set as the observed
         # installed capacity for that year (a simplification, but this lets us capture that initial
@@ -966,9 +953,8 @@ class ComputeLocations:
 
         _cap_building.drop(columns='n_technology', inplace=True)
         _cap_building.rename(columns={'cap_new':'n_technology'}, inplace=True)
-
-        # Model 100s of windows instead of individual, to improve running time
-        _cap_building.loc[:, 'n_technology'] = np.ceil(_cap_building.n_technology / 100.0)
+        
+        _cap_building.loc[:, 'n_technology'] = np.ceil(_cap_building.n_technology)
         _cap_building.loc[:, 'facility_id'] = ['B' + str(id) for id in _cap_building.facility_id]
         self.capacity_data = pd.concat([self.capacity_data, _cap_building])
 
