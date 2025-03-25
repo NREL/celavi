@@ -395,9 +395,9 @@ class Scenario:
             year = row["year"]
             # @NOTE hard coded to glass study, will need to adapt
             in_use_facility = 'pv in use_' + row["facility_id"] if row['technology'] == 'csi module' else 'window in use_' + row['facility_id']
-            #manuf_facility = self.netw.find_upstream_neighbor(
-            #    row["facility_id"]
-            #)
+            manuf_facility = self.netw.find_upstream_neighbor(
+                row["facility_id"]
+            )
 
             # Optional print statement for component monitoring
             if self.case["model_run"].get("warning_verbose") > 1:
