@@ -706,7 +706,7 @@ class CostGraph:
              # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
             for _u in _upstream_nodes:
                 try:
-                    _ = nx.astar_path(self.supply_chain, source = _node, target = _u)
+                    _ = nx.astar_path(self.supply_chain, source = _u, target = _node)
                 except nx.NetworkXNoPath:
                     _upstream_nodes.remove(_u)
         
