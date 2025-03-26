@@ -4,6 +4,8 @@ from contextlib import suppress
 import pandas as pd
 import numpy as np
 import plotly.express as px
+import matplotlib.pyplot as plt
+from matplotlib.colors import to_hex
 
 from .inventory import FacilityInventory
 
@@ -155,6 +157,10 @@ class DiagnosticViz:
         This method generates the history plots.
         """
         # Create the figure
+        _colors = plt.cm.jet(np.linspace(0,1,len(self.gather_and_melt_cumulative_histories().facility_type.drop_duplicates())))
+        _factypes = self.gather_and_melt_cumulative_histories().facility_type.drop_duplicates().values
+        color_fac = {}
+        for fac, col in zip(_factypes, _colors): color_fac[fac] = to_hex(col)
         fig = px.line(
             self.gather_and_melt_cumulative_histories(),
             x="year",
@@ -162,6 +168,7 @@ class DiagnosticViz:
             facet_row=self.var_name,
             title=self.var_name,
             color="facility_type",
+            color_discrete_map = color_fac,
             width=1000,
             height=1000,
         )
