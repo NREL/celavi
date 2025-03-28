@@ -22,7 +22,6 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
-        #manuf_facility: str,
         in_use_facility: str,
         mass_tonnes: Dict[str, float] = 0,
     ):
@@ -57,11 +56,6 @@ class Component:
             fixed float lifespans, or lifespans defined with a Weibull 
             probability distribution.
 
-        manuf_facility: str
-            The node name where the component begins life (typically but not
-            necessarily a manufacturing facility type) used in initial pathway
-            selection from CostGraph.
-
         in_use_facility: str
             The node name where the component spends its first useful lifetime
             before beginning the end-of-life process (typically but not necessarily
@@ -76,7 +70,6 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
-        self.manuf_facility = manuf_facility
         self.in_use_facility = in_use_facility
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
@@ -153,18 +146,18 @@ class Component:
         # Steps:
         # - Identify the closest virgin manufacturing facility upstream of self.in_use_facility
         # (we assume virgin facilities can always produce more / no supply constraints)
-        virgin_manuf_facility = self.context.cost_graph.find_upstream_neighbor(
-            self.in_use_facility
-        )
+        #virgin_manuf_facility = self.context.cost_graph.find_upstream_neighbor(
+        #    self.in_use_facility
+        #)
         # - Calculate the pathway cost between those virgin manufacturing facilities and the 
         # in use facility
-        virgin_manuf_cost = None
+        #virgin_manuf_cost = None
         # - Identify the secondary manufacturing facilities upstream of self.in_use_facility
         # with NON-ZERO mass inventories
         # @TODO Need(?): new method in CostGraph that looks upstream of a node and finds all connecting
         # nodes of a particular facility_type, returns a list of facility_ids and associated
-        # costs
-        secondary_manuf_facility_dict = {'facility_id': 'cost'}
+        # costs - identical logic to find_nearest but pointed upstream
+        #secondary_manuf_facility_dict = {'facility_id': 'cost'}
         # @NOTE This method should not return only the closest facility, because there may be further-away
         # facilities with secondary materials available. The virgin manuf facility will not necessarily
         # be lower cost than a further-away secondary facility.
