@@ -59,7 +59,7 @@ class PylcaCelavi:
             if self.verbose == 1:
                 print(f"PyLCIA: {self.lcia_des_filename} not found")
 
-    def lca_performance_improvement(self, df, state):
+    def lca_performance_improvement(self, df, state,stage,year):
         """
         This function is used to bypass pylca liaison calculations
         It reads emission factor data from previous runs stored in a file
@@ -129,15 +129,14 @@ class PylcaCelavi:
         
         try:
             shortcutlca_df = pd.read_csv(self.shortcutlca_filename)
-            shortcutlca_df.columns = ['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']
+            shortcutlca_df.columns = ['lcia','value','unit','year','method','stage','state']
             df[['stage','year','material','state','facility_id','route_id']] = df[['stage','year','material','state','facility_id','route_id']].astype('str')
-            shortcutlca_df[['stage','year','material','state','facility_id','route_id']] = shortcutlca_df[['stage','year','material','state','facility_id','route_id']].astype('str')
-            del shortcutlca_df['route_id']
-            df2 = df.merge(shortcutlca_df,left_on=['stage','year','material','state','facility_id'],right_on = ['stage','year','material','state','facility_id'],indicator=True,how = 'outer')
+            shortcutlca_df[['stage','year','state']] = shortcutlca_df[['stage','year','state']].astype('str')
+            df2 = df.merge(shortcutlca_df,left_on=['stage','year','state'],right_on = ['stage','year','state'],indicator=True,how = 'outer')
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
             df_results = df2[df2['_merge'] == 'both']
             if df_results.empty:
-                print("Missing from shortcut ",df['stage'],df['year'],df['state'])
+                print("Missing from shortcut lca database: ",state,stage,year)
             df_results['value'] = df_results['flow quantity'] * df_results['value']
             df_results = df_results[['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']]
             
@@ -213,7 +212,7 @@ class PylcaCelavi:
 
                 if self.use_shortcut_lca_calculations:
                     #Calling the lca performance improvement function to do shortcut calculations. 
-                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state)
+                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state,stage,year)
                     df_with_no_lca_entry['route_id'] = str(route_id) #the lca performance improvement removes routes id. 
                 else:
                     df_with_no_lca_entry = new_df
@@ -233,7 +232,7 @@ class PylcaCelavi:
                             # It calculates the LCI flows of the foreground process.
                             res,quantity = liaison_lci(
                                 working_df,
-                                new_year,
+                                original_year,
                                 facility_id,
                                 stage,
                                 material,
@@ -246,12 +245,12 @@ class PylcaCelavi:
 
                             if not res.empty:
 
-                                lca_db = res
-                                lca_db['year'] = lca_db['year'].astype(int)
+                                lca_db = res[['lcia','value','unit','year','method','stage','state']]
+                                lca_db['year'] = new_year
                                 lca_db['value'] = lca_db['value']/quantity
                                 lca_db = lca_db.drop_duplicates()
                                 lca_db.to_csv(
-                                    self.shortcutlca_filename,
+                                    self.shortcutlca_filename+'new.csv',
                                     mode="a",
                                     index=False,
                                     header=False,
@@ -273,8 +272,7 @@ class PylcaCelavi:
                                 )
 
                 else:
-                    if self.verbose == 1:
-                        print(str(facility_id) + ' - ' + str(year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)
+                        print(str(facility_id) + ' - ' + str(original_year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)
 
     
                 result_shortcut['comment'] = "shortcut calculations"
