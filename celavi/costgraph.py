@@ -669,11 +669,6 @@ class CostGraph:
             If left as default, the list of facility_types stored in the CostGraph
             attribute sc_begin is used to identify neighbors.
 
-        exclude_list : List[str], Default = None
-            If provided, the nodes in this list are ignored during neighbor
-            finding. Only upstream neighbors not in this list can be returned.
-            If None (default value), this parameter is ignored.
-
         crit : str, Default = 'dist'
             Criteron used to decide which manufacturing node is "nearest".
             Defaults to distance.

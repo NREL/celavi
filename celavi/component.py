@@ -166,8 +166,10 @@ class Component:
                     for material, mass in self.mass_tonnes.items()]
                     ):
                     self.manuf_facility = _fac
+                    # "break" ends the loop
                     break
                 else:
+                    # "pass" begins the next iteration of the loop
                     pass
             # If the closest facility IS a virgin manuf facility, then no need to check the inventory;
             # this component is manufactured at this facility
