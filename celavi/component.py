@@ -3,6 +3,7 @@ import networkx as nx
 
 from typing import Deque, Tuple, Dict
 from collections import deque
+from itertools import compress
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
@@ -71,6 +72,9 @@ class Component:
         self.year = year
         self.mass_tonnes = mass_tonnes
         self.in_use_facility = in_use_facility
+        # Manufacturing facility is assigned during component
+        # beginning of life (bol_process)
+        self.manuf_facility = None
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
         self.split_dict = self.context.path_dict["path_split"]
@@ -136,39 +140,40 @@ class Component:
         # component waits to be manufactured
         yield env.timeout(begin_timestep)
 
-        # Identify manufacturing facility
-        # @TODO replace/augment with closed loop logic
-        self.manuf_facility = self.context.cost_graph.find_upstream_neighbor(
-            self.in_use_facility
+        # Identify manufacturing facility based on distance and, for secondary manuf 
+        # facilities, whether the facility has sufficient inventory to manufacture the
+        # component
+        
+        # Locate the closest (by cost) manufacturing facilities
+        _manuf_dict = self.context.cost_graph.find_upstream_neighbor(
+            node_id = self.in_use_facility,
+            crit = 'cost', # @NOTE Replace with 'dist' to look at location only, not processing costs
         )
-        # Closed loop logic requires accessing the mass facility inventories in Context and the 
-        # node and edge costs in CostGraph
-        # Steps:
-        # - Identify the closest virgin manufacturing facility upstream of self.in_use_facility
-        # (we assume virgin facilities can always produce more / no supply constraints)
-        #virgin_manuf_facility = self.context.cost_graph.find_upstream_neighbor(
-        #    self.in_use_facility
-        #)
-        # - Calculate the pathway cost between those virgin manufacturing facilities and the 
-        # in use facility
-        #virgin_manuf_cost = None
-        # - Identify the secondary manufacturing facilities upstream of self.in_use_facility
-        # with NON-ZERO mass inventories
-        # @TODO Need(?): new method in CostGraph that looks upstream of a node and finds all connecting
-        # nodes of a particular facility_type, returns a list of facility_ids and associated
-        # costs - identical logic to find_nearest but pointed upstream
-        #secondary_manuf_facility_dict = {'facility_id': 'cost'}
-        # @NOTE This method should not return only the closest facility, because there may be further-away
-        # facilities with secondary materials available. The virgin manuf facility will not necessarily
-        # be lower cost than a further-away secondary facility.
-        # - Calculate the pathway cost between the secondary facilities and the in use
-        # facility (if not returned by method described above)
-        # IF none of the secondary facilities are lower cost than the virgin facility, use 100% virgin
-        # materials to make this component
-        # IF one or more of the secondary facilities ARE lower cost than the virgin facility, use up
-        # the secondary materials (mass) inventory in order of least to greatest cost to make this component
-        # IF not all secondary facilities are lower cost than the virgin facility AND there is demand remaining
-        # after the low-cost secondary facility inventories are used up, THEN make up the difference w virgin manuf
+        # Sort facilities by increasing distance, then search along the list of facilities
+        # until EITHER a virgin facility is found OR a secondary facility with sufficient inventory 
+        # is found
+        _manuf_sorted = sorted(_manuf_dict)
+        # @TODO Hardcoding alert! Pass sc_begin in from scenario.yaml to remove
+        # Check to see if the closest facility is a virgin manufacturing facility
+        for _fac in _manuf_sorted:
+            if _fac.split('_')[0] not in ['window glass manufacturing','solar glass manufacturing']:
+                
+                # If the facility is a secondary facility, then check that the inventory is sufficient to 
+                # manufacture the component
+                _fac_inv = self.context.mass_facility_inventories[_fac].cumulative_history
+                if all(
+                    [_fac_inv.loc[_fac_inv.timestep == begin_timestep][material].values[0] >= mass 
+                    for material, mass in self.mass_tonnes.items()]
+                    ):
+                    self.manuf_facility = _fac
+                    break
+                else:
+                    pass
+            # If the closest facility IS a virgin manuf facility, then no need to check the inventory;
+            # this component is manufactured at this facility
+            else:
+                self.manuf_facility = _fac
+                break            
 
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
@@ -223,9 +228,8 @@ class Component:
         self.create_pathway_queue(self.in_use_facility)
 
         # Component is decremented from in use inventories
-        count_inventory.increment_quantity(self.kind, -1, env.now)
-        for material, mass in self.mass_tonnes.items():
-            mass_inventory.increment_quantity(material, -mass, env.now)
+        self.move_component_from(env, loc=self.in_use_facility)
+
         # Take the current facility off the to-do list
         self.pathway.popleft()
 
@@ -244,12 +248,12 @@ class Component:
         """
         while True:
             if self.pathway:
-                # Update the component's process queue (EOL pathway) to remove the current
-                # location etc.
+                # Use the component's process queue (EOL pathway) to identify the
+                # component's next step
                 location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
 
-                # If the component is now at a facility type that incurs material losses,
+                # If the next step for the component involves material losses,
                 if factype in [key for key in self.split_dict]:
                     # increment the facility inventory and transportation tracker
                     self.move_component_to(
@@ -259,9 +263,6 @@ class Component:
                     
                     # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
-
-                    # Decrement the current facility inventory
-                    self.move_component_from(env, loc=location)
 
                     # Locate the closest facility that receives material losses
                     _split_facility_1 = self.context.cost_graph.find_nearest_factype(
@@ -283,16 +284,25 @@ class Component:
                     )
 
                     # Move the rest of the component to the next facility along pathway
-                    self.move_component_to(
-                        env,
-                        loc=self.pathway[0][0],
-                        amt=1 - apply_array_uncertainty(
-                            self.split_dict[factype]["fraction"],
-                            self.context.model_run
-                            ),
-                        dist=self.pathway[0][2],
-                        route_id=self.pathway[0][3],
-                    )
+                    if len(self.pathway) > 0:
+                        self.move_component_to(
+                            env,
+                            loc=self.pathway[0][0],
+                            amt=1 - apply_array_uncertainty(
+                                self.split_dict[factype]["fraction"],
+                                self.context.model_run
+                                ),
+                            dist=self.pathway[0][2],
+                            route_id=self.pathway[0][3],
+                        )
+                        # Decrement the current facility inventory
+                        self.move_component_from(env, loc=location)
+                    else:
+                        # The component has reached the end of its pathway and stays here
+                        # unless / until it gets remanufactured
+                        # e.g. this is purgatory right here
+                        pass
+                
                 # If the component is currently at a facility type noted "pass" (typically
                 # end-of-supply-chain facilities), do nothing b/c the component is staying
                 # here (no next step)
