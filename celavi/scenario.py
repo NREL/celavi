@@ -449,7 +449,7 @@ class Scenario:
             in_use_facility = 'pv in use_' + row["facility_id"] if row['technology'] == 'csi module' else 'window in use_' + row['facility_id']
             # Optional print statement for component monitoring
             if self.case["model_run"].get("warning_verbose") > 1:
-                print(f'{row.facility_id} , {row.year}: {manuf_facility}')
+                print(f'{row.facility_id} , {row.year}: {in_use_facility}')
 
             n_technology = int(row["n_technology"])
             
