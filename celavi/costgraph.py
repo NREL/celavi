@@ -112,7 +112,7 @@ class CostGraph:
         self.loc_df = pd.read_csv(locations_file)
 
         self.sc_end = sc_end + sc_out_circ + sc_in_circ
-        self.sc_begin = sc_begin
+        self.sc_begin = sc_begin + sc_in_circ
         
         if len(circular_components) == 1:
             self.circular_components = circular_components[0]
@@ -651,7 +651,7 @@ class CostGraph:
         self,
         node_id: int,
         neighbor_type: List[str] = None,
-        crit: str = "dist",
+        crit: str = 'cost',
     ):
         """
         Given a node in the network, find the "nearest" upstream neighbor to
@@ -668,6 +668,11 @@ class CostGraph:
             List of facility_types to which the upstream neighbor node must belong.
             If left as default, the list of facility_types stored in the CostGraph
             attribute sc_begin is used to identify neighbors.
+
+        exclude_list : List[str], Default = None
+            If provided, the nodes in this list are ignored during neighbor
+            finding. Only upstream neighbors not in this list can be returned.
+            If None (default value), this parameter is ignored.
 
         crit : str, Default = 'dist'
             Criteron used to decide which manufacturing node is "nearest".
@@ -712,7 +717,7 @@ class CostGraph:
             neighbor_factypes = self.sc_begin
         else:
             neighbor_factypes = neighbor_type
-        
+
         # Get a list of all nodes upstream of this node_id with a facility type
         # specified in neighbor_factypes
         # The while loop performs this operation recursively in case the node we're looking
@@ -728,7 +733,7 @@ class CostGraph:
                 print(f'CostGraph.find_upstream_neighbor: {_node} has no predecessors', flush = True)
             _upstream_nodes = [n for n in _predec if any([n.find(nbor + '_') != -1 for nbor in neighbor_factypes])]
             # Since we do this recursively, we also need to double check that a path exists between 
-             # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
+            # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
             for _u in _upstream_nodes:
                 try:
                     # Because supply_chain is a directed graph, specify that we want a source
@@ -747,20 +752,14 @@ class CostGraph:
             )
             return None
 
-        elif len(_upstream_nodes) > 1:
-            # If there are multiple options, identify the nearest neighbor
-            # according to the crit(eria) parameter
+        elif len(_upstream_nodes) >= 1:
+            # If there are multiple options, obtain the distances to each node and zip into a dictionary
             _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit)
                                  for _up_n in _upstream_nodes]
-            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
-            _nearest_facility = _nearest_upstream_node
+            upstream_dict = dict(zip(_upstream_nodes, _upstream_dists))
 
-        else:
-            # If there is only one option, pull that node's facility_id directly
-            _nearest_facility = _upstream_nodes[0]
-
-        # Return the "closest" node's name (facility type + facility_id)
-        return _nearest_facility
+            # Sort list of facilities and distances in order of increasing distance, for use in Component.bol_process
+            return upstream_dict
 
     def find_downstream(
         self,
