@@ -765,23 +765,8 @@ class ComputeLocations:
             inplace=True
         )
 
-        # Take sequential differences in installed capacity within each state to
-        # calcualte new yearly installations
-        # (the sort above is necesasry for this to work properly)
-        # After this step, the facility ID column becomes a float because int 
-        # columns can't contain NaNs
-        capacity_unit_counts['cap_new'] = capacity_unit_counts.groupby(
-            'region_id_2'
-            )['csi_cap_dc'].diff(
-            ).replace(
-                {np.nan: None}
-                )
-
-        # New installations for the first year a state appears in the data is set as the observed
-        # installed capacity for that year (a simplification, but this lets us capture that initial
-        # capacity so we don't under-count)
-        _replace_index = capacity_unit_counts[capacity_unit_counts.cap_new.values == None]['cap_new'].index
-        capacity_unit_counts.loc[_replace_index, 'cap_new'] = capacity_unit_counts.csi_cap_dc[_replace_index]
+        capacity_unit_counts['cap_new'] = capacity_unit_counts.csi_cap_dc
+        
         capacity_unit_counts['n_module'] = np.ceil(capacity_unit_counts.cap_new / capacity_unit_counts.MWdc_per_module)
         capacity_unit_counts.loc[capacity_unit_counts.n_module < 0, 'n_module'] = 0.0
         capacity_unit_counts['p_name'] = capacity_unit_counts.region_id_2 + '_hist'
