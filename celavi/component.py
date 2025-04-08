@@ -152,12 +152,11 @@ class Component:
         # Sort facilities by increasing distance, then search along the list of facilities
         # until EITHER a virgin facility is found OR a secondary facility with sufficient inventory 
         # is found
-        _manuf_sorted = sorted(_manuf_dict)
+        _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
         # @TODO Hardcoding alert! Pass sc_begin in from scenario.yaml to remove
         # Check to see if the closest facility is a virgin manufacturing facility
         for _fac in _manuf_sorted:
-            if _fac.split('_')[0] not in ['window glass manufacturing','solar glass manufacturing']:
-                
+            if _fac.split('_')[0] in ['window glass recovery','solar glass manufacturing from cullet']:
                 # If the facility is a secondary facility, then check that the inventory is sufficient to 
                 # manufacture the component
                 _fac_inv = self.context.mass_facility_inventories[_fac].cumulative_history
@@ -174,15 +173,17 @@ class Component:
             # If the closest facility IS a virgin manuf facility, then no need to check the inventory;
             # this component is manufactured at this facility
             else:
-                self.manuf_facility = _fac
-                break            
-
+                self.manuf_facility = _fac          
+                break
+        
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
-        count_inventory.increment_quantity(self.kind, 1, env.now)
-        for material, mass in self.mass_tonnes.items():
-            mass_inventory.increment_quantity(material, mass, env.now)
+        # @TODO Hardcoding alert! Pull from scenario.yaml
+        if self.manuf_facility.split('_')[0] in ['window glass manufacturing', 'solar glass manufacturing']:
+            count_inventory.increment_quantity(self.kind, 1, env.now)
+            for material, mass in self.mass_tonnes.items():
+                mass_inventory.increment_quantity(material, mass, env.now)
 
         # Component waits to transition to in use
         yield env.timeout(lifespan)
@@ -195,7 +196,6 @@ class Component:
             mass_inventory.increment_quantity(material, -mass, env.now)
 
         # Component is now in use; update the location
-
         
         # Increment in use inventories
         count_inventory = self.context.count_facility_inventories[self.in_use_facility]
