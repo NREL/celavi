@@ -520,6 +520,11 @@ class CostGraph:
 
         self.supply_chain.add_edges_from(all_edge_list)
         
+        # Add landfilling cost method to edges that connect to a landfill
+        for edge in self.supply_chain.edges():
+            if edge[1].split('_')[0] == 'landfilling':
+                self.supply_chain.edges[edge]['cost_method'] += [getattr(self.cost_methods, 'landfilling')]
+        
         # Each node needs a facility_id attribute assigned
         # This is so pathfinding logic, which operates off facility_id, will work
         # the facility_id is the numeric code prepended by one letter, and it's already
