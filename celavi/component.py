@@ -196,6 +196,27 @@ class Component:
         count_inventory.increment_quantity(self.kind, -1, env.now)
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, -mass, env.now)
+        
+        # Increment and decrement intermediate manufacturing facilities
+        # Identify pathway from manuf_facility to in_use_facility
+        for _fac in nx.astar_path(
+            self.context.cost_graph.supply_chain,
+            source = self.manuf_facility,
+            target = self.in_use_facility)[1:-1]:
+
+            _count = self.context.count_facility_inventories[_fac]
+            _mass = self.context.mass_facility_inventories[_fac]
+
+            _count.increment_quantity(self.kind, 1, env.now)
+            for material, mass in self.mass_tonnes.items():
+                _mass.increment_quantity(material, mass, env.now)
+            
+            yield env.timeout(lifespan)
+
+            _count.increment_quantity(self.kind, -1, env.now)
+            for material, mass in self.mass_tonnes.items():
+                _mass.increment_quantity(material, -mass, env.now)
+
 
         # Component is now in use; update the location
         
