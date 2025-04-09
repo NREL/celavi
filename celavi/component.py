@@ -71,6 +71,7 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
+        self.count = 1.0
         self.in_use_facility = in_use_facility
         # Manufacturing facility is assigned during component
         # beginning of life (bol_process)
@@ -258,20 +259,27 @@ class Component:
 
                 # If the next step for the component involves material losses,
                 if factype in [key for key in self.split_dict]:
+                    # Pull in the mass fraction lost in this step
+                    _loss = apply_array_uncertainty(self.split_dict[factype]["fraction"],self.context.model_run)
 
-                    # increment the facility inventory and transportation tracker
+                    # Move the component to the facility that involves material losses
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id
+                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
                     )
-
+                    # Update the component's location
                     self.current_location = location
                     
                     # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
 
-                    # Decrement the current facility inventory
+                    # Move the entire component OUT of the facility that involves material losses,
+                    # IF the component has a next step in its pathway
+                    # If there's no next step, then only move the lost component fraction
+                    # out of this facility
                     if len(self.pathway) > 0:
                         self.move_component_from(env, loc=location)
+                    else:
+                        self.move_component_from(env, loc=location, amt = _loss)
 
                     # Locate the closest facility that receives material losses
                     _split_facility_1 = self.context.cost_graph.find_nearest_factype(
@@ -283,15 +291,12 @@ class Component:
                     # Move component fractions to [landfill] facility that receives material losses
                     self.move_component_to(
                         env,
-                        loc=_split_facility_1[0],
-                        amt=apply_array_uncertainty(
-                            self.split_dict[factype]["fraction"],
-                            self.context.model_run
-                            ),
-                        dist=_split_facility_1[1],
-                        route_id=_split_facility_1[2],
+                        loc = _split_facility_1[0],
+                        amt = _loss,
+                        dist = _split_facility_1[1],
+                        route_id = _split_facility_1[2],
                     )
-
+                    
                     # Move the rest of the component to the next facility along pathway
                     if len(self.pathway) > 0:
 
@@ -299,13 +304,10 @@ class Component:
 
                         self.move_component_to(
                             env,
-                            loc=location,
-                            amt=1 - apply_array_uncertainty(
-                                self.split_dict[factype]["fraction"],
-                                self.context.model_run
-                                ),
-                            dist=distance,
-                            route_id=route_id,
+                            loc = location,
+                            dist = distance,
+                            route_id = route_id,
+                            amt= (1 - _loss) * 1.0
                         )
 
                         # Wait until the component has spent 'lifespan' timesteps here
@@ -313,12 +315,12 @@ class Component:
 
                         # Decrement the current facility inventory
                         self.move_component_from(env,
-                                                 loc=location,
-                                                 amt=1 - apply_array_uncertainty(
-                                                     self.split_dict[factype]["fraction"],
-                                                     self.context.model_run
-                                                     )
-                                                )
+                                                 loc = location,
+                                                 amt = (1 - _loss) * 1.0)
+                        
+                        # Update the component's record of its materials and masses by applying
+                        # the mass fraction loss
+                        self.count = (1 - _loss) * self.count
                 
                 # If the component is currently at a facility type noted "pass" (typically
                 # end-of-supply-chain facilities), do nothing b/c the component is staying
@@ -334,7 +336,7 @@ class Component:
                 # step, then move the entire component along the pathway
                 else:
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id
+                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
                     )
 
                     self.current_location = location
@@ -342,7 +344,7 @@ class Component:
                     # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
 
-                    self.move_component_from(env, loc=location)
+                    self.move_component_from(env, loc=location, amt=1.0)
 
             else:
                 break
@@ -369,15 +371,15 @@ class Component:
             Number of components being moved. Defaults to 1.        
         """
         self.context.count_facility_inventories[loc].increment_quantity(
-            self.kind, amt, env.now
+            self.kind, amt * self.count, env.now
         )
 
         for _mat, _mass in self.mass_tonnes.items():
             self.context.mass_facility_inventories[loc].increment_quantity(
-                _mat, amt * _mass, env.now
+                _mat, amt * self.count * _mass, env.now
             )
             self.context.transportation_trackers[loc].increment_inbound_tonne_km(
-                tonne_km=amt * _mass * dist, timestep=env.now, route_id=route_id
+                tonne_km=amt * self.count * _mass * dist, timestep=env.now, route_id=route_id
             )
 
     def move_component_from(self, env, loc, amt=1.0):
@@ -400,11 +402,11 @@ class Component:
         """
 
         self.context.count_facility_inventories[loc].increment_quantity(
-            self.kind, -amt, env.now
+            self.kind, -amt * self.count, env.now
         )
 
         for _mat, _mass in self.mass_tonnes.items():
             self.context.mass_facility_inventories[loc].increment_quantity(
-                _mat, -amt * _mass, env.now
+                _mat, -amt * self.count * _mass, env.now
             )
 
