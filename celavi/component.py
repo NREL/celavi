@@ -155,6 +155,7 @@ class Component:
         _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
         # @TODO Hardcoding alert! Pass sc_begin in from scenario.yaml to remove
         # Check to see if the closest facility is a virgin manufacturing facility
+        if 'solar glass manufacturing from cullet' in _manuf_sorted: print(_manuf_dict)
         for _fac in _manuf_sorted:
             if _fac.split('_')[0] in ['window glass recovery','solar glass manufacturing from cullet']:
                 # If the facility is a secondary facility, then check that the inventory is sufficient to 
@@ -257,14 +258,20 @@ class Component:
 
                 # If the next step for the component involves material losses,
                 if factype in [key for key in self.split_dict]:
+
                     # increment the facility inventory and transportation tracker
                     self.move_component_to(
                         env, loc=location, dist=distance, route_id=route_id
                     )
+
                     self.current_location = location
                     
                     # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
+
+                    # Decrement the current facility inventory
+                    if len(self.pathway) > 0:
+                        self.move_component_from(env, loc=location)
 
                     # Locate the closest facility that receives material losses
                     _split_facility_1 = self.context.cost_graph.find_nearest_factype(
@@ -287,29 +294,41 @@ class Component:
 
                     # Move the rest of the component to the next facility along pathway
                     if len(self.pathway) > 0:
+
+                        location, lifespan, distance, route_id = self.pathway.popleft()
+
                         self.move_component_to(
                             env,
-                            loc=self.pathway[0][0],
+                            loc=location,
                             amt=1 - apply_array_uncertainty(
                                 self.split_dict[factype]["fraction"],
                                 self.context.model_run
                                 ),
-                            dist=self.pathway[0][2],
-                            route_id=self.pathway[0][3],
+                            dist=distance,
+                            route_id=route_id,
                         )
+
+                        # Wait until the component has spent 'lifespan' timesteps here
+                        yield env.timeout(lifespan)
+
                         # Decrement the current facility inventory
-                        self.move_component_from(env, loc=location)
-                    else:
-                        # The component has reached the end of its pathway and stays here
-                        # unless / until it gets remanufactured
-                        # e.g. this is purgatory right here
-                        pass
+                        self.move_component_from(env,
+                                                 loc=location,
+                                                 amt=1 - apply_array_uncertainty(
+                                                     self.split_dict[factype]["fraction"],
+                                                     self.context.model_run
+                                                     )
+                                                )
                 
                 # If the component is currently at a facility type noted "pass" (typically
                 # end-of-supply-chain facilities), do nothing b/c the component is staying
                 # here (no next step)
                 elif factype in self.split_dict["pass"]:
-                    pass
+                    self.move_component_to(
+                        env, loc=location, dist=distance, route_id=route_id
+                    )
+
+                    self.current_location = location
                 
                 # If the component is at a facility WITHOUT material losses but WITH a next
                 # step, then move the entire component along the pathway
