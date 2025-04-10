@@ -156,7 +156,6 @@ class Component:
         _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
         # @TODO Hardcoding alert! Pass sc_begin in from scenario.yaml to remove
         # Check to see if the closest facility is a virgin manufacturing facility
-        if 'solar glass manufacturing from cullet' in _manuf_sorted: print(_manuf_dict)
         for _fac in _manuf_sorted:
             if _fac.split('_')[0] in ['window glass recovery','solar glass manufacturing from cullet']:
                 # If the facility is a secondary facility, then check that the inventory is sufficient to 
