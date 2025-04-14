@@ -312,4 +312,17 @@ class Router:
             
             vkmt_by_county_all.drop(columns='fclass', inplace = True)
 
-            vkmt_by_county_all.to_csv(county_routes_file, index=False)
+            # @TODO hard coding alert! If we want to keep this file we need an extra entry in casestudy.yaml
+            vkmt_by_county_all.to_csv('vkmt-county-complete.csv', index=False)
+
+            vkmt_by_county_agg = vkmt_by_county_all.groupby(['route_id']).sum('vkmt').reset_index()
+
+            vkmt_by_county_agg.rename(columns = {'vkmt': 'total_vkmt'},inplace = True)
+
+            vkmt_by_county_all[
+                ['route_id','region_transportation','vkmt']
+                ].merge(
+                    vkmt_by_county_agg[['route_id','total_vkmt']],
+                    on = ['route_id'],
+                    how = 'outer'
+                ).to_csv(county_routes_file, index = False)
