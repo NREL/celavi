@@ -638,7 +638,7 @@ class Scenario:
             .loc[lcia_df.run == self.run]
             .merge(
                 pd.read_csv(
-                    self.files["routes_computed"]
+                    self.files['county_routes']
                     if self.scen["flags"]["use_computed_routes"]
                     else self.files["routes_custom"],
                     usecols=["route_id", "region_transportation", "vkmt", "total_vkmt"],
