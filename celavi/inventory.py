@@ -122,7 +122,7 @@ class FacilityInventory:
             and not self.can_be_negative
         ):
             raise ValueError(
-                f"Inventory {self.name} cannot go negative. {self.component_materials[item_name]}"
+                f"Inventory cannot go negative: {self.component_materials[item_name]}"
             )
 
         # Return the new level
