@@ -147,9 +147,13 @@ class FacilityInventory:
         component_materials_history_df = pd.DataFrame(self.transactions)
         cumulative_history = pd.DataFrame()
         for column in component_materials_history_df.columns:
-            cumulative_history[column] = np.cumsum(
-                component_materials_history_df[column].values
-            )
+            if column == 'timestep':
+                pass
+            else:
+                cumulative_history[column] = np.cumsum(
+                    component_materials_history_df[column].values
+                )
+        cumulative_history['timestep'] = component_materials_history_df['timestep']
         return cumulative_history
 
     @property
@@ -170,6 +174,7 @@ class FacilityInventory:
             cumulative_history[column] = np.cumsum(
                 component_materials_history_df[column].values
             )
+        cumulative_history['timestep'] = component_materials_history_df['timestep']
         return cumulative_history
 
     @property

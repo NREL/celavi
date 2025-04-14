@@ -3,6 +3,7 @@ import networkx as nx
 
 from typing import Deque, Tuple, Dict
 from collections import deque
+from itertools import compress
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
@@ -22,7 +23,6 @@ class Component:
         kind: str,
         year: int,
         lifespan_timesteps: float,
-        manuf_facility: str,
         in_use_facility: str,
         mass_tonnes: Dict[str, float] = 0,
     ):
@@ -57,11 +57,6 @@ class Component:
             fixed float lifespans, or lifespans defined with a Weibull 
             probability distribution.
 
-        manuf_facility: str
-            The node name where the component begins life (typically but not
-            necessarily a manufacturing facility type) used in initial pathway
-            selection from CostGraph.
-
         in_use_facility: str
             The node name where the component spends its first useful lifetime
             before beginning the end-of-life process (typically but not necessarily
@@ -76,8 +71,11 @@ class Component:
         self.kind = kind
         self.year = year
         self.mass_tonnes = mass_tonnes
-        self.manuf_facility = manuf_facility
+        self.count = 1.0
         self.in_use_facility = in_use_facility
+        # Manufacturing facility is assigned during component
+        # beginning of life (bol_process)
+        self.manuf_facility = None
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
         self.pathway: Deque[Tuple[str, int]] = deque()
         self.split_dict = self.context.path_dict["path_split"]
@@ -142,12 +140,51 @@ class Component:
 
         # component waits to be manufactured
         yield env.timeout(begin_timestep)
+
+        # Identify manufacturing facility based on distance and, for secondary manuf 
+        # facilities, whether the facility has sufficient inventory to manufacture the
+        # component
+        
+        # Locate the closest (by cost) manufacturing facilities
+        _manuf_dict = self.context.cost_graph.find_upstream_neighbor(
+            node_id = self.in_use_facility,
+            crit = 'cost', # @NOTE Replace with 'dist' to look at location only, not processing costs
+        )
+        # Sort facilities by increasing distance, then search along the list of facilities
+        # until EITHER a virgin facility is found OR a secondary facility with sufficient inventory 
+        # is found
+        _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
+        # @TODO Hardcoding alert! Pass sc_begin in from scenario.yaml to remove
+        # Check to see if the closest facility is a virgin manufacturing facility
+        for _fac in _manuf_sorted:
+            if _fac.split('_')[0] in ['window glass recovery','solar glass manufacturing from cullet']:
+                # If the facility is a secondary facility, then check that the inventory is sufficient to 
+                # manufacture the component
+                _fac_inv = self.context.mass_facility_inventories[_fac].cumulative_history
+                if all(
+                    [_fac_inv.loc[_fac_inv.timestep == begin_timestep][material].values[0] >= mass 
+                    for material, mass in self.mass_tonnes.items()]
+                    ):
+                    self.manuf_facility = _fac
+                    # "break" ends the loop
+                    break
+                else:
+                    # "pass" begins the next iteration of the loop
+                    pass
+            # If the closest facility IS a virgin manuf facility, then no need to check the inventory;
+            # this component is manufactured at this facility
+            else:
+                self.manuf_facility = _fac          
+                break
+        
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
-        count_inventory.increment_quantity(self.kind, 1, env.now)
-        for material, mass in self.mass_tonnes.items():
-            mass_inventory.increment_quantity(material, mass, env.now)
+        # @TODO Hardcoding alert! Pull from scenario.yaml
+        if self.manuf_facility.split('_')[0] in ['window glass manufacturing', 'solar glass manufacturing']:
+            count_inventory.increment_quantity(self.kind, 1, env.now)
+            for material, mass in self.mass_tonnes.items():
+                mass_inventory.increment_quantity(material, mass, env.now)
 
         # Component waits to transition to in use
         yield env.timeout(lifespan)
@@ -158,9 +195,29 @@ class Component:
         count_inventory.increment_quantity(self.kind, -1, env.now)
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, -mass, env.now)
+        
+        # Increment and decrement intermediate manufacturing facilities
+        # Identify pathway from manuf_facility to in_use_facility
+        for _fac in nx.astar_path(
+            self.context.cost_graph.supply_chain,
+            source = self.manuf_facility,
+            target = self.in_use_facility)[1:-1]:
+
+            _count = self.context.count_facility_inventories[_fac]
+            _mass = self.context.mass_facility_inventories[_fac]
+
+            _count.increment_quantity(self.kind, 1, env.now)
+            for material, mass in self.mass_tonnes.items():
+                _mass.increment_quantity(material, mass, env.now)
+            
+            yield env.timeout(lifespan)
+
+            _count.increment_quantity(self.kind, -1, env.now)
+            for material, mass in self.mass_tonnes.items():
+                _mass.increment_quantity(material, -mass, env.now)
+
 
         # Component is now in use; update the location
-
         
         # Increment in use inventories
         count_inventory = self.context.count_facility_inventories[self.in_use_facility]
@@ -195,9 +252,8 @@ class Component:
         self.create_pathway_queue(self.in_use_facility)
 
         # Component is decremented from in use inventories
-        count_inventory.increment_quantity(self.kind, -1, env.now)
-        for material, mass in self.mass_tonnes.items():
-            mass_inventory.increment_quantity(material, -mass, env.now)
+        self.move_component_from(env, loc=self.in_use_facility)
+
         # Take the current facility off the to-do list
         self.pathway.popleft()
 
@@ -216,24 +272,34 @@ class Component:
         """
         while True:
             if self.pathway:
-                # Update the component's process queue (EOL pathway) to remove the current
-                # location etc.
+                # Use the component's process queue (EOL pathway) to identify the
+                # component's next step
                 location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
 
-                # If the component is now at a facility type that incurs material losses,
+                # If the next step for the component involves material losses,
                 if factype in [key for key in self.split_dict]:
-                    # increment the facility inventory and transportation tracker
+                    # Pull in the mass fraction lost in this step
+                    _loss = apply_array_uncertainty(self.split_dict[factype]["fraction"],self.context.model_run)
+
+                    # Move the component to the facility that involves material losses
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id
+                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
                     )
+                    # Update the component's location
                     self.current_location = location
                     
                     # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
 
-                    # Decrement the current facility inventory
-                    self.move_component_from(env, loc=location)
+                    # Move the entire component OUT of the facility that involves material losses,
+                    # IF the component has a next step in its pathway
+                    # If there's no next step, then only move the lost component fraction
+                    # out of this facility
+                    if len(self.pathway) > 0:
+                        self.move_component_from(env, loc=location)
+                    else:
+                        self.move_component_from(env, loc=location, amt = _loss)
 
                     # Locate the closest facility that receives material losses
                     _split_facility_1 = self.context.cost_graph.find_nearest_factype(
@@ -245,37 +311,52 @@ class Component:
                     # Move component fractions to [landfill] facility that receives material losses
                     self.move_component_to(
                         env,
-                        loc=_split_facility_1[0],
-                        amt=apply_array_uncertainty(
-                            self.split_dict[factype]["fraction"],
-                            self.context.model_run
-                            ),
-                        dist=_split_facility_1[1],
-                        route_id=_split_facility_1[2],
+                        loc = _split_facility_1[0],
+                        amt = _loss,
+                        dist = _split_facility_1[1],
+                        route_id = _split_facility_1[2],
                     )
-
+                    
                     # Move the rest of the component to the next facility along pathway
-                    self.move_component_to(
-                        env,
-                        loc=self.pathway[0][0],
-                        amt=1 - apply_array_uncertainty(
-                            self.split_dict[factype]["fraction"],
-                            self.context.model_run
-                            ),
-                        dist=self.pathway[0][2],
-                        route_id=self.pathway[0][3],
-                    )
+                    if len(self.pathway) > 0:
+
+                        location, lifespan, distance, route_id = self.pathway.popleft()
+
+                        self.move_component_to(
+                            env,
+                            loc = location,
+                            dist = distance,
+                            route_id = route_id,
+                            amt= (1 - _loss) * 1.0
+                        )
+
+                        # Wait until the component has spent 'lifespan' timesteps here
+                        yield env.timeout(lifespan)
+
+                        # Decrement the current facility inventory
+                        self.move_component_from(env,
+                                                 loc = location,
+                                                 amt = (1 - _loss) * 1.0)
+                        
+                        # Update the component's record of its materials and masses by applying
+                        # the mass fraction loss
+                        self.count = (1 - _loss) * self.count
+                
                 # If the component is currently at a facility type noted "pass" (typically
                 # end-of-supply-chain facilities), do nothing b/c the component is staying
                 # here (no next step)
                 elif factype in self.split_dict["pass"]:
-                    pass
+                    self.move_component_to(
+                        env, loc=location, dist=distance, route_id=route_id
+                    )
+
+                    self.current_location = location
                 
                 # If the component is at a facility WITHOUT material losses but WITH a next
                 # step, then move the entire component along the pathway
                 else:
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id
+                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
                     )
 
                     self.current_location = location
@@ -283,7 +364,7 @@ class Component:
                     # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
 
-                    self.move_component_from(env, loc=location)
+                    self.move_component_from(env, loc=location, amt=1.0)
 
             else:
                 break
@@ -310,15 +391,15 @@ class Component:
             Number of components being moved. Defaults to 1.        
         """
         self.context.count_facility_inventories[loc].increment_quantity(
-            self.kind, amt, env.now
+            self.kind, amt * self.count, env.now
         )
 
         for _mat, _mass in self.mass_tonnes.items():
             self.context.mass_facility_inventories[loc].increment_quantity(
-                _mat, amt * _mass, env.now
+                _mat, amt * self.count * _mass, env.now
             )
             self.context.transportation_trackers[loc].increment_inbound_tonne_km(
-                tonne_km=amt * _mass * dist, timestep=env.now, route_id=route_id
+                tonne_km=amt * self.count * _mass * dist, timestep=env.now, route_id=route_id
             )
 
     def move_component_from(self, env, loc, amt=1.0):
@@ -341,11 +422,11 @@ class Component:
         """
 
         self.context.count_facility_inventories[loc].increment_quantity(
-            self.kind, -amt, env.now
+            self.kind, -amt * self.count, env.now
         )
 
         for _mat, _mass in self.mass_tonnes.items():
             self.context.mass_facility_inventories[loc].increment_quantity(
-                _mat, -amt * _mass, env.now
+                _mat, -amt * self.count * _mass, env.now
             )
 

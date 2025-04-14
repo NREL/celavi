@@ -112,7 +112,7 @@ class CostGraph:
         self.loc_df = pd.read_csv(locations_file)
 
         self.sc_end = sc_end + sc_out_circ + sc_in_circ
-        self.sc_begin = sc_begin
+        self.sc_begin = sc_begin + sc_in_circ
         
         if len(circular_components) == 1:
             self.circular_components = circular_components[0]
@@ -520,6 +520,11 @@ class CostGraph:
 
         self.supply_chain.add_edges_from(all_edge_list)
         
+        # Add landfilling cost method to edges that connect to a landfill
+        for edge in self.supply_chain.edges():
+            if edge[1].split('_')[0] == 'landfilling':
+                self.supply_chain.edges[edge]['cost_method'] += [getattr(self.cost_methods, 'landfilling')]
+        
         # Each node needs a facility_id attribute assigned
         # This is so pathfinding logic, which operates off facility_id, will work
         # the facility_id is the numeric code prepended by one letter, and it's already
@@ -648,18 +653,28 @@ class CostGraph:
                 return _paths
 
     def find_upstream_neighbor(
-        self, node_id: int, crit: str = "dist"
+        self,
+        node_id: int,
+        neighbor_type: List[str] = None,
+        crit: str = 'cost',
     ):
         """
         Given a node in the network, find the "nearest" upstream neighbor to
-        that node that is of the type specified by self.sc_begin. "Nearest" is
-        determined according to the crit parameter.
+        that node that is of the type specified by self.sc_begin or by neighbor_type
+        if provided. "Nearest" is determined according to the crit parameter which
+        defaults to distance.
 
         Parameters
         ----------
         node_id : int
             facility_id of a node in the supply chain network. No default.
-        crit : str
+        
+        neighbor_type : List[str], Default = None
+            List of facility_types to which the upstream neighbor node must belong.
+            If left as default, the list of facility_types stored in the CostGraph
+            attribute sc_begin is used to identify neighbors.
+
+        crit : str, Default = 'dist'
             Criteron used to decide which manufacturing node is "nearest".
             Defaults to distance.
 
@@ -667,45 +682,62 @@ class CostGraph:
         -------
         _nearest_facility_id : int
             Integer identifying the "closest" upstream node of type listed in
-            self.sc_begin that is connected to (possibly via multiple steps)
-            the node with the provided node_id. Returns None
+            self.sc_begin or neighbor_type that is connected to (possibly via
+            multiple steps) the node with the provided node_id. Returns None
             if node_id does not exist in the network or if the node_id does not
-            connect to any nodes of types listed in self.sc_begin.
+            connect to any nodes of types listed in self.sc_begin/neighbor_type.
         """
         # Check that the node_id exists in the supply chain.
         # If it doesn't, print a message and return None
         if (
             not node_id
             in nx.get_node_attributes(self.supply_chain, name="facility_id").values()
+        ) and (
+            not node_id
+            in nx.get_node_attributes(self.supply_chain, name='facility_id')
         ):
             print(f"Facility {node_id} does not exist in CostGraph", flush=True)
             return None
         else:
             # If node_id does exist in the supply chain, pull out the node name
-            _node = [
-                x
-                for x, y in self.supply_chain.nodes(data=True)
-                if ('facility_id',node_id) in y.items()
-            ][0]
+            try:
+                _node = [
+                    x
+                    for x, y in self.supply_chain.nodes(data=True)
+                    if ('facility_id',node_id) in y.items()
+                ][0]
+            except IndexError:
+                _node = node_id
+
+        # If the neighbor_type list is left unspecified, it defaults to None
+        # and the list stored in self.sc_begin is used to find neighbor nodes
+        # If the neighbor_type list is specified as an input parameter, it is 
+        # used instead of self.sc_begin to find neighbor nodes
+        if not neighbor_type:
+            neighbor_factypes = self.sc_begin
+        else:
+            neighbor_factypes = neighbor_type
 
         # Get a list of all nodes upstream of this node_id with a facility type
-        # specified in self.sc_begin
+        # specified in neighbor_factypes
         # The while loop performs this operation recursively in case the node we're looking
         # for is several steps upstream
         # Only the node we're looking for is stored in _upstream_nodes
         # Note: the "find" function does not look for exact matches, only the existence of
-        # strings in self.sc_begin in the node name
+        # strings in neighbor_factypes in the node name
         _upstream_nodes = []
         _predec = [_node]
         while len(_upstream_nodes) == 0:
             _predec = [n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]
             if len(_predec) == 0:
                 print(f'CostGraph.find_upstream_neighbor: {_node} has no predecessors', flush = True)
-            _upstream_nodes = [n for n in _predec if any([n.find(begin + '_') != -1 for begin in self.sc_begin])]
+            _upstream_nodes = [n for n in _predec if any([n.find(nbor + '_') != -1 for nbor in neighbor_factypes])]
             # Since we do this recursively, we also need to double check that a path exists between 
-             # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
+            # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
             for _u in _upstream_nodes:
                 try:
+                    # Because supply_chain is a directed graph, specify that we want a source
+                    # FROM the upstream node TO our target node (input parameter node_id)
                     _ = nx.astar_path(self.supply_chain, source = _u, target = _node)
                 except nx.NetworkXNoPath:
                     _upstream_nodes.remove(_u)
@@ -715,25 +747,19 @@ class CostGraph:
             # If there are no upstream nodes of the correct type, print a
             # message and return None
             print(
-                f"Facility {node_id} does not have any upstream neighbors of type {connect_to}",
+                f"Facility {node_id} does not have any upstream neighbors of type {neighbor_factypes}",
                 flush=True,
             )
             return None
 
-        elif len(_upstream_nodes) > 1:
-            # If there are multiple options, identify the nearest neighbor
-            # according to the crit(eria) parameter
-            _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = 'dist') 
+        elif len(_upstream_nodes) >= 1:
+            # If there are multiple options, obtain the distances to each node and zip into a dictionary
+            _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit)
                                  for _up_n in _upstream_nodes]
-            _nearest_upstream_node = _upstream_nodes[_upstream_dists.index(min(_upstream_dists))]
-            _nearest_facility = _nearest_upstream_node
+            upstream_dict = dict(zip(_upstream_nodes, _upstream_dists))
 
-        else:
-            # If there is only one option, pull that node's facility_id directly
-            _nearest_facility = _upstream_nodes[0]
-
-        # Return the "closest" node's name (facility type + facility_id)
-        return _nearest_facility
+            # Sort list of facilities and distances in order of increasing distance, for use in Component.bol_process
+            return upstream_dict
 
     def find_downstream(
         self,
