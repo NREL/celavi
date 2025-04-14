@@ -65,14 +65,6 @@ def liaison_lci(
     """
     f_d = f_d.drop_duplicates()
     f_d = f_d.dropna()
-    print(yr)
-    print(fac_id)
-    print(stage)
-    print(material)
-    print(route_id)
-    print(state) 
-
-
     tim0 = time.time()
 
     # This part of the code helps to change the years if less than 2024 to 2024
@@ -108,7 +100,6 @@ def liaison_lci(
     selected_process = liaison_process_bridge[liaison_process_bridge['Activities'] == stage]
     # selected_process = liaison_process_bridge.sample()
     selected_process = selected_process[['Activities','Ecoinvent','Unit','Celavi Unit']].dropna()
-    print('LCA to be done for ',selected_process)
 
     res_df = pd.DataFrame()
     
@@ -270,10 +261,6 @@ def liaison_lci(
         number = str(secrets.token_hex(8))
         project_name = reset_project(updated_project_name,number,lca_project,updated_database,bw)
 
-        # Sanity Check statements
-        print(process_in_ecoinvent_for_lca_from_celavi,'to do lca for',flush=True)
-        print(stage,material)
-
         #todo
         # Not sure why it was decided to have states as a list. Can be changed and the loop may be deleted
         for st in state_from_celavi:   
@@ -320,7 +307,7 @@ def liaison_lci(
         res_df['state'] = state
 
 
-        print('Performed lca for ',stage,' ',material,' ', state)
+        print('Performed lca for ',stage,' ',material,' ', state, ' ', yr)
         print(str(time.time()-tim0),' seconds for one lca calculation of ', str(yr), stage, material) 
         print("")
         print("")
