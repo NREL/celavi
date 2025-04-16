@@ -115,7 +115,8 @@ class FacilityInventory:
             self.input_transactions[timestep][item_name] += quantity
 
         if (
-            self.component_materials[item_name] < quantity
+            quantity < 0
+            and self.component_materials[item_name] < -1.0*quantity
             and not self.can_be_negative
         ):
             raise ValueError(
