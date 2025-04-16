@@ -105,13 +105,16 @@ class FacilityInventory:
         int
             The new quantity of the material.
         """
+        self.component_materials[item_name] = np.round(self.component_materials[item_name], 3)
+        quantity = np.round(quantity, 3)
+        
         # Test whether there are enough components in the facility's inventory to cover
         # the outflow
         # Do this comparison on quantities rounded to 3 decimal points to avoid overages
         # of ~1E-14 (likely caused by cumulative material losses)
         if (
             quantity < 0
-            and np.round(self.component_materials[item_name], 3) < -1.0*np.round(quantity, 3)
+            and self.component_materials[item_name] < -1.0*quantity
             and not self.can_be_negative
         ):
             raise ValueError(
