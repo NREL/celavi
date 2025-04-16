@@ -8,7 +8,7 @@ from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-
+import pdb
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -520,10 +520,10 @@ class CostGraph:
 
         self.supply_chain.add_edges_from(all_edge_list)
         
-        # Add landfilling cost method to edges that connect to a landfill
+        # Add terminal node cost methods to edges that connect to self.sc_end nodes
         for edge in self.supply_chain.edges():
-            if edge[1].split('_')[0] == 'landfilling':
-                self.supply_chain.edges[edge]['cost_method'] += [getattr(self.cost_methods, 'landfilling')]
+            if edge[1].split('_')[0] in self.sc_end:
+                self.supply_chain.edges[edge]['cost_method'] += [getattr(self.cost_methods, edge[1].split('_')[0].replace(" ", "_"))]
         
         # Each node needs a facility_id attribute assigned
         # This is so pathfinding logic, which operates off facility_id, will work
