@@ -114,16 +114,16 @@ class FacilityInventory:
         if quantity > 0:
             self.input_transactions[timestep][item_name] += quantity
 
-        # Now increment the inventory
-        self.component_materials[item_name] += quantity
-
         if (
-            round(self.component_materials[item_name], 2) < 0
+            self.component_materials[item_name] < quantity
             and not self.can_be_negative
         ):
             raise ValueError(
-                f"Inventory cannot go negative: {self.component_materials[item_name]}"
+                f"{self.facility_type}_{self.facility_id} inventory cannot go negative: {quantity} required, {self.component_materials[item_name]} in stock"
             )
+        
+        # Now increment the inventory
+        self.component_materials[item_name] += quantity
 
         # Return the new level
         return self.component_materials[item_name]
