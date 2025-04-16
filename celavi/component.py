@@ -162,8 +162,8 @@ class Component:
                 # manufacture the component
                 _fac_inv = self.context.mass_facility_inventories[_fac].cumulative_history
                 if all(
-                    [_fac_inv.loc[_fac_inv.timestep == begin_timestep][material].values[0] >= mass 
-                    for material, mass in self.mass_tonnes.items()]
+                    [_fac_inv.loc[_fac_inv.timestep == begin_timestep][material].values[0] > mass 
+                     for material, mass in self.mass_tonnes.items()]
                     ):
                     self.manuf_facility = _fac
                     # "break" ends the loop
@@ -186,8 +186,8 @@ class Component:
             for material, mass in self.mass_tonnes.items():
                 mass_inventory.increment_quantity(material, mass, env.now)
 
-        # Component waits to transition to in use
-        yield env.timeout(lifespan)
+            # Component waits to transition to in use
+            yield env.timeout(lifespan)
 
         # Decrement manufacturing inventories
         # No transportation here: transportation is tracked at destination
