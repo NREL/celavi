@@ -105,6 +105,19 @@ class FacilityInventory:
         int
             The new quantity of the material.
         """
+        # Test whether there are enough components in the facility's inventory to cover
+        # the outflow
+        # Do this comparison on quantities rounded to 3 decimal points to avoid overages
+        # of ~1E-14 (likely caused by cumulative material losses)
+        if (
+            quantity < 0
+            and np.round(self.component_materials[item_name], 3) < -1.0*np.round(quantity, 3)
+            and not self.can_be_negative
+        ):
+            raise ValueError(
+                f"{self.facility_type}_{self.facility_id} inventory cannot go negative: {quantity} required, {self.component_materials[item_name]} in stock"
+            )
+        
         # Place this transaction in the history
         timestep = int(timestep)
         self.transactions[timestep][item_name] += quantity
@@ -114,15 +127,6 @@ class FacilityInventory:
         if quantity > 0:
             self.input_transactions[timestep][item_name] += quantity
 
-        if (
-            quantity < 0
-            and self.component_materials[item_name] < -1.0*quantity
-            and not self.can_be_negative
-        ):
-            raise ValueError(
-                f"{self.facility_type}_{self.facility_id} inventory cannot go negative: {quantity} required, {self.component_materials[item_name]} in stock"
-            )
-        
         # Now increment the inventory
         self.component_materials[item_name] += quantity
 
