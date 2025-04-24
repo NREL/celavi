@@ -92,7 +92,7 @@ def liaison_lci(
     # Not sure why I changed state to a list and then loop through the list. Can be changed to directly storing the variable. 
     state_from_celavi = [state]
 
-    liaison_process_bridge_dir = "/kfs2/projects/celavicf/celavi-master-kansas/celavi-data/inputs/"
+    liaison_process_bridge_dir = "/kfs2/projects/celavicf/celavi-master-usa/celavi-data/inputs/"
     liaison_process_bridge = pd.read_csv(liaison_process_bridge_dir+'liaison_process_bridge.csv')
     
 
@@ -117,8 +117,8 @@ def liaison_lci(
 
         #These data directories are relevant to LiAISON. 
         #inventory_to_be_built_from_celavi = pd.read_csv('/kfs2/shared-projects/liaison/liaison_reeds/data/inputs/example.csv')
-        data_dir = "/kfs2/projects/celavicf/celavi-master-kansas/celavi-data/generated/"
-        output_dir = "/kfs2/projects/celavicf/celavi-master-kansas/"
+        data_dir = "/kfs2/projects/celavicf/celavi-master-usa/celavi-data/generated/"
+        output_dir = "/kfs2/projects/celavicf/celavi-master-usa/"
 
         #These are two ways in which LCA can be performed. 
         #1. One where the activity is present in Ecoinvent. We need to extract it, edit it and then do LCA.
