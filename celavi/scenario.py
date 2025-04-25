@@ -314,7 +314,6 @@ class Scenario:
                 save_copy=self.case["model_run"].get("save_cg_csv", True),
                 save_name=self.files["costgraph_csv"],
                 pathway_crit_history_filename=self.files["pathway_criterion_history"],
-                circular_components=circular_components,
                 component_initial_mass=component_total_mass.loc[
                     component_total_mass.year == start_year, "mass_tonnes"
                 ].values[0],

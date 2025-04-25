@@ -4,16 +4,15 @@ import pandas as pd
 import numpy as np
 from itertools import product
 from time import time
-from networkx_query import search_nodes
 
 from celavi.costmethods import CostMethods
 
-import pdb
+
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
-    in a circular supply chain, identifies preferred end-of-life pathways through the
-    supply chain, calculates supply chain characteristics such as pathway cost.
+    in a circular supply chain superstructure, identifies preferred end-of-life pathways
+    through the supply chain, calculates supply chain characteristics such as pathway cost.
     """
 
     def __init__(
@@ -23,7 +22,6 @@ class CostGraph:
         locations_file: str,
         routes_file: str,
         pathway_crit_history_filename: str,
-        circular_components: list,
         component_initial_mass: float,
         path_dict: dict,
         sc_begin : List[str] = ["manufacturing"],
@@ -33,10 +31,10 @@ class CostGraph:
         year: float = 2000.0,
         start_year: float = 2000.0,
         verbose: int = 0,
-        save_copy=False,
-        save_name="netw.csv",
-        run=0,
-        random_state=np.random.default_rng(13),
+        save_copy: bool = True,
+        save_name: str ="netw.csv",
+        run: int = 0,
+        random_state = np.random.default_rng(13),
     ):
         """
         Reads in small datasets to DataFrames and stores the path to the large
@@ -57,8 +55,6 @@ class CostGraph:
         pathway_crit_history_filename : str
             Path to file where the history of whatever criterion is used to
             decide between circularity pathways is saved.
-        circular_components : list
-            Names of components for which this CostGraph is built.
         component_initial_mass : float
             Average mass of a single technology component at the beginning of
             the model run. Units: metric tons (tonnes).
@@ -78,19 +74,19 @@ class CostGraph:
             Simulation year provided by the DES at CostGraph instantiation.
         start_year : float
             Year at beginning of the model run.
-        verbose : int
+        verbose : int, Default = 0
             Integer specifying how much info CostGraph should provide as it
             works.
             0 = No information other than return values
             1 = Info on when key methods start and stop
             >1 = Detailed info on facilities, nodes, and edges
-        save_copy : bool
+        save_copy : bool, Default = True
             Whether or not to save the initial Cost Graph network structure
             as a CSV file (edge list).
-        save_name : str
+        save_name : str, Default = 'netw.csv'
             CSV file name where the initial Cost Graph network structure is
             saved (edge list).
-        run : int
+        run : int, Default = 0
             Model run number for evaluating uncertainty within a scenario
         random_state : np.random.default_rng
             Instantiated random number generator for uncertainty analysis.
@@ -101,9 +97,6 @@ class CostGraph:
         self.step_costs = pd.read_csv(step_costs_file)
         self.transpo_edges = pd.read_csv(transpo_edges_file)
 
-        # these data sets are processed line by line
-        self.loc_file = locations_file
-
         # This file now contains edge definitions, node metadata, and route distances
         self.routes_file = pd.read_csv(routes_file)
 
@@ -111,20 +104,21 @@ class CostGraph:
         # find_nearest
         self.loc_df = pd.read_csv(locations_file)
 
+        # Group circularity-related node types into two categories
+        # Nodes in sc_end are either nodes where components accumulate at the end of
+        # linear, open-loop or closed-loop pathways.
+        # Nodes in sc_begin serve as the starting point for either linear or closed
+        # loop pathways, in other words these are the nodes that precede the useful
+        # lifespan (first, second, or otherwise)
         self.sc_end = sc_end + sc_out_circ + sc_in_circ
         self.sc_begin = sc_begin + sc_in_circ
-        
-        if len(circular_components) == 1:
-            self.circular_components = circular_components[0]
-        else:
-            self.circular_components = circular_components
 
         self.path_dict = path_dict
 
         self.year = year
 
         # Create a dictionary to store the cost adjustment factor by year
-        # Using this factor prevents negative path weights, which break most shortest path algorithms
+        # Using this factor prevents negative path weights, which break shortest path algorithms
         # By storing the cost adjustment, we can post process costs back to their non-adjusted
         # values in each year
         self.cost_adjustment_factor = {}
@@ -486,22 +480,38 @@ class CostGraph:
 
     def build_supplychain_graph(self):
         """
-        Reads in the locations data set line by line. Each line becomes a
-        DiGraph representing a single facility. Facility DiGraphs are
-        added onto a supply chain DiGraph and connected with inter-facility
-        edges. Edges within facilities have no cost or distance. Edges
-        between facilities have costs defined in the interconnections
-        dataset and distances defined in the routes dataset.
+        Construct a directed graph (network) with each node representing one processing step
+        in the supply chain.
+
+        Edges between nodes in different facilities are assigned distances and route_ids.
+
+        Edges also store processing and transportation cost methods and calculated costs.
+        Transport costs for nodes at the same facility are zero. For edges that connect to
+        nodes in the sc_end attribute, the cost of the terminal node is added to the connecting
+        edge.
+        
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
         """
+        # Variable for tracking processing time in this method
         _netime = time()
+
         if self.verbose > 0:
             print(f'CostGraph: Adding nodes and edges',flush=True)
 
-        # add all facilities and intra-facility edges to supply chain
+        # Add all facilities and intra-facility edges to supply chain
         # The format the networkx DiGraph needs is a list of three-tuples
         # The first two elements per tuple define the u (source) and v 
         # (destination) nodes
         # The last element is a dictionary of edge attributes
+        # Cost (numeric) is initially set as -1 and is calculated after the supply chain
+        # graph has been built
+        # Edges that connect to sc_end nodes have additional cost methods added after building
         all_edge_list = [ (
             u_node,
             v_node,
@@ -513,11 +523,15 @@ class CostGraph:
             for u_node, v_node, dist,
                 node_cost, transpo_cost,
                 routeid 
-            in zip(self.network_data.u_node_id, self.network_data.v_node_id, self.network_data.vkmt,
-            self.network_data.step_cost_method, self.network_data.transpo_cost_method,
-            self.network_data.route_id)
+            in zip(self.network_data.u_node_id, #u_node
+                   self.network_data.v_node_id, #v_node
+                   self.network_data.vkmt, # dist
+                   self.network_data.step_cost_method, # cost_method
+                   self.network_data.transpo_cost_method, # cost_method
+                   self.network_data.route_id) # route_id
         ]
 
+        # Build the supply chain graph using the list of three-tuples all_edge_list
         self.supply_chain.add_edges_from(all_edge_list)
         
         # Add terminal node cost methods to edges that connect to self.sc_end nodes
@@ -541,12 +555,15 @@ class CostGraph:
             name = 'facility_id'
         )
 
-        # Add timespan to nodes. Facilities with "in use" in the name get either 20 or 30 year lifespans
+        # Add timespan node attribute to nodes. Facilities with "in use" in the name get long lifespans
         # @NOTE Eventually this should draw from facility information and component-level lifespans
         # in the YAML files. This logic is a quick fix specific to the glass case study.
+        # Create a dict of the node timeout attributes
         _node_timeout_dict = {}
         for node_id in self.network_data.u_node_id:
-            if node_id not in _node_timeout_dict.keys(): 
+            if node_id not in _node_timeout_dict.keys():
+                # @NOTE Hardcoding alert! Tech component lifespans are defined in YAML
+                # files; those values should be passed in and used here
                 if 'pv in use' in node_id:
                     _timeout = 20.0
                 elif 'window in use' in node_id:
@@ -556,7 +573,9 @@ class CostGraph:
                 
                 _node_timeout_dict[node_id] = _timeout
         for node_id in self.network_data.v_node_id:
-            if node_id not in _node_timeout_dict.keys(): 
+            if node_id not in _node_timeout_dict.keys():
+                # @NOTE Hardcoding alert! Tech component lifespans are defined in YAML
+                # files; those values should be passed in and used here
                 if 'pv in use' in node_id:
                     _timeout = 20.0
                 elif 'window in use' in node_id:
@@ -566,6 +585,7 @@ class CostGraph:
                 
                 _node_timeout_dict[node_id] = _timeout
         
+        # Assign the node timeout attributes to nodes in supply_chain
         nx.set_node_attributes(
             self.supply_chain,
             values = _node_timeout_dict,
@@ -578,6 +598,7 @@ class CostGraph:
         if self.verbose > 0:
             print(f'CostGraph: Calculating edge costs', flush=True)
 
+        # Record the time when cost calculation begins
         _ctime = time()
         for edge in self.supply_chain.edges():
             if self.verbose > 2:
@@ -588,6 +609,8 @@ class CostGraph:
 
             # Year and component mass are defined when CostGraph is instantiated
             # and do not need to be updated during supply chain generation
+            # This goes through every cost_method assigned to the edge, executes it,
+            # and sums the cost from each method
             try:
                 self.supply_chain.edges[edge]["cost"] = sum(
                     [f(_edge_dict) for f in self.supply_chain.edges[edge]["cost_method"]]
@@ -599,6 +622,8 @@ class CostGraph:
         if self.verbose > 0:
             print(f'CostGraph: Calculating edge costs took {np.round((time() - _ctime)/60, 2)} minutes', flush=True)
 
+        # Cost adjustment logic: if any edge costs are negative, adjust ALL calculated costs in the supply chain
+        # upwards
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         if _cost_adjust < 0.0:
             print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
@@ -659,10 +684,12 @@ class CostGraph:
         crit: str = 'cost',
     ):
         """
-        Given a node in the network, find the "nearest" upstream neighbor to
-        that node that is of the type specified by self.sc_begin or by neighbor_type
-        if provided. "Nearest" is determined according to the crit parameter which
-        defaults to distance.
+        Find the closest upstream neighbor to node_id that is of the type specified
+        by self.sc_begin or by neighbor_type if provided.
+        
+        The "closest" node is determined according to the crit parameter which
+        defaults to cost (total processing and transport costs between node_id and the
+        upstream node).
 
         Parameters
         ----------
@@ -674,18 +701,16 @@ class CostGraph:
             If left as default, the list of facility_types stored in the CostGraph
             attribute sc_begin is used to identify neighbors.
 
-        crit : str, Default = 'dist'
+        crit : str, Default = 'cost'
             Criteron used to decide which manufacturing node is "nearest".
-            Defaults to distance.
+            Defaults to total processing and transportation costs between the 
+            upstream node and node_id.
 
         Returns
         -------
-        _nearest_facility_id : int
-            Integer identifying the "closest" upstream node of type listed in
-            self.sc_begin or neighbor_type that is connected to (possibly via
-            multiple steps) the node with the provided node_id. Returns None
-            if node_id does not exist in the network or if the node_id does not
-            connect to any nodes of types listed in self.sc_begin/neighbor_type.
+        Dict
+            Dictionary of upstream node IDs and corresponding "distances" between 
+            the upstream nodes and node_id. "Distance" defaults to total costs.
         """
         # Check that the node_id exists in the supply chain.
         # If it doesn't, print a message and return None
@@ -764,27 +789,30 @@ class CostGraph:
     def find_downstream(
         self,
         node_name: str = None,
-        facility_id: int = None,
+        facility_id: str = None,
         connect_to: str = "landfill",
         crit: str = "dist",
         get_dist: bool = False,
     ):
         """
-        Given a node (node_name and/or facility_id) in the network, find the
-        node's "nearest" downstream neighbor of type connect_to. "Nearest"
-        is specified by the crit parameter.
+        Find node_name's "closest" downstream neighbor of type connect_to.
+        
+        "Closest" is specified by the crit parameter, which defaults to distance (km).
+        Because this method is primarily used to locate the closest landfill facility to
+        processes that produce waste (material losses), distance is an appropriate criteria
+        and will likely yield the same outcome as using cost.
 
         Parameters
         ----------
-        node_name : str
+        node_name : str, Default = None
             Full node name of the starting node.
-        facility_id : int
+        facility_id : str, Default = None
             Unique facility ID for the starting node.
-        connect_to : str
+        connect_to : str, Default = 'landfill'
             Facility type to connect to.
-        crit : str
-            Criterion on which "shortest" pathway is determined.
-        get_dist : bool
+        crit : str, Default = 'dist'
+            Criterion on which shortest pathway is determined.
+        get_dist : bool, Default = False
             If True, also return the transportation distance to the downstream
             node and the route_id along which material is transported.
 
@@ -928,7 +956,7 @@ class CostGraph:
 
     def update_costs(self, path_dict):
         """
-        Re-calculates all edge costs based on arguments passed to cost methods.
+        Re-calculate all edge costs based on arguments passed to cost methods.
 
         Parameters
         ----------
@@ -936,6 +964,10 @@ class CostGraph:
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+        
+        Returns
+        -------
+        None
         """
         # update the year for CostGraph
         self.year = path_dict["year"]
