@@ -65,7 +65,7 @@ class Scenario:
             )
             raise
         try:
-            self.scenario_filename = 'yaml/'+self.scenario_filename
+            self.args.scenario= 'yaml/'+self.args.scenario
             self.scenario_filename = os.path.join(self.args.data, self.args.scenario)
             with open(self.scenario_filename, "r", encoding="utf-8") as f:
                 self.scen = yaml.load(f, Loader=yaml.FullLoader)
