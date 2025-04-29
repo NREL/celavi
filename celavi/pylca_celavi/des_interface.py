@@ -49,6 +49,7 @@ class PylcaCelavi:
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         self.verbose = verbose
         self.run = run
+        self.data_dir = data_dir
 
         # The results file should be removed if present. The LCA results are appended to the results file. 
         try:
@@ -185,6 +186,10 @@ class PylcaCelavi:
         lcia_mass_flow = pd.DataFrame()
         states = list(pd.unique(df["state"]))
 
+        #Saving the input data
+        data_sent_to_liaison = self.data_dir + "/generated/" + "data_sent_to_liaison.csv"
+        df.to_csv(data_sent_to_liaison, mode='a', header=False, index=False)
+
         # The LCA needs to be done for every region separately. Thus separating the states in the dataframe.
         for st in states:
             df_s = df[df["state"] == st]
@@ -239,6 +244,7 @@ class PylcaCelavi:
                                 unit,
                                 route_id,
                                 state,
+                                self.data_dir,
                                 self.verbose,
                                 bw
                             )
