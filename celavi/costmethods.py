@@ -112,17 +112,20 @@ class CostMethods:
         # fee model = point-slope form of a line
         return _m * (_year - 2000.0) + _b
 
+
     def process_cost_loss_revenue_model(self, path_dict, process):
         """
-        Cost method
+        General cost method that applies identical calculation logic
+        to any process involving costs and/or material losses and/or
+        revenues (negative costs).
 
         Parameters
         ----------
-        path_dict
+        path_dict : dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
-        process
+        process : str
             String of the process (as written in the scenario.yaml file) which
             uses this simple cost, loss, revenue model
 
@@ -235,129 +238,362 @@ class CostMethods:
 
         return _cost + _landfill - _revenue
 
+
     def solar_glass_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'solar glass manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'solar glass manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'solar glass manufacturing')
-    
+
+
     def solar_glass_manufacturing_from_cullet(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'solar glass manufacturing from cullet'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'solar glass manufacturing from cullet'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'solar glass manufacturing from cullet')
     
+
     def solar_glass_recovery(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'solar glass recovery'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'solar glass recovery'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'solar glass recovery')
-    
+
+
     def module_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'module manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'module manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'module manufacturing')
     
+
     def module_installation(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'module installation'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'module installation'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'module installation')
 
+
     def module_uninstallation(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'module uninstallation'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'module uninstallation'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'module uninstallation')
 
+
     def module_disassembly(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'module disassembly'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'module disassembly'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'module disassembly')
 
+
     def window_glass_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'window glass manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'window glass manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'window glass manufacturing')
 
+
     def window_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'window manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'window manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'window manufacturing')
 
+
     def window_installation(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'window installation'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'window installation'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'window installation')
 
+
     def window_uninstallation(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'window uninstallation'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'window uninstallation'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'window uninstallation')
 
+
     def window_glass_recovery(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'window glass recovery'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'window glass recovery'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'window glass recovery')
 
+
     def solar_glass_cullet_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'solar glass cullet manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'solar glass cullet manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'solar glass cullet manufacturing')
 
+
     def window_glass_cullet_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'window glass cullet manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'window glass cullet manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'window glass cullet manufacturing')
 
+
     def glass_wool_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'glass wool manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'glass wool manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'glass wool manufacturing')
     
+
     def scm_manufacturing(self, path_dict):
         """
-        See process_cost_loss_revenue_model method
+        Call the process_cost_loss_revenue_model method for 
+        process = 'scm manufacturing'.
+
+        SCM stands for supplementary cementitious material.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'scm manufacturing'
         """
         return self.process_cost_loss_revenue_model(
             path_dict, 'scm manufacturing')
 
+
     def transportation_cost_model(self, path_dict, transport_process):
         """
-        Cost method for calculating transportation costs (truck)
+        General cost method for calculating transportation costs (truck)
         in USD/metric ton.
 
         Parameters
         ----------
-        path_dict
+        path_dict : dict
             Dictionary of variable structure containing cost parameters for
             calculating and updating processing costs for circularity pathway
             processes
+        transport_process : str
+            Description of transportation process based on what's being 
+            transported (full technology, waste, EOL material, etc.).
+            Different parameters for different materials can be specified in
+            scenario.yaml. For the glass study, all transportation costs per
+            tonne-km are assumed to be equal.
 
         Returns
         -------
@@ -403,33 +639,90 @@ class CostMethods:
         
             return (_m * (_year - 2000.0) + _b) * _vkmt
 
+
     def primary_material(self, path_dict):
         """
-        See transportation_cost_model method
+        Call the transportation_cost_model method for 
+        transport_process = 'primary material'.
+
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes=
+
+        Returns
+        -------
+            Call to transportation_cost_model with transport_process = 
+            'primary material'
         """
         return self.transportation_cost_model(
             path_dict, 'primary material')
 
+
     def technology(self, path_dict):
         """
-        See transportation_cost_model method
+        Call the transportation_cost_model method for 
+        transport_process = 'technology'.
+
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes=
+
+        Returns
+        -------
+            Call to transportation_cost_model with transport_process = 
+            'technology'
         """
         return self.transportation_cost_model(
             path_dict, 'technology')
 
+
     def eol_material(self, path_dict):
         """
-        See transportation_cost_model method
+        Call the transportation_cost_model method for 
+        transport_process = 'eol material'.
+
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes=
+
+        Returns
+        -------
+            Call to transportation_cost_model with transport_process = 
+            'eol material'
         """
         return self.transportation_cost_model(
             path_dict, 'eol material')
 
+
     def waste(self, path_dict):
         """
-        See transportation_cost_model method
+        Call the transportation_cost_model method for 
+        transport_process = 'waste'.
+
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes=
+
+        Returns
+        -------
+            Call to transportation_cost_model with transport_process = 
+            'waste'
         """
         return self.transportation_cost_model(
             path_dict, 'waste')
+
 
     def coarse_grinding(self, path_dict):
         """
@@ -512,6 +805,7 @@ class CostMethods:
         # these factors are unitless
         # apply cost reduction to initial cost
         return _initial_cost * coarsegrind_cumul ** _learn_rate
+
 
     def fine_grinding(self, path_dict):
         """
@@ -634,6 +928,7 @@ class CostMethods:
         _landfill = _loss * self.landfilling(path_dict)
 
         return _cost + _landfill - _revenue
+
 
     def shred_transpo(self, path_dict):
         """
