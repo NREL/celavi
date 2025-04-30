@@ -295,9 +295,6 @@ class Scenario:
                 transportation_graph=self.files["transportation_graph"],
                 node_locations=self.files["node_locs"],
                 routes_output_file=_routefile,
-                routing_output_folder=os.path.join(
-                    self.args.data, self.case["directories"].get("generated")
-                ),
                 county_routes_file = self.files['county_routes']
                 )
         print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
