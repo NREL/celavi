@@ -70,7 +70,8 @@ class Context:
             component types.
 
         cost_graph: CostGraph
-            The CostGraph instance to use with this Context instance.
+            The CostGraph (supply chain superstructure network) instance to
+            use with this Context instance.
 
         lca: PylcaCelavi
             The pyLCIA instance to use with this Context instance.
@@ -207,6 +208,7 @@ class Context:
         self.data_for_lci: List[Dict[str, float]] = []
         self.verbose = verbose
 
+
     def years_to_timesteps(self, year: float) -> int:
         """
         Convert calendar year into the corresponding timestep of the discrete
@@ -226,6 +228,7 @@ class Context:
 
         return int(year * self.timesteps_per_year)
 
+
     def timesteps_to_years(self, timesteps: int) -> float:
         """
         Convert the discrete DES timestep to a fractional calendar year.
@@ -243,14 +246,14 @@ class Context:
         result = timesteps / self.timesteps_per_year + self.min_year
         return result
 
+
     def populate(self, df: pd.DataFrame, lifespan_fns: Dict[str, Callable[[], float]]):
         """
         Before a model can run, components must be loaded into it. This method
-        loads components from a DataFrame, has the following columns which
-        correspond to the attributes of a component object:
+        loads components from a DataFrame created in scenario.py.
 
         Each component is placed into a process that will timeout when the
-        component begins its useful life, as specified in year. From there,
+        component begins its first useful life, as specified in year. From there,
         choices about the component's lifecycle are made as further processes
         time out and decisions are made at subsequent timesteps.
 
@@ -284,7 +287,6 @@ class Context:
             component = Component(
                 kind=row["kind"],
                 year=year,
-                #manuf_facility=row["manuf_facility"],
                 in_use_facility=row["in_use_facility"],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
@@ -292,6 +294,7 @@ class Context:
             )
             self.env.process(component.bol_process(self.env))
             self.components.append(component)
+
 
     def cumulative_mass_for_component_in_process_at_timestep(
         self, component_kind: str, process_name: List[str], timestep: int
@@ -313,7 +316,7 @@ class Context:
             The kind of component (such as "blade" passing through an inventory)
 
         process_name: str
-            The process name (such as "fine griding") to look for in the facility
+            The process name (such as "fine grinding") to look for in the facility
             inventory names.
 
         timestep: int
@@ -329,16 +332,17 @@ class Context:
         year = int(floor(self.timesteps_to_years(timestep)))
         avg_component_mass = self.average_total_component_mass_for_year(year)
 
-        cumulative_counts = [facility.cumulative_input_history[component_kind][timestep]for name, facility in self.count_facility_inventories.items()if any(pname in name for pname in process_name)]
+        cumulative_counts = [facility.cumulative_input_history[component_kind][timestep] for name, facility in self.count_facility_inventories.items()if any(pname in name for pname in process_name)]
         total_count = sum(cumulative_counts)
         total_mass = total_count * avg_component_mass
         return total_mass
 
+
     def pylca_interface_process(self, env):
         """
-        pylca_interface_process() runs periodically to update the LCIA model with
-        results from the DES model. It updates the LCA code with the latest distance
-        and mass flow calculations.
+        Runs periodically to update the LCIA model with results from the DES 
+        model. It updates the LCA code with the latest distance and mass flow
+        calculations.
 
         It only calls the LCA code for timesteps where the mass_kg > 0. Years with
         zero mass flows are not passed to the LCA.
@@ -395,6 +399,8 @@ class Context:
                         actual_year = actual_year + 1
 
                     # If the facility is NOT manufacturing, keep only positive transactions
+                    # @TODO Hardcoding alert! Replace the string 'manufacturing' with one or more
+                    # facility types read from YAML, similar to sc_begin in CostGraph.
                     if facility_name.find("manufacturing") == -1:
                         positive_annual_transactions = annual_transactions[
                             annual_transactions > 0
@@ -496,15 +502,16 @@ class Context:
                             annual_data_for_lci.append(row)
 
             if annual_data_for_lci:
-                if self.verbose == 1:
+                if self.verbose > 0:
                     print(
                         f"{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA"
                     )
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
                 self.lca.pylca_run_main(df_for_pylca_interface, self.verbose)
             else:
-                if self.verbose == 1:
-                  print(f"{datetime.now()} pylca_interface_process(): All Masses are 0")
+                if self.verbose > 0:
+                  print(f"{year}: Context.pylca_interface_process(): No material flows for LCA")
+
 
     def average_total_component_mass_for_year(self, year):
         """
@@ -527,9 +534,21 @@ class Context:
             total_mass += self.component_material_mass_tonne_dict[material][year]
         return total_mass
 
+
     def update_cost_graph_process(self, env):
         """
-        This is the SimPy process that updates the cost graph periodically.
+        Call CostGraph.update_costs with current cumulative processing amounts
+        to re-calculate all node and edge (processing and transportation) costs
+        before continuing to the next timestep.
+
+        Parameters
+        ----------
+        env: Environment
+            The SimPy environment this process belongs to.
+
+        Returns
+        -------
+        None
         """
         while True:
             yield env.timeout(self.cost_graph_update_interval_timesteps)
@@ -553,9 +572,14 @@ class Context:
                     )
                 self.cost_graph.update_costs(_path_dict)
 
+
     def run(self) -> Dict[str, FacilityInventory]:
         """
         This method executes the discrete event simulation.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
