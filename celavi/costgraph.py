@@ -562,7 +562,7 @@ class CostGraph:
         _node_timeout_dict = {}
         for node_id in self.network_data.u_node_id:
             if node_id not in _node_timeout_dict.keys():
-                # @NOTE Hardcoding alert! Tech component lifespans are defined in YAML
+                # @TODO Hardcoding alert! Tech component lifespans are defined in YAML
                 # files; those values should be passed in and used here
                 if 'pv in use' in node_id:
                     _timeout = 20.0
@@ -574,7 +574,7 @@ class CostGraph:
                 _node_timeout_dict[node_id] = _timeout
         for node_id in self.network_data.v_node_id:
             if node_id not in _node_timeout_dict.keys():
-                # @NOTE Hardcoding alert! Tech component lifespans are defined in YAML
+                # @TODO Hardcoding alert! Tech component lifespans are defined in YAML
                 # files; those values should be passed in and used here
                 if 'pv in use' in node_id:
                     _timeout = 20.0
