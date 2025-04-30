@@ -531,7 +531,6 @@ class Context:
                             ).drop(
                                 '_merge', axis=1
                                 )
-                    print(f"{year} LCI: {df_to_lcia_calcs}")
                 else:
                     df_to_lcia_calcs = df_for_pylca_interface
 
