@@ -267,7 +267,8 @@ class Component:
         yield env.timeout(self.initial_lifespan_timesteps)
 
         # Component's next steps are determined and stored in self.pathway
-        self.create_pathway_queue(self.in_use_facility)
+        # This method looks at the in_use_facility attribute and thus takes no parameters
+        self.create_pathway_queue()
 
         # Component is decremented from in use inventories
         self.move_component_from(env, loc=self.in_use_facility)
