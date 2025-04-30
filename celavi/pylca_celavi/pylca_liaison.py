@@ -16,6 +16,7 @@ def liaison_lci(
     unit,
     route_id,
     state,
+    data_dir,
     verbose,
     bw
     ):
@@ -92,8 +93,8 @@ def liaison_lci(
     # Not sure why I changed state to a list and then loop through the list. Can be changed to directly storing the variable. 
     state_from_celavi = [state]
 
-    liaison_process_bridge_dir = "/kfs2/projects/celavicf/celavi-master-usa/celavi-data/inputs/"
-    liaison_process_bridge = pd.read_csv(liaison_process_bridge_dir+'liaison_process_bridge.csv')
+    input_dir = data_dir + "/inputs/"
+    liaison_process_bridge = pd.read_csv(input_dir+'liaison_process_bridge.csv')
     
 
     # This is the method of connecting with CELAVI. Not using this since we want to debug the activities
@@ -117,8 +118,8 @@ def liaison_lci(
 
         #These data directories are relevant to LiAISON. 
         #inventory_to_be_built_from_celavi = pd.read_csv('/kfs2/shared-projects/liaison/liaison_reeds/data/inputs/example.csv')
-        data_dir = "/kfs2/projects/celavicf/celavi-master-usa/celavi-data/generated/"
-        output_dir = "/kfs2/projects/celavicf/celavi-master-usa/"
+        data_dir_generated = data_dir + "/generated/"
+        output_dir = data_dir
 
         #These are two ways in which LCA can be performed. 
         #1. One where the activity is present in Ecoinvent. We need to extract it, edit it and then do LCA.
@@ -127,7 +128,7 @@ def liaison_lci(
         # Right now, the dataframe being read is empty. 
         inventory_to_be_built_from_celavi = pd.DataFrame(columns=['process', 'flow', 'value', 'unit', 'input', 'year', 'comments', 'type',
                'process_location', 'supplying_location'])
-        inventory_to_be_built_from_celavi =  liaison_process_bridge_dir+"additional_inventories"+".csv"
+        inventory_to_be_built_from_celavi =  input_dir+"additional_inventories"+".csv"
         
         # These project names match to the project names of HIPSTER and need to be added to the yaml file
         updated_project_name='Mid_Case'+str(year_from_celavi)
@@ -274,7 +275,8 @@ def liaison_lci(
                      region_sensitivity_flag=False,
                      edit_ecoinvent_user_controlled = True,
                      region=st,
-                     data_dir=data_dir,
+                     data_dir=data_dir_generated,
+                     input_dir=input_dir,
                      primary_process=process_in_ecoinvent_for_lca_from_celavi,
                      process_under_study=process_in_ecoinvent_for_lca_from_celavi, 
                      location_under_study=st,
