@@ -57,10 +57,11 @@ class Scenario:
         self.args = parser.parse_args()
 
         # Get the configuration information as two dictionaries
+        
         try:
+            self.args.casestudy = 'yaml/'+self.args.casestudy
             with open(
-                os.path.join(self.args.data, self.args.casestudy), "r", encoding="utf-8"
-            ) as f:
+                os.path.join(self.args.data,self.args.casestudy), "r", encoding="utf-8") as f:
                 self.case = yaml.load(f, Loader=yaml.FullLoader)
         except IOError:
             print(
@@ -68,6 +69,7 @@ class Scenario:
             )
             raise
         try:
+            self.args.scenario= 'yaml/'+self.args.scenario
             self.scenario_filename = os.path.join(self.args.data, self.args.scenario)
             with open(self.scenario_filename, "r", encoding="utf-8") as f:
                 self.scen = yaml.load(f, Loader=yaml.FullLoader)

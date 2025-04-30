@@ -14,7 +14,7 @@ from celavi.pylca_celavi.liaison.search_activity_ecoinvent import search_activit
 from celavi.pylca_celavi.liaison.edit_activity_ecoinvent import modify_electricity_grid_mix_and_solar_glass_removal,module_required_for_solar_glass,module_installation_for_solar_glass,window_frame,landfilling_functional_unit,module_disassembly_glass_content
 
 
-def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_foreground_flag,lca_flag,region_sensitivity_flag,edit_ecoinvent_user_controlled,region,data_dir,primary_process,process_under_study,location_under_study,unit_under_study,updated_database,mc_runs,functional_unit,inventory_filename,output_dir,bw):
+def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_foreground_flag,lca_flag,region_sensitivity_flag,edit_ecoinvent_user_controlled,region,data_dir,input_dir,primary_process,process_under_study,location_under_study,unit_under_study,updated_database,mc_runs,functional_unit,inventory_filename,output_dir,bw):
 
     """
     This function defines the result arrays and then calls monte carlo analysis if required or just runs the 
@@ -132,7 +132,7 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                 inventory['supplying_location'] = location_under_study
                 #inventory is a dataframe
                 process_dictionary = liaison_calc(db,inventory,bw)
-                functional_unit =  module_disassembly_glass_content(process_under_study,year_of_study,functional_unit)
+                functional_unit =  module_disassembly_glass_content(process_under_study,year_of_study,functional_unit,input_dir)
 
             else:
                 inventory = searched_item  #dictionary
@@ -142,10 +142,10 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                     #inventory here has to be a dictionary. So if we read inventory from csv file we cannot edit it.             
                     
                     #Editing the functional unit for solar module manufacturing
-                    functional_unit = module_required_for_solar_glass(inventory,year_of_study,functional_unit)
+                    functional_unit = module_required_for_solar_glass(inventory,year_of_study,functional_unit,input_dir)
 
                     #Editing the functional unit for solar module installation
-                    functional_unit = module_installation_for_solar_glass(inventory,year_of_study,functional_unit)
+                    functional_unit = module_installation_for_solar_glass(inventory,year_of_study,functional_unit,input_dir)
 
                     # Editing the functional unit for window frame manufacturing
                     functional_unit = window_frame(inventory,year_of_study,functional_unit)
@@ -299,8 +299,8 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
     try:
         bw.projects.delete_project(bw.projects.current, delete_dir=True) 
         print('Deleted succesfully')
-        bw.projects.purge_deleted_directories()
+        #bw.projects.purge_deleted_directories()
     except:
         print('There was an issue with deletion')
-        bw.projects.purge_deleted_directories()
+        #bw.projects.purge_deleted_directories()
 

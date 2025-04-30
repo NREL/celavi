@@ -203,6 +203,10 @@ class Context:
 
         self.cost_graph = cost_graph
         self.lca = lca
+        # Adds attribute for storing each year's LCI dataframe
+        # Some values can get duplicated and reported in subsequent LCI dataframes
+        # Having this attribute lets us strip out these duplicates before they're sent for calculation
+        self.lci_last_sent = pd.DataFrame()
         self.cost_graph_update_interval_timesteps = cost_graph_update_interval_timesteps
 
         self.data_for_lci: List[Dict[str, float]] = []
@@ -447,7 +451,7 @@ class Context:
                 if len(annual_transportations[annual_transportations != 0]) == 1:
                     # Provide one row of data to LCIA by filtering out zeros/Nones. No aggregation needed.
                     if any(route_ids[annual_transportations != 0].tolist()):
-                        _route_id_list = [r for rs in route_ids[annual_transportations != 0].tolist() for r in rs]
+                        _route_id_list = ''.join([r for rs in route_ids[annual_transportations != 0].tolist() for r in rs])
                     else:
                         _route_id_list = [None]
                     row = {
@@ -495,7 +499,7 @@ class Context:
                                 "material": "transportation",
                                 "flow unit": "t * km",
                                 "facility_id": facility_id,
-                                "route_id": _r,
+                                "route_id": str(_r),
                                 "state": self.facility_states[facility_id],
                             }
                             self.data_for_lci.append(row)
@@ -507,7 +511,32 @@ class Context:
                         f"{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA"
                     )
                 df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
-                self.lca.pylca_run_main(df_for_pylca_interface, self.verbose)
+                # The first time these calculations are run, lci_last_sent is empty
+                # only check for and remove duplicates if there is a previous df_for_pylca_interface stored
+                # in lci_last_sent
+                if len(self.lci_last_sent) != 0:
+                    # Doing an outer merge on the last-sent LCI and the current LCI with indicator=True constructs a
+                    # data frame with all of the entries in both LCIs and a column called _merge that indicates if each
+                    # row is only in the left-hand DF (current LCI), only in the right-hand LCI (last-sent LCI), or in
+                    # both LCIs (duplicate entry!).
+                    # The query pulls out only rows that are in the current LCI (ie ignores rows in the last-sent LCI AND 
+                    # rows that appear in both), and the drop removes the _merge column
+                    df_to_lcia_calcs = pd.merge(
+                        df_for_pylca_interface, 
+                        self.lci_last_sent,
+                        indicator=True,
+                        how='outer'
+                        ).query(
+                            '_merge=="left_only"'
+                            ).drop(
+                                '_merge', axis=1
+                                )
+                    print(f"{year} LCI: {df_to_lcia_calcs}")
+                else:
+                    df_to_lcia_calcs = df_for_pylca_interface
+
+                self.lca.pylca_run_main(df_to_lcia_calcs, self.verbose)
+                self.lci_last_sent = df_to_lcia_calcs
             else:
                 if self.verbose > 0:
                   print(f"{year}: Context.pylca_interface_process(): No material flows for LCA")
