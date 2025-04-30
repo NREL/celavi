@@ -49,6 +49,10 @@ class Scenario:
         ------
         IOError
             Raises IOError if either config file cannot be opened.
+        
+        Returns
+        -------
+        None
         """
         self.args = parser.parse_args()
 
@@ -120,14 +124,23 @@ class Scenario:
         # Print run finish message
         print(f"FINISHED SIMULATION at {self.simtime(self.start)} s", flush=True)
 
+
     def get_filepaths(self):
         """
         Check that input files exist and assemble paths.
+
+        Parameters
+        ----------
+        None
 
         Raises
         ------
         Exception
             Raises exception if necessary filepaths do not exist.
+        
+        Returns
+        -------
+        None
         """
         for _dir, _fdict in self.case["files"].items():
             # Create the directory if it doesn't exist
@@ -156,8 +169,19 @@ class Scenario:
                     )
                 self.files[_n] = _p
 
+
     def preprocess(self):
-        """Compute routes, locations, technology units, and step costs."""
+        """
+        Compute routes, locations, technology units, and step costs.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
 
         start_year = self.case["model_run"].get("start_year")
 
@@ -276,8 +300,20 @@ class Scenario:
                 )
         print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
 
+
     def setup(self):
-        """Create instances of CostGraph, DES (Context and Components) and PyLCIA."""
+        """
+        Create instances of CostGraph, DES (Context and Components) and the LiAISON
+        interface class.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
         start_year = self.case["model_run"].get("start_year")
 
         component_material_mass = pd.read_csv(self.files["component_material_mass"])
@@ -286,10 +322,6 @@ class Scenario:
             component_material_mass.groupby(by=["year", "technology", "component"])
             .sum("mass_tonnes")
             .reset_index()
-        )
-
-        circular_components = self.scen["technology_components"].get(
-            "circular_components"
         )
 
         if self.scen["flags"].get("initialize_costgraph", True):
@@ -348,8 +380,19 @@ class Scenario:
             run=self.run,
         )
 
+
     def execute(self):
-        """Execute one model run within the scenario."""
+        """
+        Execute one model run within the scenario.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
         start_year = self.case["model_run"].get("start_year")
 
         component_material_mass = pd.read_csv(self.files["component_material_mass"])
@@ -526,8 +569,20 @@ class Scenario:
         # Run the context
         self.context.run()
 
+
     def postprocess(self):
-        """Post-process, visualize, and save results of one model run."""
+        """
+        Post-process, visualize, and save results of one model run.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        # @TODO Hardcoding alert! Cost-adjust-factors needs to be added to YAML
         pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv('cost-adjust-factors.csv')
 
         # Create a name for the scenario, based either on a key in the original
@@ -783,6 +838,7 @@ class Scenario:
                 f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
+
     @staticmethod
     def impact_and_units(line_item):
         """
@@ -828,6 +884,7 @@ class Scenario:
         )
 
         return impact, units
+
 
     def calculate_circularity_metrics(self, mass):
         """
@@ -923,8 +980,19 @@ class Scenario:
 
         return outflow_circularity, inflow_circularity
 
+
     def clear_results(self):
-        """Move old CSV results files to a timestamped sub-directory."""
+        """
+        Move old CSV results files to a timestamped sub-directory.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
         # If the user wants to remove old results from the results directory,
         if self.scen["flags"].get("clear_results", True):
             # Define the new directory name uniquely using a timestamp.
@@ -952,6 +1020,7 @@ class Scenario:
             # is empty, delete it (there were no results files to move)
             if not os.listdir(os.path.join(self.args.data, _dir)):
                 os.rmdir(os.path.join(self.args.data, _dir))
+
 
     @staticmethod
     def simtime(starttime):
