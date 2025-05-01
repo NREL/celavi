@@ -180,6 +180,16 @@ class Component:
                 # manufacture the component
                 _fac_inv_mass = self.context.mass_facility_inventories[_fac].cumulative_history
                 _fac_inv_count = self.context.count_facility_inventories[_fac].cumulative_history
+                
+                # Check for potential inventory accounting errors - if the facility has sufficient material
+                # mass but insufficient component counts, print out the respective inventories for manual
+                # verification
+                if all(
+                    [_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0] > mass 
+                     for material, mass in self.mass_tonnes.items()]
+                    ) and not (_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] > self.count):
+                    print(f'{_fac} in {begin_timestep} has potential inventory error:\nMass\n{_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep]}\nCount\n{_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep]}')
+
                 if all(
                     [_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0] > mass 
                      for material, mass in self.mass_tonnes.items()]
