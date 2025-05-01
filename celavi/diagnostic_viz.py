@@ -12,7 +12,7 @@ from .inventory import FacilityInventory
 
 class DiagnosticViz:
     """
-    This class creates diagnostic visualizations from a context after the
+    Create basic diagnostic visualizations from a Context instance after the
     model run has been executed.
     """
 
@@ -30,6 +30,8 @@ class DiagnosticViz:
         component_scaledown: int = None,
     ):
         """
+        Define class attributes.
+
         Parameters
         ----------
         facility_inventories: Dict[str, FacilityInventory]
@@ -64,6 +66,8 @@ class DiagnosticViz:
             Model run identifier for uncertainty runs within a scenario.
         
         component_scaledown: int or None, Default = None
+            Multiplier used to scale up component counts - used for these basic
+            visualizations ONLY.
         """
         self.facility_inventories = facility_inventories
         _name, _ext = str.split(output_plot_filename, ".")
@@ -78,16 +82,18 @@ class DiagnosticViz:
 
         self.component_scaledown = component_scaledown
 
-        # This instance attribute is not set by a parameter to the
-        # constructor. Rather, it is merely created to hold a cached
-        # result from the gather_cumulative_histories() method
-        # below
-
+        # Create blank attribute to hold results from gather_cumulative_histories() method
         self.gathered_and_melted_cumulative_histories = None
+
 
     def gather_and_melt_cumulative_histories(self) -> pd.DataFrame:
         """
-        This gathers the cumulative histories in a way that they can be plotted
+        Gather and rearrange the cumulative histories from every facility
+        to allow for plotting component counts.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
@@ -119,20 +125,22 @@ class DiagnosticViz:
             # components in each technology unit
             with suppress(KeyError):
                 cumulative_history.loc[
-                    :, [key for key, value in self.component_count.items()]
+                    :, [key for key, _ in self.component_count.items()]
                 ] = cumulative_history.loc[
-                    :, [key for key, value in self.component_count.items()]
+                    :, [key for key, _ in self.component_count.items()]
                 ] * [
-                    value for key, value in self.component_count.items()
+                    value for _, value in self.component_count.items()
                 ]
 
             cumulative_histories.append(cumulative_history)
 
-        # The dropna() gets rid of all blank component counts, generally those
-        # where the facility never processes a particular component
+        # Fill any empty entries (generally where a facility never processed a
+        # particular component kind) with zeros
         cumulative_histories_df = pd.concat(cumulative_histories).fillna(0)
 
         # Save a raw version of the histories file for debugging
+        # @TODO Hardcoding alert! Decide if we want to save this file and if so,
+        # add to the filepath definitions in YAML
         cumulative_histories_df.to_csv('cumulative-histories-raw.csv',index=False)
 
         self.gathered_and_melted_cumulative_histories = (
@@ -152,9 +160,20 @@ class DiagnosticViz:
 
         return self.gathered_and_melted_cumulative_histories
 
+
     def generate_plots(self):
         """
-        This method generates the history plots.
+        Generate component mass and counts over time with Plotly Express.
+
+        Plots are saved to file.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
         """
         # Create the figure
         _colors = plt.cm.jet(np.linspace(0,1,len(self.gather_and_melt_cumulative_histories().facility_type.drop_duplicates())))

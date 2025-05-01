@@ -5,9 +5,8 @@ import pandas as pd
 
 class FacilityInventory:
     """
-    The inventory class holds an inventory of materials and quantities
-    for a landfill, virgin material extraction, or recycled material
-    availability.
+    Holds an inventory of component materials and quantitiesfor aany facility
+    in a supply chain
     """
 
     def __init__(
@@ -21,6 +20,8 @@ class FacilityInventory:
         can_be_negative: bool = False,
     ):
         """
+        Define class attributes.
+
         Parameters
         ----------
         facility_id: int
@@ -40,14 +41,18 @@ class FacilityInventory:
             The number of discrete timesteps in the simulation that this
             inventory will hold.
         
-        quantity_unit: str
+        quantity_unit: str, Default = 'tonne'
             The unit in which the quantity is recorded.
 
-        can_be_negative: bool
+        can_be_negative: bool, Default = False
             True if the quantity in this inventory can be negative. If False,
             the quantity must always be positive, and the instance will
             raise an exception if there is an attempt of a negative
             transaction.
+        
+        Returns
+        -------
+        None
         """
         self.step = step
         self.facility_id = facility_id
@@ -70,6 +75,7 @@ class FacilityInventory:
             component_materials_copy = self.component_materials.copy()
             component_materials_copy["timestep"] = timestep
             self.input_transactions.append(component_materials_copy)
+
 
     def increment_quantity(
         self, item_name: str, quantity: float, timestep: int
@@ -136,6 +142,7 @@ class FacilityInventory:
         # Return the new level
         return self.component_materials[item_name]
 
+
     @property
     def cumulative_history(self) -> pd.DataFrame:
         """
@@ -145,6 +152,10 @@ class FacilityInventory:
         For facilities where material is not stored and does not accumulate,
         the cumulative history will be zero. The cumulative_input_history will
         be more informative for facilities of this type.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
@@ -164,11 +175,16 @@ class FacilityInventory:
         cumulative_history['timestep'] = component_materials_history_df['timestep']
         return cumulative_history
 
+
     @property
     def cumulative_input_history(self) -> pd.DataFrame:
         """
         Calculate the cumulative input quantities of a facility inventory over
         all its input transactions.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
@@ -185,6 +201,7 @@ class FacilityInventory:
         cumulative_history['timestep'] = component_materials_history_df['timestep']
         return cumulative_history
 
+
     @property
     def transaction_history(self) -> pd.DataFrame:
         """
@@ -194,6 +211,10 @@ class FacilityInventory:
         Because this method instantiates a DataFrame, it should be called
         sparingly, as this is a resource consuming procedure.
 
+        Parameters
+        ----------
+        None
+
         Returns
         -------
         pd.DataFrame
@@ -201,6 +222,7 @@ class FacilityInventory:
         """
         transactions_df = pd.DataFrame(self.transactions)
         return transactions_df
+
 
     @property
     def input_transaction_history(self) -> pd.DataFrame:
@@ -210,6 +232,10 @@ class FacilityInventory:
         
         Because this method instantiates a DataFrame, it should be called
         sparingly, as this is a resource consuming procedure.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------

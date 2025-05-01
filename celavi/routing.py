@@ -41,9 +41,9 @@ class Router:
             DataFrame of edges within the routing (transportation) network.
         node_map: [DataFrame]
             DataFrame of nodes within the routing (transportation) network.
-        memory [joblib.Memory]
+        memory: [joblib.Memory], Default = None
             Allows for caching.
-        algorithm: [function]
+        algorithm: [function], Default = bidirectional_dijkstra
             Method for finding minimum-distance route. Defaults to bidirectional_dijkstra.
         """
 
@@ -68,6 +68,7 @@ class Router:
 
         print("loading routing graph", flush=True)
         _ = self.edges.apply(lambda x: self.Graph.add_edge(**x), axis=1)
+
 
     def get_route(self, start, end):
 
@@ -134,6 +135,7 @@ class Router:
 
         return _summary[["region_transportation", "fclass", "vkmt"]]
 
+
     @staticmethod
     def get_all_routes(
         network_edges,
@@ -141,7 +143,6 @@ class Router:
         node_locations,
         routes_output_file,
         county_routes_file,
-        routing_output_folder,
     ):
         """
         Calculate distances traveled between all connected supply chain facilities.
@@ -167,9 +168,11 @@ class Router:
         
         county_routes_file : str
             Path to file where routes with vkmt by county is saved.
-
-        routing_output_folder : str
-            Path to directory for intermediate routing outputs.
+        
+        
+        Returns
+        -------
+        None
         """
         backfill = True  # data backfill flag - True will replace nulls; user must input value for replacement
 

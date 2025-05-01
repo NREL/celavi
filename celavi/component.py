@@ -38,7 +38,7 @@ class Component:
         Parameters
         ----------
         context: Context
-            The context that contains this component.
+            The supply chain context that contains this component.
 
         kind: str
             The type of this component. It isn't called "type" because
@@ -49,50 +49,60 @@ class Component:
             for the first time.
 
         lifespan_timesteps: float
-            The component useful lifetime: the period, in timesteps, that
-            the component spends in its first in use state. The argument
-            can be provided as a floating point value, but it is converted
-            into an integer before it is assigned to the instance attribute.
-            This allows components to have either fixed integer lifespans,
-            fixed float lifespans, or lifespans defined with a Weibull 
-            probability distribution.
+            The component's first useful lifetime: the amount of time, in 
+            DES timesteps, that the component spends in its first in use 
+            state. The argument can be provided as a floating point value,
+            but it is converted into an integer before it is assigned to 
+            the instance attribute. This allows components to have either
+            fixed integer lifespans, fixed float lifespans, or lifespans
+            defined with a Weibull probability distribution.
 
         in_use_facility: str
             The node name where the component spends its first useful lifetime
-            before beginning the end-of-life process (typically but not necessarily
-            a renewable energy power plant).
+            before beginning the end-of-life process.
         
         mass_tonnes: Dict[str, float]
-            Component composition by material, in tonnes. Keys are
+            Component composition by material, in metric tonnes. Keys are
             material names. Values are material masses.            
         """
 
         self.context = context
         self.kind = kind
+        # Note that this is NOT the current simulation year, but the year in which
+        # the component first enters use.
         self.year = year
         self.mass_tonnes = mass_tonnes
+        # How many components are in this component - required for material loss
+        # accounting; always 1
         self.count = 1.0
         self.in_use_facility = in_use_facility
         # Manufacturing facility is assigned during component
         # beginning of life (bol_process)
         self.manuf_facility = None
         self.initial_lifespan_timesteps = int(lifespan_timesteps)  # timesteps
+        # The list of EOL processes the component will visit at EOL gets
+        # stored in this attribute after its first useful lifetime
         self.pathway: Deque[Tuple[str, int]] = deque()
+        # Information on material losses in some processes
         self.split_dict = self.context.path_dict["path_split"]
 
-    def create_pathway_queue(self, from_facility_id: int):
+    def create_pathway_queue(self):
         """
-        Query the CostGraph instance and construct a queue of the lifecycle for
-        this component. This method is called during the manufacturing step
-        and during the eol_process when exiting the in use stage.
+        Query the CostGraph instance and construct an EOL process queue for
+        this component. This method is called during the eol_process when, and
+        uses the component's in_use_facility (node name) attribute to select the
+        starting point for the EOL process queue.
 
         This method does not return anything, rather it modifies the
         instance attribute self.pathway with a new deque.
 
         Parameters
         ----------
-        from_facility_id: int
-            The starting location of the the component.
+        None
+
+        Returns
+        -------
+        None
         """
         path_choices = self.context.cost_graph.choose_paths(source_node=self.in_use_facility)
         path_choices_dict = {
@@ -102,12 +112,13 @@ class Component:
         path_choice = path_choices_dict[self.in_use_facility]
         self.pathway = deque()
         for facility, lifespan, distance, route_id in path_choice["path"]:
-            # Override the initial timespan when component goes into use.
-
+            # Overwrite the default timespan from CostGraph for the in use phase.
             if 'in use' in facility:
                 self.pathway.append(
                     (facility, self.initial_lifespan_timesteps, distance, route_id)
                 )
+            # Also overwrite the default timespan for facilities where components
+            # do not leave during the simulation.
             elif any(
                 [
                     facility.startswith(i)
@@ -117,13 +128,13 @@ class Component:
                 self.pathway.append(
                     (facility, self.context.max_timesteps * 2, distance, route_id)
                 )
-            # Otherwise, use the timespan the model gives us.
+            # Otherwise, use the default timespan obtained from CostGraph (1 timestep).
             else:
                 self.pathway.append((facility, lifespan, distance, route_id))
 
     def bol_process(self, env):
         """
-        This process starts the lifecycle for this component. Since it is
+        This process starts the first useful lifetime for this component. Since it is
         only called once, it does not have a loop, like most other SimPy
         processes. When the component reaches end-of-life, this method
         sets the end-of-life (EOL) pathway for the component.
@@ -132,10 +143,17 @@ class Component:
         ----------
         env: simpy.Environment
             The SimPy environment running the DES timesteps.
+        
+        Returns
+        -------
+        None
         """
         begin_timestep = (
             self.year - self.context.min_year
         ) * self.context.timesteps_per_year
+
+        # Apart from the in use node, the component will spend only
+        # "lifespan" timesteps in each node
         lifespan = 1
 
         # component waits to be manufactured
@@ -150,7 +168,7 @@ class Component:
             node_id = self.in_use_facility,
             crit = 'cost', # @NOTE Replace with 'dist' to look at location only, not processing costs
         )
-        # Sort facilities by increasing distance, then search along the list of facilities
+        # Sort facilities by increasing distance criterion, then search along the list of facilities
         # until EITHER a virgin facility is found OR a secondary facility with sufficient inventory 
         # is found
         _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
@@ -217,7 +235,7 @@ class Component:
                 _mass.increment_quantity(material, -mass, env.now)
 
 
-        # Component is now in use; update the location
+        # Component is now in use
         
         # Increment in use inventories
         count_inventory = self.context.count_facility_inventories[self.in_use_facility]
@@ -237,10 +255,10 @@ class Component:
             )
             
             count_transport.increment_inbound_tonne_km(
-                # @NOTE dist > 0 logic here only kicks in for artificially small datasets with all 
-                # facilities colocated ie tiny-circfutures
+                # @NOTE dist > 0 logic here only kicks in for co-located facilities that
+                # still require transportation (ie in tiny-circfutures)
                 tonne_km = mass * dist if dist > 0 else mass * 1.0,
-                # @NOTE route_id may become a list of route_ids or may be removed altogether(?)
+                # @TODO route_id should now be a string pulled from the routes file - incorporate
                 route_id = None,
                 timestep=env.now,
             )
@@ -249,12 +267,13 @@ class Component:
         yield env.timeout(self.initial_lifespan_timesteps)
 
         # Component's next steps are determined and stored in self.pathway
-        self.create_pathway_queue(self.in_use_facility)
+        # This method looks at the in_use_facility attribute and thus takes no parameters
+        self.create_pathway_queue()
 
         # Component is decremented from in use inventories
         self.move_component_from(env, loc=self.in_use_facility)
 
-        # Take the current facility off the to-do list
+        # Take the current facility (the in use facility) off the to-do list
         self.pathway.popleft()
 
         # Begin the end of life process
@@ -269,6 +288,10 @@ class Component:
         ----------
         env: simpy.Environment
             The environment in which this process is running.
+        
+        Returns
+        -------
+        None
         """
         while True:
             if self.pathway:
@@ -290,6 +313,7 @@ class Component:
                     self.current_location = location
                     
                     # Wait until the component has spent 'lifespan' timesteps here
+                    # Generally this is only 1 timestep
                     yield env.timeout(lifespan)
 
                     # Move the entire component OUT of the facility that involves material losses,
@@ -388,7 +412,11 @@ class Component:
             UUID for route along which component is moved. Defaults to None.
 
         amt : float
-            Number of components being moved. Defaults to 1.        
+            Number of components being moved. Defaults to 1.
+        
+        Returns
+        -------
+        None
         """
         self.context.count_facility_inventories[loc].increment_quantity(
             self.kind, amt * self.count, env.now
@@ -419,6 +447,10 @@ class Component:
         
         amt : float
             Number of components being moved. Defaults to 1.
+        
+        Returns
+        -------
+        None
         """
 
         self.context.count_facility_inventories[loc].increment_quantity(

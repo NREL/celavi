@@ -2,16 +2,15 @@ import pandas as pd
 from celavi.pylca_celavi.pylca_liaison import liaison_lci
 import os
 import secrets
-#todo
+# @TODO
 #This directory needs to be read as a yaml file to be removed from being hardcoded. 
 os.environ['BRIGHTWAY2_DIR']= "/kfs2/shared-projects/liaison/env/hipster/"
 print('Importing brightway module.....',flush=True)
 import brightway2 as bw
 print('Imported',flush= True)
 
-#todo
+# @TODO
 #We need to remove several variables that are unnecessary now. 
-#We need to add the data directory
 class PylcaCelavi:
     def __init__(
         self,
@@ -42,6 +41,10 @@ class PylcaCelavi:
             1 to allow print statements
         run: int
             Model run. Defaults to zero.
+        
+        Returns
+        -------
+        None
         """
         # filepaths for files used in the pylca calculations
         self.lcia_des_filename = lcia_des_filename
@@ -60,13 +63,13 @@ class PylcaCelavi:
             if self.verbose == 1:
                 print(f"PyLCIA: {self.lcia_des_filename} not found")
 
-    def lca_performance_improvement(self, df, state,stage,year):
-        """
-        This function is used to bypass pylca liaison calculations
-        It reads emission factor data from previous runs stored in a file
-        and performs lca faster.
 
-        The stored file needs to be reset after any significant update to data.
+    def lca_performance_improvement(self, df, state, stage, year):
+        """
+        Bypass LiAISON calculations by reading emission factors from previous
+        runs stored in a file.
+
+        The stored file needs to be regenerated after any significant data updates.
 
         Parameters
         ----------
@@ -85,7 +88,7 @@ class PylcaCelavi:
                     UUID for the route along which transportation occurs. None for non-transportation activities.
         
         state : str
-            State identifier. Currently not used
+            State identifier.
 
         Returns
         -------
@@ -125,9 +128,6 @@ class PylcaCelavi:
                 - route_id: str
                     UUID of transportation route.
         """
-      
-        
-        
         try:
             shortcutlca_df = pd.read_csv(self.shortcutlca_filename)
             shortcutlca_df.columns = ['lcia','value','unit','year','method','stage','state']
@@ -137,7 +137,7 @@ class PylcaCelavi:
             df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
             df_results = df2[df2['_merge'] == 'both']
             if df_results.empty:
-                print("Missing from shortcut lca database: ",state,stage,year)
+                print(f"PylcaCelavi.lca_performance_improvement: Missing {state} {stage} {year} from shortcut lca database")
             df_results['value'] = df_results['flow quantity'] * df_results['value']
             df_results = df_results[['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']]
             
@@ -158,12 +158,14 @@ class PylcaCelavi:
 
     def pylca_run_main(self, df, verbose=0):
         """
-        This function runs the individual pylca celavi functions for performing LCA relevant calculations.
+        Run the individual LiAISON functions for performing LCA calculations.
         
         Parameters
         ----------
         df: pandas.DataFrame
-            Material flows from DES.
+            Material flows from DES, defined there as df_to_lcia_calcs.
+        verbose: int, Default = 0
+            Parameter to control feedback level.
         
         Returns
         -------
@@ -197,7 +199,7 @@ class PylcaCelavi:
             df_s['state'] = "US-"+df_s['state']
             # This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
             for index, row in df_s.iterrows():
-                #CHECK THIS PART
+                # @TODO CHECK THIS PART
                 year = row["year"]
                 stage = row["stage"]
                 material = row["material"]
