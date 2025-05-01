@@ -178,11 +178,12 @@ class Component:
             if _fac.split('_')[0] in ['window glass recovery','solar glass manufacturing from cullet']:
                 # If the facility is a secondary facility, then check that the inventory is sufficient to 
                 # manufacture the component
-                _fac_inv = self.context.mass_facility_inventories[_fac].cumulative_history
+                _fac_inv_mass = self.context.mass_facility_inventories[_fac].cumulative_history
+                _fac_inv_count = self.context.count_facility_inventories[_fac].cumulative_history
                 if all(
-                    [_fac_inv.loc[_fac_inv.timestep == begin_timestep][material].values[0] > mass 
+                    [_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0] > mass 
                      for material, mass in self.mass_tonnes.items()]
-                    ):
+                    ) and (_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] > self.count):
                     self.manuf_facility = _fac
                     # "break" ends the loop
                     break
