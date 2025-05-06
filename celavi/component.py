@@ -180,31 +180,57 @@ class Component:
                 # manufacture the component
                 _fac_inv_mass = self.context.mass_facility_inventories[_fac].cumulative_history
                 _fac_inv_count = self.context.count_facility_inventories[_fac].cumulative_history
-                
-                # Check for potential inventory accounting errors - if the facility has sufficient material
-                # mass but insufficient component counts, print out the respective inventories for manual
-                # verification
-                if all(
-                    [_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0] > mass 
-                     for material, mass in self.mass_tonnes.items()]
-                    ) and not (_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] > self.count):
-                    print(f'{_fac} in {begin_timestep} sufficient mass, insufficient count:\nMass\n{_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep]}\nCount\n{_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep]}')
 
+                # If the facility has sufficient material mass, it's set as the manufacturing facility
                 if all(
                     [_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0] > mass 
                      for material, mass in self.mass_tonnes.items()]
-                    ) and (_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] > self.count):
+                    ):
+                    
+                    # To guard against any future instances of an actual inventory error, with zero count and 
+                    # non-zero mass, add this additional print statement and do not use this facility to
+                    # manufacture components
+                    # Instead of stopping the simulation entirely, this lets us bypass facilities that might
+                    # cause inconsistencies in the results
+                    if _fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] == 0:
+                        print(f'''{_fac} inventory error at {begin_timestep}: Non-zero mass, zero count''')
+                        pass # begins the next iteration of the loop
+
+                    # If the facility has sufficient mass inventory but INsufficient count inventory,
+                    # print out an FYI notification - this isn't an error but does require custom
+                    # component decrementing
+                    if (_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] < self.count):
+                        print(f'''{_fac} in {begin_timestep} sufficient mass, insufficient count:\n
+                              Mass\n{_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep]}\n
+                              Count\n{_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep]}''')
+                        # Calculate the component count to decrement from this facility as the fraction (0-1) of
+                        # mass in inventory required to manufacture this component, scaled up by the count
+                        # inventory
+                        # Get dictionary of mass inventory fractions required by material
+                        _component_count_dict = {
+                            material: 
+                            _fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] * (mass/_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0]) 
+                            for material, mass in self.mass_tonnes.items()
+                            }
+
+                        # Decrement by the maximum mass fraction required, to avoid future negative inventory values
+                        # @NOTE Revisit and revise this logic for future case studies with multi-material components,
+                        # especially if material loss fractions differ for different materials in the same component
+                        _component_count_decrement = max([mass for _, mass in _component_count_dict.items()])
+                    
                     self.manuf_facility = _fac
-                    # "break" ends the loop
-                    break
+                    break # ends the loop
+                
+                # If the facilities does NOT have sufficient material mass to manufacture the component,
+                # move on to the next manufacturing facility in the list
                 else:
-                    # "pass" begins the next iteration of the loop
-                    pass
+                    pass # begins the next iteration of the loop
+            
             # If the closest facility IS a virgin manuf facility, then no need to check the inventory;
             # this component is manufactured at this facility
             else:
                 self.manuf_facility = _fac          
-                break
+                break # ends the loop
         
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
@@ -221,7 +247,13 @@ class Component:
         # Decrement manufacturing inventories
         # No transportation here: transportation is tracked at destination
         # facilities
-        count_inventory.increment_quantity(self.kind, -1, env.now)
+        # If a custom decrement amount has been specified, use that to decrement
+        # If the custom value doesn't exist, decrement by 1 as per usual
+        try:
+            count_inventory.increment_quantity(self.kind, -1.0 * _component_count_decrement, env.now)
+        except NameError: # Use this statement if _component_count_decrement wasn't defined above
+             count_inventory.increment_quantity(self.kind, -1.0, env.now)
+        
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, -mass, env.now)
         
