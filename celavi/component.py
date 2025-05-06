@@ -188,7 +188,7 @@ class Component:
                     [_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0] > mass 
                      for material, mass in self.mass_tonnes.items()]
                     ) and not (_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] > self.count):
-                    print(f'{_fac} in {begin_timestep} has potential inventory error:\nMass\n{_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep]}\nCount\n{_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep]}')
+                    print(f'{_fac} in {begin_timestep} sufficient mass, insufficient count:\nMass\n{_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep]}\nCount\n{_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep]}')
 
                 if all(
                     [_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep][material].values[0] > mass 
