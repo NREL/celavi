@@ -1,304 +1,341 @@
+import os
+from pathlib import Path
+import logging
+from typing import Any, Dict, List, Optional, Tuple
+
 import pandas as pd
 from celavi.pylca_celavi.pylca_liaison import liaison_lci
-import os
-import secrets
-# @TODO
-#This directory needs to be read as a yaml file to be removed from being hardcoded. 
-os.environ['BRIGHTWAY2_DIR']= "/kfs2/shared-projects/liaison/env/hipster/"
-print('Importing brightway module.....',flush=True)
-import brightway2 as bw
-print('Imported',flush= True)
 
-# @TODO
-#We need to remove several variables that are unnecessary now. 
+logger = logging.getLogger(__name__)
+
+
 class PylcaCelavi:
+    """
+    Interface for performing precomputed or live LCA calculations via LiAISON.
+
+    Attributes
+    ----------
+    lcia_des_path : Path
+        Path to the output CSV that receives calculated impacts.
+    shortcutlca_path : Path
+        Path to the cache of previously computed impacts.
+    data_sent_path : Path
+        Path to record input data sent for LCA processing.
+    brightway_dir : Path
+        Directory for Brightway2 database configuration.
+    liaison_reeds_project_name : str
+    liaison_reeds_database : str
+    celavi_lca_project : str
+    liaison_process_bridge : Any
+    additional_inventories : List[Any]
+    pv_module_chars : Dict[str, Any]
+    use_shortcut_lca_calculations : bool
+    verbose : bool
+    run_id : int
+    data_dir : Path
+    bw : module
+        Imported Brightway2 module, available after initialization.
+    """
+
     def __init__(
         self,
-        data_dir,
-        liaison_params,
-        lcia_des_filename,
-        shortcutlca_filename,
-        use_shortcut_lca_calculations,
-        verbose,
-        run=0,
-    ):
+        data_dir: str,
+        liaison_params: Dict[str, str],
+        lcia_des_filename: str,
+        shortcutlca_filename: str,
+        brightway_dir: str,
+        liaison_process_bridge: Any,
+        additional_inventories: List[Any],
+        data_sent_to_liaison: str,
+        pv_module_chars: Dict[str, Any],
+        use_shortcut_lca_calculations: bool = False,
+        verbose: bool = False,
+        run: int = 0,
+    ) -> None:
         """
-        Stores filenames in self and deletes old interface file if it exists.
-        
+        Initialize LCA runner, configure Brightway, and clear previous results.
+
         Parameters
         ----------
-        lcia_des_filename: str
-            Path to file that stores calculated impacts for passing back to the
-            discrete event simulation.
-        shortcutlca_filename: str
-            Path to file where previously calculated impacts are stored. This file
-            can be used instead of re-calculating impacts from the inventory.
-        use_shortcut_lca_calculations: Boolean
-            Boolean flag for using previously calculating impact data or running the
-            optimization code to re-calculate impacts.
-        verbose: int
-            0 to suppress detailed print statements
-            1 to allow print statements
-        run: int
-            Model run. Defaults to zero.
-        
-        Returns
-        -------
-        None
+        data_dir
+            Directory for intermediate data files.
+        liaison_params
+            Keys: 'liaison_reeds_project_name', 'liaison_reeds_database', 'celavi_lca_project'.
+        lcia_des_filename
+            CSV file path to append final LCIA results.
+        shortcutlca_filename
+            CSV file path to cache shortcut results.
+        brightway_dir
+            Directory for Brightway2 configuration.
+        liaison_process_bridge
+            Bridge object for LiAISON process definitions.
+        additional_inventories
+            Inventories to include in LiAISON.
+        data_sent_to_liaison
+            CSV file path to record input flows sent to LiAISON.
+        pv_module_chars
+            PV module characteristics for the LiAISON model.
+        use_shortcut_lca_calculations
+            If True, attempt to read impacts from the cache.
+        verbose
+            Enable debug-level logging.
+        run
+            Identifier for the model run.
         """
-        # filepaths for files used in the pylca calculations
-        self.lcia_des_filename = lcia_des_filename
-        self.shortcutlca_filename = shortcutlca_filename
+        # Convert paths
+        self.data_dir = Path(data_dir)
+        self.lcia_des_path = Path(lcia_des_filename)
+        self.shortcutlca_path = Path(shortcutlca_filename)
+        self.data_sent_path = Path(data_sent_to_liaison)
+        self.brightway_dir = Path(brightway_dir)
+
+        # Liaison parameters
+        self.liaison_reeds_project_name = liaison_params["liaison_reeds_project_name"]
+        self.liaison_reeds_database = liaison_params["liaison_reeds_database"]
+        self.celavi_lca_project = liaison_params["celavi_lca_project"]
+
+        # Other configuration
+        self.liaison_process_bridge = liaison_process_bridge
+        self.additional_inventories = additional_inventories
+        self.pv_module_chars = pv_module_chars
         self.use_shortcut_lca_calculations = use_shortcut_lca_calculations
         self.verbose = verbose
-        self.run = run
-        self.data_dir = data_dir
+        self.run_id = run
 
-        # The results file should be removed if present. The LCA results are appended to the results file. 
+        # Set up Brightway environment variable
+        os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
+        if self.verbose:
+            print("Importing Brightway2 module...", flush=True)
+        import brightway2 as bw
+        self.bw = bw
+        if self.verbose:
+            print("Imported Brightway2", flush=True)
+
+        logger.info("Configuring Brightway at %s", self.brightway_dir)
+
+        # Clean previous results if present
         try:
-            os.remove(self.lcia_des_filename)
-            if self.verbose == 1:
-                print(f"PylcaCelavi: Deleted {self.lcia_des_filename}")
+            self.lcia_des_path.unlink()
+            logger.debug("Deleted old LCIA output: %s", self.lcia_des_path)
         except FileNotFoundError:
-            if self.verbose == 1:
-                print(f"PyLCIA: {self.lcia_des_filename} not found")
+            logger.debug("No existing LCIA output to delete: %s", self.lcia_des_path)
 
-
-    def lca_performance_improvement(self, df, state, stage, year):
+    def lca_performance_improvement(
+        self,
+        df: pd.DataFrame,
+        state: str,
+        stage: str,
+        year: int,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Bypass LiAISON calculations by reading emission factors from previous
-        runs stored in a file.
-
-        The stored file needs to be regenerated after any significant data updates.
+        Read cached LCIA impacts to skip live calculation where possible.
 
         Parameters
         ----------
-        df: pandas.DataFrame
-            Material flow and process information provided by the DES.
-            Columns:
-                - year: int
-                    Model year.
-                - stage: str
-                    Activity in the system
-                - material: str
-                    Material flowing through the particular system activity
-                - state: str
-                    Optional state identifier. Required only if electricity_grid_spatial_level is "state".
-                - route_id: str
-                    UUID for the route along which transportation occurs. None for non-transportation activities.
-        
-        state : str
-            State identifier.
+        df
+            Input flows DataFrame for a specific region and process stage.
+        state
+            State identifier (e.g., 'US-CA').
+        stage
+            Supply chain stage.
+        year
+            Model year.
 
         Returns
         -------
-        pandas.DataFrame, pandas.DataFrame
-            Emission results using the shortcut calculations and another dataframe with the flows that do not have any emission results.
-            Columns:
-                - year: int
-                    Model year.
-                - stage: str
-                    Supply chain stage.
-                - material: str
-                    Material being processed.
-                - state: str
-                    State in which process exists.
-                - route_id: str
-                    UUID of transportation route.
-
-        pandas.DataFrame
-            Pollutant flows from the shortcut LCA file, or an empty DataFrame if the shortcut file doesn't exist.
-            Columns:
-                - flow name: str
-                    Pollutant name.
-                - flow unit: str
-                    Unit of pollutant flow.
-                - flow quantity: float
-                    Pollutant flow quantity.
-                - year: int
-                    Model year.
-                - facility_id: int
-                    Facility ID.
-                - stage: str
-                    Supply chain stage.
-                - state: str
-                    State where facility is located.
-                - material: str
-                    Material being processed.
-                - route_id: str
-                    UUID of transportation route.
+        missing_df
+            Rows needing live LCA calculation.
+        result_df
+            Cached impacts for matching rows.
         """
         try:
-            shortcutlca_df = pd.read_csv(self.shortcutlca_filename)
-            shortcutlca_df.columns = ['lcia','value','unit','year','method','stage','state']
-            df[['stage','year','material','state','facility_id','route_id']] = df[['stage','year','material','state','facility_id','route_id']].astype('str')
-            shortcutlca_df[['stage','year','state']] = shortcutlca_df[['stage','year','state']].astype('str')
-            df2 = df.merge(shortcutlca_df,left_on=['stage','year','state'],right_on = ['stage','year','state'],indicator=True,how = 'outer')
-            df_with_no_lca_entry =  df2[df2['_merge'] == 'left_only']
-            df_results = df2[df2['_merge'] == 'both']
-            if df_results.empty:
-                print(f"PylcaCelavi.lca_performance_improvement: Missing {state} {stage} {year} from shortcut lca database")
-            df_results['value'] = df_results['flow quantity'] * df_results['value']
-            df_results = df_results[['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']]
-            
-            return df_with_no_lca_entry,df_results
+            # Read cache without header, assign expected columns
+            cache_df = pd.read_csv(
+                self.shortcutlca_path,
+                header=None,
+                names=[
+                    'lcia', 'cached_value', 'unit', 'year',
+                    'method', 'stage', 'state'
+                ]
+            )
+            # Ensure consistent types for merge keys
+            for col in ['stage', 'year', 'state']:
+                df[col] = df[col].astype(str)
+                cache_df[col] = cache_df[col].astype(str)
+
+            merged = df.merge(
+                cache_df,
+                on=['stage', 'year', 'state'],
+                how='outer',
+                indicator=True,
+            )
+            missing_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
+            result_df = merged[merged['_merge'] == 'both'].drop(columns=['_merge'])
+
+            if result_df.empty:
+                logger.warning(
+                    "Shortcut LCA cache missing entry for %s, %s, %d",
+                    state, stage, year,
+                )
+            else:
+                logger.info(
+                    "Using shortcut LCA cache for %s, %s, %d: %d entries",
+                    state, stage, year, len(result_df)
+                )
+
+            # Apply cached factor
+            result_df['value'] = (
+                result_df['flow quantity'] * result_df['cached_value']
+            )
+            cols = [
+                'lcia', 'value', 'unit', 'year', 'method',
+                'facility_id', 'stage', 'material', 'route_id', 'state'
+            ]
+            return missing_df, result_df[cols]
 
         except FileNotFoundError:
-            
-            shortcutlca_df= pd.DataFrame()
-            #shortcutlca_df.columns = ['lcia','value','unit','year','method','facility_id','stage','material','route_id','state']
-            df_with_no_lca_entry = df
+            logger.info(
+                "Shortcut LCA cache not found at %s", self.shortcutlca_path
+            )
+            return df, pd.DataFrame()
 
-
-            if self.verbose == 1:
-                print("No existing shortcut LCA file:" + self.shortcutlca_filename)
-            
-            return df_with_no_lca_entry,pd.DataFrame()
-
-
-    def pylca_run_main(self, df, verbose=0):
+    def pylca_run_main(
+        self, df: pd.DataFrame, verbose: Optional[int] = None
+    ) -> pd.DataFrame:
         """
-        Run the individual LiAISON functions for performing LCA calculations.
-        
+        Execute LiAISON LCA runs, using cache where enabled.
+
         Parameters
         ----------
-        df: pandas.DataFrame
-            Material flows from DES, defined there as df_to_lcia_calcs.
-        verbose: int, Default = 0
-            Parameter to control feedback level.
-        
+        df
+            DataFrame of flows with columns including 'flow quantity', 'state', etc.
+        verbose
+            Override instance verbosity for this call.
+
         Returns
         -------
-        res_df: pd.DataFrame
-            LCIA results (also appends to csv file)
-
-            Columns:
-                - year: int
-                - facility_id: int
-                - material: str
-                - route_id: str
-                - state: str
-                - stage: str
-                - impacts: str
-                - impact: float
+        pd.DataFrame
+            Combined LCIA results with columns:
+            ['year', 'facility_id', 'material', 'route_id', 'stage', 'state',
+             'impacts', 'impact', 'unit', 'run', 'comment']
         """
-        df = df[df["flow quantity"] != 0]
-        res_df = pd.DataFrame()
-        df = df.reset_index()
-        lcia_mass_flow = pd.DataFrame()
-        states = list(pd.unique(df["state"]))
+        if verbose is None:
+            verbose = self.verbose
 
-        #Saving the input data
-        data_sent_to_liaison = self.data_dir + "/generated/" + "data_sent_to_liaison.csv"
-        df.to_csv(data_sent_to_liaison, mode='a', header=False, index=False)
+        # Filter zero flows
+        df = df.loc[df["flow quantity"] != 0].reset_index(drop=True)
+        if df.empty:
+            logger.info("No nonzero flows to process.")
+            return pd.DataFrame()
 
-        # The LCA needs to be done for every region separately. Thus separating the states in the dataframe.
-        for st in states:
-            df_s = df[df["state"] == st]
-            # Changing the state name from "XX to US-XX"
-            df_s['state'] = "US-"+df_s['state']
-            # This function breaks down the df sent from DES to individual rows with unique rows, facilityID, stage and materials.
-            for index, row in df_s.iterrows():
-                # @TODO CHECK THIS PART
-                year = row["year"]
+        # Record inputs
+        df.to_csv(self.data_sent_path, mode="a", header=False, index=False)
+
+        results: List[pd.DataFrame] = []
+        states = df["state"].unique()
+
+        for raw_state in states:
+            region = f"US-{raw_state}" if len(raw_state) == 2 else raw_state
+            subset = df[df["state"] == raw_state].copy()
+            subset["state"] = region
+
+            for idx, row in subset.iterrows():
+                year = int(row["year"])
                 stage = row["stage"]
                 material = row["material"]
                 facility_id = row["facility_id"]
-                route_id = str(row["route_id"]) 
-                state = row["state"]
+                route_id = str(row["route_id"])
                 unit = row["flow unit"]
-                new_df = df_s[df_s["index"] == index]
-                #Update years before 2024 since LCI not available
+
+                original_year = year
                 if year < 2024:
-                    original_year = year
-                    new_year = 2024
-                    new_df['year'] = new_year
-                else:
-                    new_year = year
-                    original_year = year
+                    year = 2024
+                    subset.at[idx, "year"] = year
 
                 if self.use_shortcut_lca_calculations:
-                    #Calling the lca performance improvement function to do shortcut calculations. 
-                    df_with_no_lca_entry,result_shortcut = self.lca_performance_improvement(new_df,state,stage,year)
-                    df_with_no_lca_entry['route_id'] = str(route_id) #the lca performance improvement removes routes id. 
+                    to_calc, cached = self.lca_performance_improvement(
+                        subset.loc[[idx]], region, stage, original_year
+                    )
+                    to_calc["route_id"] = route_id
                 else:
-                    df_with_no_lca_entry = new_df
-                    result_shortcut = pd.DataFrame()
+                    to_calc = subset.loc[[idx]]
+                    cached = pd.DataFrame()
 
-                res_calculated = pd.DataFrame()
-                if not df_with_no_lca_entry.empty:
-                        working_df = df_with_no_lca_entry
-                        working_df["flow name"] = (
-                            working_df["material"] + ", " + working_df["stage"]
+                live = pd.DataFrame()
+                if not to_calc.empty and to_calc["flow quantity"].sum() != 0:
+                    flow_df = to_calc.assign(**{"flow name": to_calc["material"] + ", " + stage})[
+                        ["flow name", "flow quantity"]
+                    ]
+
+                    res, quantity = liaison_lci(
+                        flow_df,
+                        year,
+                        facility_id,
+                        stage,
+                        material,
+                        unit,
+                        route_id,
+                        region,
+                        self.liaison_process_bridge,
+                        self.additional_inventories,
+                        self.liaison_reeds_project_name,
+                        self.liaison_reeds_database,
+                        self.celavi_lca_project,
+                        self.pv_module_chars,
+                        str(self.data_dir),
+                        verbose,
+                        self.bw,
+                    )
+
+                    if not res.empty:
+                        res["year"] = original_year
+                        res["value"] = res["value"] / quantity
+                        res.drop_duplicates(inplace=True)
+                        res.to_csv(
+                            self.shortcutlca_path,
+                            mode="a",
+                            index=False,
+                            header=False,
                         )
-                        working_df = working_df[["flow name", "flow quantity"]]
+                        live = res.copy()
+                    elif verbose:
+                        logger.warning(
+                            "Empty LCA result for %d, %s, %s", original_year, stage, material
+                        )
+                elif verbose:
+                    logger.debug(
+                        "Skipped live LCA: zero flow or no entries for %d, %s, %s",
+                        original_year,
+                        stage,
+                        material,
+                    )
 
-                        if sum(working_df["flow quantity"]) != 0:
+                if not cached.empty:
+                    cached = cached.assign(comment="shortcut calculations")
+                    results.append(cached)
+                if not live.empty:
+                    live = live.assign(comment="full calculations")
+                    results.append(live)
 
-                            # liaison_lci() is calculating foreground processes and dynamics of electricity mix.
-                            # It calculates the LCI flows of the foreground process.
-                            res,quantity = liaison_lci(
-                                working_df,
-                                original_year,
-                                facility_id,
-                                stage,
-                                material,
-                                unit,
-                                route_id,
-                                state,
-                                self.data_dir,
-                                self.verbose,
-                                bw
-                            )
+        if not results:
+            return pd.DataFrame()
 
-                            if not res.empty:
+        final = pd.concat(results, ignore_index=True)
+        final = final.assign(run=self.run_id, impacts=final["lcia"], impact=final["value"])
+        cols = [
+            "year",
+            "facility_id",
+            "material",
+            "route_id",
+            "stage",
+            "state",
+            "impacts",
+            "impact",
+            "unit",
+            "run",
+            "comment",
+        ]
+        final = final[cols]
 
-                                lca_db = res[['lcia','value','unit','year','method','stage','state']]
-                                lca_db['year'] = new_year
-                                lca_db['value'] = lca_db['value']/quantity
-                                lca_db = lca_db.drop_duplicates()
-                                lca_db.to_csv(
-                                    self.shortcutlca_filename+'new.csv',
-                                    mode="a",
-                                    index=False,
-                                    header=False,
-                                )
-                                res['year'] = original_year
-                                res_calculated = res
-
-                            elif res.empty:
-                                if verbose > 0:
-                                    print(
-                                        f"Empty dataframe returned from pylcia foreground for {year} {stage} {material}"
-                                    )
-
-                        else:
-                            if verbose > 0:
-                                print(
-                                    "Final demand for %s %s %s is zero"
-                                    % (str(year), stage, material)
-                                )
-
-                else:
-                        print(str(facility_id) + ' - ' + str(original_year) + ' - ' + stage + ' - ' + material + ' shortcut calculations done',flush = True)
-
-    
-                result_shortcut['comment'] = "shortcut calculations"
-                res_calculated['comment'] = "full calculations"
-                res_df = pd.concat([res_df,result_shortcut,res_calculated])
-        
-        if not res_df.empty:
-
-            res_df["run"] = self.run
-            res_df['impacts'] = res_df['lcia']
-            res_df['impact'] = res_df['value']
-            res_df['year'] = original_year
-            res_df2 = res_df[['year','facility_id','material','route_id','stage','state','impacts','impact','unit','run','comment']]
-            res_df2.to_csv(self.lcia_des_filename, mode='a', header=False, index=False)
-            #res_df2.to_csv('results_checked_to_be_deleted.csv',mode='a', header=False, index=False)
-
-
-        else:
-            res_df2 = pd.DataFrame()
-        # This is the result that needs to be analyzed every timestep.
-        return res_df2
+        final.to_csv(self.lcia_des_path, mode="a", index=False, header=False)
+        return final
