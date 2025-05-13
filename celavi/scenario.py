@@ -838,53 +838,6 @@ class Scenario:
             )
 
 
-    @staticmethod
-    def impact_and_units(line_item):
-        """
-        Cleans up an impact name to return the units and the name of the impact
-        as separate strings. It removes "(", ")", "[", "]" and thw word
-        "substance" from units.
-
-        Parameters
-        ----------
-        line_item: str
-            Impact and unit mixed together from the LCIA.
-
-        Returns
-        -------
-        str, str
-            Tuple of impact name and units of that impact.
-        """
-        p_paren = re.compile("\(.*\)")
-        p_square = re.compile("\[.*\]")
-
-        all_paren = p_paren.findall(line_item)
-        all_square = p_square.findall(line_item)
-
-        if len(all_paren) > 0:
-            units = all_paren[0]
-            impact = line_item.replace(units, "")
-        elif len(all_square) > 0:
-            units = all_square[0]
-            impact = line_item.replace(units, "")
-        else:
-            units = "unitless"
-            impact = line_item
-
-        impact = " ".join(impact.split())
-        impact = impact.replace(" , ", ", ")
-
-        units = (
-            units.replace("(", "")
-            .replace(")", "")
-            .replace("[", "")
-            .replace("]", "")
-            .replace("substance", "")
-        )
-
-        return impact, units
-
-
     def calculate_circularity_metrics(self, mass):
         """
         Calculates the inflow and outflow circularity metrics from the mass flow dataframe
