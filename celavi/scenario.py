@@ -368,7 +368,7 @@ class Scenario:
         if self.case["model_run"].get("warning_verbose") == 0:
             warnings.filterwarnings('ignore')
         self.lca = PylcaCelavi(
-            data_dir=self.case["directories"]["generated"],
+            data_dir=os.path.join(self.args.data,self.case["directories"]["generated"]),
             liaison_params= self.case["liaison"],
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
