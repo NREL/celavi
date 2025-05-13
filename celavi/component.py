@@ -113,6 +113,7 @@ class Component:
         self.pathway = deque()
         for facility, lifespan, distance, route_id in path_choice["path"]:
             # Overwrite the default timespan from CostGraph for the in use phase.
+            # @TODO Hardcoding alert! Replace 'in use' with list of in use facilities from yaml
             if 'in use' in facility:
                 self.pathway.append(
                     (facility, self.initial_lifespan_timesteps, distance, route_id)
@@ -193,14 +194,14 @@ class Component:
                     # Instead of stopping the simulation entirely, this lets us bypass facilities that might
                     # cause inconsistencies in the results
                     if _fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] == 0:
-                        print(f'''{_fac} inventory error at {begin_timestep}: Non-zero mass, zero count''')
+                        print(f'''Component.bol_process: {_fac} inventory error at {begin_timestep}: Non-zero mass, zero count''')
                         pass # begins the next iteration of the loop
 
                     # If the facility has sufficient mass inventory but INsufficient count inventory,
                     # print out an FYI notification - this isn't an error but does require custom
                     # component decrementing
                     if (_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep][self.kind].values[0] < self.count):
-                        print(f'''{_fac} in {begin_timestep} sufficient mass, insufficient count:\n
+                        print(f'''Component.bol_process: {_fac} in {begin_timestep} sufficient mass, insufficient count:\n
                               Mass\n{_fac_inv_mass.loc[_fac_inv_mass.timestep == begin_timestep]}\n
                               Count\n{_fac_inv_count.loc[_fac_inv_count.timestep == begin_timestep]}''')
                         # Calculate the component count to decrement from this facility as the fraction (0-1) of
