@@ -288,7 +288,7 @@ class PVTechUnitLocations(Data):
     """
     Read in and process raw power plant locations dataset.
 
-    Dataset is downloadable at @TODO
+    Dataset is downloadable at https://energy.usgs.gov/uspvdb/
 
     No manual changes are needed to the raw dataset before it is processed.
     """
