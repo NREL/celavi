@@ -292,6 +292,9 @@ class Context:
                 kind=row["kind"],
                 year=year,
                 in_use_facility=row["in_use_facility"],
+                virgin_manuf_facility_types = row['virgin_manuf_facility_types'],
+                secondary_manuf_facility_types = row['secondary_manuf_facility_types'],
+                in_use_facility_types = row['in_use_facility_types'],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
                 mass_tonnes=row['mass_tonnes'],
@@ -534,7 +537,7 @@ class Context:
                 else:
                     df_to_lcia_calcs = df_for_pylca_interface
 
-                self.lca.pylca_run_main(df_to_lcia_calcs, self.verbose)
+                #self.lca.pylca_run_main(df_to_lcia_calcs, self.verbose)
                 self.lci_last_sent = df_to_lcia_calcs
             else:
                 if self.verbose > 0:
