@@ -646,6 +646,7 @@ class Scenario:
             var_name="material",
             value_name="tonnes",
             run=self.run,
+            raw_cumulative_histories_file = self.files['raw_cumulative_histories'],
         )
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
