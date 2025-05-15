@@ -106,8 +106,8 @@ class PylcaCelavi:
         os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
         if self.verbose:
             print("Importing Brightway2 module...", flush=True)
-        #import brightway2 as bw
-        #self.bw = bw
+        import brightway2 as bw
+        self.bw = bw
         if self.verbose:
             print("Imported Brightway2", flush=True)
 

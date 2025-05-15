@@ -537,7 +537,7 @@ class Context:
                 else:
                     df_to_lcia_calcs = df_for_pylca_interface
 
-                #self.lca.pylca_run_main(df_to_lcia_calcs, self.verbose)
+                self.lca.pylca_run_main(df_to_lcia_calcs, self.verbose)
                 self.lci_last_sent = df_to_lcia_calcs
             else:
                 if self.verbose > 0:
