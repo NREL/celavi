@@ -403,8 +403,8 @@ class Context:
                         actual_year = actual_year + 1
 
                     # If the facility is NOT manufacturing, keep only positive transactions
-                    # @TODO Hardcoding alert! Replace the string 'manufacturing' with one or more
-                    # facility types read from YAML, similar to sc_begin in CostGraph.
+                    # @NOTE This logic assumes all manufacturing facility types (virgin, secondary, or 
+                    # otherwise) contain the string 'manufacturing'.
                     if facility_name.find("manufacturing") == -1:
                         positive_annual_transactions = annual_transactions[
                             annual_transactions > 0
