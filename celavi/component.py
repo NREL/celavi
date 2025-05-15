@@ -25,6 +25,7 @@ class Component:
         lifespan_timesteps: float,
         in_use_facility: str,
         virgin_manuf_facility_types: list[str],
+        secondary_manuf_facility_types: list[str],
         mass_tonnes: Dict[str, float] = 0,
     ):
         """
@@ -66,6 +67,10 @@ class Component:
             List of manufacturing facility types that only manufacture components from
             virgin materials.
         
+        secondary_manuf_facility_types : list[str]
+            List of manufacturing facility types that only manufacture components from
+            secondary materials.
+        
         mass_tonnes: Dict[str, float]
             Component composition by material, in metric tonnes. Keys are
             material names. Values are material masses.            
@@ -83,6 +88,7 @@ class Component:
         self.in_use_facility = in_use_facility
 
         self.virgin_manuf_facility_types = virgin_manuf_facility_types
+        self.secondary_manuf_facility_types = secondary_manuf_facility_types
 
         # Manufacturing facility is assigned during component
         # beginning of life (bol_process)
@@ -181,10 +187,10 @@ class Component:
         # until EITHER a virgin facility is found OR a secondary facility with sufficient inventory 
         # is found
         _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
-        # @TODO Hardcoding alert! Pass sc_begin in from scenario.yaml to remove
-        # Check to see if the closest facility is a virgin manufacturing facility
+
         for _fac in _manuf_sorted:
-            if _fac.split('_')[0] in ['window glass recovery','solar glass manufacturing from cullet']:
+            # Check to see if the closest facility is a secondary manufacturing facility
+            if _fac.split('_')[0] in self.secondary_manuf_facility_types:
                 # If the facility is a secondary facility, then check that the inventory is sufficient to 
                 # manufacture the component
                 _fac_inv_mass = self.context.mass_facility_inventories[_fac].cumulative_history
