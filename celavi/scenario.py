@@ -295,7 +295,8 @@ class Scenario:
                 transportation_graph=self.files["transportation_graph"],
                 node_locations=self.files["node_locs"],
                 routes_output_file=_routefile,
-                county_routes_file = self.files['county_routes']
+                county_routes_file = self.files['county_routes'],
+                vkmt_by_region_file = self.files['vkmt_by_region'],
                 )
         print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
 
@@ -586,8 +587,8 @@ class Scenario:
         -------
         None
         """
-        # @TODO Hardcoding alert! Cost-adjust-factors needs to be added to YAML
-        pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv('cost-adjust-factors.csv')
+        # Save the cost adjustment factors from every timestep to a file in the results directory
+        pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv(self.files['cost_adjust_factors'])
 
         # Create a name for the scenario, based either on a key in the original
         # scneario YAML or, if the key is not found, the filename of the scenario.
