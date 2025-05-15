@@ -1,7 +1,7 @@
 import pandas as pd
 import networkx as nx
 
-from typing import Deque, Tuple, Dict
+from typing import Deque, Tuple, Dict, List
 from collections import deque
 from itertools import compress
 
@@ -24,9 +24,9 @@ class Component:
         year: int,
         lifespan_timesteps: float,
         in_use_facility: str,
-        virgin_manuf_facility_types: list[str],
-        secondary_manuf_facility_types: list[str],
-        in_use_facility_types : list[str],
+        virgin_manuf_facility_types: List[str],
+        secondary_manuf_facility_types: List[str],
+        in_use_facility_types : List[str],
         mass_tonnes: Dict[str, float] = 0,
     ):
         """
@@ -315,14 +315,35 @@ class Component:
                 target = self.in_use_facility,
                 weight = 'dist'
             )
-            
+            _path = nx.astar_path(
+                self.context.cost_graph.supply_chain,
+                source=self.manuf_facility,
+                target=self.in_use_facility
+                )
+            # Get the list of route_ids from the path between the manuf and in use facilities
+            # Applying list(set([])) drops duplicate entries from the argument of set()
+            route_ids = list(set(
+                [self.context.cost_graph.supply_chain[u][v]['route_id'] for u,v in zip(_path,_path[1:])]
+                ))
+
+            if len(route_ids) == 1:
+                # If only one route_id remains, turn it into a string
+                route_ids = route_ids[0]
+            else:
+                # If multiple route_ids remain, remove any colocated route_ids
+                route_ids = [r for r in route_ids if r != 'colocated']
+                if len(route_ids) == 1:
+                    # If only one route_id remains, turn it into a string
+                    route_ids = route_ids[0]
+                else:
+                    # If multiple routes remain, mash them into a string anyway
+                    route_ids = str(route_ids)
             count_transport.increment_inbound_tonne_km(
                 # @NOTE dist > 0 logic here only kicks in for co-located facilities that
                 # still require transportation (ie in tiny-circfutures)
                 tonne_km = mass * dist if dist > 0 else mass * 1.0,
-                # @TODO route_id should now be a string pulled from the routes file - incorporate
-                route_id = None,
                 timestep=env.now,
+                route_id = route_ids
             )
 
         # Component stays in use for its lifetime
