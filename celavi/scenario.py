@@ -336,6 +336,7 @@ class Scenario:
                 routes_file=self.files["routes_computed"]
                 if self.scen["flags"].get("use_computed_routes")
                 else self.files["routes_custom"],
+                in_use_facility_lifespan = self.scen['circular_pathways'].get('in_use_facility_lifespan'),
                 sc_begin=self.scen["circular_pathways"].get("sc_begin"),
                 sc_end=self.scen["circular_pathways"].get("sc_end"),
                 sc_in_circ=self.scen["circular_pathways"].get("sc_in_circ", []),
