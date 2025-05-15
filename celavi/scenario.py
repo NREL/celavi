@@ -522,6 +522,8 @@ class Scenario:
                                 "in_use_facility": in_use_facility,
                                 'virgin_manuf_facility_types': self.scen['circular_pathways'].get('sc_begin'),
                                 'secondary_manuf_facility_types': self.scen['circular_pathways'].get('sc_in_circ'),
+                                'in_use_facility_types': 
+                                    [key for key, _ in self.scen['circular_pathways'].get('in_use_facility_lifespan').items()],
                                 "mass_tonnes": dict(zip(_c_mats, _c_mat_mass)),
                             }
                         )

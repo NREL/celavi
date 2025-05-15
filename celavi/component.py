@@ -26,6 +26,7 @@ class Component:
         in_use_facility: str,
         virgin_manuf_facility_types: list[str],
         secondary_manuf_facility_types: list[str],
+        in_use_facility_types : list[str],
         mass_tonnes: Dict[str, float] = 0,
     ):
         """
@@ -71,6 +72,9 @@ class Component:
             List of manufacturing facility types that only manufacture components from
             secondary materials.
         
+        in_use_facility_types : list[str]
+            List of in use facility types for all component kinds
+
         mass_tonnes: Dict[str, float]
             Component composition by material, in metric tonnes. Keys are
             material names. Values are material masses.            
@@ -89,6 +93,7 @@ class Component:
 
         self.virgin_manuf_facility_types = virgin_manuf_facility_types
         self.secondary_manuf_facility_types = secondary_manuf_facility_types
+        self.in_use_facility_types = in_use_facility_types
 
         # Manufacturing facility is assigned during component
         # beginning of life (bol_process)
@@ -127,8 +132,7 @@ class Component:
         self.pathway = deque()
         for facility, lifespan, distance, route_id in path_choice["path"]:
             # Overwrite the default timespan from CostGraph for the in use phase.
-            # @TODO Hardcoding alert! Replace 'in use' with list of in use facilities from yaml
-            if 'in use' in facility:
+            if facility.split('_')[0] in self.in_use_facility_types:
                 self.pathway.append(
                     (facility, self.initial_lifespan_timesteps, distance, route_id)
                 )
