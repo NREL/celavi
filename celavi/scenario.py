@@ -616,6 +616,7 @@ class Scenario:
             var_name="unit",
             value_name="count",
             run=self.run,
+            raw_cumulative_histories_file = self.files['raw_cumulative_histories'],
             component_scaledown = self.scen['scenario']['component_scaledown'],
         )
         count_cumulative_histories = (
