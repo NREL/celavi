@@ -24,6 +24,7 @@ class Component:
         year: int,
         lifespan_timesteps: float,
         in_use_facility: str,
+        virgin_manuf_facility_types: list[str],
         mass_tonnes: Dict[str, float] = 0,
     ):
         """
@@ -61,6 +62,10 @@ class Component:
             The node name where the component spends its first useful lifetime
             before beginning the end-of-life process.
         
+        virgin_manuf_facility_types : list[str]
+            List of manufacturing facility types that only manufacture components from
+            virgin materials.
+        
         mass_tonnes: Dict[str, float]
             Component composition by material, in metric tonnes. Keys are
             material names. Values are material masses.            
@@ -76,6 +81,9 @@ class Component:
         # accounting; always 1
         self.count = 1.0
         self.in_use_facility = in_use_facility
+
+        self.virgin_manuf_facility_types = virgin_manuf_facility_types
+
         # Manufacturing facility is assigned during component
         # beginning of life (bol_process)
         self.manuf_facility = None
@@ -236,8 +244,8 @@ class Component:
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
-        # @TODO Hardcoding alert! Pull from scenario.yaml
-        if self.manuf_facility.split('_')[0] in ['window glass manufacturing', 'solar glass manufacturing']:
+        
+        if self.manuf_facility.split('_')[0] in self.virgin_manuf_facility_types:
             count_inventory.increment_quantity(self.kind, 1, env.now)
             for material, mass in self.mass_tonnes.items():
                 mass_inventory.increment_quantity(material, mass, env.now)

@@ -520,6 +520,7 @@ class Scenario:
                                 "year": year,
                                 "kind": c,
                                 "in_use_facility": in_use_facility,
+                                'virgin_manuf_facility_types': self.scen['circular_pathways'].get('sc_begin'),
                                 "mass_tonnes": dict(zip(_c_mats, _c_mat_mass)),
                             }
                         )
