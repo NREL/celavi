@@ -621,7 +621,7 @@ class Scenario:
             var_name="unit",
             value_name="count",
             run=self.run,
-            raw_cumulative_histories_file = self.files['raw_cumulative_histories'],
+            raw_cumulative_histories_file = self.files['count_cumulative_histories_raw'],
             component_scaledown = self.scen['scenario']['component_scaledown'],
         )
         count_cumulative_histories = (
@@ -646,7 +646,7 @@ class Scenario:
             var_name="material",
             value_name="tonnes",
             run=self.run,
-            raw_cumulative_histories_file = self.files['raw_cumulative_histories'],
+            raw_cumulative_histories_file = self.files['mass_cumulative_histories_raw'],
         )
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
