@@ -343,16 +343,6 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
-            _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
-            _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            #_bol_crit = nx.shortest_path_length(
-            #    self.supply_chain,
-            #    source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
-            #    target=source_node,
-            #    weight=crit,
-            #    method="bellman-ford",
-            #)
-
             for i in self.sc_end:
                 _dest = [key for key, value in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
@@ -360,15 +350,10 @@ class CostGraph:
                     self.pathway_crit_history.append(
                         {
                             "year": self.year,
-                            "source_facility_id": _fac_id,
+                            "source_facility_id": source_node,
                             "destination_facility_id": _dest,
-                            "region_id_1": _loc_line.region_id_1.values[0],
-                            "region_id_2": _loc_line.region_id_2.values[0],
-                            "region_id_3": _loc_line.region_id_3.values[0],
-                            "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
                             "eol_pathway_criterion": _crit,
-                            #"bol_pathway_criterion": _bol_crit,
                         }
                     )
 
@@ -448,32 +433,17 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
-            _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
-            _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            #_bol_crit = nx.shortest_path_length(
-            #    self.supply_chain,
-            #    source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
-            #    target=source_node,
-            #    weight=crit,
-            #    method="bellman-ford",
-            #)
-
             for i in self.sc_end:
-                _dest = [key for key, value in lengths.items() if i in key]
+                _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
                             "year": self.year,
-                            "source_facility_id": _fac_id,
+                            "source_facility_id": source_node,
                             "destination_facility_id": _dest,
-                            "region_id_1": _loc_line.region_id_1.values[0],
-                            "region_id_2": _loc_line.region_id_2.values[0],
-                            "region_id_3": _loc_line.region_id_3.values[0],
-                            "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
                             "eol_pathway_criterion": _crit,
-                            #"bol_pathway_criterion": _bol_crit,
                         }
                     )
 
@@ -1008,8 +978,42 @@ class CostGraph:
                         ignore_index=True
                         )
             _out["run"] = self.run
+            # Merge with locations file to get region_id_2 for source and
+            # destination facilities
+            # Get column that matches the source and destination id columns
+            # in _out
+            self.loc_df['facility_type_id'] = self.loc_df.facility_type + '_' + self.loc_df.facility_id
+            _out['source_idcode'] = [facid.split('_')[1] for facid in _out.source_facility_id]
+            _out_locs = _out.merge(
+                self.loc_df[
+                    ['facility_id','region_id_2']
+                    ].rename(
+                        columns={'facility_id':'source_facility_id',
+                                 'region_id_2':'source_region_id_2'}
+                        ),
+                left_on = 'source_idcode',
+                right_on = 'source_facility_id',
+                how = 'left'
+            ).merge(
+                self.loc_df[
+                    ['facility_type_id','region_id_2']
+                    ].rename(
+                        columns={'facility_type_id':'destination_facility_id',
+                                 'region_id_2':'destination_region_id_2'}
+                        ),
+                on = 'destination_facility_id',
+                how = 'left'
+            )
+            _out_locs.drop(
+                columns=['source_idcode','source_facility_id_y'],
+                inplace=True
+                )
+            _out_locs.rename(
+                columns = {'source_facility_id_x':'source_facility_id'},
+                inplace=True
+                )
             with open(self.pathway_crit_history_filename, "a") as f:
-                _out.to_csv(
+                _out_locs.to_csv(
                     f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
                 )
         except KeyError:
