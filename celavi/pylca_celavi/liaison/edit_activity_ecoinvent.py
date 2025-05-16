@@ -145,7 +145,7 @@ def modify_electricity_grid_mix_and_solar_glass_removal(process_selected_as_fore
     return run_filename
 
 
-def module_disassembly_glass_content(process_selected_as_foreground,year_of_study,functional_unit,input_dir):
+def module_disassembly_glass_content(process_selected_as_foreground,year_of_study,functional_unit,pv_module_chars):
     """
     This function is used to convert kilograms of solar glass in module manufacturing to number of modules to square meter
     This is because Ecoinvent works with module as square meter
