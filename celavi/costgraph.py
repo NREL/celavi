@@ -567,25 +567,23 @@ class CostGraph:
         for node_id in self.network_data.u_node_id:
             if node_id not in _node_timeout_dict.keys():
                 # Set lifespans for in use facilities based on input dictionary
-                for key, value in self.in_use_facility_lifespan.items():
-                    if key in node_id:
-                        _timeout = value
-                    else:
-                        _timeout = 1.0
+                if any([k in node_id for k in self.in_use_facility_lifespan.keys()]):
+                    _timeout = self.in_use_facility_lifespan[node_id.split('_')[0]]
+                else:
+                    _timeout = 1.0
                 
                 _node_timeout_dict[node_id] = _timeout
         
         for node_id in self.network_data.v_node_id:
             if node_id not in _node_timeout_dict.keys():
                 # Set lifespans for in use facilities based on input dictionary
-                for key, value in self.in_use_facility_lifespan.items():
-                    if key in node_id:
-                        _timeout = value
-                    else:
-                        _timeout = 1.0
+                if any([k in node_id for k in self.in_use_facility_lifespan.keys()]):
+                    _timeout = self.in_use_facility_lifespan[node_id.split('_')[0]]
+                else:
+                    _timeout = 1.0
                 
                 _node_timeout_dict[node_id] = _timeout
-        
+
         # Assign the node timeout attributes to nodes in supply_chain
         nx.set_node_attributes(
             self.supply_chain,
