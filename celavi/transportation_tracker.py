@@ -33,10 +33,10 @@ class TransportationTracker:
         timestep
             The timestep that is being incremented.
         
-        route_id
-            UUID for the route along which material is transported
+        route_id : str or List[str], Default = None
+            One or more route_ids along which material is transported, or None
         """
 
         timestep = int(timestep)
         self.inbound_tonne_km[timestep] = self.inbound_tonne_km[timestep] + tonne_km
-        self.route_id[timestep] = str(uuid.uuid1())
+        self.route_id[timestep] = route_id

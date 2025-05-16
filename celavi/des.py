@@ -292,6 +292,9 @@ class Context:
                 kind=row["kind"],
                 year=year,
                 in_use_facility=row["in_use_facility"],
+                virgin_manuf_facility_types = row['virgin_manuf_facility_types'],
+                secondary_manuf_facility_types = row['secondary_manuf_facility_types'],
+                in_use_facility_types = row['in_use_facility_types'],
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
                 mass_tonnes=row['mass_tonnes'],
@@ -403,8 +406,8 @@ class Context:
                         actual_year = actual_year + 1
 
                     # If the facility is NOT manufacturing, keep only positive transactions
-                    # @TODO Hardcoding alert! Replace the string 'manufacturing' with one or more
-                    # facility types read from YAML, similar to sc_begin in CostGraph.
+                    # @NOTE This logic assumes all manufacturing facility types (virgin, secondary, or 
+                    # otherwise) contain the string 'manufacturing'.
                     if facility_name.find("manufacturing") == -1:
                         positive_annual_transactions = annual_transactions[
                             annual_transactions > 0

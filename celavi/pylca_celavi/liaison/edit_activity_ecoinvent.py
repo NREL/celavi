@@ -145,7 +145,7 @@ def modify_electricity_grid_mix_and_solar_glass_removal(process_selected_as_fore
     return run_filename
 
 
-def module_disassembly_glass_content(process_selected_as_foreground,year_of_study,functional_unit,input_dir):
+def module_disassembly_glass_content(process_selected_as_foreground,year_of_study,functional_unit,pv_module_chars):
     """
     This function is used to convert kilograms of solar glass in module manufacturing to number of modules to square meter
     This is because Ecoinvent works with module as square meter
@@ -166,7 +166,7 @@ def module_disassembly_glass_content(process_selected_as_foreground,year_of_stud
     """
 
     
-    glass_module_df = pd.read_csv(input_dir+"glasspermodule_pvice.csv")
+    glass_module_df = pd.read_csv(pv_module_chars)
     if process_selected_as_foreground == "module disassembly":
         #Convert the function unit
         chosen_year_df = glass_module_df[glass_module_df['year'] == int(year_of_study)].reset_index()
@@ -182,7 +182,7 @@ def module_disassembly_glass_content(process_selected_as_foreground,year_of_stud
 
 
 
-def module_required_for_solar_glass(process_selected_as_foreground,year_of_study,functional_unit,input_dir):
+def module_required_for_solar_glass(process_selected_as_foreground,year_of_study,functional_unit,pv_module_chars):
     """
     This function is used to convert kilograms of solar glass in module manufacturing to number of modules to square meter
     This is because Ecoinvent works with module as square meter
@@ -201,7 +201,7 @@ def module_required_for_solar_glass(process_selected_as_foreground,year_of_study
         Modified functional unit
 
     """
-    glass_module_df = pd.read_csv(input_dir+"glasspermodule_pvice.csv")
+    glass_module_df = pd.read_csv(pv_module_chars)
     if process_selected_as_foreground['name'] == "photovoltaic panel production, multi-Si wafer":
         #Convert the function unit
         chosen_year_df = glass_module_df[glass_module_df['year'] == int(year_of_study)].reset_index()
@@ -219,7 +219,7 @@ def module_required_for_solar_glass(process_selected_as_foreground,year_of_study
         return functional_unit
 
 
-def module_installation_for_solar_glass(process_selected_as_foreground,year_of_study,functional_unit,input_dir):
+def module_installation_for_solar_glass(process_selected_as_foreground,year_of_study,functional_unit,pv_module_chars):
     """
     This function is used to convert kilograms of solar glass in module manufacturing to units of installation
     This is because Ecoinvent works with module installation as unit
@@ -238,7 +238,7 @@ def module_installation_for_solar_glass(process_selected_as_foreground,year_of_s
         Modified functional unit
 
     """
-    glass_module_df = pd.read_csv(input_dir+"glasspermodule_pvice.csv")
+    glass_module_df = pd.read_csv(pv_module_chars)
     if process_selected_as_foreground['name'] == "electric installation, 570 kWp photovoltaic plant, at plant":
         #Convert the function unit
         chosen_year_df = glass_module_df[glass_module_df['year'] == int(year_of_study)].reset_index()
