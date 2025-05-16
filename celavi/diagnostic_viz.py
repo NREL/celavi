@@ -27,6 +27,7 @@ class DiagnosticViz:
         var_name: str,
         value_name: str,
         run: int,
+        raw_cumulative_histories_file: str,
         component_scaledown: int = None,
     ):
         """
@@ -65,6 +66,9 @@ class DiagnosticViz:
         run : int
             Model run identifier for uncertainty runs within a scenario.
         
+        raw_cumulative_histories_file : str
+            Filepath where the un-process cumulative histories data is saved.
+
         component_scaledown: int or None, Default = None
             Multiplier used to scale up component counts - used for these basic
             visualizations ONLY.
@@ -84,6 +88,8 @@ class DiagnosticViz:
 
         # Create blank attribute to hold results from gather_cumulative_histories() method
         self.gathered_and_melted_cumulative_histories = None
+
+        self.raw_cumulative_histories_file = raw_cumulative_histories_file
 
 
     def gather_and_melt_cumulative_histories(self) -> pd.DataFrame:
@@ -139,9 +145,7 @@ class DiagnosticViz:
         cumulative_histories_df = pd.concat(cumulative_histories).fillna(0)
 
         # Save a raw version of the histories file for debugging
-        # @TODO Hardcoding alert! Decide if we want to save this file and if so,
-        # add to the filepath definitions in YAML
-        cumulative_histories_df.to_csv('cumulative-histories-raw.csv',index=False)
+        cumulative_histories_df.to_csv(self.raw_cumulative_histories_file,index=False)
 
         self.gathered_and_melted_cumulative_histories = (
             cumulative_histories_df.drop(["timestep", "year_floor", "facility_id"], axis=1)

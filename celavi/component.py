@@ -1,7 +1,7 @@
 import pandas as pd
 import networkx as nx
 
-from typing import Deque, Tuple, Dict
+from typing import Deque, Tuple, Dict, List
 from collections import deque
 from itertools import compress
 
@@ -24,6 +24,9 @@ class Component:
         year: int,
         lifespan_timesteps: float,
         in_use_facility: str,
+        virgin_manuf_facility_types: List[str],
+        secondary_manuf_facility_types: List[str],
+        in_use_facility_types : List[str],
         mass_tonnes: Dict[str, float] = 0,
     ):
         """
@@ -61,6 +64,17 @@ class Component:
             The node name where the component spends its first useful lifetime
             before beginning the end-of-life process.
         
+        virgin_manuf_facility_types : list[str]
+            List of manufacturing facility types that only manufacture components from
+            virgin materials.
+        
+        secondary_manuf_facility_types : list[str]
+            List of manufacturing facility types that only manufacture components from
+            secondary materials.
+        
+        in_use_facility_types : list[str]
+            List of in use facility types for all component kinds
+
         mass_tonnes: Dict[str, float]
             Component composition by material, in metric tonnes. Keys are
             material names. Values are material masses.            
@@ -76,6 +90,11 @@ class Component:
         # accounting; always 1
         self.count = 1.0
         self.in_use_facility = in_use_facility
+
+        self.virgin_manuf_facility_types = virgin_manuf_facility_types
+        self.secondary_manuf_facility_types = secondary_manuf_facility_types
+        self.in_use_facility_types = in_use_facility_types
+
         # Manufacturing facility is assigned during component
         # beginning of life (bol_process)
         self.manuf_facility = None
@@ -113,8 +132,7 @@ class Component:
         self.pathway = deque()
         for facility, lifespan, distance, route_id in path_choice["path"]:
             # Overwrite the default timespan from CostGraph for the in use phase.
-            # @TODO Hardcoding alert! Replace 'in use' with list of in use facilities from yaml
-            if 'in use' in facility:
+            if facility.split('_')[0] in self.in_use_facility_types:
                 self.pathway.append(
                     (facility, self.initial_lifespan_timesteps, distance, route_id)
                 )
@@ -173,10 +191,10 @@ class Component:
         # until EITHER a virgin facility is found OR a secondary facility with sufficient inventory 
         # is found
         _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
-        # @TODO Hardcoding alert! Pass sc_begin in from scenario.yaml to remove
-        # Check to see if the closest facility is a virgin manufacturing facility
+
         for _fac in _manuf_sorted:
-            if _fac.split('_')[0] in ['window glass recovery','solar glass manufacturing from cullet']:
+            # Check to see if the closest facility is a secondary manufacturing facility
+            if _fac.split('_')[0] in self.secondary_manuf_facility_types:
                 # If the facility is a secondary facility, then check that the inventory is sufficient to 
                 # manufacture the component
                 _fac_inv_mass = self.context.mass_facility_inventories[_fac].cumulative_history
@@ -236,8 +254,8 @@ class Component:
         # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
-        # @TODO Hardcoding alert! Pull from scenario.yaml
-        if self.manuf_facility.split('_')[0] in ['window glass manufacturing', 'solar glass manufacturing']:
+        
+        if self.manuf_facility.split('_')[0] in self.virgin_manuf_facility_types:
             count_inventory.increment_quantity(self.kind, 1, env.now)
             for material, mass in self.mass_tonnes.items():
                 mass_inventory.increment_quantity(material, mass, env.now)
@@ -297,14 +315,35 @@ class Component:
                 target = self.in_use_facility,
                 weight = 'dist'
             )
-            
+            _path = nx.astar_path(
+                self.context.cost_graph.supply_chain,
+                source=self.manuf_facility,
+                target=self.in_use_facility
+                )
+            # Get the list of route_ids from the path between the manuf and in use facilities
+            # Applying list(set([])) drops duplicate entries from the argument of set()
+            route_ids = list(set(
+                [self.context.cost_graph.supply_chain[u][v]['route_id'] for u,v in zip(_path,_path[1:])]
+                ))
+
+            if len(route_ids) == 1:
+                # If only one route_id remains, turn it into a string
+                route_ids = route_ids[0]
+            else:
+                # If multiple route_ids remain, remove any colocated route_ids
+                route_ids = [r for r in route_ids if r != 'colocated']
+                if len(route_ids) == 1:
+                    # If only one route_id remains, turn it into a string
+                    route_ids = route_ids[0]
+                else:
+                    # If multiple routes remain, mash them into a string anyway
+                    route_ids = str(route_ids)
             count_transport.increment_inbound_tonne_km(
                 # @NOTE dist > 0 logic here only kicks in for co-located facilities that
                 # still require transportation (ie in tiny-circfutures)
                 tonne_km = mass * dist if dist > 0 else mass * 1.0,
-                # @TODO route_id should now be a string pulled from the routes file - incorporate
-                route_id = None,
                 timestep=env.now,
+                route_id = route_ids
             )
 
         # Component stays in use for its lifetime

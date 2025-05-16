@@ -24,6 +24,7 @@ class CostGraph:
         pathway_crit_history_filename: str,
         component_initial_mass: float,
         path_dict: dict,
+        in_use_facility_lifespan: dict,
         sc_begin : List[str] = ["manufacturing"],
         sc_end : List[str]=["landfilling"],
         sc_in_circ : List[str]=[],
@@ -62,6 +63,9 @@ class CostGraph:
             Dictionary of case-study-specific parameters to be passed into
             the cost methods. Can be of any structure as defined in the
             scenario config file.
+        in_use_facility_lifespan : Dict
+            Dictionary with keys defining in use facility types and value defining
+            the useful lifespan of technologies at that facility type.
         sc_begin : List[str]
             List of processing step(s) where supply chain paths begin.
         sc_end : List[str]
@@ -103,6 +107,8 @@ class CostGraph:
         # also read in the locations as a dataframe for reference in
         # find_nearest
         self.loc_df = pd.read_csv(locations_file)
+
+        self.in_use_facility_lifespan = in_use_facility_lifespan
 
         # Group circularity-related node types into two categories
         # Nodes in sc_end are either nodes where components accumulate at the end of
@@ -555,33 +561,28 @@ class CostGraph:
             name = 'facility_id'
         )
 
-        # Add timespan node attribute to nodes. Facilities with "in use" in the name get long lifespans
-        # @NOTE Eventually this should draw from facility information and component-level lifespans
-        # in the YAML files. This logic is a quick fix specific to the glass case study.
+        # Add timespan node attribute to nodes
         # Create a dict of the node timeout attributes
         _node_timeout_dict = {}
         for node_id in self.network_data.u_node_id:
             if node_id not in _node_timeout_dict.keys():
-                # @TODO Hardcoding alert! Tech component lifespans are defined in YAML
-                # files; those values should be passed in and used here
-                if 'pv in use' in node_id:
-                    _timeout = 20.0
-                elif 'window in use' in node_id:
-                    _timeout = 30.0
-                else:
-                    _timeout = 1.0
+                # Set lifespans for in use facilities based on input dictionary
+                for key, value in self.in_use_facility_lifespan.items():
+                    if key in node_id:
+                        _timeout = value
+                    else:
+                        _timeout = 1.0
                 
                 _node_timeout_dict[node_id] = _timeout
+        
         for node_id in self.network_data.v_node_id:
             if node_id not in _node_timeout_dict.keys():
-                # @TODO Hardcoding alert! Tech component lifespans are defined in YAML
-                # files; those values should be passed in and used here
-                if 'pv in use' in node_id:
-                    _timeout = 20.0
-                elif 'window in use' in node_id:
-                    _timeout = 30.0
-                else:
-                    _timeout = 1.0
+                # Set lifespans for in use facilities based on input dictionary
+                for key, value in self.in_use_facility_lifespan.items():
+                    if key in node_id:
+                        _timeout = value
+                    else:
+                        _timeout = 1.0
                 
                 _node_timeout_dict[node_id] = _timeout
         

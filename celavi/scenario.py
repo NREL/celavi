@@ -295,7 +295,8 @@ class Scenario:
                 transportation_graph=self.files["transportation_graph"],
                 node_locations=self.files["node_locs"],
                 routes_output_file=_routefile,
-                county_routes_file = self.files['county_routes']
+                county_routes_file = self.files['county_routes'],
+                vkmt_by_region_file = self.files['vkmt_by_region'],
                 )
         print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
 
@@ -335,6 +336,7 @@ class Scenario:
                 routes_file=self.files["routes_computed"]
                 if self.scen["flags"].get("use_computed_routes")
                 else self.files["routes_custom"],
+                in_use_facility_lifespan = self.scen['circular_pathways'].get('in_use_facility_lifespan'),
                 sc_begin=self.scen["circular_pathways"].get("sc_begin"),
                 sc_end=self.scen["circular_pathways"].get("sc_end"),
                 sc_in_circ=self.scen["circular_pathways"].get("sc_in_circ", []),
@@ -518,6 +520,10 @@ class Scenario:
                                 "year": year,
                                 "kind": c,
                                 "in_use_facility": in_use_facility,
+                                'virgin_manuf_facility_types': self.scen['circular_pathways'].get('sc_begin'),
+                                'secondary_manuf_facility_types': self.scen['circular_pathways'].get('sc_in_circ'),
+                                'in_use_facility_types': 
+                                    [key for key, _ in self.scen['circular_pathways'].get('in_use_facility_lifespan').items()],
                                 "mass_tonnes": dict(zip(_c_mats, _c_mat_mass)),
                             }
                         )
@@ -586,8 +592,8 @@ class Scenario:
         -------
         None
         """
-        # @TODO Hardcoding alert! Cost-adjust-factors needs to be added to YAML
-        pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv('cost-adjust-factors.csv')
+        # Save the cost adjustment factors from every timestep to a file in the results directory
+        pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv(self.files['cost_adjust_factors'])
 
         # Create a name for the scenario, based either on a key in the original
         # scneario YAML or, if the key is not found, the filename of the scenario.
@@ -615,6 +621,7 @@ class Scenario:
             var_name="unit",
             value_name="count",
             run=self.run,
+            raw_cumulative_histories_file = self.files['count_cumulative_histories_raw'],
             component_scaledown = self.scen['scenario']['component_scaledown'],
         )
         count_cumulative_histories = (
@@ -639,6 +646,7 @@ class Scenario:
             var_name="material",
             value_name="tonnes",
             run=self.run,
+            raw_cumulative_histories_file = self.files['mass_cumulative_histories_raw'],
         )
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
