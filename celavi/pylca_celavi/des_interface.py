@@ -291,7 +291,8 @@ class PylcaCelavi:
                         res["year"] = original_year
                         res["value"] = res["value"] / quantity
                         res.drop_duplicates(inplace=True)
-                        res.to_csv(
+                        res2 = res[['lcia','value', 'unit','year','method','stage','state']]
+                        res2.to_csv(
                             self.shortcutlca_path,
                             mode="a",
                             index=False,
