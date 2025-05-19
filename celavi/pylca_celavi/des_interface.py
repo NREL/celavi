@@ -178,7 +178,7 @@ class PylcaCelavi:
                     state, stage, year,
                 )
             else:
-                logger.info(
+                logger.warning(
                     "Using shortcut LCA cache for %s, %s, %d: %d entries",
                     state, stage, year, len(result_df)
                 )
@@ -193,8 +193,8 @@ class PylcaCelavi:
             ]
             return missing_df, result_df[cols]
 
-        except FileNotFoundError:
-            logger.info(
+        except:
+            logger.warning(
                 "Shortcut LCA cache not found at %s", self.shortcutlca_path
             )
             return df, pd.DataFrame()
