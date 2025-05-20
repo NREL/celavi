@@ -220,9 +220,8 @@ def liaison_lci(
     # Clean up project
     try:
         bw.projects.delete_project(bw.projects.current, delete_dir=True)
-        bw.projects.purge_deleted_directories()
     except Exception:
-        bw.projects.purge_deleted_directories()
+        logging.error("Issue with deleting project directory %s",bw.projects.current)
 
     # Validate results
     if res_df.empty:
