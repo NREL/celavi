@@ -130,11 +130,11 @@ class Component:
 
         path_choice = path_choices_dict[self.in_use_facility]
         self.pathway = deque()
-        for facility, lifespan, distance, route_id in path_choice["path"]:
+        for facility, lifespan, distance, _ in path_choice["path"]:
             # Overwrite the default timespan from CostGraph for the in use phase.
             if facility.split('_')[0] in self.in_use_facility_types:
                 self.pathway.append(
-                    (facility, self.initial_lifespan_timesteps, distance, route_id)
+                    (facility, self.initial_lifespan_timesteps, distance, 'not tracked')
                 )
             # Also overwrite the default timespan for facilities where components
             # do not leave during the simulation.
@@ -145,11 +145,11 @@ class Component:
                 ]
             ):
                 self.pathway.append(
-                    (facility, self.context.max_timesteps * 2, distance, route_id)
+                    (facility, self.context.max_timesteps * 2, distance, 'not tracked')
                 )
             # Otherwise, use the default timespan obtained from CostGraph (1 timestep).
             else:
-                self.pathway.append((facility, lifespan, distance, route_id))
+                self.pathway.append((facility, lifespan, distance, 'not tracked'))
 
     def bol_process(self, env):
         """
@@ -319,8 +319,7 @@ class Component:
                 # @NOTE dist > 0 logic here only kicks in for co-located facilities that
                 # still require transportation (ie in tiny-circfutures)
                 tonne_km = mass * dist if dist > 0 else mass * 1.0,
-                timestep=env.now,
-                route_id = 'not tracked'
+                timestep=env.now
             )
 
         # Component stays in use for its lifetime
@@ -357,7 +356,7 @@ class Component:
             if self.pathway:
                 # Use the component's process queue (EOL pathway) to identify the
                 # component's next step
-                location, lifespan, distance, route_id = self.pathway.popleft()
+                location, lifespan, distance, _ = self.pathway.popleft()
                 factype = location.split("_")[0]
 
                 # If the next step for the component involves material losses,
@@ -367,7 +366,7 @@ class Component:
 
                     # Move the component to the facility that involves material losses
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
+                        env, loc=location, dist=distance, amt=1.0
                     )
                     # Update the component's location
                     self.current_location = location
@@ -398,19 +397,17 @@ class Component:
                         loc = _split_facility_1[0],
                         amt = _loss,
                         dist = _split_facility_1[1],
-                        route_id = 'not tracked',
                     )
                     
                     # Move the rest of the component to the next facility along pathway
                     if len(self.pathway) > 0:
 
-                        location, lifespan, distance, route_id = self.pathway.popleft()
+                        location, lifespan, distance, _ = self.pathway.popleft()
 
                         self.move_component_to(
                             env,
                             loc = location,
                             dist = distance,
-                            route_id = 'not tracked',
                             amt= (1 - _loss) * 1.0
                         )
 
@@ -431,7 +428,7 @@ class Component:
                 # here (no next step)
                 elif factype in self.split_dict["pass"]:
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id='not tracked'
+                        env, loc=location, dist=distance
                     )
 
                     self.current_location = location
@@ -440,7 +437,7 @@ class Component:
                 # step, then move the entire component along the pathway
                 else:
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id='not tracked', amt=1.0
+                        env, loc=location, dist=distance, amt=1.0
                     )
 
                     self.current_location = location
@@ -487,7 +484,7 @@ class Component:
                 _mat, amt * self.count * _mass, env.now
             )
             self.context.transportation_trackers[loc].increment_inbound_tonne_km(
-                tonne_km=amt * self.count * _mass * dist, timestep=env.now, route_id=route_id
+                tonne_km=amt * self.count * _mass * dist, timestep=env.now
             )
 
     def move_component_from(self, env, loc, amt=1.0):
