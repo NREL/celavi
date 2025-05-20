@@ -454,7 +454,7 @@ class Context:
                         "stage": "Transportation",
                         "year": actual_year,
                         "material": "transportation",
-                        "flow unit": "t * km",
+                        "flow unit": "tonne - km",
                         "facility_id": facility_id,
                         "route_id": 'not tracked',
                         "state": self.facility_states[facility_id],
@@ -469,7 +469,7 @@ class Context:
                         "stage": "Transportation",
                         "year": year,
                         "material": "transportation",
-                        "flow unit": "t * km",
+                        "flow unit": "tonne - km",
                         "facility_id": facility_id,
                         "route_id": 'not tracked',
                         "state": self.facility_states[facility_id],
@@ -493,16 +493,19 @@ class Context:
                     # both LCIs (duplicate entry!).
                     # The query pulls out only rows that are in the current LCI (ie ignores rows in the last-sent LCI AND 
                     # rows that appear in both), and the drop removes the _merge column
-                    df_to_lcia_calcs = pd.merge(
-                        df_for_pylca_interface, 
-                        self.lci_last_sent,
-                        indicator=True,
-                        how='outer'
-                        ).query(
-                            '_merge=="left_only"'
-                            ).drop(
-                                '_merge', axis=1
-                                )
+                    try:
+                        df_to_lcia_calcs = pd.merge(
+                            df_for_pylca_interface, 
+                            self.lci_last_sent,
+                            indicator=True,
+                            how='outer'
+                            ).query(
+                                '_merge=="left_only"'
+                                ).drop(
+                                    '_merge', axis=1
+                                    )
+                    except TypeError:
+                        print(f'{year=} : Issue 301 occurrence\n{df_for_pylca_interface=}\n{self.lci_last_sent=}')
                 else:
                     df_to_lcia_calcs = df_for_pylca_interface
 
