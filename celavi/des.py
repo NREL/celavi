@@ -429,7 +429,7 @@ class Context:
                             "material": mat,
                             "flow unit": "kg",
                             "facility_id": facility_id,
-                            "route_id": None,
+                            "route_id": 'not tracked',
                             "state": self.facility_states[facility_id],
                         }
                         self.data_for_lci.append(row)
@@ -441,10 +441,6 @@ class Context:
                 annual_transportations = tracker.inbound_tonne_km[
                     window_first_timestep : window_last_timestep + 1
                 ]
-                # Corresponding list of the routes along which the inbound transportation took place
-                route_ids = tracker.route_id[
-                    window_first_timestep : window_last_timestep + 1
-                ]
 
                 # Case 1: There was no inbound transportation and the rest of this block is skipped
                 # Provide no data to LCIA. Executes if none of the if/elif statements below are True.
@@ -453,60 +449,33 @@ class Context:
                 # and therefore only one corresponding route
                 if len(annual_transportations[annual_transportations != 0]) == 1:
                     # Provide one row of data to LCIA by filtering out zeros/Nones. No aggregation needed.
-                    if any(route_ids[annual_transportations != 0].tolist()):
-                        _route_id_list = ''.join([r for rs in route_ids[annual_transportations != 0].tolist() for r in rs])
-                    else:
-                        _route_id_list = [None]
                     row = {
-                        "flow quantity": annual_transportations[
-                            annual_transportations != 0
-                        ][0],
+                        "flow quantity": annual_transportations[annual_transportations != 0][0],
                         "stage": "Transportation",
                         "year": actual_year,
                         "material": "transportation",
                         "flow unit": "t * km",
                         "facility_id": facility_id,
-                        "route_id": _route_id_list,
+                        "route_id": 'not tracked',
                         "state": self.facility_states[facility_id],
                     }
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
 
                 elif len(annual_transportations[annual_transportations != 0]) > 1:
-                    # Case 3: There were multiple instances of inbound transportation that all took place along the same route
-                    if len(np.unique(route_ids[annual_transportations != 0])) == 1:
-                        # Provide one row of data to LCIA by summing the inbound transportation and filtering out Nones in route_ids.
-                        row = {
-                            "flow quantity": annual_transportations.sum(),
-                            "stage": "Transportation",
-                            "year": year,
-                            "material": "transportation",
-                            "flow unit": "t * km",
-                            "facility_id": facility_id,
-                            "route_id": route_ids[annual_transportations != 0][0],
-                            "state": self.facility_states[facility_id],
-                        }
-                        self.data_for_lci.append(row)
-                        annual_data_for_lci.append(row)
-                    # Case 4: There were multiple instances of inbound transportation that took place along different routes
-                    elif len(np.unique(route_ids[annual_transportations != 0])) > 1:
-                        # Provide as many rows of data to LCIA as there are unique routes by filtering out zeros/Nones. Only
-                        # aggregate if one or more routes had multiple instances of inbound transportation.
-                        for _r in np.unique(route_ids[annual_transportations != 0]):
-                            row = {
-                                "flow quantity": annual_transportations[
-                                    route_ids == _r
-                                ].sum(),
-                                "stage": "Transportation",
-                                "year": year,
-                                "material": "transportation",
-                                "flow unit": "t * km",
-                                "facility_id": facility_id,
-                                "route_id": str(_r),
-                                "state": self.facility_states[facility_id],
-                            }
-                            self.data_for_lci.append(row)
-                            annual_data_for_lci.append(row)
+                    # Provide one row of data to LCIA by summing the inbound transportation.
+                    row = {
+                        "flow quantity": annual_transportations.sum(),
+                        "stage": "Transportation",
+                        "year": year,
+                        "material": "transportation",
+                        "flow unit": "t * km",
+                        "facility_id": facility_id,
+                        "route_id": 'not tracked',
+                        "state": self.facility_states[facility_id],
+                    }
+                    self.data_for_lci.append(row)
+                    annual_data_for_lci.append(row)
 
             if annual_data_for_lci:
                 if self.verbose > 0:
