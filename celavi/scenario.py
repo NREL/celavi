@@ -673,6 +673,7 @@ class Scenario:
             "c_type"
         ]
         lcia_df = pd.read_csv(self.files["lcia_to_des"], names=lcia_names)
+        lcia_df.drop(columns = 'route_id', inplace = True)
         locations_df = pd.read_csv(self.files["locs"])
         locations_columns = [
             "facility_id",
@@ -687,7 +688,7 @@ class Scenario:
 
         locations_select_df = locations_df.loc[:, locations_columns]
         lcia_process = lcia_df.loc[
-            (lcia_df.run == self.run) & (lcia_df.route_id.isna())
+            lcia_df.run == self.run
         ] 
         lcia_locations_df = lcia_process.merge(
             locations_select_df, how="inner", on="facility_id"
@@ -698,44 +699,39 @@ class Scenario:
                 f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
-        # Create and save LCIA results for transportation, by route county
-        lcia_transpo = (
-            lcia_df.dropna()
-            .loc[lcia_df.run == self.run]
-            .merge(
-                pd.read_csv(
-                    self.files['county_routes']
-                    if self.scen["flags"]["use_computed_routes"]
-                    else self.files["routes_custom"],
-                    usecols=["route_id", "region_transportation", "vkmt", "total_vkmt"],
-                ),
-                on="route_id",
-                how="outer",
-            )
-            .dropna(subset=["region_transportation"])
-            .rename(
+        _county_routes = pd.read_csv(
+            self.files['county_routes'] if self.scen["flags"]["use_computed_routes"] else self.files["routes_custom"],
+            usecols = ["region_transportation", "total_vkmt"]
+        ).drop_duplicates()
+
+        # Create and save LCIA results for transportation, by county
+        lcia_transpo = lcia_process.merge(
+            _county_routes,
+            left_on="region_id_2",
+            right_on='region_transportation',
+            how="outer",
+            ).dropna(
+                subset=["region_transportation"]
+            ).rename(
                 columns={
                     "region_transportation": "fips",
                     "impact_value": "impact_total",
-                    "vkmt": "vkmt_by_region",
                     "total_vkmt": "vkmt_total",
                 }
             )
-        )
 
         # Calculate transportation impacts by region (county) using county-level vkmt and route-level vkmt
-        lcia_transpo["impact_value"] = (
-            lcia_transpo.impact_total
-            * lcia_transpo.vkmt_by_region
-            / lcia_transpo.vkmt_total
-        )
+        #lcia_transpo["impact_value"] = (
+        #    lcia_transpo.impact_total
+        #    * lcia_transpo.vkmt_by_region
+        #    / lcia_transpo.vkmt_total
+        #)
 
         # Drop unneeded columns
         lcia_transpo.drop(
             axis=1,
             columns=[
                 "facility_id",
-                "route_id",
                 "material",
                 "stage",
                 "vkmt_by_region",
