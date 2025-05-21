@@ -148,16 +148,15 @@ class PylcaCelavi:
         result_df
             Cached impacts for matching rows.
         """
+        
         try:
             # Read cache without header, assign expected columns
             cache_df = pd.read_csv(
                 self.shortcutlca_path,
                 header=None,
-                names=[
-                    'lcia', 'cached_value', 'unit', 'year',
-                    'method', 'stage', 'state'
-                ]
             )
+            cache_df = cache_df.dropna(axis=1, how='all')
+            cache_df.columns = ['lcia','cached_value','unit','year','method','stage','state']
             # Ensure consistent types for merge keys
             for col in ['stage', 'year', 'state']:
                 df[col] = df[col].astype(str)
@@ -195,7 +194,7 @@ class PylcaCelavi:
 
         except:
             logger.warning(
-                "Shortcut LCA cache not found at %s", self.shortcutlca_path
+                "Shortcut LCA cache not read or column reading issues at %s", self.shortcutlca_path
             )
             return df, pd.DataFrame()
 
