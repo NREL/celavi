@@ -326,23 +326,9 @@ class Component:
                 [self.context.cost_graph.supply_chain[u][v]['route_id'] for u,v in zip(_path,_path[1:])]
                 ))
 
-            if len(route_ids) == 1:
-                # If only one route_id remains, turn it into a string
-                route_ids = route_ids[0]
-            else:
-                # If multiple route_ids remain, remove any colocated route_ids
-                route_ids = [r for r in route_ids if r != 'colocated']
-                if len(route_ids) == 1:
-                    # If only one route_id remains, turn it into a string
-                    route_ids = route_ids[0]
-                else:
-                    # If multiple routes remain, mash them into a string anyway
-                    route_ids = str(route_ids)
             count_transport.increment_inbound_tonne_km(
-                # @NOTE dist > 0 logic here only kicks in for co-located facilities that
-                # still require transportation (ie in tiny-circfutures)
-                tonne_km = mass * dist if dist > 0 else mass * 1.0,
-                timestep=env.now,
+                tonne_km = mass * dist,
+                timestep = env.now,
                 route_id = route_ids
             )
 
