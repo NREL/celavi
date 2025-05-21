@@ -197,9 +197,7 @@ class Context:
                 can_be_negative=False,
             )
 
-            self.transportation_trackers[step_facility_id] = TransportationTracker(
-                timesteps=max_timesteps
-            )
+            self.transportation_trackers[step_facility_id] = TransportationTracker()
 
         self.cost_graph = cost_graph
         self.lca = lca
@@ -434,86 +432,57 @@ class Context:
                         }
                         self.data_for_lci.append(row)
                         annual_data_for_lci.append(row)
-
+            
             for facility_name, tracker in self.transportation_trackers.items():
+                # Provide no data to LCIA if no transportation info exists 
+                # for this facility
+                if tracker.record.empty: continue
+
                 _, facility_id = facility_name.split("_")
+                
                 # List of all inbound transportation amounts to this facility in the past window
-                annual_transportations = tracker.inbound_tonne_km[
-                    window_first_timestep : window_last_timestep + 1
-                ]
-                # Corresponding list of the routes along which the inbound transportation took place
-                route_ids = tracker.route_id[
-                    window_first_timestep : window_last_timestep + 1
-                ]
+                # Aggregate by timestep and route to cut down on the number of LCIA calculations
+                annual_record = tracker.record[
+                    tracker.record.timesteps.isin(
+                        np.arange(window_first_timestep, window_last_timestep + 1)
+                    )
+                    ].groupby(
+                        ['timesteps','route_id']
+                    ).agg(
+                        {'inbound_tonne_km': sum}
+                    ).reset_index()
 
-                # Case 1: There was no inbound transportation and the rest of this block is skipped
-                # Provide no data to LCIA. Executes if none of the if/elif statements below are True.
-
-                # Case 2: There was only one instance of inbound transportation
-                # and therefore only one corresponding route
-                if len(annual_transportations[annual_transportations != 0]) == 1:
-                    # Provide one row of data to LCIA by filtering out zeros/Nones. No aggregation needed.
-                    if any(route_ids[annual_transportations != 0].tolist()):
-                        _route_id_list = ''.join([r for rs in route_ids[annual_transportations != 0].tolist() for r in rs])
-                    else:
-                        _route_id_list = [None]
+                # The annual record may be empty if no transportation was done during this
+                # window. If it's not empty, create a dict with all incoming transpo records
+                # add add it to a list of dicts for further processing
+                if not annual_record.empty:
                     row = {
-                        "flow quantity": annual_transportations[
-                            annual_transportations != 0
-                        ][0],
+                        "flow quantity": annual_record.inbound_tonne_km.values,
                         "stage": "Transportation",
-                        "year": actual_year,
+                        "year": [int(ts) for ts in self.timesteps_to_years(annual_record.timesteps.values)],
                         "material": "transportation",
                         "flow unit": "t * km",
                         "facility_id": facility_id,
-                        "route_id": _route_id_list,
+                        "route_id": annual_record.route_id.values,
                         "state": self.facility_states[facility_id],
                     }
+                    
                     self.data_for_lci.append(row)
                     annual_data_for_lci.append(row)
-
-                elif len(annual_transportations[annual_transportations != 0]) > 1:
-                    # Case 3: There were multiple instances of inbound transportation that all took place along the same route
-                    if len(np.unique(route_ids[annual_transportations != 0])) == 1:
-                        # Provide one row of data to LCIA by summing the inbound transportation and filtering out Nones in route_ids.
-                        row = {
-                            "flow quantity": annual_transportations.sum(),
-                            "stage": "Transportation",
-                            "year": year,
-                            "material": "transportation",
-                            "flow unit": "t * km",
-                            "facility_id": facility_id,
-                            "route_id": route_ids[annual_transportations != 0][0],
-                            "state": self.facility_states[facility_id],
-                        }
-                        self.data_for_lci.append(row)
-                        annual_data_for_lci.append(row)
-                    # Case 4: There were multiple instances of inbound transportation that took place along different routes
-                    elif len(np.unique(route_ids[annual_transportations != 0])) > 1:
-                        # Provide as many rows of data to LCIA as there are unique routes by filtering out zeros/Nones. Only
-                        # aggregate if one or more routes had multiple instances of inbound transportation.
-                        for _r in np.unique(route_ids[annual_transportations != 0]):
-                            row = {
-                                "flow quantity": annual_transportations[
-                                    route_ids == _r
-                                ].sum(),
-                                "stage": "Transportation",
-                                "year": year,
-                                "material": "transportation",
-                                "flow unit": "t * km",
-                                "facility_id": facility_id,
-                                "route_id": str(_r),
-                                "state": self.facility_states[facility_id],
-                            }
-                            self.data_for_lci.append(row)
-                            annual_data_for_lci.append(row)
-
+                
             if annual_data_for_lci:
                 if self.verbose > 0:
                     print(
                         f"{datetime.now()} pylca_interface_process(): Found flow quantities greater than 0, performing LCIA"
                     )
-                df_for_pylca_interface = pd.DataFrame(annual_data_for_lci)
+                # Applying explode() turns some transportation records from lists into separate df rows
+                df_for_pylca_interface = pd.DataFrame(
+                    annual_data_for_lci
+                    ).explode(
+                        ['flow quantity','year','route_id'],
+                        ignore_index=True
+                    )
+                
                 # The first time these calculations are run, lci_last_sent is empty
                 # only check for and remove duplicates if there is a previous df_for_pylca_interface stored
                 # in lci_last_sent
@@ -536,9 +505,12 @@ class Context:
                                 )
                 else:
                     df_to_lcia_calcs = df_for_pylca_interface
-
-                self.lca.pylca_run_main(df_to_lcia_calcs, self.verbose)
-                self.lci_last_sent = df_to_lcia_calcs
+                
+                # Some transportation flows may be zero for transpo between colocated facilities
+                # Drop those before sending the flow df for LCIA calcs
+                self.lca.pylca_run_main(df_to_lcia_calcs.loc[df_to_lcia_calcs['flow quantity'] != 0], self.verbose)
+                self.lci_last_sent = df_to_lcia_calcs.loc[df_to_lcia_calcs['flow quantity'] != 0]
+                print(f'{env.now=}\n{self.lci_last_sent}')
             else:
                 if self.verbose > 0:
                   print(f"{year}: Context.pylca_interface_process(): No material flows for LCA")
