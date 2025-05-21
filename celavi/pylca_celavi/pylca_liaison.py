@@ -222,7 +222,7 @@ def liaison_lci(
         bw.projects.delete_project(bw.projects.current, delete_dir=True)
         bw.projects.purge_deleted_directories()
     except Exception:
-        bw.projects.purge_deleted_directories()
+        pass
 
     # Validate results
     if res_df.empty:
