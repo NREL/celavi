@@ -657,7 +657,7 @@ class Scenario:
         # Postprocess and save CostGraph outputs
         self.netw.save_costgraph_outputs()
         #Save lca shortcut file
-        self.lca.lca_database.to_csv(self.shortcutlca_path,index=False,header=False)
+        self.lca.lca_database.to_csv(self.files["lcia_shortcut_db"],index=False,header=False)
 
         # Join LCIA and locations computed and write the result to enable creation of
         # maps
