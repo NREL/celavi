@@ -102,6 +102,15 @@ class PylcaCelavi:
         self.verbose = verbose
         self.run_id = run
 
+        #ShortcutLCA file creator
+        self.lca_database = pd.read_csv(
+                self.shortcutlca_path,
+                header=None,
+        )
+        self.lca_database.columns = ['lcia','value', 'unit','year','method','stage','state']
+
+
+
         # Set up Brightway environment variable
         os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
         if self.verbose:
@@ -148,16 +157,15 @@ class PylcaCelavi:
         result_df
             Cached impacts for matching rows.
         """
+        
         try:
             # Read cache without header, assign expected columns
             cache_df = pd.read_csv(
                 self.shortcutlca_path,
                 header=None,
-                names=[
-                    'lcia', 'cached_value', 'unit', 'year',
-                    'method', 'stage', 'state'
-                ]
             )
+            cache_df = cache_df.dropna(axis=1, how='all')
+            cache_df.columns = ['lcia','cached_value','unit','year','method','stage','state']
             # Ensure consistent types for merge keys
             for col in ['stage', 'year', 'state']:
                 df[col] = df[col].astype(str)
@@ -178,7 +186,7 @@ class PylcaCelavi:
                     state, stage, year,
                 )
             else:
-                logger.info(
+                logger.warning(
                     "Using shortcut LCA cache for %s, %s, %d: %d entries",
                     state, stage, year, len(result_df)
                 )
@@ -193,9 +201,9 @@ class PylcaCelavi:
             ]
             return missing_df, result_df[cols]
 
-        except FileNotFoundError:
-            logger.info(
-                "Shortcut LCA cache not found at %s", self.shortcutlca_path
+        except:
+            logger.warning(
+                "Shortcut LCA cache not read or column reading issues at %s", self.shortcutlca_path
             )
             return df, pd.DataFrame()
 
@@ -291,9 +299,10 @@ class PylcaCelavi:
                         res["year"] = original_year
                         res["value"] = res["value"] / quantity
                         res.drop_duplicates(inplace=True)
-                        res.to_csv(
+                        res2 = res[['lcia','value', 'unit','year','method','stage','state']]
+                        self.lca_database = pd.concat([self.lca_database,res2]).drop_duplicates()
+                        self.lca_database.to_csv(
                             self.shortcutlca_path,
-                            mode="a",
                             index=False,
                             header=False,
                         )

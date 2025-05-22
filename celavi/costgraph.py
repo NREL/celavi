@@ -344,7 +344,7 @@ class CostGraph:
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
             for i in self.sc_end:
-                _dest = [key for key, value in lengths.items() if i in key]
+                _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
@@ -353,7 +353,7 @@ class CostGraph:
                             "source_facility_id": source_node,
                             "destination_facility_id": _dest,
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": _crit,
+                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
                         }
                     )
 
@@ -443,7 +443,10 @@ class CostGraph:
                             "source_facility_id": source_node,
                             "destination_facility_id": _dest,
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": _crit,
+                            # The cost adjustment factor is applied to every *edge*, so to save the absolute pathway 
+                            # cost, subtract off the cost adjustment factor multiplied by the number of edges
+                            # in each pathway between source_node and each facility in _dest
+                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
                         }
                     )
 
@@ -537,25 +540,23 @@ class CostGraph:
         for node_id in self.network_data.u_node_id:
             if node_id not in _node_timeout_dict.keys():
                 # Set lifespans for in use facilities based on input dictionary
-                for key, value in self.in_use_facility_lifespan.items():
-                    if key in node_id:
-                        _timeout = value
-                    else:
-                        _timeout = 1.0
+                if any([k in node_id for k in self.in_use_facility_lifespan.keys()]):
+                    _timeout = self.in_use_facility_lifespan[node_id.split('_')[0]]
+                else:
+                    _timeout = 1.0
                 
                 _node_timeout_dict[node_id] = _timeout
         
         for node_id in self.network_data.v_node_id:
             if node_id not in _node_timeout_dict.keys():
                 # Set lifespans for in use facilities based on input dictionary
-                for key, value in self.in_use_facility_lifespan.items():
-                    if key in node_id:
-                        _timeout = value
-                    else:
-                        _timeout = 1.0
+                if any([k in node_id for k in self.in_use_facility_lifespan.keys()]):
+                    _timeout = self.in_use_facility_lifespan[node_id.split('_')[0]]
+                else:
+                    _timeout = 1.0
                 
                 _node_timeout_dict[node_id] = _timeout
-        
+
         # Assign the node timeout attributes to nodes in supply_chain
         nx.set_node_attributes(
             self.supply_chain,
@@ -596,9 +597,9 @@ class CostGraph:
         # Cost adjustment logic: if any edge costs are negative, adjust ALL calculated costs in the supply chain
         # upwards
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
         if _cost_adjust < 0.0:
             print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
-            self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
             for edge in self.supply_chain.edges():
                 self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
@@ -951,11 +952,10 @@ class CostGraph:
             )
         
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
         if _cost_adjust < 0.0:
             print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
             flush = True)
-            self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
-
             for edge in self.supply_chain.edges():
                 self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 

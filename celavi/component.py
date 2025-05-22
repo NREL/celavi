@@ -428,6 +428,7 @@ class Component:
                     if len(self.pathway) > 0:
 
                         location, lifespan, distance, route_id = self.pathway.popleft()
+                        factype = location.split("_")[0]
 
                         self.move_component_to(
                             env,
@@ -437,13 +438,16 @@ class Component:
                             amt= (1 - _loss) * 1.0
                         )
 
-                        # Wait until the component has spent 'lifespan' timesteps here
-                        yield env.timeout(lifespan)
-
-                        # Decrement the current facility inventory
-                        self.move_component_from(env,
-                                                 loc = location,
-                                                 amt = (1 - _loss) * 1.0)
+                        # If component is in a facility where it should stay indefinitely, do not
+                        # move the component along.
+                        if factype not in self.split_dict['pass']:
+                            # Wait until the component has spent 'lifespan' timesteps here
+                            yield env.timeout(lifespan)
+    
+                            # Decrement the current facility inventory
+                            self.move_component_from(env,
+                                                     loc = location,
+                                                     amt = (1 - _loss) * 1.0)
                         
                         # Update the component's record of its materials and masses by applying
                         # the mass fraction loss
