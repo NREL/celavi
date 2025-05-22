@@ -510,7 +510,6 @@ class Context:
                 # Drop those before sending the flow df for LCIA calcs
                 self.lca.pylca_run_main(df_to_lcia_calcs.loc[df_to_lcia_calcs['flow quantity'] != 0], self.verbose)
                 self.lci_last_sent = df_to_lcia_calcs.loc[df_to_lcia_calcs['flow quantity'] != 0]
-                print(f'{env.now=}\n{self.lci_last_sent}')
             else:
                 if self.verbose > 0:
                   print(f"{year}: Context.pylca_interface_process(): No material flows for LCA")
