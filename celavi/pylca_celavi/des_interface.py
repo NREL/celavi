@@ -102,6 +102,15 @@ class PylcaCelavi:
         self.verbose = verbose
         self.run_id = run
 
+        #ShortcutLCA file creator
+        self.lca_database = pd.read_csv(
+                self.shortcutlca_path,
+                header=None,
+        )
+        self.lca_database.columns = ['lcia','value', 'unit','year','method','stage','state']
+
+
+
         # Set up Brightway environment variable
         os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
         if self.verbose:
@@ -291,9 +300,9 @@ class PylcaCelavi:
                         res["value"] = res["value"] / quantity
                         res.drop_duplicates(inplace=True)
                         res2 = res[['lcia','value', 'unit','year','method','stage','state']]
-                        res2.to_csv(
+                        self.lca_database = pd.concat([self.lca_database,res2]).drop_duplicates()
+                        self.lca_database.to_csv(
                             self.shortcutlca_path,
-                            mode="a",
                             index=False,
                             header=False,
                         )

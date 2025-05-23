@@ -354,20 +354,20 @@ class CostGraph:
             #)
 
             for i in self.sc_end:
-                _dest = [key for key, value in lengths.items() if i in key]
+                _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
                             "year": self.year,
-                            "source_facility_id": _fac_id,
+                            "source_facility_id": source_node,
                             "destination_facility_id": _dest,
                             "region_id_1": _loc_line.region_id_1.values[0],
                             "region_id_2": _loc_line.region_id_2.values[0],
                             "region_id_3": _loc_line.region_id_3.values[0],
                             "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": _crit,
+                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
                             #"bol_pathway_criterion": _bol_crit,
                         }
                     )
@@ -459,20 +459,23 @@ class CostGraph:
             #)
 
             for i in self.sc_end:
-                _dest = [key for key, value in lengths.items() if i in key]
+                _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
                             "year": self.year,
-                            "source_facility_id": _fac_id,
+                            "source_facility_id": source_node,
                             "destination_facility_id": _dest,
                             "region_id_1": _loc_line.region_id_1.values[0],
                             "region_id_2": _loc_line.region_id_2.values[0],
                             "region_id_3": _loc_line.region_id_3.values[0],
                             "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": _crit,
+                            # The cost adjustment factor is applied to every *edge*, so to save the absolute pathway 
+                            # cost, subtract off the cost adjustment factor multiplied by the number of edges
+                            # in each pathway between source_node and each facility in _dest
+                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
                             #"bol_pathway_criterion": _bol_crit,
                         }
                     )
