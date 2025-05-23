@@ -675,6 +675,7 @@ class Scenario:
             "c_type"
         ]
         lcia_df = pd.read_csv(self.files["lcia_to_des"], names=lcia_names)
+        lcia_df.drop(columns = 'route_id', inplace = True)
         locations_df = pd.read_csv(self.files["locs"])
         locations_columns = [
             "facility_id",
@@ -689,7 +690,7 @@ class Scenario:
 
         locations_select_df = locations_df.loc[:, locations_columns]
         lcia_process = lcia_df.loc[
-            (lcia_df.run == self.run) & (lcia_df.route_id.isna())
+            lcia_df.run == self.run
         ] 
         lcia_locations_df = lcia_process.merge(
             locations_select_df, how="inner", on="facility_id"
@@ -700,72 +701,18 @@ class Scenario:
                 f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
-        # Create and save LCIA results for transportation, by route county
-        lcia_transpo = (
-            lcia_df.dropna()
-            .loc[lcia_df.run == self.run]
-            .merge(
-                pd.read_csv(
-                    self.files['county_routes']
-                    if self.scen["flags"]["use_computed_routes"]
-                    else self.files["routes_custom"],
-                    usecols=["route_id", "region_transportation", "vkmt", "total_vkmt"],
-                ),
-                on="route_id",
-                how="outer",
-            )
-            .dropna(subset=["region_transportation"])
-            .rename(
+        # Create and save LCIA results for transportation, by county
+        lcia_transpo = lcia_locations_df.rename(
                 columns={
                     "region_transportation": "fips",
                     "impact_value": "impact_total",
-                    "vkmt": "vkmt_by_region",
                     "total_vkmt": "vkmt_total",
                 }
             )
-        )
 
-        # Calculate transportation impacts by region (county) using county-level vkmt and route-level vkmt
-        lcia_transpo["impact_value"] = (
-            lcia_transpo.impact_total
-            * lcia_transpo.vkmt_by_region
-            / lcia_transpo.vkmt_total
-        )
-
-        # Drop unneeded columns
-        lcia_transpo.drop(
-            axis=1,
-            columns=[
-                "facility_id",
-                "route_id",
-                "material",
-                "stage",
-                "vkmt_by_region",
-                "vkmt_total",
-                "impact_total",
-            ],
-            inplace=True,
-        )
-
-        # When a route has multiple impact values in the same region, it means multiple road classes
-        # were used. Sum these values to get one impact value per impact per region.
-        # Groupby year-impact-fips and sum the impact_value over road classes
-        # Save the disaggregated transportation impacts to file
-        lcia_transpo_agg = (
-            lcia_transpo.groupby(["year", "impact", "run", "fips"])
-            .agg("sum")
-            .reset_index()
-            .astype(
-                {
-                    "year": "int",
-                    "impact": "str",
-                    "run": "int",
-                    "fips": "int",
-                    "impact_value": "float",
-                }
-            )
-        )
-
+        # Save this file without aggregating
+        lcia_transpo_agg = lcia_transpo
+        
         # Summarize log files into one place.
 
         lcia_summary = []
@@ -835,11 +782,6 @@ class Scenario:
         with open(self.files["mass_cumulative_histories"], "a") as f:
             mass_cumulative_histories.to_csv(
                 f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
-            )
-
-        with open(self.files["lcia_transpo_results"], "a") as f:
-            lcia_transpo_agg.to_csv(
-                f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
 
         with open(self.files["lcia_transpo_results"], "a") as f:
