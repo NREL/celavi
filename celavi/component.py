@@ -130,11 +130,11 @@ class Component:
 
         path_choice = path_choices_dict[self.in_use_facility]
         self.pathway = deque()
-        for facility, lifespan, distance, _ in path_choice["path"]:
+        for facility, lifespan, distance, route_id in path_choice["path"]:
             # Overwrite the default timespan from CostGraph for the in use phase.
             if facility.split('_')[0] in self.in_use_facility_types:
                 self.pathway.append(
-                    (facility, self.initial_lifespan_timesteps, distance, 'not tracked')
+                    (facility, self.initial_lifespan_timesteps, distance, route_id)
                 )
             # Also overwrite the default timespan for facilities where components
             # do not leave during the simulation.
@@ -145,11 +145,11 @@ class Component:
                 ]
             ):
                 self.pathway.append(
-                    (facility, self.context.max_timesteps * 2, distance, 'not tracked')
+                    (facility, self.context.max_timesteps * 2, distance, route_id)
                 )
             # Otherwise, use the default timespan obtained from CostGraph (1 timestep).
             else:
-                self.pathway.append((facility, lifespan, distance, 'not tracked'))
+                self.pathway.append((facility, lifespan, distance, route_id))
 
     def bol_process(self, env):
         """
@@ -315,11 +315,35 @@ class Component:
                 target = self.in_use_facility,
                 weight = 'dist'
             )
+            _path = nx.astar_path(
+                self.context.cost_graph.supply_chain,
+                source=self.manuf_facility,
+                target=self.in_use_facility
+                )
+            # Get the list of route_ids from the path between the manuf and in use facilities
+            # Applying list(set([])) drops duplicate entries from the argument of set()
+            route_ids = list(set(
+                [self.context.cost_graph.supply_chain[u][v]['route_id'] for u,v in zip(_path,_path[1:])]
+                ))
+
+            if len(route_ids) == 1:
+                # If only one route_id remains, turn it into a string
+                route_ids = route_ids[0]
+            else:
+                # If multiple route_ids remain, remove any colocated route_ids
+                route_ids = [r for r in route_ids if r != 'colocated']
+                if len(route_ids) == 1:
+                    # If only one route_id remains, turn it into a string
+                    route_ids = route_ids[0]
+                else:
+                    # If multiple routes remain, mash them into a string anyway
+                    route_ids = str(route_ids)
             count_transport.increment_inbound_tonne_km(
                 # @NOTE dist > 0 logic here only kicks in for co-located facilities that
                 # still require transportation (ie in tiny-circfutures)
                 tonne_km = mass * dist if dist > 0 else mass * 1.0,
-                timestep=env.now
+                timestep=env.now,
+                route_id = route_ids
             )
 
         # Component stays in use for its lifetime
@@ -356,7 +380,7 @@ class Component:
             if self.pathway:
                 # Use the component's process queue (EOL pathway) to identify the
                 # component's next step
-                location, lifespan, distance, _ = self.pathway.popleft()
+                location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
 
                 # If the next step for the component involves material losses,
@@ -366,7 +390,7 @@ class Component:
 
                     # Move the component to the facility that involves material losses
                     self.move_component_to(
-                        env, loc=location, dist=distance, amt=1.0
+                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
                     )
                     # Update the component's location
                     self.current_location = location
@@ -397,6 +421,7 @@ class Component:
                         loc = _split_facility_1[0],
                         amt = _loss,
                         dist = _split_facility_1[1],
+                        route_id = _split_facility_1[2],
                     )
                     
                     # Move the rest of the component to the next facility along pathway
@@ -409,6 +434,7 @@ class Component:
                             env,
                             loc = location,
                             dist = distance,
+                            route_id = route_id,
                             amt= (1 - _loss) * 1.0
                         )
 
@@ -432,7 +458,7 @@ class Component:
                 # here (no next step)
                 elif factype in self.split_dict["pass"]:
                     self.move_component_to(
-                        env, loc=location, dist=distance
+                        env, loc=location, dist=distance, route_id=route_id
                     )
 
                     self.current_location = location
@@ -441,7 +467,7 @@ class Component:
                 # step, then move the entire component along the pathway
                 else:
                     self.move_component_to(
-                        env, loc=location, dist=distance, amt=1.0
+                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
                     )
 
                     self.current_location = location
@@ -454,7 +480,7 @@ class Component:
             else:
                 break
 
-    def move_component_to(self, env, loc, dist: float, route_id='not tracked', amt=1.0):
+    def move_component_to(self, env, loc, dist: float, route_id=None, amt=1.0):
         """
         Increment mass, count, and transportation inventories.
 
@@ -470,7 +496,7 @@ class Component:
             Transportation distance in km to destination facility.
         
         route_id : str
-            UUID for route along which component is moved. Defaults to string.
+            UUID for route along which component is moved. Defaults to None.
 
         amt : float
             Number of components being moved. Defaults to 1.
@@ -488,7 +514,7 @@ class Component:
                 _mat, amt * self.count * _mass, env.now
             )
             self.context.transportation_trackers[loc].increment_inbound_tonne_km(
-                tonne_km=amt * self.count * _mass * dist, timestep=env.now
+                tonne_km=amt * self.count * _mass * dist, timestep=env.now, route_id=route_id
             )
 
     def move_component_from(self, env, loc, amt=1.0):
