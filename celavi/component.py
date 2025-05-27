@@ -87,7 +87,7 @@ class Component:
         self.year = year
         self.mass_tonnes = mass_tonnes
         # How many components are in this component - required for material loss
-        # accounting; always 1
+        # accounting; always 1 to start with; updated as material losses occur
         self.count = 1.0
         self.in_use_facility = in_use_facility
 
@@ -354,7 +354,7 @@ class Component:
         self.create_pathway_queue()
 
         # Component is decremented from in use inventories
-        self.move_component_from(env, loc=self.in_use_facility)
+        self.move_component_from(env, loc=self.in_use_facility, amt=self.count)
 
         # Take the current facility (the in use facility) off the to-do list
         self.pathway.popleft()
@@ -390,7 +390,7 @@ class Component:
 
                     # Move the component to the facility that involves material losses
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
+                        env, loc=location, dist=distance, route_id=route_id, amt = self.count
                     )
                     # Update the component's location
                     self.current_location = location
@@ -404,9 +404,9 @@ class Component:
                     # If there's no next step, then only move the lost component fraction
                     # out of this facility
                     if len(self.pathway) > 0:
-                        self.move_component_from(env, loc=location)
+                        self.move_component_from(env, loc=location, amt = self.count)
                     else:
-                        self.move_component_from(env, loc=location, amt = _loss)
+                        self.move_component_from(env, loc=location, amt = _loss * self.count)
 
                     # Locate the closest facility that receives material losses
                     _split_facility_1 = self.context.cost_graph.find_nearest_factype(
@@ -419,7 +419,7 @@ class Component:
                     self.move_component_to(
                         env,
                         loc = _split_facility_1[0],
-                        amt = _loss,
+                        amt = _loss * self.count,
                         dist = _split_facility_1[1],
                         route_id = _split_facility_1[2],
                     )
@@ -435,7 +435,7 @@ class Component:
                             loc = location,
                             dist = distance,
                             route_id = route_id,
-                            amt= (1 - _loss) * 1.0
+                            amt= (1 - _loss) * self.count
                         )
 
                         # If component is in a facility where it should stay indefinitely, do not
@@ -447,7 +447,7 @@ class Component:
                             # Decrement the current facility inventory
                             self.move_component_from(env,
                                                      loc = location,
-                                                     amt = (1 - _loss) * 1.0)
+                                                     amt = (1 - _loss) * self.count)
                         
                         # Update the component's record of its materials and masses by applying
                         # the mass fraction loss
@@ -458,7 +458,7 @@ class Component:
                 # here (no next step)
                 elif factype in self.split_dict["pass"]:
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id
+                        env, loc=location, dist=distance, route_id=route_id, amt = self.count
                     )
 
                     self.current_location = location
@@ -467,7 +467,7 @@ class Component:
                 # step, then move the entire component along the pathway
                 else:
                     self.move_component_to(
-                        env, loc=location, dist=distance, route_id=route_id, amt=1.0
+                        env, loc=location, dist=distance, route_id=route_id, amt=self.count
                     )
 
                     self.current_location = location
@@ -475,7 +475,7 @@ class Component:
                     # Wait until the component has spent 'lifespan' timesteps here
                     yield env.timeout(lifespan)
 
-                    self.move_component_from(env, loc=location, amt=1.0)
+                    self.move_component_from(env, loc=location, amt=self.count)
 
             else:
                 break
