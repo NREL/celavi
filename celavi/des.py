@@ -296,6 +296,7 @@ class Context:
                 context=self,
                 lifespan_timesteps=lifespan_fns[row["kind"]](),
                 mass_tonnes=row['mass_tonnes'],
+                count_unscaled = row['count_unscaled']
             )
             self.env.process(component.bol_process(self.env))
             self.components.append(component)
