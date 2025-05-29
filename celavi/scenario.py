@@ -295,7 +295,8 @@ class Scenario:
                 transportation_graph=self.files["transportation_graph"],
                 node_locations=self.files["node_locs"],
                 routes_output_file=_routefile,
-                county_routes_file = self.files['county_routes']
+                county_routes_file = self.files['county_routes'],
+                vkmt_by_region_file = self.files['vkmt_by_region'],
                 )
         print(f"Run routes completed at {self.simtime(self.start)} s", flush=True)
 
@@ -335,6 +336,7 @@ class Scenario:
                 routes_file=self.files["routes_computed"]
                 if self.scen["flags"].get("use_computed_routes")
                 else self.files["routes_custom"],
+                in_use_facility_lifespan = self.scen['circular_pathways'].get('in_use_facility_lifespan'),
                 sc_begin=self.scen["circular_pathways"].get("sc_begin"),
                 sc_end=self.scen["circular_pathways"].get("sc_end"),
                 sc_in_circ=self.scen["circular_pathways"].get("sc_in_circ", []),
@@ -368,10 +370,15 @@ class Scenario:
         if self.case["model_run"].get("warning_verbose") == 0:
             warnings.filterwarnings('ignore')
         self.lca = PylcaCelavi(
-            data_dir=self.args.data,
-            liaison_params=self.case['liaison'],
+            data_dir=os.path.join(self.args.data,self.case["directories"]["generated"]),
+            liaison_params= self.case["liaison"],
             lcia_des_filename=self.files["lcia_to_des"],
             shortcutlca_filename=self.files["lcia_shortcut_db"],
+            brightway_dir=self.case["directories"]["brightway_dir"],
+            liaison_process_bridge=self.files["liaison_process_bridge"],
+            additional_inventories=self.files["additional_inventories"],
+            data_sent_to_liaison=self.files["runtime_data_to_liaison"],
+            pv_module_chars=self.files["pv_module_chars"],
             use_shortcut_lca_calculations=self.scen["flags"].get(
                 "use_lcia_shortcut", True
             ),
@@ -480,7 +487,12 @@ class Scenario:
             technology_data.loc[:,'n_technology'] = _n_tech_scaled
             technology_data['scale_factor'] = _technology_data_scaled['scale_factor']
 
+
         components = []
+        # NOTE that the below logic will only instantiate components that exist during the simulation's
+        # time span. If technology_data contains years beyond the simulation's time span, those components
+        # will not be instantiated. As a result, the print statement immediately below and the one at the
+        # end of this process may not give the same information when technology_data contains unused rows.
         print(f'Instantiating {sum(technology_data.n_technology)} components at {self.simtime(self.start)} s',
                 flush=True)
         _comptime = time.time()
@@ -493,15 +505,17 @@ class Scenario:
                 print(f'{row.facility_id} , {row.year}: {in_use_facility}')
 
             n_technology = int(row["n_technology"])
+            if 'scale_factor' in row.index:
+                # Use this to scale up the material masses in each instance, and to
+                # record the actual number of units represented by each instance
+                _scaler = row['scale_factor']
+            else:
+                _scaler = 1.0
             
             for _ in range(n_technology):
                 for c in circular_components:
                     _c_mats = self.scen['technology_components']['component_materials'][c]
-                    if 'scale_factor' in row.index:
-                        _mass_scaler = row['scale_factor']
-                    else:
-                        _mass_scaler = 1.0
-                    _c_mat_mass = _mass_scaler * component_material_mass.mass_tonnes.loc[
+                    _c_mat_mass = _scaler * component_material_mass.mass_tonnes.loc[
                         (component_material_mass.technology == row['technology']) &
                         (component_material_mass.component == c) & 
                         (component_material_mass.material.isin(_c_mats)) &
@@ -513,7 +527,12 @@ class Scenario:
                                 "year": year,
                                 "kind": c,
                                 "in_use_facility": in_use_facility,
+                                'virgin_manuf_facility_types': self.scen['circular_pathways'].get('sc_begin'),
+                                'secondary_manuf_facility_types': self.scen['circular_pathways'].get('sc_in_circ'),
+                                'in_use_facility_types': 
+                                    [key for key, _ in self.scen['circular_pathways'].get('in_use_facility_lifespan').items()],
                                 "mass_tonnes": dict(zip(_c_mats, _c_mat_mass)),
+                                'count_unscaled': _scaler,
                             }
                         )
                     else:
@@ -581,8 +600,8 @@ class Scenario:
         -------
         None
         """
-        # @TODO Hardcoding alert! Cost-adjust-factors needs to be added to YAML
-        pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv('cost-adjust-factors.csv')
+        # Save the cost adjustment factors from every timestep to a file in the results directory
+        pd.DataFrame.from_dict(self.netw.cost_adjustment_factor,orient='index').to_csv(self.files['cost_adjust_factors'])
 
         # Create a name for the scenario, based either on a key in the original
         # scneario YAML or, if the key is not found, the filename of the scenario.
@@ -610,6 +629,7 @@ class Scenario:
             var_name="unit",
             value_name="count",
             run=self.run,
+            raw_cumulative_histories_file = self.files['count_cumulative_histories_raw'],
             component_scaledown = self.scen['scenario']['component_scaledown'],
         )
         count_cumulative_histories = (
@@ -634,6 +654,7 @@ class Scenario:
             var_name="material",
             value_name="tonnes",
             run=self.run,
+            raw_cumulative_histories_file = self.files['mass_cumulative_histories_raw'],
         )
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
@@ -643,6 +664,8 @@ class Scenario:
 
         # Postprocess and save CostGraph outputs
         self.netw.save_costgraph_outputs()
+        #Save lca shortcut file
+        self.lca.lca_database.to_csv(self.files["lcia_shortcut_db"],index=False,header=False)
 
         # Join LCIA and locations computed and write the result to enable creation of
         # maps
@@ -836,53 +859,6 @@ class Scenario:
             central_summary.to_csv(
                 f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
-
-
-    @staticmethod
-    def impact_and_units(line_item):
-        """
-        Cleans up an impact name to return the units and the name of the impact
-        as separate strings. It removes "(", ")", "[", "]" and thw word
-        "substance" from units.
-
-        Parameters
-        ----------
-        line_item: str
-            Impact and unit mixed together from the LCIA.
-
-        Returns
-        -------
-        str, str
-            Tuple of impact name and units of that impact.
-        """
-        p_paren = re.compile("\(.*\)")
-        p_square = re.compile("\[.*\]")
-
-        all_paren = p_paren.findall(line_item)
-        all_square = p_square.findall(line_item)
-
-        if len(all_paren) > 0:
-            units = all_paren[0]
-            impact = line_item.replace(units, "")
-        elif len(all_square) > 0:
-            units = all_square[0]
-            impact = line_item.replace(units, "")
-        else:
-            units = "unitless"
-            impact = line_item
-
-        impact = " ".join(impact.split())
-        impact = impact.replace(" , ", ", ")
-
-        units = (
-            units.replace("(", "")
-            .replace(")", "")
-            .replace("[", "")
-            .replace("]", "")
-            .replace("substance", "")
-        )
-
-        return impact, units
 
 
     def calculate_circularity_metrics(self, mass):

@@ -143,6 +143,7 @@ class Router:
         node_locations,
         routes_output_file,
         county_routes_file,
+        vkmt_by_region_file,
     ):
         """
         Calculate distances traveled between all connected supply chain facilities.
@@ -169,6 +170,8 @@ class Router:
         county_routes_file : str
             Path to file where routes with vkmt by county is saved.
         
+        vkmt_by_region_file : str
+            Path to file where routes with vkmt disaggregated by county traveled is saved.
         
         Returns
         -------
@@ -315,8 +318,9 @@ class Router:
             
             vkmt_by_county_all.drop(columns='fclass', inplace = True)
 
-            # @TODO hard coding alert! If we want to keep this file we need an extra entry in casestudy.yaml
-            vkmt_by_county_all.to_csv('vkmt-county-complete.csv', index=False)
+            # For reference, save the routes with vkmt disaggregated by county through which
+            # each route passes
+            vkmt_by_county_all.to_csv(vkmt_by_region_file, index=False)
 
             vkmt_by_county_agg = vkmt_by_county_all.groupby(['route_id']).sum('vkmt').reset_index()
 

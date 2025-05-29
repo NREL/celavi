@@ -1,7 +1,4 @@
-import numpy as np
-
-import uuid
-
+import pandas as pd
 
 class TransportationTracker:
     """
@@ -10,7 +7,7 @@ class TransportationTracker:
     the inbound tonne_km only increments.
     """
 
-    def __init__(self, timesteps):
+    def __init__(self):
         """
         Parameters
         ----------
@@ -18,9 +15,11 @@ class TransportationTracker:
             An integer of the maximum number of timesteps that will be
             recorded in the model.
         """
-
-        self.inbound_tonne_km = np.zeros(timesteps)
-        self.route_id = np.array([None] * timesteps)
+        self.record = pd.DataFrame(
+            {'timesteps': [],
+             'inbound_tonne_km': [],
+             'route_id': []}
+        )
 
     def increment_inbound_tonne_km(self, tonne_km, timestep, route_id = None):
         """
@@ -33,10 +32,27 @@ class TransportationTracker:
         timestep
             The timestep that is being incremented.
         
-        route_id
-            UUID for the route along which material is transported
+        route_id : str or List[str], Default = None
+            One or more route_ids along which material is transported, or None
         """
+        if isinstance(route_id, list):
+            _add_record = {'timesteps': [int(timestep) for _ in route_id],
+                           'inbound_tonne_km': [tonne_km for _ in route_id],
+                           'route_id': route_id}
+            
+        elif isinstance(route_id, str):
+            _add_record = {'timesteps': int(timestep),
+                           'inbound_tonne_km': tonne_km,
+                           'route_id': route_id}
+        
+        else:
+            print(f'TransportationTracker: route_id is unexpected format: {route_id=}',flush=True)
+            _add_record = {}
+        
+        # Add row(s) of inbound transportation
+        try:
+            self.record = pd.concat([self.record, pd.DataFrame(_add_record)], ignore_index=True)
+        except ValueError:
+            self.record = pd.concat([self.record, pd.DataFrame(_add_record, index=[0])], ignore_index=True)
+        
 
-        timestep = int(timestep)
-        self.inbound_tonne_km[timestep] = self.inbound_tonne_km[timestep] + tonne_km
-        self.route_id[timestep] = str(uuid.uuid1())

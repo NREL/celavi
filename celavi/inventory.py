@@ -123,9 +123,19 @@ class FacilityInventory:
             and self.component_materials[item_name] < -1.0*quantity
             and not self.can_be_negative
         ):
-            raise ValueError(
-                f"{self.facility_type}_{self.facility_id} inventory cannot go negative: {quantity} required, {self.component_materials[item_name]} in stock"
+            # If an inventory tries to decrement by more than is in stock, print a warning and only
+            # decrement the amount in stock
+            # This logic should rarely if ever be used, as updates to component.bol_process and
+            # component.eol_process should prevent inventories going negative
+            print(f"""
+{self.facility_type}_{self.facility_id} at {timestep=}: Inventory cannot go negative.
+{quantity} required, {self.component_materials[item_name]}
+in stock\nDecreasing quantity to {self.component_materials[item_name]}
+                """,
+                flush=True
             )
+            quantity = -1.0 * self.component_materials[item_name]
+
         
         # Place this transaction in the history
         timestep = int(timestep)

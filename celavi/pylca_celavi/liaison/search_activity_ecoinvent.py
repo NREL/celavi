@@ -25,7 +25,7 @@ def extract_process(dic_key,data_dict):
         print('\n')
         return activity_dict[key]
 
-def search_activity_in_ecoinvent(dictionary,process_under_study,location_under_study,unit_under_study,run_filename,data_dir):
+def search_activity_in_ecoinvent(dictionary,process_under_study,location_under_study,unit_under_study,run_filename):
     """
     This function searches for activities and edits the ecoinvent activity as a foreground process in the chosen location
     It extracts every flow in the chosen foreground process, creates a dataframe from it and changes the location

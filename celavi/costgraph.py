@@ -24,6 +24,7 @@ class CostGraph:
         pathway_crit_history_filename: str,
         component_initial_mass: float,
         path_dict: dict,
+        in_use_facility_lifespan: dict,
         sc_begin : List[str] = ["manufacturing"],
         sc_end : List[str]=["landfilling"],
         sc_in_circ : List[str]=[],
@@ -62,6 +63,9 @@ class CostGraph:
             Dictionary of case-study-specific parameters to be passed into
             the cost methods. Can be of any structure as defined in the
             scenario config file.
+        in_use_facility_lifespan : Dict
+            Dictionary with keys defining in use facility types and value defining
+            the useful lifespan of technologies at that facility type.
         sc_begin : List[str]
             List of processing step(s) where supply chain paths begin.
         sc_end : List[str]
@@ -103,6 +107,8 @@ class CostGraph:
         # also read in the locations as a dataframe for reference in
         # find_nearest
         self.loc_df = pd.read_csv(locations_file)
+
+        self.in_use_facility_lifespan = in_use_facility_lifespan
 
         # Group circularity-related node types into two categories
         # Nodes in sc_end are either nodes where components accumulate at the end of
@@ -337,32 +343,17 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
-            _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
-            _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            #_bol_crit = nx.shortest_path_length(
-            #    self.supply_chain,
-            #    source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
-            #    target=source_node,
-            #    weight=crit,
-            #    method="bellman-ford",
-            #)
-
             for i in self.sc_end:
-                _dest = [key for key, value in lengths.items() if i in key]
+                _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
                             "year": self.year,
-                            "source_facility_id": _fac_id,
+                            "source_facility_id": source_node,
                             "destination_facility_id": _dest,
-                            "region_id_1": _loc_line.region_id_1.values[0],
-                            "region_id_2": _loc_line.region_id_2.values[0],
-                            "region_id_3": _loc_line.region_id_3.values[0],
-                            "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": _crit,
-                            #"bol_pathway_criterion": _bol_crit,
+                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
                         }
                     )
 
@@ -442,32 +433,20 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
-            _fac_id = self.supply_chain.nodes[source_node]["facility_id"]
-            _loc_line = self.loc_df[self.loc_df.facility_id == _fac_id]
-            #_bol_crit = nx.shortest_path_length(
-            #    self.supply_chain,
-            #    source=self.find_upstream_neighbor(node_id=_fac_id, crit="cost"),
-            #    target=source_node,
-            #    weight=crit,
-            #    method="bellman-ford",
-            #)
-
             for i in self.sc_end:
-                _dest = [key for key, value in lengths.items() if i in key]
+                _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
                 if len(_crit) > 0:
                     self.pathway_crit_history.append(
                         {
                             "year": self.year,
-                            "source_facility_id": _fac_id,
+                            "source_facility_id": source_node,
                             "destination_facility_id": _dest,
-                            "region_id_1": _loc_line.region_id_1.values[0],
-                            "region_id_2": _loc_line.region_id_2.values[0],
-                            "region_id_3": _loc_line.region_id_3.values[0],
-                            "region_id_4": _loc_line.region_id_4.values[0],
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": _crit,
-                            #"bol_pathway_criterion": _bol_crit,
+                            # The cost adjustment factor is applied to every *edge*, so to save the absolute pathway 
+                            # cost, subtract off the cost adjustment factor multiplied by the number of edges
+                            # in each pathway between source_node and each facility in _dest
+                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
                         }
                     )
 
@@ -555,36 +534,29 @@ class CostGraph:
             name = 'facility_id'
         )
 
-        # Add timespan node attribute to nodes. Facilities with "in use" in the name get long lifespans
-        # @NOTE Eventually this should draw from facility information and component-level lifespans
-        # in the YAML files. This logic is a quick fix specific to the glass case study.
+        # Add timespan node attribute to nodes
         # Create a dict of the node timeout attributes
         _node_timeout_dict = {}
         for node_id in self.network_data.u_node_id:
             if node_id not in _node_timeout_dict.keys():
-                # @TODO Hardcoding alert! Tech component lifespans are defined in YAML
-                # files; those values should be passed in and used here
-                if 'pv in use' in node_id:
-                    _timeout = 20.0
-                elif 'window in use' in node_id:
-                    _timeout = 30.0
-                else:
-                    _timeout = 1.0
-                
-                _node_timeout_dict[node_id] = _timeout
-        for node_id in self.network_data.v_node_id:
-            if node_id not in _node_timeout_dict.keys():
-                # @TODO Hardcoding alert! Tech component lifespans are defined in YAML
-                # files; those values should be passed in and used here
-                if 'pv in use' in node_id:
-                    _timeout = 20.0
-                elif 'window in use' in node_id:
-                    _timeout = 30.0
+                # Set lifespans for in use facilities based on input dictionary
+                if any([k in node_id for k in self.in_use_facility_lifespan.keys()]):
+                    _timeout = self.in_use_facility_lifespan[node_id.split('_')[0]]
                 else:
                     _timeout = 1.0
                 
                 _node_timeout_dict[node_id] = _timeout
         
+        for node_id in self.network_data.v_node_id:
+            if node_id not in _node_timeout_dict.keys():
+                # Set lifespans for in use facilities based on input dictionary
+                if any([k in node_id for k in self.in_use_facility_lifespan.keys()]):
+                    _timeout = self.in_use_facility_lifespan[node_id.split('_')[0]]
+                else:
+                    _timeout = 1.0
+                
+                _node_timeout_dict[node_id] = _timeout
+
         # Assign the node timeout attributes to nodes in supply_chain
         nx.set_node_attributes(
             self.supply_chain,
@@ -625,9 +597,9 @@ class CostGraph:
         # Cost adjustment logic: if any edge costs are negative, adjust ALL calculated costs in the supply chain
         # upwards
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
         if _cost_adjust < 0.0:
             print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
-            self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
             for edge in self.supply_chain.edges():
                 self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
@@ -980,11 +952,10 @@ class CostGraph:
             )
         
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
+        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
         if _cost_adjust < 0.0:
             print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
             flush = True)
-            self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
-
             for edge in self.supply_chain.edges():
                 self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
@@ -1007,8 +978,42 @@ class CostGraph:
                         ignore_index=True
                         )
             _out["run"] = self.run
+            # Merge with locations file to get region_id_2 for source and
+            # destination facilities
+            # Get column that matches the source and destination id columns
+            # in _out
+            self.loc_df['facility_type_id'] = self.loc_df.facility_type + '_' + self.loc_df.facility_id
+            _out['source_idcode'] = [facid.split('_')[1] for facid in _out.source_facility_id]
+            _out_locs = _out.merge(
+                self.loc_df[
+                    ['facility_id','region_id_2']
+                    ].rename(
+                        columns={'facility_id':'source_facility_id',
+                                 'region_id_2':'source_region_id_2'}
+                        ),
+                left_on = 'source_idcode',
+                right_on = 'source_facility_id',
+                how = 'left'
+            ).merge(
+                self.loc_df[
+                    ['facility_type_id','region_id_2']
+                    ].rename(
+                        columns={'facility_type_id':'destination_facility_id',
+                                 'region_id_2':'destination_region_id_2'}
+                        ),
+                on = 'destination_facility_id',
+                how = 'left'
+            )
+            _out_locs.drop(
+                columns=['source_idcode','source_facility_id_y'],
+                inplace=True
+                )
+            _out_locs.rename(
+                columns = {'source_facility_id_x':'source_facility_id'},
+                inplace=True
+                )
             with open(self.pathway_crit_history_filename, "a") as f:
-                _out.to_csv(
+                _out_locs.to_csv(
                     f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
                 )
         except KeyError:
