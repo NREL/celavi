@@ -487,6 +487,7 @@ class Scenario:
             technology_data.loc[:,'n_technology'] = _n_tech_scaled
             technology_data['scale_factor'] = _technology_data_scaled['scale_factor']
 
+
         components = []
         # NOTE that the below logic will only instantiate components that exist during the simulation's
         # time span. If technology_data contains years beyond the simulation's time span, those components
@@ -504,15 +505,17 @@ class Scenario:
                 print(f'{row.facility_id} , {row.year}: {in_use_facility}')
 
             n_technology = int(row["n_technology"])
+            if 'scale_factor' in row.index:
+                # Use this to scale up the material masses in each instance, and to
+                # record the actual number of units represented by each instance
+                _scaler = row['scale_factor']
+            else:
+                _scaler = 1.0
             
             for _ in range(n_technology):
                 for c in circular_components:
                     _c_mats = self.scen['technology_components']['component_materials'][c]
-                    if 'scale_factor' in row.index:
-                        _mass_scaler = row['scale_factor']
-                    else:
-                        _mass_scaler = 1.0
-                    _c_mat_mass = _mass_scaler * component_material_mass.mass_tonnes.loc[
+                    _c_mat_mass = _scaler * component_material_mass.mass_tonnes.loc[
                         (component_material_mass.technology == row['technology']) &
                         (component_material_mass.component == c) & 
                         (component_material_mass.material.isin(_c_mats)) &
@@ -529,6 +532,7 @@ class Scenario:
                                 'in_use_facility_types': 
                                     [key for key, _ in self.scen['circular_pathways'].get('in_use_facility_lifespan').items()],
                                 "mass_tonnes": dict(zip(_c_mats, _c_mat_mass)),
+                                'count_unscaled': _scaler,
                             }
                         )
                     else:
