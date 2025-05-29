@@ -488,6 +488,10 @@ class Scenario:
             technology_data['scale_factor'] = _technology_data_scaled['scale_factor']
 
         components = []
+        # NOTE that the below logic will only instantiate components that exist during the simulation's
+        # time span. If technology_data contains years beyond the simulation's time span, those components
+        # will not be instantiated. As a result, the print statement immediately below and the one at the
+        # end of this process may not give the same information when technology_data contains unused rows.
         print(f'Instantiating {sum(technology_data.n_technology)} components at {self.simtime(self.start)} s',
                 flush=True)
         _comptime = time.time()
