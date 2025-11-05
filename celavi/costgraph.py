@@ -7,7 +7,7 @@ from time import time
 
 from celavi.costmethods import CostMethods
 
-
+import pdb
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -305,10 +305,32 @@ class CostGraph:
         for tnode in targets:
             try:
                 # Find the shortest path (list of nodes) to terminal node
+                # Run bellman-ford to throw an exception and use the manual logic if a negative cycle exists
+                #print(f"CostGraph.find_nearest: bellman-ford {source_node} to {tnode}")
+                _ = nx.bellman_ford_predecessor_and_distance(self.supply_chain, source = source_node, target = tnode, weight = crit)
                 short_paths[tnode] = nx.astar_path(self.supply_chain, source = source_node, target = tnode, weight = crit)
                 # Find the shortest path length to terminal node
                 lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)
-            except nx.NetworkXNoPath:
+            
+            except nx.exception.NetworkXUnbounded:
+                # Manually find simple (non-intersecting) paths from upstream node to target node
+                # Calculate the distance along the simple path
+                # Construct the dictionary of upstream nodes and path lengths
+                for tnode in targets:
+                    _path = list(nx.all_simple_paths(self.supply_chain, source = source_node, target = tnode))
+                    # There may not be a path from source to target; if so, continue on to the next target node
+                    if len(_path) == 0:
+                        if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
+                        continue
+                    
+                    # Some simple paths still pass through "in use" nodes multiple times - we want to make decisions
+                    # based on a single material cycle, so drop those paths
+                    _drop_long_paths = [_long_path for _long_path in _path if len([s for s in _long_path if "in use" in s])<=1]
+                    _path_length = [float(nx.path_weight(self.supply_chain, _p, weight='cost')) for _p in _drop_long_paths]
+                    short_paths[tnode] = _drop_long_paths[_path_length == min(_path_length)]
+                    lengths[tnode] = min(_path_length)
+            
+            except nx.exception.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
                 continue
         
@@ -405,11 +427,32 @@ class CostGraph:
         for tnode in targets:
             try:
                 # Find the shortest path (list of nodes) to target factype nodes
+                #print(f"CostGraph.find_upstream_factype: bellman-ford {source_node} to {tnode}")
+                _ = nx.bellman_ford_predecessor_and_distance(self.supply_chain, source = source_node, target = tnode, weight = crit)
                 short_paths[tnode] = nx.astar_path(self.supply_chain, source = source_node, target = tnode, weight = crit)
                 # Find the shortest path length from source_node to target factype nodes
                 lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)
+
+            except nx.exception.NetworkXUnbounded:
+                # Manually find simple (non-intersecting) paths from upstream node to target node
+                # Calculate the distance along the simple path
+                # Construct the dictionary of upstream nodes and path lengths
+                for tnode in targets:
+                    # @NOTE This assumes there is always exactly one path from source to target
+                    # This assumption may not hold for more complex supply chains
+                    print(f"CostGraph.find_nearest_factype: Finding all simple paths from {source_node} to {tnode}")
+                    _asp_time = time()
+                    _path = list(nx.all_simple_paths(self.supply_chain, source = source_node, target = tnode))
+                    print(f"CostGraph.find_upstream_neighbor: Finding all simple paths from {source_node} to {tnode} took {np.round(time() - _asp_time, 0)} s")                    
+                    if len(_path) != 1:
+                        pdb.set_trace()
+                    _path_length = [nx.path_weight(self.supply_chain, _p, weight='cost') for _p in _path]
+                    short_paths[tnode] = _path
+                    lengths[tnode] = _path_length
+            
             except nx.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest_factype: No path from {source_node} to {tnode}')
+
 
         # return the smallest of all lengths to get to typeofnode
         if len(lengths) > 0:
@@ -598,10 +641,10 @@ class CostGraph:
         # upwards
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
-        if _cost_adjust < 0.0:
-            print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
-            for edge in self.supply_chain.edges():
-                self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
+        #if _cost_adjust < 0.0:
+            #print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
+            #for edge in self.supply_chain.edges():
+            #    self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
             print(f'CostGraph: Instantiation took {np.round((time() - self.start_time)/60, 2)} minutes', flush = True)
@@ -735,10 +778,14 @@ class CostGraph:
                 try:
                     # Because supply_chain is a directed graph, specify that we want a source
                     # FROM the upstream node TO our target node (input parameter node_id)
+                    #print(f"CostGraph.find_upstream_neighbor A: bellman-ford {_u} to {_node}")
+                    _ = nx.bellman_ford_predecessor_and_distance(self.supply_chain, source = _u, target = _node, weight = crit)
                     _ = nx.astar_path(self.supply_chain, source = _u, target = _node)
+                except nx.exception.NetworkXUnbounded:
+                    continue
                 except nx.NetworkXNoPath:
                     _upstream_nodes.remove(_u)
-        
+
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
@@ -751,9 +798,30 @@ class CostGraph:
 
         elif len(_upstream_nodes) >= 1:
             # If there are multiple options, obtain the distances to each node and zip into a dictionary
-            _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit)
-                                 for _up_n in _upstream_nodes]
-            upstream_dict = dict(zip(_upstream_nodes, _upstream_dists))
+            try:
+                # Call this bellman-ford first - it will throw the Unbounded exception if a negative cycle exists, preventing
+                # astar_path_length from being used
+                #print(f"CostGraph.find_upstream_neighbor B: bellman-ford {_upstream_nodes} to {_node}")
+                _ = [nx.bellman_ford_predecessor_and_distance(self.supply_chain, source = _up_n, target = _node, weight = crit) for _up_n in _upstream_nodes]
+                _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit) for _up_n in _upstream_nodes]
+                upstream_dict = dict(zip(_upstream_nodes, _upstream_dists))
+            except nx.exception.NetworkXUnbounded:
+                # Manually find simple (non-intersecting) paths from upstream node to target node
+                # Calculate the distance along the simple path
+                # Construct the dictionary of upstream nodes and path lengths
+                upstream_dict = {}
+                for _up_n in _upstream_nodes:
+                    # @NOTE This assumes there is always exactly one path from source to target
+                    # This assumption may not hold for more complex supply chains
+                    # @NOTE This line takes almost a minute to execute each time
+                    print(f"CostGraph.find_upstream_neighbor: Finding all simple paths from {_up_n} to {_node}")
+                    _asp_time = time()
+                    _path = list(nx.all_simple_paths(self.supply_chain, source = _up_n, target = _node))
+                    print(f"CostGraph.find_upstream_neighbor: Finding all simple paths from {_up_n} to {_node} took {np.round(time() - _asp_time, 0)} s")
+                    if len(_path) != 1:
+                        pdb.set_trace()
+                    _path_length = [nx.path_weight(self.supply_chain, _p, weight='cost') for _p in _path]
+                    upstream_dict[_up_n] =_path_length
 
             # Sort list of facilities and distances in order of increasing distance, for use in Component.bol_process
             return upstream_dict
@@ -953,11 +1021,11 @@ class CostGraph:
         
         _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
         self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
-        if _cost_adjust < 0.0:
-            print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
-            flush = True)
-            for edge in self.supply_chain.edges():
-                self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
+        #if _cost_adjust < 0.0:
+        #    print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
+        #    flush = True)
+        #    for edge in self.supply_chain.edges():
+        #        self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
         if self.verbose > 0 and self.year > 2001:
             print(f'CostGraph.update_costs: Costs updated for {self.year} after {np.round(time() - self.update_time, 1)} s',
