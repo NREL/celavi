@@ -36,11 +36,12 @@ class TransportationTracker:
             One or more route_ids along which material is transported, or None
         """
         if isinstance(route_id, list):
-            _add_record = {'timesteps': [int(timestep) for _ in route_id],
-                           'inbound_tonne_km': [tonne_km for _ in route_id],
-                           'route_id': route_id}
+            _add_record = {'timesteps': [int(timestep) for r in route_id if r != 'colocated'],
+                           'inbound_tonne_km': [tonne_km for r in route_id if r != 'colocated'],
+                           'route_id': [r for r in route_id if r != 'colocated']}
             
         elif isinstance(route_id, str):
+            if route_id == 'colocated': tonne_km = 0
             _add_record = {'timesteps': int(timestep),
                            'inbound_tonne_km': tonne_km,
                            'route_id': route_id}
