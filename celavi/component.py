@@ -327,14 +327,13 @@ class Component:
                 )
             # Get the list of route_ids from the path between the manuf and in use facilities
             # Applying list(set([])) drops duplicate entries from the argument of set()
-            route_ids = list(set(
-                [self.context.cost_graph.supply_chain[u][v]['route_id'] for u,v in zip(_path,_path[1:])]
-                ))
+            route_ids = list(set([self.context.cost_graph.supply_chain[u][v]['route_id'] for u,v in zip(_path,_path[1:])]))
+            route_ids.remove('colocated')
 
             count_transport.increment_inbound_tonne_km(
                 tonne_km = mass * dist,
                 timestep = env.now,
-                route_id = route_ids
+                route_id = route_ids[-1]
             )
 
         # Component stays in use for its lifetime
