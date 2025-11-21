@@ -14,7 +14,7 @@ from celavi.pylca_celavi.liaison.search_activity_ecoinvent import search_activit
 from celavi.pylca_celavi.liaison.edit_activity_ecoinvent import modify_electricity_grid_mix_and_solar_glass_removal,module_required_for_solar_glass,module_installation_for_solar_glass,window_frame,landfilling_functional_unit,module_disassembly_glass_content
 
 
-def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_foreground_flag,lca_flag,region_sensitivity_flag,edit_ecoinvent_user_controlled,region,data_dir,input_dir,primary_process,process_under_study,location_under_study,unit_under_study,updated_database,mc_runs,functional_unit,inventory_filename,pv_module_chars,output_dir,bw):
+def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_foreground_flag,lca_flag,region_sensitivity_flag,edit_ecoinvent_user_controlled,region,data_dir,input_dir,primary_process,process_under_study,location_under_study,unit_under_study,updated_database,mc_runs,functional_unit,inventory_filename,pv_module_chars,celavi_process_name,output_dir,bw):
 
     """
     This function defines the result arrays and then calls monte carlo analysis if required or just runs the 
@@ -154,7 +154,7 @@ def main_run(lca_project,updated_project_name,year_of_study,results_filename,mc_
                     functional_unit = landfilling_functional_unit(inventory,functional_unit)
                     
                     #Editing electricity grid mix for all processes so that electricity is obtained from the state grid from ReEDS grid mix data
-                    run_filename = modify_electricity_grid_mix_and_solar_glass_removal(inventory,year_of_study,location_under_study,data_dir)
+                    run_filename = modify_electricity_grid_mix_and_solar_glass_removal(inventory,year_of_study,location_under_study,celavi_process_name,data_dir)
                     
                     print('Activity edited according to user prereferences and saved success',flush=True)  
                     #run_filename is a dataframe.

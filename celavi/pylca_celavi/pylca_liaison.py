@@ -111,6 +111,7 @@ def liaison_lci(
     # Load process bridge
     bridge_path = Path(liaison_process_bridge)
     bridge_df = pd.read_csv(bridge_path)
+
     proc_map = (
         bridge_df
         .loc[bridge_df['Activities'] == stage, ['Activities', 'Ecoinvent', 'Unit', 'Celavi Unit']]
@@ -130,6 +131,7 @@ def liaison_lci(
         )
         return pd.DataFrame(), quantity
 
+    celavi_name = proc_map.at[0, 'Activities']
     process_name = proc_map.at[0, 'Ecoinvent']
     expected_unit = proc_map.at[0, 'Unit']
     celavi_unit = proc_map.at[0, 'Celavi Unit']
@@ -192,6 +194,9 @@ def liaison_lci(
         "Running LCA: project=%s, process=%s, region=%s, quantity=%.3f",
         new_proj, process_name, state, quantity,
     )
+    print("Running LCA: project=%s, process=%s, region=%s, quantity=%.3f",
+        new_proj, process_name, state, quantity,flush=True)
+
     res_df = main_run(
         lca_project=lca_proj,
         updated_project_name=proj_year,
@@ -213,6 +218,7 @@ def liaison_lci(
         functional_unit=quantity,
         inventory_filename=additional_inventories,
         pv_module_chars=pv_module_chars,
+        celavi_process_name=celavi_name,
         output_dir=None,
         bw=bw,
     )
