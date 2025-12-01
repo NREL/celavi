@@ -936,6 +936,7 @@ class ComputeLocations:
         # turn out blank in _new_facility_locs
         _need_latlong = _new_facility_locs.loc[_new_facility_locs.lat.isna() & _new_facility_locs.long.isna()].index
         
+        # Use a for loop to assign state centroid lat/longs to future power plants
         for _p in _need_latlong:
             _new_facility_locs.loc[_p, 'lat'] = states.lat.loc[states.region_id_2 == _new_facility_locs.loc[_p, 'region_id_2']].values
             _new_facility_locs.loc[_p, 'long'] = states.long.loc[states.region_id_2 == _new_facility_locs.loc[_p, 'region_id_2']].values
