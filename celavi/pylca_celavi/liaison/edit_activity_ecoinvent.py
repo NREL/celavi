@@ -29,7 +29,7 @@ def electricity_correction(exchange_ob):
     return name_of_flow,value
 
 
-def modify_electricity_grid_mix_and_solar_glass_removal(process_selected_as_foreground,year_of_study,location_under_study,data_dir):
+def modify_electricity_grid_mix_and_solar_glass_removal(process_selected_as_foreground,year_of_study,location_under_study,celavi_process_name,data_dir):
     """
     This function searches for activities and edits the ecoinvent activity as a foreground process in the chosen location
     It extracts every flow in the chosen foreground process, creates a dataframe from it and changes the location
@@ -131,7 +131,7 @@ def modify_electricity_grid_mix_and_solar_glass_removal(process_selected_as_fore
 
     #Sanity check to write the dataframe. Can be deleted later
     name_of_process = process_selected_as_foreground['name'].replace("/","per")
-    example.to_csv(data_dir+name_of_process+str(year_of_study)+location_under_study+'.csv',index=False)
+    example.to_csv(data_dir+name_of_process+celavi_process_name+str(year_of_study)+location_under_study+'.csv',index=False)
     run_filename = example
 
     # Removal of solar glass iron from the inventory for the panel production activity. 
@@ -139,7 +139,7 @@ def modify_electricity_grid_mix_and_solar_glass_removal(process_selected_as_fore
             example2 = example[example['flow'] != "solar glass production, low-iron"]
             example2 = example2[example2['flow'] != "tempering, flat glass"]
             print('Removed glass production from the inventory',flush = True)
-            example2.to_csv(data_dir+name_of_process+str(year_of_study)+location_under_study+'.csv',index=False)
+            example2.to_csv(data_dir+name_of_process+celavi_process_name+str(year_of_study)+location_under_study+'.csv',index=False)
             run_filename = example2
 
     return run_filename
