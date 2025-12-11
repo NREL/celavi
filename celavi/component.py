@@ -7,7 +7,7 @@ from itertools import compress
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
-
+import pdb
 class Component:
     """
     The Component class works with the Context class to run the discrete
@@ -187,7 +187,7 @@ class Component:
         # Identify manufacturing facility based on distance and, for secondary manuf 
         # facilities, whether the facility has sufficient inventory to manufacture the
         # component
-        
+
         # Locate the closest (by cost) manufacturing facilities
         _manuf_dict = self.context.cost_graph.find_upstream_neighbor(
             node_id = self.in_use_facility,
@@ -269,6 +269,37 @@ class Component:
             # Component waits to transition to in use
             yield env.timeout(lifespan)
 
+        _discrepancies = ['pv in use_P10000358',
+                            'pv in use_P10000359',
+                            'pv in use_P10000362',
+                            'pv in use_P10000363',
+                            'pv in use_P10000364',
+                            'pv in use_P10000367',
+                            'pv in use_P10000368',
+                            'pv in use_P10000369',
+                            'pv in use_P10000371',
+                            'pv in use_P10000374',
+                            'pv in use_P10000375',
+                            'pv in use_P10000376',
+                            'pv in use_P10000377',
+                            'pv in use_P10000378',
+                            'pv in use_P10000381',
+                            'pv in use_P10000383',
+                            'pv in use_P10000384',
+                            'pv in use_P10000385',
+                            'pv in use_P10000388',
+                            'pv in use_P10000389',
+                            'pv in use_P10000390',
+                            'pv in use_P10000392',
+                            'pv in use_P10000393',
+                            'pv in use_P10000395',
+                            'pv in use_P10000396',
+                            'pv in use_P10000400',
+                            'pv in use_P10000401',
+                            'pv in use_P10000403',
+                            'pv in use_P10000404']
+        
+        if self.in_use_facility in _discrepancies and begin_timestep >= 38: pdb.set_trace()
         # Decrement manufacturing inventories
         # No transportation here: transportation is tracked at destination
         # facilities
