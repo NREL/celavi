@@ -2,7 +2,7 @@ from typing import Dict, List
 import numpy as np
 import pandas as pd
 
-import pdb
+
 class FacilityInventory:
     """
     Holds an inventory of component materials and quantitiesfor aany facility
@@ -128,47 +128,11 @@ class FacilityInventory:
             # This logic should rarely if ever be used, as updates to component.bol_process and
             # component.eol_process should prevent inventories going negative
             print(f"""
-{self.facility_type}_{self.facility_id} at {timestep=}: Inventory cannot go negative.
-{quantity} required, {self.component_materials[item_name]}
-in stock\nDecreasing quantity to {self.component_materials[item_name]}
+{self.facility_type}_{self.facility_id} at {timestep=}: Inventory cannot go negative. {quantity} required, {self.component_materials[item_name]} in stock\nDecreasing quantity to {self.component_materials[item_name]}
                 """,
                 flush=True
             )
-            quantity = -1.0 * self.component_materials[item_name]
-        
-        _discrepancies = ['P10000358',
-                            'P10000359',
-                            'P10000362',
-                            'P10000363',
-                            'P10000364',
-                            'P10000367',
-                            'P10000368',
-                            'P10000369',
-                            'P10000371',
-                            'P10000374',
-                            'P10000375',
-                            'P10000376',
-                            'P10000377',
-                            'P10000378',
-                            'P10000381',
-                            'P10000383',
-                            'P10000384',
-                            'P10000385',
-                            'P10000388',
-                            'P10000389',
-                            'P10000390',
-                            'P10000392',
-                            'P10000393',
-                            'P10000395',
-                            'P10000396',
-                            'P10000400',
-                            'P10000401',
-                            'P10000403',
-                            'P10000404']
-        if self.facility_id in _discrepancies and timestep >= 38:
-            print(f'Facility {self.facility_id} at timestep {timestep}: Increment by {quantity} of {item_name}')
-        if self.facility_id in _discrepancies and timestep > 38:
-            pdb.set_trace()
+            quantity = -1.0 * self.component_materials[item_name]       
         
         # Place this transaction in the history
         timestep = int(timestep)
