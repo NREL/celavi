@@ -107,7 +107,7 @@ class PylcaCelavi:
                 self.shortcutlca_path,
                 header=None,
         )
-        self.lca_database.columns = ['lcia','value', 'unit','year','method','stage','state']
+        self.lca_database.columns = ['lcia','unit','year','method','stage','state','value']
 
 
         
@@ -197,8 +197,8 @@ class PylcaCelavi:
                 result_df['flow quantity'] * result_df['cached_value']
             )
             cols = [
-                'lcia', 'value', 'unit', 'year', 'method',
-                'facility_id', 'stage', 'material', 'route_id', 'state'
+                'lcia', 'unit', 'year', 'method',
+                'facility_id', 'stage', 'material', 'route_id', 'state','value'
             ]
             return missing_df, result_df[cols]
 
@@ -300,7 +300,7 @@ class PylcaCelavi:
                         res["year"] = original_year
                         res["value"] = res["value"] / quantity
                         res.drop_duplicates(inplace=True)
-                        res2 = res[['lcia','value', 'unit','year','method','stage','state']]
+                        res2 = res[['lcia','unit','year','method','stage','state','value']]
                         self.lca_database = pd.concat([self.lca_database,res2]).drop_duplicates()
                         self.lca_database.to_csv(
                             self.shortcutlca_path,
