@@ -110,13 +110,13 @@ class PylcaCelavi:
         self.lca_database.columns = ['lcia','value', 'unit','year','method','stage','state']
 
 
-
+        
         # Set up Brightway environment variable
         os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
         if self.verbose:
             print("Importing Brightway2 module...", flush=True)
-        #import brightway2 as bw
-        #self.bw = bw
+        import brightway2 as bw
+        self.bw = bw
         if self.verbose:
             print("Imported Brightway2", flush=True)
 
@@ -157,7 +157,7 @@ class PylcaCelavi:
         result_df
             Cached impacts for matching rows.
         """
-        
+
         try:
             # Read cache without header, assign expected columns
             cache_df = pd.read_csv(
@@ -165,7 +165,8 @@ class PylcaCelavi:
                 header=None,
             )
             cache_df = cache_df.dropna(axis=1, how='all')
-            cache_df.columns = ['lcia','cached_value','unit','year','method','stage','state']
+            #cache_df.columns = ['lcia','cached_value','unit','year','method','stage','state']
+            cache_df.columns = ['lcia','unit','year','method','stage','state','cached_value']
             # Ensure consistent types for merge keys
             for col in ['stage', 'year', 'state']:
                 df[col] = df[col].astype(str)
@@ -177,9 +178,9 @@ class PylcaCelavi:
                 how='outer',
                 indicator=True,
             )
+
             missing_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
             result_df = merged[merged['_merge'] == 'both'].drop(columns=['_merge'])
-
             if result_df.empty:
                 logger.warning(
                     "Shortcut LCA cache missing entry for %s, %s, %d",
