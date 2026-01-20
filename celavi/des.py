@@ -509,7 +509,6 @@ class Context:
                 
                 # Some transportation flows may be zero for transpo between colocated facilities
                 # Drop those before sending the flow df for LCIA calcs
-                #df_to_lcia_calcs.loc[df_to_lcia_calcs['flow quantity'] != 0].to_csv('df_to_lcia.csv', mode='a', header=False)
                 self.lca.pylca_run_main(df_to_lcia_calcs.loc[df_to_lcia_calcs['flow quantity'] != 0], self.verbose)
                 self.lci_last_sent = df_to_lcia_calcs.loc[df_to_lcia_calcs['flow quantity'] != 0]
             else:
