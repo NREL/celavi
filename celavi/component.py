@@ -257,17 +257,20 @@ class Component:
                 self.manuf_facility = _fac          
                 break # ends the loop
         
-        # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
         
+        # Increment virgin manufacturing inventories ONLY
+        # (secondary manuf facilities already have inventory)
         if self.manuf_facility.split('_')[0] in self.virgin_manuf_facility_types:
             count_inventory.increment_quantity(self.kind, self.count, env.now)
             for material, mass in self.mass_tonnes.items():
                 mass_inventory.increment_quantity(material, mass, env.now)
 
-            # Component waits to transition to in use
-            yield env.timeout(lifespan)
+        # Component waits to transition to in use
+        # This is done for both virgin and secondary manuf facilities, otherwise the mass flows end up 
+        # in different timesteps under different cost scenarios
+        yield env.timeout(lifespan)
 
         # Decrement manufacturing inventories
         # No transportation here: transportation is tracked at destination
