@@ -267,10 +267,10 @@ class Component:
             for material, mass in self.mass_tonnes.items():
                 mass_inventory.increment_quantity(material, mass, env.now)
 
-        # Component waits to transition to in use
-        # This is done for both virgin and secondary manuf facilities, otherwise the mass flows end up 
-        # in different timesteps under different cost scenarios
-        yield env.timeout(lifespan)
+            # Component waits to transition to in use
+            # This is done for only virgin facilities, because the inventory check on secondary facilities
+            # must be done in the same timestep as the component is manufactured
+            yield env.timeout(lifespan)
 
         # Decrement manufacturing inventories
         # No transportation here: transportation is tracked at destination
@@ -284,6 +284,11 @@ class Component:
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, -mass, env.now)
         
+        # if the component is manufactured from a secondary facility, wait one more timestep
+        # this should bring the timing of the virgin and secondary supply chains to alignment
+        if self.manuf_facility.split('_')[0] not in self.virgin_manuf_facility_types:
+            env.timeout(lifespan)
+
         # Increment and decrement intermediate manufacturing facilities
         # Identify pathway from manuf_facility to in_use_facility
         for _fac in nx.astar_path(
