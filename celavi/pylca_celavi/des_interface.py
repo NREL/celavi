@@ -107,10 +107,10 @@ class PylcaCelavi:
                 self.shortcutlca_path,
                 header=None,
         )
-        self.lca_database.columns = ['lcia','value', 'unit','year','method','stage','state']
+        self.lca_database.columns = ['lcia','unit','year','method','stage','state','value']
 
 
-
+        
         # Set up Brightway environment variable
         os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
         if self.verbose:
@@ -157,7 +157,7 @@ class PylcaCelavi:
         result_df
             Cached impacts for matching rows.
         """
-        
+
         try:
             # Read cache without header, assign expected columns
             cache_df = pd.read_csv(
@@ -165,7 +165,8 @@ class PylcaCelavi:
                 header=None,
             )
             cache_df = cache_df.dropna(axis=1, how='all')
-            cache_df.columns = ['lcia','cached_value','unit','year','method','stage','state']
+            #cache_df.columns = ['lcia','cached_value','unit','year','method','stage','state']
+            cache_df.columns = ['lcia','unit','year','method','stage','state','cached_value']
             # Ensure consistent types for merge keys
             for col in ['stage', 'year', 'state']:
                 df[col] = df[col].astype(str)
@@ -177,9 +178,9 @@ class PylcaCelavi:
                 how='outer',
                 indicator=True,
             )
+
             missing_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
             result_df = merged[merged['_merge'] == 'both'].drop(columns=['_merge'])
-
             if result_df.empty:
                 logger.warning(
                     "Shortcut LCA cache missing entry for %s, %s, %d",
@@ -196,8 +197,8 @@ class PylcaCelavi:
                 result_df['flow quantity'] * result_df['cached_value']
             )
             cols = [
-                'lcia', 'value', 'unit', 'year', 'method',
-                'facility_id', 'stage', 'material', 'route_id', 'state'
+                'lcia', 'unit', 'year', 'method',
+                'facility_id', 'stage', 'material', 'route_id', 'state','value'
             ]
             return missing_df, result_df[cols]
 
@@ -299,7 +300,7 @@ class PylcaCelavi:
                         res["year"] = original_year
                         res["value"] = res["value"] / quantity
                         res.drop_duplicates(inplace=True)
-                        res2 = res[['lcia','value', 'unit','year','method','stage','state']]
+                        res2 = res[['lcia','unit','year','method','stage','state','value']]
                         self.lca_database = pd.concat([self.lca_database,res2]).drop_duplicates()
                         self.lca_database.to_csv(
                             self.shortcutlca_path,
