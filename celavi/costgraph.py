@@ -7,7 +7,7 @@ from time import time
 
 from celavi.costmethods import CostMethods
 
-import pdb
+
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -290,12 +290,11 @@ class CostGraph:
         """
         if self.verbose > 1:
             print(f"Finding shortest paths from {source_node} to {self.sc_end}")
-        if 'window' in source_node: pdb.set_trace()
+        
         # Pull out a list of all nodes in the supply chain that are terminal
         # The linear supply chain terminates there, OR one loop of a circular pathway
         # terminates there
-        targets = [tnode for tnode in self.supply_chain.nodes 
-                    if any([scr in tnode for scr in self.sc_end])]
+        targets = [tnode for tnode in self.supply_chain.nodes if any([scr in tnode for scr in self.sc_end])]
 
         # Loop thru terminal nodes
         # Use the loop rather than list comprehension b/c if a terminal node isn't reachable from the source
@@ -305,9 +304,15 @@ class CostGraph:
         for tnode in targets:
             try:
                 # Find the shortest path (list of nodes) to terminal node
-                short_paths[tnode] = nx.astar_path(self.supply_chain, source = source_node, target = tnode, weight = crit)
-                # Find the shortest path length to terminal node
-                lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)            
+                _short_path = nx.astar_path(self.supply_chain, source = source_node, target = tnode)
+                # If this path contains more than one terminal node, continue without saving the path
+                if len([_node for _node in _short_path if _node.split('_')[0] in self.sc_end]) != 1:
+                    continue
+                else:
+                    # If the path contains exactly one terminal node, record the path and its weighted length
+                    short_paths[tnode] = _short_path
+                    # Find the shortest path length to terminal node
+                    lengths[tnode] = nx.path_weight(self.supply_chain, path=short_paths[tnode], weight=crit)
             except nx.exception.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
                 continue
