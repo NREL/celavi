@@ -7,7 +7,7 @@ from itertools import compress
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
-import pdb
+
 class Component:
     """
     The Component class works with the Context class to run the discrete
@@ -133,7 +133,7 @@ class Component:
         path_choices_dict = {
             path_choice["source"]: path_choice for path_choice in path_choices
         }
-        if 'window' in self.in_use_facility: pdb.set_trace()
+
         path_choice = path_choices_dict[self.in_use_facility]
         self.pathway = deque()
         for facility, lifespan, distance, route_id in path_choice["path"]:
