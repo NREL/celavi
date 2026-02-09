@@ -7,7 +7,7 @@ from time import time
 
 from celavi.costmethods import CostMethods
 
-
+import pdb
 class CostGraph:
     """
     Reads in supply chain data, creates a network of processing steps and facilities
@@ -290,7 +290,7 @@ class CostGraph:
         """
         if self.verbose > 1:
             print(f"Finding shortest paths from {source_node} to {self.sc_end}")
-
+        if 'window' in source_node: pdb.set_trace()
         # Pull out a list of all nodes in the supply chain that are terminal
         # The linear supply chain terminates there, OR one loop of a circular pathway
         # terminates there
@@ -343,6 +343,7 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
+            # @TODO Update this logic to match new cost adjustment factor(s)
             for i in self.sc_end:
                 _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
@@ -434,6 +435,7 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
+            # @TODO Update this logic to match new cost adjustment factor(s)
             for i in self.sc_end:
                 _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
@@ -596,14 +598,14 @@ class CostGraph:
             print(f'CostGraph: Calculating edge costs took {np.round((time() - _ctime)/60, 2)} minutes', flush=True)
 
         # Cost adjustment logic: Identify all negative edge weights, add them up and take the absolute value,
-        # then add this adjustment ONLY to the in use and uninstallation steps
+        # then add this adjustment ONLY to the in use steps
         # _cost_adjust is zero if there are no negative edge weights
         _cost_adjust = abs(sum([value for _, value in nx.get_edge_attributes(self.supply_chain, 'cost').items() if value < 0]))
         self.cost_adjustment_factor[self.year] = _cost_adjust
         if _cost_adjust != 0.0:
-            print(f'CostGraph: Adjusting in use and uninstallation costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
+            print(f'CostGraph: Adjusting in use costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
             for edge in self.supply_chain.edges():
-                if 'in use' in edge[1] or 'uninstall' in edge[0]:
+                if 'in use' in edge[1]:
                     self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
@@ -956,10 +958,10 @@ class CostGraph:
         _cost_adjust = abs(sum([value for _, value in nx.get_edge_attributes(self.supply_chain, 'cost').items() if value < 0]))
         self.cost_adjustment_factor[self.year] = _cost_adjust
         if _cost_adjust != 0.0:
-            print(f'CostGraph.update_costs: Adjusting in use and uninstallation costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
+            print(f'CostGraph.update_costs: Adjusting in use costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
             flush = True)
             for edge in self.supply_chain.edges():
-                if 'in use' in edge[1] or 'uninstall' in edge[0]:
+                if 'in use' in edge[1]:
                     self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
         if self.verbose > 0 and self.year > 2001:
