@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 import logging
 from typing import Any, Dict, List, Optional, Tuple
-
+import sys
 import pandas as pd
 from celavi.pylca_celavi.pylca_liaison import liaison_lci
 
@@ -102,13 +102,64 @@ class PylcaCelavi:
         self.verbose = verbose
         self.run_id = run
 
-        #ShortcutLCA file creator
-        self.lca_database = pd.read_csv(
-                self.shortcutlca_path,
-                header=None,
-        )
-        self.lca_database.columns = ['lcia','unit','year','method','stage','state','value']
+        stop_flag = 0
+        try:
+            #ShortcutLCA file creator
+            self.lca_database = pd.read_csv(
+                    self.shortcutlca_path,
+                    header=None,
+            )
+            self.lca_database.columns = ['lcia','unit','year','method','stage','state','value']      
+            # ------------------------------------------------------------------
+            # SAFETY CHECK: CLEAN THE SHORTCUT DATABASE ON LOAD
+            # ------------------------------------------------------------------
 
+            group_cols = ['lcia','unit','year','method','stage','state']
+            counts = (
+                self.lca_database
+                .groupby(group_cols)
+                .size()
+                .reset_index(name='count')
+            )
+
+            if (counts['count'] > 1).any():
+                print(
+                    "VALUE ERROR: Reading shortcut File"
+                    "Shortcut file integrity violated.",flush=True
+                )
+
+            # Drop exact duplicates
+            self.lca_database = self.lca_database.drop_duplicates()
+
+            # Groupby cleaning to remove near-duplicates
+            
+            self.lca_database = (
+                self.lca_database
+                .groupby(group_cols, as_index=False)['value']
+                .mean()
+            )
+
+            # Final check that all combinations are unique
+            counts = (
+                self.lca_database
+                .groupby(group_cols)
+                .size()
+                .reset_index(name='count')
+            )
+
+            if (counts['count'] > 1).any():
+                raise ValueError(
+                    "ERROR: LCA shortcut file contains duplicate keys even after cleaning. "
+                    "Please run the offline cleaning script."
+                )
+                stop_flag = 1
+        except:
+            self.lca_database = pd.DataFrame()
+            logger.error("Error while reading and performing check, dropping duplicates and averaging on LCA shortcut file")
+
+        #Shutting down the code if there are count error in the LCA shortcut file
+        if stop_flag == 1:
+            sys.exit(0)
 
         
         # Set up Brightway environment variable
@@ -165,7 +216,6 @@ class PylcaCelavi:
                 header=None,
             )
             cache_df = cache_df.dropna(axis=1, how='all')
-            #cache_df.columns = ['lcia','cached_value','unit','year','method','stage','state']
             cache_df.columns = ['lcia','unit','year','method','stage','state','cached_value']
             # Ensure consistent types for merge keys
             for col in ['stage', 'year', 'state']:
@@ -300,13 +350,47 @@ class PylcaCelavi:
                         res["year"] = original_year
                         res["value"] = res["value"] / quantity
                         res.drop_duplicates(inplace=True)
-                        res2 = res[['lcia','unit','year','method','stage','state','value']]
-                        self.lca_database = pd.concat([self.lca_database,res2]).drop_duplicates()
+                        res2 = res[['lcia','value', 'unit','year','method','stage','state']]
+
+                        # ------------------------------------------------------------
+                        # BEFORE WRITING: CLEAN AND VALIDATE THE SHORTCUT DATABASE
+                        # ------------------------------------------------------------
+
+                        # Append new rows
+                        self.lca_database = pd.concat([self.lca_database, res2], ignore_index=True)
+
+                        # 1. Remove exact duplicates
+                        self.lca_database = self.lca_database.drop_duplicates()
+
+                        # 2. Groupby clean near-duplicates
+                        group_cols = ['lcia','unit','year','method','stage','state']
+                        self.lca_database = (
+                            self.lca_database
+                            .groupby(group_cols, as_index=False)['value']
+                            .mean()
+                        )
+
+                        # 3. Final validation
+                        counts = (
+                            self.lca_database
+                            .groupby(group_cols)
+                            .size()
+                            .reset_index(name='count')
+                        )
+
+                        if (counts['count'] > 1).any():
+                            raise ValueError(
+                                "ERROR: Duplicate shortcut entries detected while writing new results. "
+                                "Shortcut file integrity violated."
+                            )
+
+                        # 4. Write clean, validated shortcut file
                         self.lca_database.to_csv(
                             self.shortcutlca_path,
                             index=False,
                             header=False,
                         )
+
                         live = res.copy()
                     elif verbose:
                         logger.warning(
@@ -321,6 +405,7 @@ class PylcaCelavi:
                     )
 
                 if not cached.empty:
+                    cached["year"] = original_year
                     cached = cached.assign(comment="shortcut calculations")
                     results.append(cached)
                 if not live.empty:

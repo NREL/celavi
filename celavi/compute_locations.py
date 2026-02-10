@@ -935,16 +935,11 @@ class ComputeLocations:
         # Some states won't have previous installations and the lat/longs will
         # turn out blank in _new_facility_locs
         _need_latlong = _new_facility_locs.loc[_new_facility_locs.lat.isna() & _new_facility_locs.long.isna()].index
-        _new_facility_locs.loc[_need_latlong, 'lat'] = states.lat.loc[
-            states.region_id_2.isin(
-                _new_facility_locs.loc[_need_latlong, 'region_id_2']
-                )
-                ].values
-        _new_facility_locs.loc[_need_latlong, 'long'] = states.long.loc[
-            states.region_id_2.isin(
-                _new_facility_locs.loc[_need_latlong, 'region_id_2']
-                )
-                ].values
+        
+        # Use a for loop to assign state centroid lat/longs to future power plants
+        for _p in _need_latlong:
+            _new_facility_locs.loc[_p, 'lat'] = states.lat.loc[states.region_id_2 == _new_facility_locs.loc[_p, 'region_id_2']].values
+            _new_facility_locs.loc[_p, 'long'] = states.long.loc[states.region_id_2 == _new_facility_locs.loc[_p, 'region_id_2']].values
 
         _new_facility_locs['facility_type'] = 'pv power plant'
         _new_facility_locs['region_id_1'] = 'USA'
