@@ -124,12 +124,11 @@ class PylcaCelavi:
 
             if (counts['count'] > 1).any():
                 print(
-                    "VALUE ERROR: Reading shortcut File"
-                    "Shortcut file integrity violated.",flush=True
+                    "PylcaCelavi: Warning: Shortcut LCIA file contains duplicate entries. Removing duplicates before use.",flush=True
                 )
 
-            # Drop exact duplicates
-            self.lca_database = self.lca_database.drop_duplicates()
+                # Drop exact duplicates
+                self.lca_database = self.lca_database.drop_duplicates()
 
             # Groupby cleaning to remove near-duplicates
             
