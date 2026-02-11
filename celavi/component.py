@@ -287,7 +287,7 @@ class Component:
         # if the component is manufactured from a secondary facility, wait one more timestep
         # this should bring the timing of the virgin and secondary supply chains to alignment
         if self.manuf_facility.split('_')[0] not in self.virgin_manuf_facility_types:
-            env.timeout(lifespan)
+            yield env.timeout(lifespan)
 
         # Increment and decrement intermediate manufacturing facilities
         # Identify pathway from manuf_facility to in_use_facility
