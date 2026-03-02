@@ -641,8 +641,6 @@ class Scenario:
                 f, mode="a", header=f.tell() == 0, index=False, lineterminator="\n"
             )
 
-        diagnostic_viz_counts.generate_plots()
-
         # Plot the levels of the mass inventories
         diagnostic_viz_mass = DiagnosticViz(
             facility_inventories=self.context.mass_facility_inventories,
@@ -659,8 +657,6 @@ class Scenario:
         mass_cumulative_histories = (
             diagnostic_viz_mass.gather_and_melt_cumulative_histories()
         )
-
-        diagnostic_viz_mass.generate_plots()
 
         # Postprocess and save CostGraph outputs
         self.netw.save_costgraph_outputs()
@@ -859,6 +855,9 @@ class Scenario:
             central_summary.to_csv(
                 f, index=False, mode="a", header=f.tell() == 0, lineterminator="\n"
             )
+        
+        diagnostic_viz_counts.generate_plots()
+        diagnostic_viz_mass.generate_plots()
 
 
     def calculate_circularity_metrics(self, mass):

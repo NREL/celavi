@@ -363,7 +363,10 @@ class Context:
 
             annual_data_for_lci = []
             window_last_timestep = env.now
-            window_first_timestep = env.now - self.timesteps_per_year
+            if self.timesteps_per_year > 1:
+                window_first_timestep = env.now - self.timesteps_per_year
+            else:
+                window_first_timestep = env.now
 
             year = int(floor(self.timesteps_to_years(env.now)))
 
@@ -390,7 +393,10 @@ class Context:
                             )
                         )
                     )
-                    problematic_value = sliced_info[mat][self.timesteps_per_year]
+                    try:
+                        problematic_value = sliced_info[mat][self.timesteps_per_year]
+                    except KeyError:
+                        problematic_value = 0
 
                     # A problematic value is when mass is reported in the last time step of a sliced dataframe
                     # which belongs to the next year. Generally this happens only for manufacturing.

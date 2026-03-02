@@ -187,7 +187,7 @@ class Component:
         # Identify manufacturing facility based on distance and, for secondary manuf 
         # facilities, whether the facility has sufficient inventory to manufacture the
         # component
-        
+
         # Locate the closest (by cost) manufacturing facilities
         _manuf_dict = self.context.cost_graph.find_upstream_neighbor(
             node_id = self.in_use_facility,
@@ -257,16 +257,19 @@ class Component:
                 self.manuf_facility = _fac          
                 break # ends the loop
         
-        # Increment manufacturing inventories
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
         
+        # Increment virgin manufacturing inventories ONLY
+        # (secondary manuf facilities already have inventory)
         if self.manuf_facility.split('_')[0] in self.virgin_manuf_facility_types:
             count_inventory.increment_quantity(self.kind, self.count, env.now)
             for material, mass in self.mass_tonnes.items():
                 mass_inventory.increment_quantity(material, mass, env.now)
 
             # Component waits to transition to in use
+            # This is done for only virgin facilities, because the inventory check on secondary facilities
+            # must be done in the same timestep as the component is manufactured
             yield env.timeout(lifespan)
 
         # Decrement manufacturing inventories
@@ -281,6 +284,11 @@ class Component:
         for material, mass in self.mass_tonnes.items():
             mass_inventory.increment_quantity(material, -mass, env.now)
         
+        # if the component is manufactured from a secondary facility, wait one more timestep
+        # this should bring the timing of the virgin and secondary supply chains to alignment
+        if self.manuf_facility.split('_')[0] not in self.virgin_manuf_facility_types:
+            yield env.timeout(lifespan)
+
         # Increment and decrement intermediate manufacturing facilities
         # Identify pathway from manuf_facility to in_use_facility
         for _fac in nx.astar_path(
@@ -448,6 +456,7 @@ class Component:
                             yield env.timeout(lifespan)
     
                             # Decrement the current facility inventory
+                            # @NOTE Check this statement in case of "Inventory cannot go negative" warnings
                             self.move_component_from(env,
                                                      loc = location,
                                                      amt = 1 - _loss)

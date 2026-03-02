@@ -161,6 +161,7 @@ class PylcaCelavi:
         if stop_flag == 1:
             sys.exit(0)
 
+        
         # Set up Brightway environment variable
         os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
         if self.verbose:
@@ -207,7 +208,7 @@ class PylcaCelavi:
         result_df
             Cached impacts for matching rows.
         """
-        
+
         try:
             # Read cache without header, assign expected columns
             cache_df = pd.read_csv(
@@ -227,9 +228,9 @@ class PylcaCelavi:
                 how='outer',
                 indicator=True,
             )
+
             missing_df = merged[merged['_merge'] == 'left_only'].drop(columns=['_merge'])
             result_df = merged[merged['_merge'] == 'both'].drop(columns=['_merge'])
-
             if result_df.empty:
                 logger.warning(
                     "Shortcut LCA cache missing entry for %s, %s, %d",
@@ -246,8 +247,8 @@ class PylcaCelavi:
                 result_df['flow quantity'] * result_df['cached_value']
             )
             cols = [
-                'lcia', 'value', 'unit', 'year', 'method',
-                'facility_id', 'stage', 'material', 'route_id', 'state'
+                'lcia', 'unit', 'year', 'method',
+                'facility_id', 'stage', 'material', 'route_id', 'state','value'
             ]
             return missing_df, result_df[cols]
 
