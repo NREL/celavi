@@ -348,7 +348,6 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
-            # @TODO Update this logic to match new cost adjustment factor(s)
             for i in self.sc_end:
                 _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
@@ -359,7 +358,7 @@ class CostGraph:
                             "source_facility_id": source_node,
                             "destination_facility_id": _dest,
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
+                            "eol_pathway_criterion": [c for c,d in zip(_crit,_dest)],
                         }
                     )
 
@@ -440,7 +439,6 @@ class CostGraph:
 
             # create dictionary for this preferred pathway cost and decision
             # criterion and append to the pathway_crit_history
-            # @TODO Update this logic to match new cost adjustment factor(s)
             for i in self.sc_end:
                 _dest = [key for key, _ in lengths.items() if i in key]
                 _crit = [value for key, value in lengths.items() if i in key]
@@ -454,7 +452,7 @@ class CostGraph:
                             # The cost adjustment factor is applied to every *edge*, so to save the absolute pathway 
                             # cost, subtract off the cost adjustment factor multiplied by the number of edges
                             # in each pathway between source_node and each facility in _dest
-                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
+                            "eol_pathway_criterion": [c for c,d in zip(_crit,_dest)],
                         }
                     )
 
