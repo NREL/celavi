@@ -290,12 +290,11 @@ class CostGraph:
         """
         if self.verbose > 1:
             print(f"Finding shortest paths from {source_node} to {self.sc_end}")
-
+        
         # Pull out a list of all nodes in the supply chain that are terminal
         # The linear supply chain terminates there, OR one loop of a circular pathway
         # terminates there
-        targets = [tnode for tnode in self.supply_chain.nodes 
-                    if any([scr in tnode for scr in self.sc_end])]
+        targets = [tnode for tnode in self.supply_chain.nodes if any([scr in tnode for scr in self.sc_end])]
 
         # Loop thru terminal nodes
         # Use the loop rather than list comprehension b/c if a terminal node isn't reachable from the source
@@ -305,10 +304,16 @@ class CostGraph:
         for tnode in targets:
             try:
                 # Find the shortest path (list of nodes) to terminal node
-                short_paths[tnode] = nx.astar_path(self.supply_chain, source = source_node, target = tnode, weight = crit)
-                # Find the shortest path length to terminal node
-                lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)
-            except nx.NetworkXNoPath:
+                _short_path = nx.astar_path(self.supply_chain, source = source_node, target = tnode)
+                # If this path contains more than one terminal node, continue without saving the path
+                if len([_node for _node in _short_path if _node.split('_')[0] in self.sc_end]) != 1:
+                    continue
+                else:
+                    # If the path contains exactly one terminal node, record the path and its weighted length
+                    short_paths[tnode] = _short_path
+                    # Find the shortest path length to terminal node
+                    lengths[tnode] = nx.path_weight(self.supply_chain, path=short_paths[tnode], weight=crit)
+            except nx.exception.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest: No path from {source_node} to {tnode}')
                 continue
         
@@ -353,7 +358,7 @@ class CostGraph:
                             "source_facility_id": source_node,
                             "destination_facility_id": _dest,
                             "eol_pathway_type": i,
-                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
+                            "eol_pathway_criterion": [c for c,d in zip(_crit,_dest)],
                         }
                     )
 
@@ -407,9 +412,10 @@ class CostGraph:
                 # Find the shortest path (list of nodes) to target factype nodes
                 short_paths[tnode] = nx.astar_path(self.supply_chain, source = source_node, target = tnode, weight = crit)
                 # Find the shortest path length from source_node to target factype nodes
-                lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)
+                lengths[tnode] = nx.astar_path_length(self.supply_chain, source = source_node, target = tnode, weight = crit)            
             except nx.NetworkXNoPath:
                 if self.verbose > 1: print(f'CostGraph.find_nearest_factype: No path from {source_node} to {tnode}')
+
 
         # return the smallest of all lengths to get to typeofnode
         if len(lengths) > 0:
@@ -446,7 +452,7 @@ class CostGraph:
                             # The cost adjustment factor is applied to every *edge*, so to save the absolute pathway 
                             # cost, subtract off the cost adjustment factor multiplied by the number of edges
                             # in each pathway between source_node and each facility in _dest
-                            "eol_pathway_criterion": [c - self.cost_adjustment_factor[self.year]*(len(short_paths[d]) - 1) for c,d in zip(_crit,_dest)],
+                            "eol_pathway_criterion": [c for c,d in zip(_crit,_dest)],
                         }
                     )
 
@@ -594,14 +600,16 @@ class CostGraph:
         if self.verbose > 0:
             print(f'CostGraph: Calculating edge costs took {np.round((time() - _ctime)/60, 2)} minutes', flush=True)
 
-        # Cost adjustment logic: if any edge costs are negative, adjust ALL calculated costs in the supply chain
-        # upwards
-        _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
-        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
-        if _cost_adjust < 0.0:
-            print(f'CostGraph: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
+        # Cost adjustment logic: Identify all negative edge weights, add them up and take the absolute value,
+        # then add this adjustment ONLY to the in use steps
+        # _cost_adjust is zero if there are no negative edge weights
+        _cost_adjust = abs(sum([value for _, value in nx.get_edge_attributes(self.supply_chain, 'cost').items() if value < 0]))
+        self.cost_adjustment_factor[self.year] = _cost_adjust
+        if _cost_adjust != 0.0:
+            print(f'CostGraph: Adjusting in use costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}', flush = True)
             for edge in self.supply_chain.edges():
-                self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
+                if 'in use' in edge[1]:
+                    self.supply_chain.edges[edge]['cost'] = self.supply_chain.edges[edge]['cost'] + self.cost_adjustment_factor[self.year]
 
         if self.verbose > 0:
             print(f'CostGraph: Instantiation took {np.round((time() - self.start_time)/60, 2)} minutes', flush = True)
@@ -738,7 +746,7 @@ class CostGraph:
                     _ = nx.astar_path(self.supply_chain, source = _u, target = _node)
                 except nx.NetworkXNoPath:
                     _upstream_nodes.remove(_u)
-        
+
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
@@ -752,7 +760,7 @@ class CostGraph:
         elif len(_upstream_nodes) >= 1:
             # If there are multiple options, obtain the distances to each node and zip into a dictionary
             _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit)
-                                 for _up_n in _upstream_nodes]
+                                for _up_n in _upstream_nodes]
             upstream_dict = dict(zip(_upstream_nodes, _upstream_dists))
 
             # Sort list of facilities and distances in order of increasing distance, for use in Component.bol_process
@@ -943,7 +951,6 @@ class CostGraph:
         """
         # update the year for CostGraph
         self.year = path_dict["year"]
-
         for edge in self.supply_chain.edges():
             _edge_dict = path_dict.copy()
             _edge_dict["vkmt"] = self.supply_chain.edges[edge]["dist"]
@@ -951,13 +958,14 @@ class CostGraph:
                 [f(_edge_dict) for f in self.supply_chain.edges[edge]["cost_method"]]
             )
         
-        _cost_adjust = min([value for key, value in nx.get_edge_attributes(self.supply_chain, 'cost').items()])
-        self.cost_adjustment_factor[self.year] = abs(_cost_adjust) if _cost_adjust < 0.0 else 0.0
-        if _cost_adjust < 0.0:
-            print(f'CostGraph.update_costs: Adjusting all costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
+        _cost_adjust = abs(sum([value for _, value in nx.get_edge_attributes(self.supply_chain, 'cost').items() if value < 0]))
+        self.cost_adjustment_factor[self.year] = _cost_adjust
+        if _cost_adjust != 0.0:
+            print(f'CostGraph.update_costs: Adjusting in use costs for {self.year} upwards by ${np.round(abs(_cost_adjust), 2)}',
             flush = True)
             for edge in self.supply_chain.edges():
-                self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
+                if 'in use' in edge[1]:
+                    self.supply_chain.edges[edge]['cost'] = self.cost_adjustment_factor[self.year] + self.supply_chain.edges[edge]['cost']
 
         if self.verbose > 0 and self.year > 2001:
             print(f'CostGraph.update_costs: Costs updated for {self.year} after {np.round(time() - self.update_time, 1)} s',

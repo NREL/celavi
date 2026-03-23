@@ -345,11 +345,16 @@ class Component:
             # Increment transportation only once, for a single element of route_ids
             # There's list comprehension in increment_inbound_tonne_km that can result in duplication
             # if a list of route_ids is passed in
-            count_transport.increment_inbound_tonne_km(
-                tonne_km = mass * dist,
-                timestep = env.now,
-                route_id = route_ids[-1]
-            )
+            try:
+                count_transport.increment_inbound_tonne_km(
+                    tonne_km = mass * dist,
+                    timestep = env.now,
+                    route_id = route_ids[-1]
+                )
+            except IndexError:
+                # This error will get thrown if all nodes along _path are colocated.
+                # It's not an actual error, so use "pass" to keep the code running.
+                pass
 
         # Component stays in use for its lifetime
         yield env.timeout(self.initial_lifespan_timesteps)
