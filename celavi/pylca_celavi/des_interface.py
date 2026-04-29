@@ -127,9 +127,8 @@ class PylcaCelavi:
                     "VALUE ERROR: Reading shortcut File"
                     "Shortcut file integrity violated.",flush=True
                 )
-
-            # Drop exact duplicates
-            self.lca_database = self.lca_database.drop_duplicates()
+                # Drop exact duplicates
+                self.lca_database = self.lca_database.drop_duplicates()
 
             # Groupby cleaning to remove near-duplicates
             
@@ -167,7 +166,6 @@ class PylcaCelavi:
         os.makedirs = _makedirs_exist_ok
         # ──────────────────────────────────────────────────────────────────────────────
 
-        os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
         import brightway2 as bw
 
         os.makedirs = _orig_makedirs
