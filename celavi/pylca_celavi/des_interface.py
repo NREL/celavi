@@ -124,9 +124,9 @@ class PylcaCelavi:
 
             if (counts['count'] > 1).any():
                 print(
-                    "PylcaCelavi: Warning: Shortcut LCIA file contains duplicate entries. Removing duplicates before use.",flush=True
+                    "VALUE ERROR: Reading shortcut File"
+                    "Shortcut file integrity violated.",flush=True
                 )
-
                 # Drop exact duplicates
                 self.lca_database = self.lca_database.drop_duplicates()
 
@@ -160,6 +160,15 @@ class PylcaCelavi:
         if stop_flag == 1:
             sys.exit(0)
 
+        _orig_makedirs = os.makedirs
+        def _makedirs_exist_ok(path, mode=0o777, exist_ok=False):
+            _orig_makedirs(path, mode=mode, exist_ok=True)
+        os.makedirs = _makedirs_exist_ok
+        # ──────────────────────────────────────────────────────────────────────────────
+
+        import brightway2 as bw
+
+        os.makedirs = _orig_makedirs
         
         # Set up Brightway environment variable
         os.environ["BRIGHTWAY2_DIR"] = str(self.brightway_dir)
