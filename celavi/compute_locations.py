@@ -1045,8 +1045,8 @@ class ComputeLocations:
         self.locs = locations
 
         #self.capacity_projections_wind()
-        self.capacity_projections_solar()
-        self.capacity_projections_buildings()
+        #self.capacity_projections_solar()
+        #self.capacity_projections_buildings()
 
         self.capacity_data.to_csv(
             self.technology_data_filename,
