@@ -1000,15 +1000,15 @@ class ComputeLocations:
         """
 
         #wind_plant_locations = ComputeLocations.wind_power_plant(self)
-        pv_plant_locations = ComputeLocations.solar_power_plant(self)
-        comm_buildings_locations = ComputeLocations.commercial_building_windows(self)
+        #pv_plant_locations = ComputeLocations.solar_power_plant(self)
+        #comm_buildings_locations = ComputeLocations.commercial_building_windows(self)
         landfill_locations_no_nulls = ComputeLocations.landfill(self)
         facility_locations = ComputeLocations.other_facility(self)
 
         #locations = pd.concat([facility_locations,wind_plant_locations])
-        locations = pd.concat([facility_locations, pv_plant_locations])
-        locations = pd.concat([locations, comm_buildings_locations])
-        locations = pd.concat([locations,landfill_locations_no_nulls])
+        #locations = pd.concat([facility_locations, pv_plant_locations])
+        #locations = pd.concat([locations, comm_buildings_locations])
+        locations = pd.concat([facility_locations,landfill_locations_no_nulls])
         locations.reset_index(drop=True, inplace=True)
 
 
