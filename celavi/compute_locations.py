@@ -24,6 +24,7 @@ class ComputeLocations:
                  start_year : int,
                  power_plant_locations,
                  commercial_building_locations,
+                 transformer_locations,
                  landfill_locations,
                  other_facility_locations,
                  state_centroids,
@@ -94,6 +95,7 @@ class ComputeLocations:
         # file paths for raw data used to compute locations
         self.power_plant_locations = power_plant_locations
         self.commercial_building_locations = commercial_building_locations
+        self.transformer_locations = transformer_locations
         self.landfill_locations = landfill_locations
         self.other_facility_locations = other_facility_locations
         self.state_centroids = state_centroids
@@ -416,7 +418,6 @@ class ComputeLocations:
             )
         
         building_locs = building_locs_raw.copy()
-
         # exclude Hawaii, Guam, Puerto Rico, Alaska, and Washington DC
         # (only have road network data for the contiguous United States, and do
         # not have landfill data for Washington DC)
@@ -452,6 +453,83 @@ class ComputeLocations:
         building_locs_state["region_id_4"] = ''
 
         return building_locs_state
+
+
+    def transformer_locations(self):
+        """
+        Ingests a modified dataset based on <insert data source for transformers>,
+        filters down to the contiguous U.S. and creates a data frame that can
+        be combined with other sets of facility location data.
+
+        The number_of_technology_units file is also added to in this method.
+
+        See <name of data class> child class of Data class for column names and
+        data types.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        transformer_locs_state : pd.DataFrame
+            Dataset of transformer use locations
+            including unique facility ID, the facility type identifier, a lat/long pair,
+            and four generic region identifiers (country, state, county, etc.)
+
+            Columns:
+                - facility_id : str
+                - facility_type : str
+                - lat : float
+                - long : float
+                - region_id_1 : str
+                - region_id_2 : str
+                - region_id_3 : str
+                - region_id_4 : str
+        """
+        # Process data from <data source> outputs
+        transformer_locs_raw = Data.TransformerTechUnitLocations(
+            fpath=self.transformer_locations,
+            backfill=self.backfill
+            )
+        
+        transformer_locs = transformer_locs_raw.copy()
+        # exclude Hawaii, Guam, Puerto Rico, Alaska, and Washington DC
+        # (only have road network data for the contiguous United States, and do
+        # not have landfill data for Washington DC)
+        transformer_locs.drop(
+            index = transformer_locs[transformer_locs.region_id_2.isin(['HI','GU','PR','AK', 'DC'])].index,
+            inplace = True
+        )
+
+        # also drop data from before the simulation start year
+        transformer_locs.drop(
+            index = transformer_locs[transformer_locs.year < self.start_year].index,
+            inplace = True
+        )
+
+        transformer_locs.loc[:,'facility_id'] = ['T' + str(id) for id in transformer_locs.facility_id]
+
+        # Filter down the dataset to generate the buildings portion of the
+        #  number_of_technology_units file
+        # Store this dataframe into self for use in capacity projection
+        # calculations and creation of the number_of_technology_units file
+        self.capacity_data_transformers = transformer_locs.loc[:,
+        ['facility_id', 'technology', 'region_id_2', 'year', 'n_technology']
+        ].drop_duplicates().dropna()
+        self.capacity_data_transformers['p_name'] = self.capacity_data_transformers.region_id_2 + '_buildings'
+
+        # Create the dataset for LOCATION only, no capacity info
+        transformer_locs_state = transformer_locs.loc[:,
+        ['region_id_2','lat','long','facility_id','facility_type']
+        ]
+        transformer_locs_state.drop_duplicates(keep='last',inplace=True)
+        
+        transformer_locs_state["region_id_1"] = 'USA'
+        transformer_locs_state["region_id_3"] = ''
+        transformer_locs_state["region_id_4"] = ''
+
+        return transformer_locs_state
 
 
     def landfill(self):
@@ -986,6 +1064,17 @@ class ComputeLocations:
         self.capacity_data = pd.concat([self.capacity_data, _cap_building])
 
 
+    def capacity_projections_transformers(self):
+        """
+        Processes transformer demand data into capacity projections dataframe.
+        """
+        self.capacity_data = self.capacity_data_transformers[
+            ['facility_id','region_id_2','year','technology','n_technology']
+            ].groupby(
+                ['facility_id','region_id_2','year','technology']
+                ).sum().reset_index()
+
+
     def join_facilities(self, locations_output_file):
         """
         Call other ComputeLocations methods to process raw locations datasets
@@ -1002,13 +1091,15 @@ class ComputeLocations:
         #wind_plant_locations = ComputeLocations.wind_power_plant(self)
         #pv_plant_locations = ComputeLocations.solar_power_plant(self)
         #comm_buildings_locations = ComputeLocations.commercial_building_windows(self)
+        transformer_locations = ComputeLocations.transformer_locations(self)
         landfill_locations_no_nulls = ComputeLocations.landfill(self)
         facility_locations = ComputeLocations.other_facility(self)
 
         #locations = pd.concat([facility_locations,wind_plant_locations])
         #locations = pd.concat([facility_locations, pv_plant_locations])
         #locations = pd.concat([locations, comm_buildings_locations])
-        locations = pd.concat([facility_locations,landfill_locations_no_nulls])
+        locations = pd.concat([transformer_locations, facility_locations, landfill_locations_no_nulls])
+        #locations = pd.concat([facility_locations,landfill_locations_no_nulls])
         locations.reset_index(drop=True, inplace=True)
 
 
@@ -1047,6 +1138,7 @@ class ComputeLocations:
         #self.capacity_projections_wind()
         #self.capacity_projections_solar()
         #self.capacity_projections_buildings()
+        self.capacity_projections_transformers()
 
         self.capacity_data.to_csv(
             self.technology_data_filename,

@@ -334,6 +334,30 @@ class CommWindowTechUnitLocations(Data):
         super(CommWindowTechUnitLocations, self).__init__(df=df, fpath=fpath, columns=columns,
                                                 backfill=backfill)
 
+class TransformerTechUnitLocations(Data):
+    """
+    Read in and process raw transformer location and demand dataset.
+
+    Dataset is derived from <datasource>.
+    """
+    COLUMNS = (
+               {'name': 'region_id_2', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'facility_id', 'type': str, 'index': True, 'backfill': None},
+               {'name': 'facility_type', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'year', 'type': int, 'index': False, 'backfill': '-1'},
+               {'name': 'technology', 'type': str, 'index': False, 'backfill': None},
+               {'name': 'long', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'lat', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'n_technology', 'type': float, 'index': False, 'backfill': None},
+               {'name': 'esteel_kg', 'type': float, 'index': False, 'backfill': None}
+               )
+
+    def __init__(self, df=None, fpath=None,
+                 columns={d['name']: d['type'] for d in COLUMNS},
+                 backfill=True):
+        super(TransformerTechUnitLocations, self).__init__(df=df, fpath=fpath, columns=columns,
+                                                backfill=backfill)
+
 
 class PVTechUnitChars(Data):
     """
