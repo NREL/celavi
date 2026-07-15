@@ -499,8 +499,8 @@ class Scenario:
         _comptime = time.time()
         for _, row in technology_data.iterrows():
             year = row["year"]
-            # @NOTE hard coded to glass study, will need to adapt
-            in_use_facility = 'pv in use_' + row["facility_id"] if row['technology'] == 'csi module' else 'window in use_' + row['facility_id']
+            # @NOTE hard coded to esteel study, will need to adapt
+            in_use_facility = 'transformer use location_' + row["facility_id"]
             # Optional print statement for component monitoring
             if self.case["model_run"].get("warning_verbose") > 1:
                 print(f'{row.facility_id} , {row.year}: {in_use_facility}')
