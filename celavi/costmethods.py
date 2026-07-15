@@ -54,6 +54,25 @@ class CostMethods:
         """
         return 0.0
 
+    @staticmethod
+    def transformer_core_reconditioning_and_annealing(path_dict):
+        return 0.0
+
+    @staticmethod
+    def transformer_core_testing_and_sorting(path_dict):
+        return 0.0
+
+    @staticmethod
+    def electrical_steel_smelting_from_esteel_scrap(path_dict):
+        return 0.0
+
+    @staticmethod
+    def next_use_or_exporting(path_dict):
+        return 0.0
+
+    @staticmethod
+    def carbon_steel_manufacturing(path_dict):
+        return 0.0
 
     def landfilling(self, path_dict):
         """
