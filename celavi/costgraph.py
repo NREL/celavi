@@ -732,21 +732,37 @@ class CostGraph:
         # strings in neighbor_factypes in the node name
         _upstream_nodes = []
         _predec = [_node]
-        while len(_upstream_nodes) == 0:
-            _predec = [n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]
+        while not set(neighbor_factypes).issubset([_ups.split('_')[0] for _ups in _upstream_nodes]):
+            # get unique list of nodes immediately upstream of all nodes in _predec
+            _predec = list(set([n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]))
+
+            # if _predec is empty at this point, that's a problem, because not all the required upstream nodes
+            # have been found yet
             if len(_predec) == 0:
                 print(f'CostGraph.find_upstream_neighbor: {_node} has no predecessors', flush = True)
-            _upstream_nodes = [n for n in _predec if any([n.find(nbor + '_') != -1 for nbor in neighbor_factypes])]
-            # Since we do this recursively, we also need to double check that a path exists between 
-            # the upstream nodes and _node. If not, remove those entries from _upstream_nodes
-            for _u in _upstream_nodes:
-                try:
-                    # Because supply_chain is a directed graph, specify that we want a source
-                    # FROM the upstream node TO our target node (input parameter node_id)
-                    _ = nx.astar_path(self.supply_chain, source = _u, target = _node)
-                except nx.NetworkXNoPath:
-                    _upstream_nodes.remove(_u)
+            else:
+                for _u in _predec:
+                    try:
+                        # Because supply_chain is a directed graph, specify that we want a source
+                        # FROM the upstream node TO our target node (input parameter node_id)
+                        _ = nx.astar_path(self.supply_chain, source = _u, target = _node)
+                    except nx.NetworkXNoPath:
+                        _predec.remove(_u)
 
+            # If predecessors remain after filtering out any without a directed path, check for nodes
+            # that are in neighbor_factype
+            if len(_predec) != 0:
+                if len([n for n in _predec if any([n.find(nbor + '_') != -1 for nbor in neighbor_factypes])]) != 0:
+                    # extend _upstream_nodes with predecessors that have a path to _node and are one of neighbor_factypes
+                    _upstream_nodes.extend([n for n in _predec if any([n.find(nbor + '_') != -1 for nbor in neighbor_factypes])])
+            
+            # any nodes in _predec that belong to neighbor_factypes do NOT need to be further traced
+            # remove those nodes from _predec before continuing to look upstream
+            _predec = [n for n in _predec if not any([n.find(nbor + '_') != -1 for nbor in neighbor_factypes])]
+
+        # eliminate duplicates
+        _upstream_nodes = list(set(_upstream_nodes))
+        
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
@@ -756,7 +772,6 @@ class CostGraph:
                 flush=True,
             )
             return None
-
         elif len(_upstream_nodes) >= 1:
             # If there are multiple options, obtain the distances to each node and zip into a dictionary
             _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit)
