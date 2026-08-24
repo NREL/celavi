@@ -154,7 +154,12 @@ class CostMethods:
             material at different facilities and disposing of material losses
             in a landfill (accounting for associated costs)
         """
-        _learn_dict = path_dict['learning'][process]
+        try:
+            _learn_dict = path_dict['learning'][process]
+        except KeyError:
+            _learn_dict = {'initial cumul': 1.0,
+                           'cumul': None,
+                           'learn rate': 0.0}
 
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty'][process]['uncertainty'] == 'array':
@@ -595,7 +600,408 @@ class CostMethods:
         return self.process_cost_loss_revenue_model(
             path_dict, 'scm manufacturing')
 
+        
+    def hot_briquetted_iron_production(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'hot briquetted iron production'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
 
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'hot briquetted iron production'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'hot briquetted iron production')
+
+
+    def electric_steel_smelting(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'electric steel smelting'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'electric steel smelting'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'electric steel smelting')
+
+
+    def cold_rolling(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'cold rolling'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'cold rolling'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'cold rolling')
+
+
+    def annealing_and_coating(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'annealing and coating'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'annealing and coating'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'annealing and coating')
+
+
+    def GOES_finishing(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'GOES finishing'.
+
+        GOES stands for Grain-oriented Electrical Steel.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'GOES finishing'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'GOES finishing')
+
+
+    def transformer_core_stamping(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer core stamping'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer core stamping'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer core stamping')
+
+
+    def transformer_assembly(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer assembly'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer assembly'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer assembly')
+
+    
+    def transformer_installation(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer installation'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer installation'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer installation')
+
+
+    def transformer_in_use(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer in use'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer in use'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer in use')
+
+
+    def transformer_uninstallation(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer uninstallation'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer uninstallation'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer uninstallation')
+
+
+    def transformer_dismantling(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer dismantling'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer dismantling'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer dismantling')
+
+
+    def transformer_core_reconditioning_and_annealing(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer core reconditioning and annealing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer core reconditioning and annealing'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer core reconditioning and annealing')
+
+
+    def transformer_core_testing_and_sorting(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'transformer core testing and sorting'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'transformer core testing and sorting'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'transformer core testing and sorting')
+
+
+    def magnetic_scrap_sorting(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'magnetic scrap sorting'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'magnetic scrap sorting'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'magnetic scrap sorting')
+
+
+    def shredder_and_trommel(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'shredder and trommel'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'shredder and trommel'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'shredder and trommel')
+
+
+    def laser_induced_breakdown_spectroscopy(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'laser induced breakdown spectroscopy'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'laser induced breakdown spectroscopy'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'laser induced breakdown spectroscopy')
+
+
+    def electrical_steel_smelting_from_esteel_scrap(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'electrical steel smelting from esteel scrap'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'electrical steel smelting from esteel scrap'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'electrical steel smelting from esteel scrap')
+
+
+    def next_use_or_exporting(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'next use or exporting'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'next use or exporting'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'next use or exporting')
+
+
+    def carbon_steel_manufacturing(self, path_dict):
+        """
+        Call the process_cost_loss_revenue_model method for 
+        process = 'carbon steel manufacturing'.
+        
+        Parameters
+        ----------
+        path_dict : dict
+            Dictionary of variable structure containing cost parameters for
+            calculating and updating processing costs for circularity pathway
+            processes
+
+        Returns
+        -------
+            Call to process_cost_loss_revenue_model with process = 
+            'carbon steel manufacturing'
+        """
+        return self.process_cost_loss_revenue_model(
+            path_dict, 'carbon steel manufacturing')
+
+    
     def transportation_cost_model(self, path_dict, transport_process):
         """
         General cost method for calculating transportation costs (truck)
