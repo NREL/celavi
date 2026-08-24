@@ -154,7 +154,12 @@ class CostMethods:
             material at different facilities and disposing of material losses
             in a landfill (accounting for associated costs)
         """
-        _learn_dict = path_dict['learning'][process]
+        try:
+            _learn_dict = path_dict['learning'][process]
+        except KeyError:
+            _learn_dict = {'initial cumul': 1.0,
+                           'cumul': None,
+                           'learn rate': 0.0}
 
         # Implement uncertainty on parameters: array or random
         if path_dict['cost uncertainty'][process]['uncertainty'] == 'array':
