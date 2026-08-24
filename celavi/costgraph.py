@@ -732,6 +732,7 @@ class CostGraph:
         # strings in neighbor_factypes in the node name
         _upstream_nodes = []
         _predec = [_node]
+        t0 = time()
         while not set(neighbor_factypes).issubset([_ups.split('_')[0] for _ups in _upstream_nodes]):
             # get unique list of nodes immediately upstream of all nodes in _predec
             _predec = list(set([n for ns in [list(self.supply_chain.predecessors(p)) for p in _predec] for n in ns]))
@@ -777,7 +778,7 @@ class CostGraph:
             _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit)
                                 for _up_n in _upstream_nodes]
             upstream_dict = dict(zip(_upstream_nodes, _upstream_dists))
-
+            print(f'CostGraph.find_upstream_neighbor on {_node}: {np.round(time() - t0, 1)} s', flush = True)
             # Sort list of facilities and distances in order of increasing distance, for use in Component.bol_process
             return upstream_dict
 

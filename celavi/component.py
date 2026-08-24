@@ -7,7 +7,9 @@ from itertools import compress
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
-
+import pdb
+from time import time
+import numpy as np
 class Component:
     """
     The Component class works with the Context class to run the discrete
@@ -197,7 +199,7 @@ class Component:
         # until EITHER a virgin facility is found OR a secondary facility with sufficient inventory 
         # is found
         _manuf_sorted = sorted(_manuf_dict, key=_manuf_dict.get)
-
+        t0 = time()
         for _fac in _manuf_sorted:
             # Check to see if the closest facility is a secondary manufacturing facility
             if _fac.split('_')[0] in self.secondary_manuf_facility_types:
@@ -259,7 +261,7 @@ class Component:
         
         count_inventory = self.context.count_facility_inventories[self.manuf_facility]
         mass_inventory = self.context.mass_facility_inventories[self.manuf_facility]
-        
+
         # Increment virgin manufacturing inventories ONLY
         # (secondary manuf facilities already have inventory)
         if self.manuf_facility.split('_')[0] in self.virgin_manuf_facility_types:
@@ -355,14 +357,15 @@ class Component:
                 # This error will get thrown if all nodes along _path are colocated.
                 # It's not an actual error, so use "pass" to keep the code running.
                 pass
-
+        print(f'Component at {self.in_use_facility} is in use: {np.round(time() - t0, 1)} s', flush = True)
         # Component stays in use for its lifetime
         yield env.timeout(self.initial_lifespan_timesteps)
 
         # Component's next steps are determined and stored in self.pathway
         # This method looks at the in_use_facility attribute and thus takes no parameters
+        tpathway = time()
         self.create_pathway_queue()
-
+        print(f"Create Pathway took {np.round(time() - tpathway, 1)} s", flush = True)
         # Component is decremented from in use inventories
         # Note that amt is the FRACTION of the total component being moved
         # It multiplies both self.count and material masses within the method
@@ -372,6 +375,7 @@ class Component:
         self.pathway.popleft()
 
         # Begin the end of life process
+        print(f"Beginning EOL")
         env.process(self.eol_process(env))
 
     def eol_process(self, env):
@@ -394,9 +398,10 @@ class Component:
                 # component's next step
                 location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
-
+                print(f"EOL Factype: {factype}")
                 # If the next step for the component involves material losses,
                 if factype in [key for key in self.split_dict]:
+                    pdb.set_trace()
                     # Pull in the mass fraction lost in this step
                     _loss = apply_array_uncertainty(self.split_dict[factype]["fraction"],self.context.model_run)
 
