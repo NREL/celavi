@@ -7,7 +7,7 @@ from itertools import compress
 
 from celavi.uncertainty_methods import apply_array_uncertainty
 
-import pdb
+
 from time import time
 import numpy as np
 class Component:
@@ -401,7 +401,6 @@ class Component:
                 print(f"EOL Factype: {factype}")
                 # If the next step for the component involves material losses,
                 if factype in [key for key in self.split_dict]:
-                    pdb.set_trace()
                     # Pull in the mass fraction lost in this step
                     _loss = apply_array_uncertainty(self.split_dict[factype]["fraction"],self.context.model_run)
 
