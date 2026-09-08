@@ -357,7 +357,7 @@ class Component:
                 # This error will get thrown if all nodes along _path are colocated.
                 # It's not an actual error, so use "pass" to keep the code running.
                 pass
-        print(f'Component at {self.in_use_facility} is in use: {np.round(time() - t0, 1)} s', flush = True)
+        
         # Component stays in use for its lifetime
         yield env.timeout(self.initial_lifespan_timesteps)
 
@@ -398,11 +398,14 @@ class Component:
                 # component's next step
                 location, lifespan, distance, route_id = self.pathway.popleft()
                 factype = location.split("_")[0]
-                print(f"EOL Factype: {factype}")
                 # If the next step for the component involves material losses,
                 if factype in [key for key in self.split_dict]:
                     # Pull in the mass fraction lost in this step
-                    _loss = apply_array_uncertainty(self.split_dict[factype]["fraction"],self.context.model_run)
+                    try:
+                        _loss = [apply_array_uncertainty(self.split_dict[factype]["fraction"],self.context.model_run)]
+                    except KeyError:
+                        _loss = [apply_array_uncertainty(self.split_dict[factype]["fraction_1"],self.context.model_run),
+                                 apply_array_uncertainty(self.split_dict[factype]["fraction_2"],self.context.model_run)]
 
                     # Move the component to the facility that involves material losses
                     # Note the amt parameter is the FRACTION of this component being moved
@@ -426,7 +429,7 @@ class Component:
                     # If there's no next step, then only move the lost component fraction
                     # out of this facility. The recovered fraction remains in the current facility.
                     else:
-                        self.move_component_from(env, loc=location, amt = _loss)
+                        self.move_component_from(env, loc=location, amt = sum(_loss))
 
                     # Locate the closest facility that receives material losses
                     _split_facility_1 = self.context.cost_graph.find_nearest_factype(
@@ -439,10 +442,29 @@ class Component:
                     self.move_component_to(
                         env,
                         loc = _split_facility_1[0],
-                        amt = _loss,
+                        amt = _loss[0],
                         dist = _split_facility_1[1],
                         route_id = _split_facility_1[2],
                     )
+
+                    try:
+                        # Locate the closest facility that receives material losses
+                        _split_facility_2 = self.context.cost_graph.find_nearest_factype(
+                            source_node = location,
+                            target_factype = self.split_dict[factype]["facility_2"],
+                            crit = 'dist',
+                        )
+
+                        # Move component fractions to [landfill] facility that receives material losses
+                        self.move_component_to(
+                            env,
+                            loc = _split_facility_2[0],
+                            amt = _loss[1],
+                            dist = _split_facility_2[1],
+                            route_id = _split_facility_2[2],
+                        )
+                    except KeyError:
+                        pass
                     
                     # Move the rest of the component to the next facility along pathway
                     if len(self.pathway) > 0:
@@ -455,7 +477,7 @@ class Component:
                             loc = location,
                             dist = distance,
                             route_id = route_id,
-                            amt= 1 - _loss
+                            amt= 1 - sum(_loss)
                         )
 
                         # If component is in a facility where it should stay indefinitely, do not
@@ -468,11 +490,11 @@ class Component:
                             # @NOTE Check this statement in case of "Inventory cannot go negative" warnings
                             self.move_component_from(env,
                                                      loc = location,
-                                                     amt = 1 - _loss)
+                                                     amt = 1 - sum(_loss))
                         
                         # Update the component's record of its materials and masses by applying
                         # the mass fraction loss
-                        self.count = (1 - _loss) * self.count
+                        self.count = (1 - sum(_loss)) * self.count
                 
                 # If the component is currently at a facility type noted "pass" (typically
                 # end-of-supply-chain facilities), do nothing b/c the component is staying
