@@ -763,7 +763,7 @@ class CostGraph:
 
         # eliminate duplicates
         _upstream_nodes = list(set(_upstream_nodes))
-        
+
         # Search the list for the "closest" node
         if len(_upstream_nodes) == 0:
             # If there are no upstream nodes of the correct type, print a
@@ -775,8 +775,8 @@ class CostGraph:
             return None
         elif len(_upstream_nodes) >= 1:
             # If there are multiple options, obtain the distances to each node and zip into a dictionary
-            _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit)
-                                for _up_n in _upstream_nodes]
+            # @TODO slow culprit!!
+            _upstream_dists = [nx.astar_path_length(self.supply_chain, source = _up_n, target = _node, weight = crit) for _up_n in _upstream_nodes]
             upstream_dict = dict(zip(_upstream_nodes, _upstream_dists))
             print(f'CostGraph.find_upstream_neighbor on {_node}: {np.round(time() - t0, 1)} s', flush = True)
             # Sort list of facilities and distances in order of increasing distance, for use in Component.bol_process
